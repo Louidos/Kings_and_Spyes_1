@@ -1,0 +1,110 @@
+{
+	"_hinweis": [
+		"Biome der Spielwelt. Die Reihenfolge der Regeln entscheidet: das erste Biom, dessen 'conditions' zutreffen, wird gewählt.",
+		"Bedingungen: height_min/height_max, moisture_min/moisture_max, heat_min/heat_max, volcanic_min/volcanic_max (Werte 0.0–1.0, als Flächenanteil zu lesen).",
+		"'sprites': Pfade zu Kachelgrafiken (64x64 PNG). Fehlt eine Datei, wird automatisch eine Platzhaltergrafik in 'color' mit Muster 'pattern' erzeugt.",
+		"movement_cost: Bewegungskosten (1.0 = normal). defense_bonus: Verteidigungsbonus im Kampf (0.25 = +25 %). Beides wird ab Phase 3 genutzt.",
+		"buildable: Ob hier Gebäude errichtet werden dürfen (ab Phase 2)."
+	],
+
+	"default_biome": "plains",
+
+	"biomes": [
+		{
+			"id": "volcanic",
+			"name": "Vulkangebiet",
+			"color": "#5a2d24",
+			"pattern": "lava",
+			"movement_cost": 2.0,
+			"defense_bonus": 0.0,
+			"buildable": false,
+			"conditions": { "volcanic_min": 0.93, "height_min": 0.35 },
+			"sprites": [
+				"res://assets/sprites/terrain/terrain_volcanic_1.png",
+				"res://assets/sprites/terrain/terrain_volcanic_2.png",
+				"res://assets/sprites/terrain/terrain_volcanic_3.png",
+				"res://assets/sprites/terrain/terrain_volcanic_4.png"
+			]
+		},
+		{
+			"id": "mountains",
+			"name": "Berge",
+			"color": "#8b8682",
+			"pattern": "peaks",
+			"movement_cost": 3.0,
+			"defense_bonus": 0.3,
+			"buildable": false,
+			"conditions": { "height_min": 0.84 },
+			"sprites": [
+				"res://assets/sprites/terrain/terrain_mountains_1.png",
+				"res://assets/sprites/terrain/terrain_mountains_2.png",
+				"res://assets/sprites/terrain/terrain_mountains_3.png",
+				"res://assets/sprites/terrain/terrain_mountains_4.png"
+			]
+		},
+		{
+			"id": "swamp",
+			"name": "Sumpf",
+			"color": "#4e7068",
+			"pattern": "reeds",
+			"movement_cost": 2.5,
+			"defense_bonus": -0.1,
+			"buildable": false,
+			"conditions": { "moisture_min": 0.8, "height_max": 0.5 },
+			"sprites": [
+				"res://assets/sprites/terrain/terrain_swamp_1.png",
+				"res://assets/sprites/terrain/terrain_swamp_2.png",
+				"res://assets/sprites/terrain/terrain_swamp_3.png",
+				"res://assets/sprites/terrain/terrain_swamp_4.png"
+			]
+		},
+		{
+			"id": "desert",
+			"name": "Wüste",
+			"color": "#d9c27e",
+			"pattern": "dunes",
+			"movement_cost": 1.5,
+			"defense_bonus": -0.05,
+			"buildable": true,
+			"conditions": { "heat_min": 0.7, "moisture_max": 0.42 },
+			"sprites": [
+				"res://assets/sprites/terrain/terrain_desert_1.png",
+				"res://assets/sprites/terrain/terrain_desert_2.png",
+				"res://assets/sprites/terrain/terrain_desert_3.png",
+				"res://assets/sprites/terrain/terrain_desert_4.png"
+			]
+		},
+		{
+			"id": "forest",
+			"name": "Wald",
+			"color": "#2f6b34",
+			"pattern": "trees",
+			"movement_cost": 1.6,
+			"defense_bonus": 0.2,
+			"buildable": true,
+			"conditions": { "moisture_min": 0.56 },
+			"sprites": [
+				"res://assets/sprites/terrain/terrain_forest_1.png",
+				"res://assets/sprites/terrain/terrain_forest_2.png",
+				"res://assets/sprites/terrain/terrain_forest_3.png",
+				"res://assets/sprites/terrain/terrain_forest_4.png"
+			]
+		},
+		{
+			"id": "plains",
+			"name": "Ebene",
+			"color": "#86b257",
+			"pattern": "grass",
+			"movement_cost": 1.0,
+			"defense_bonus": 0.0,
+			"buildable": true,
+			"conditions": {},
+			"sprites": [
+				"res://assets/sprites/terrain/terrain_plains_1.png",
+				"res://assets/sprites/terrain/terrain_plains_2.png",
+				"res://assets/sprites/terrain/terrain_plains_3.png",
+				"res://assets/sprites/terrain/terrain_plains_4.png"
+			]
+		}
+	]
+}

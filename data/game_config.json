@@ -1,0 +1,37 @@
+{
+	"_hinweis": "Allgemeine Spielkonfiguration. Alle Werte können ohne Code-Änderung angepasst werden.",
+
+	"map": {
+		"_hinweis": "tile_size = Pixel pro Kachel (passend zu den Terrain-Grafiken). chunk_size = Kacheln pro Chunk-Seite (Kartenteile, die nur bei Bedarf gezeichnet werden).",
+		"tile_size": 64,
+		"chunk_size": 32,
+		"tile_variants": 4,
+		"default_size": "large",
+		"sizes": [
+			{ "id": "small",  "name": "Klein (256 × 256)",   "tiles": 256 },
+			{ "id": "medium", "name": "Mittel (512 × 512)",  "tiles": 512 },
+			{ "id": "large",  "name": "Gross (1024 × 1024)", "tiles": 1024 }
+		]
+	},
+
+	"camera": {
+		"_hinweis": "zoom_max = maximale Vergrösserung. terrain_detail_min_zoom = unterhalb dieses Zooms wird nur die Übersichtskarte gezeichnet (spart Leistung).",
+		"zoom_max": 2.0,
+		"zoom_start": 0.8,
+		"zoom_step": 1.15,
+		"zoom_smoothing": 14.0,
+		"pan_speed": 1100.0,
+		"edge_scroll_margin": 8,
+		"terrain_detail_min_zoom": 0.2,
+		"max_chunk_builds_per_frame": 3
+	},
+
+	"time": {
+		"_hinweis": "seconds_per_day = echte Sekunden pro Spieltag bei Tempo 1x. sim_ticks_per_second = Simulationsschritte pro Spielsekunde (Wirtschaft, KI usw.).",
+		"seconds_per_day": 600,
+		"start_hour": 8,
+		"sim_ticks_per_second": 10,
+		"speed_steps": [0.5, 1.0, 2.0, 3.0],
+		"default_speed_index": 1
+	}
+}

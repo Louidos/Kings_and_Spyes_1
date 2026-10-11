@@ -1,0 +1,12 @@
+{
+	"_hinweis": "Schwierigkeitsgrade. Die Multiplikatoren sind vorläufig und werden ab Phase 7 (Gegner-KI) genutzt und in Phase 10 ausbalanciert.",
+
+	"default": "normal",
+
+	"difficulties": [
+		{ "id": "easy",   "name": "Leicht", "enemy_income_mult": 0.7, "enemy_strength_mult": 0.8, "ai_think_interval": 8.0 },
+		{ "id": "normal", "name": "Normal", "enemy_income_mult": 1.0, "enemy_strength_mult": 1.0, "ai_think_interval": 5.0 },
+		{ "id": "hard",   "name": "Schwer", "enemy_income_mult": 1.3, "enemy_strength_mult": 1.15, "ai_think_interval": 3.0 },
+		{ "id": "epic",   "name": "Episch", "enemy_income_mult": 1.7, "enemy_strength_mult": 1.3, "ai_think_interval": 2.0 }
+	]
+}

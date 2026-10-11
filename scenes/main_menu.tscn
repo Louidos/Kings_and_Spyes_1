@@ -1,0 +1,247 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="1_menu"]
+
+[node name="MainMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_menu")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.07, 0.06, 0.1, 1)
+
+[node name="BackgroundImage" type="TextureRect" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 6
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="Center"]
+layout_mode = 2
+
+[node name="VBox" type="VBoxContainer" parent="Center/Panel"]
+custom_minimum_size = Vector2(600, 0)
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Title" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.84, 0.48, 1)
+theme_override_colors/font_outline_color = Color(0.2, 0.1, 0.02, 1)
+theme_override_constants/outline_size = 10
+theme_override_font_sizes/font_size = 56
+text = "KÖNIGREICHE"
+horizontal_alignment = 1
+
+[node name="Subtitle" type="Label" parent="Center/Panel/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.78, 0.74, 0.68, 1)
+theme_override_font_sizes/font_size = 16
+text = "Echtzeit-Strategie und Aufbau  ·  Arbeitstitel"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="Center/Panel/VBox"]
+layout_mode = 2
+
+[node name="MainButtons" type="VBoxContainer" parent="Center/Panel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="NewGameButton" type="Button" parent="Center/Panel/VBox/MainButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Neues Spiel"
+
+[node name="LoadButton" type="Button" parent="Center/Panel/VBox/MainButtons"]
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+tooltip_text = "Speichern und Laden kommt in Phase 10"
+theme_override_font_sizes/font_size = 22
+disabled = true
+text = "Laden (Phase 10)"
+
+[node name="SettingsButton" type="Button" parent="Center/Panel/VBox/MainButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Einstellungen"
+
+[node name="QuitButton" type="Button" parent="Center/Panel/VBox/MainButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 46)
+layout_mode = 2
+theme_override_font_sizes/font_size = 22
+text = "Beenden"
+
+[node name="NewGamePanel" type="VBoxContainer" parent="Center/Panel/VBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Center/Panel/VBox/NewGamePanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Neues Spiel"
+
+[node name="FactionLabel" type="Label" parent="Center/Panel/VBox/NewGamePanel"]
+layout_mode = 2
+text = "Wähle deine Fraktion – du bist der König:"
+
+[node name="FactionButtons" type="HBoxContainer" parent="Center/Panel/VBox/NewGamePanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="FactionDescription" type="Label" parent="Center/Panel/VBox/NewGamePanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 72)
+layout_mode = 2
+theme_override_colors/font_color = Color(0.82, 0.79, 0.72, 1)
+theme_override_font_sizes/font_size = 15
+text = "Beschreibung"
+autowrap_mode = 3
+
+[node name="Grid" type="GridContainer" parent="Center/Panel/VBox/NewGamePanel"]
+layout_mode = 2
+theme_override_constants/h_separation = 16
+theme_override_constants/v_separation = 10
+columns = 2
+
+[node name="DifficultyLabel" type="Label" parent="Center/Panel/VBox/NewGamePanel/Grid"]
+layout_mode = 2
+text = "Schwierigkeit"
+
+[node name="DifficultyOption" type="OptionButton" parent="Center/Panel/VBox/NewGamePanel/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MapSizeLabel" type="Label" parent="Center/Panel/VBox/NewGamePanel/Grid"]
+layout_mode = 2
+text = "Kartengrösse"
+
+[node name="MapSizeOption" type="OptionButton" parent="Center/Panel/VBox/NewGamePanel/Grid"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SeedLabel" type="Label" parent="Center/Panel/VBox/NewGamePanel/Grid"]
+layout_mode = 2
+text = "Seed"
+
+[node name="SeedBox" type="HBoxContainer" parent="Center/Panel/VBox/NewGamePanel/Grid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="SeedEdit" type="LineEdit" parent="Center/Panel/VBox/NewGamePanel/Grid/SeedBox"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+tooltip_text = "Gleicher Seed = gleiche Welt. Zahl oder beliebiges Wort."
+placeholder_text = "Zahl oder Wort"
+
+[node name="RandomSeedButton" type="Button" parent="Center/Panel/VBox/NewGamePanel/Grid/SeedBox"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Zufall"
+
+[node name="Buttons" type="HBoxContainer" parent="Center/Panel/VBox/NewGamePanel"]
+layout_mode = 2
+theme_override_constants/separation = 10
+alignment = 2
+
+[node name="BackButton" type="Button" parent="Center/Panel/VBox/NewGamePanel/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(140, 44)
+layout_mode = 2
+text = "Zurück"
+
+[node name="StartButton" type="Button" parent="Center/Panel/VBox/NewGamePanel/Buttons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 44)
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Spiel starten"
+
+[node name="SettingsPanel" type="VBoxContainer" parent="Center/Panel/VBox"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="Title" type="Label" parent="Center/Panel/VBox/SettingsPanel"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 26
+text = "Einstellungen"
+
+[node name="EdgeScrollCheck" type="CheckBox" parent="Center/Panel/VBox/SettingsPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Kamera am Bildschirmrand verschieben"
+
+[node name="SpeedRow" type="HBoxContainer" parent="Center/Panel/VBox/SettingsPanel"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="Label" type="Label" parent="Center/Panel/VBox/SettingsPanel/SpeedRow"]
+layout_mode = 2
+text = "Kamera-Tempo"
+
+[node name="CameraSpeedSlider" type="HSlider" parent="Center/Panel/VBox/SettingsPanel/SpeedRow"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+min_value = 0.5
+max_value = 2.0
+step = 0.1
+value = 1.0
+
+[node name="FullscreenCheck" type="CheckBox" parent="Center/Panel/VBox/SettingsPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Vollbild"
+
+[node name="SettingsBackButton" type="Button" parent="Center/Panel/VBox/SettingsPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "Speichern und zurück"
+
+[node name="VersionLabel" type="Label" parent="Center/Panel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.55, 0.52, 0.5, 1)
+theme_override_font_sizes/font_size = 13
+text = "Version"
+horizontal_alignment = 2

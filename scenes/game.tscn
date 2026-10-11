@@ -1,0 +1,23 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
+[ext_resource type="Script" path="res://scripts/world/world_map.gd" id="2_worldmap"]
+[ext_resource type="Script" path="res://scripts/camera/rts_camera.gd" id="3_camera"]
+[ext_resource type="PackedScene" path="res://scenes/ui/hud.tscn" id="4_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/pause_menu.tscn" id="5_pause"]
+[ext_resource type="PackedScene" path="res://scenes/ui/loading_screen.tscn" id="6_loading"]
+
+[node name="Game" type="Node2D"]
+script = ExtResource("1_game")
+
+[node name="WorldMap" type="Node2D" parent="."]
+script = ExtResource("2_worldmap")
+
+[node name="Camera" type="Camera2D" parent="."]
+script = ExtResource("3_camera")
+
+[node name="HUD" parent="." instance=ExtResource("4_hud")]
+
+[node name="PauseMenu" parent="." instance=ExtResource("5_pause")]
+
+[node name="LoadingScreen" parent="." instance=ExtResource("6_loading")]

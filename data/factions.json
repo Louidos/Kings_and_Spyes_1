@@ -1,0 +1,39 @@
+{
+	"_hinweis": "Fraktionen und Völker. Werte für Stärken/Schwächen der Völker (Gelände, Tag/Nacht usw.) folgen in späteren Phasen.",
+
+	"factions": [
+		{ "id": "good",    "name": "GUT",     "color": "#5aa0e6", "playable": true,
+		  "description": "Die Reiche des Lichts. Deine Späher sind tapfere Menschen." },
+		{ "id": "evil",    "name": "BÖSE",    "color": "#c0392b", "playable": true,
+		  "description": "Die Reiche der Finsternis. Deine Späher sind kleine Monster." },
+		{ "id": "neutral", "name": "NEUTRAL", "color": "#c9b458", "playable": false,
+		  "description": "Freie Völker, die sich jeder Seite anschliessen können." }
+	],
+
+	"peoples": [
+		{ "id": "humans",          "name": "Menschen",           "faction": "good" },
+		{ "id": "high_elves",      "name": "Hochelfen",          "faction": "good" },
+		{ "id": "druids",          "name": "Druiden",            "faction": "good" },
+		{ "id": "light_wardens",   "name": "Lichtwächter",       "faction": "good" },
+		{ "id": "griffin_riders",  "name": "Greifenreiter",      "faction": "good" },
+		{ "id": "star_mages",      "name": "Sternenmagier",      "faction": "good" },
+
+		{ "id": "dwarves",         "name": "Zwerge",             "faction": "neutral" },
+		{ "id": "halflings",       "name": "Halblinge",          "faction": "neutral" },
+		{ "id": "wood_elves",      "name": "Waldelfen",          "faction": "neutral" },
+		{ "id": "lizardfolk",      "name": "Echsenvolk",         "faction": "neutral" },
+		{ "id": "nomads",          "name": "Nomaden",            "faction": "neutral" },
+		{ "id": "giants",          "name": "Riesen",             "faction": "neutral" },
+		{ "id": "water_spirits",   "name": "Wassergeister",      "faction": "neutral" },
+		{ "id": "kobold_traders",  "name": "Koboldhändler",      "faction": "neutral" },
+
+		{ "id": "blood_elves",     "name": "Blutelfen",          "faction": "evil" },
+		{ "id": "orcs",            "name": "Orks",               "faction": "evil" },
+		{ "id": "night_riders",    "name": "Nachtreiter",        "faction": "evil" },
+		{ "id": "warlocks",        "name": "Hexenmeister",       "faction": "evil" },
+		{ "id": "undead",          "name": "Untote",             "faction": "evil" },
+		{ "id": "demon_summoners", "name": "Dämonenbeschwörer",  "faction": "evil" },
+		{ "id": "shadow_cult",     "name": "Schattenkult",       "faction": "evil" },
+		{ "id": "trolls",          "name": "Trolle",             "faction": "evil" }
+	]
+}

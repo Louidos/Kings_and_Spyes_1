@@ -1,0 +1,57 @@
+{
+	"_hinweis": "Parameter der prozeduralen Weltgenerierung. Jede Ebene ist ein Rauschfeld. Nach dem Erzeugen wird jede Ebene 'ausgeglichen': ein Wert von 0.8 bedeutet dann 'höher als 80 % der Karte'. So lassen sich die Biom-Regeln in biomes.json direkt als Flächenanteile lesen.",
+
+	"layers": {
+		"height": {
+			"_hinweis": "Höhe: bestimmt Berge und Senken.",
+			"seed_offset": 101,
+			"frequency": 0.006,
+			"octaves": 5,
+			"lacunarity": 2.0,
+			"gain": 0.5,
+			"domain_warp": 40.0
+		},
+		"moisture": {
+			"_hinweis": "Feuchtigkeit: Wald, Sumpf, Wüste.",
+			"seed_offset": 202,
+			"frequency": 0.005,
+			"octaves": 4,
+			"lacunarity": 2.0,
+			"gain": 0.5,
+			"domain_warp": 30.0
+		},
+		"heat": {
+			"_hinweis": "Hitze: Wüste.",
+			"seed_offset": 303,
+			"frequency": 0.0035,
+			"octaves": 3,
+			"lacunarity": 2.0,
+			"gain": 0.5,
+			"domain_warp": 0.0
+		},
+		"volcanic": {
+			"_hinweis": "Vulkanaktivität: wenige, grosse Vulkangebiete.",
+			"seed_offset": 404,
+			"frequency": 0.004,
+			"octaves": 3,
+			"lacunarity": 2.0,
+			"gain": 0.45,
+			"domain_warp": 20.0
+		}
+	},
+
+	"border": {
+		"_hinweis": "Am Kartenrand steigt das Gelände zu einem Grenzgebirge an (kein Meer). width = Breite der Anstiegszone in Kacheln (0 = aus). solid = Anteil davon, der immer Gebirge ist.",
+		"width": 14,
+		"solid": 0.4
+	},
+
+	"start": {
+		"_hinweis": "Suche nach einem Startplatz für den Spieler: Abstand vom Rand (Anteil der Kartengrösse), Mindestanteil bebaubarer Kacheln im Umkreis und bevorzugte Biome für die Mitte.",
+		"edge_margin": 0.12,
+		"center_biomes": ["plains"],
+		"check_radius": 6,
+		"min_buildable_ratio": 0.85,
+		"attempts": 400
+	}
+}
