@@ -55,6 +55,21 @@ var formation: String = "block"
 var unlocks: Dictionary = {}
 ## Statistik für den Spielende-Bildschirm: Name -> Zahl
 var stats: Dictionary = {}
+# --- Forschung und Magie (Phase 4) ---
+## Abgeschlossene Forschungen: ID -> true
+var researched: Dictionary = {}
+## Forschungs-Warteschlange (IDs, die erste wird gerade erforscht)
+var research_queue: Array = []
+## Fortschritt der aktiven Forschung in Sekunden
+var research_progress: float = 0.0
+## Zauber -> Spielzeit, ab der er wieder bereit ist
+var spell_cooldowns: Dictionary = {}
+## Zusätzliches Mana-Maximum (Forschung, Kampfpunkte)
+var mana_cap_bonus: float = 0.0
+## Mana pro Sekunde an der Burg (Forschung, Kampfpunkte)
+var mana_regen: float = 0.0
+## Stufe der Mana-Verbesserungen (ID -> Stufe)
+var mana_upgrades: Dictionary = {}
 ## Hat dieses Reich eine Wirtschaft (Nahrung, Wachstum)? Monster nicht.
 var has_economy: bool = true
 ## Herrscht Hungersnot?
@@ -147,7 +162,10 @@ func get_amount(res_id: String) -> float:
 ## Lagergrenze einer Ressource ("cap" in resources.json, sonst unbegrenzt)
 func get_capacity(res_id: String) -> float:
 	var cap: Variant = DataDB.get_resource(res_id).get("cap", null)
-	return INF if cap == null else float(cap) * mod("cap." + res_id)
+	if cap == null:
+		return INF
+	var bonus := mana_cap_bonus if res_id == "mana" else 0.0
+	return float(cap) * mod("cap." + res_id) + bonus
 
 
 ## Fügt eine Menge hinzu (negativ = Verbrauch). Bestand bleibt zwischen 0 und Lagergrenze.

@@ -183,7 +183,7 @@ func has_free_slot() -> bool:
 
 
 func get_display_name() -> String:
-	return str(def.get("name", "Gebäude"))
+	return DataDB.get_building_name(def, kingdom.faction_id if kingdom != null else "")
 
 
 func is_alive() -> bool:

@@ -43,6 +43,14 @@ var units: Array = []
 var unit_by_id: Dictionary = {}
 ## Kampfregeln (combat.json)
 var combat: Dictionary = {}
+## Forschung (research.json): Zweige und Forschungen
+var research_branches: Array = []
+var research: Array = []
+var research_by_id: Dictionary = {}
+## Zauber (spells.json) und Magie-Einstellungen/Mana-Verbesserungen
+var spells: Array = []
+var spell_by_id: Dictionary = {}
+var magic: Dictionary = {}
 
 
 func _ready() -> void:
@@ -68,6 +76,8 @@ func reload() -> void:
 	economy = _load_json("economy.json")
 	_load_units()
 	combat = _load_json("combat.json")
+	_load_research()
+	_load_spells()
 
 
 ## Liest einen Wert aus game_config.json über einen Punkt-Pfad, z. B. "camera.zoom_max".
@@ -164,6 +174,49 @@ func get_unit_sprite(def: Dictionary, faction_id: String) -> String:
 ## Liest einen Wert aus combat.json über einen Punkt-Pfad, z. B. "camps.size".
 func cmb(path: String, default_value: Variant = null) -> Variant:
 	var node: Variant = combat
+	for key in path.split("."):
+		if node is Dictionary and node.has(key):
+			node = node[key]
+		else:
+			return default_value
+	return node
+
+
+## Name eines Gebäudes für eine Fraktion (z. B. "Bibliothek" / "Dunkles Archiv")
+func get_building_name(def: Dictionary, faction_id: String) -> String:
+	var names: Dictionary = def.get("names", {})
+	return str(names.get(faction_id, def.get("name", "Gebäude")))
+
+
+func get_research(id: String) -> Dictionary:
+	return research_by_id.get(id, {})
+
+
+## Forschungen einer Fraktion (dazu alle mit faction "any"), in Datei-Reihenfolge
+func get_research_for_faction(faction_id: String) -> Array:
+	var list: Array = []
+	for r in research:
+		if r["faction"] == faction_id or r["faction"] == "any":
+			list.append(r)
+	return list
+
+
+func get_spell(id: String) -> Dictionary:
+	return spell_by_id.get(id, {})
+
+
+## Zauber einer Fraktion in Datei-Reihenfolge
+func get_spells_for_faction(faction_id: String) -> Array:
+	var list: Array = []
+	for sp in spells:
+		if sp["faction"] == faction_id or sp["faction"] == "any":
+			list.append(sp)
+	return list
+
+
+## Liest einen Wert aus spells.json (Einstellungen, Mana-Verbesserungen) über einen Punkt-Pfad.
+func mag(path: String, default_value: Variant = null) -> Variant:
+	var node: Variant = magic
 	for key in path.split("."):
 		if node is Dictionary and node.has(key):
 			node = node[key]
@@ -345,6 +398,40 @@ func _load_units() -> void:
 		u["cost"] = cost
 		u["projectile"] = str(u.get("projectile", ""))
 		unit_by_id[u["id"]] = u
+
+
+func _load_research() -> void:
+	var data := _load_json("research.json")
+	research_branches = data.get("branches", [])
+	research = data.get("research", [])
+	research_by_id.clear()
+	for r in research:
+		r["faction"] = str(r.get("faction", "any"))
+		r["branch"] = str(r.get("branch", ""))
+		r["tier"] = int(r.get("tier", 1))
+		r["time"] = maxf(float(r.get("time", 30.0)), 0.1)
+		var cost := {}
+		for k in r.get("cost", {}):
+			cost[k] = float(r["cost"][k])
+		r["cost"] = cost
+		var req: Array = r.get("requires", [])
+		r["requires"] = req
+		var effects: Array = r.get("effects", [])
+		r["effects"] = effects
+		research_by_id[r["id"]] = r
+
+
+func _load_spells() -> void:
+	magic = _load_json("spells.json")
+	spells = magic.get("spells", [])
+	spell_by_id.clear()
+	for sp in spells:
+		sp["faction"] = str(sp.get("faction", "any"))
+		sp["school"] = str(sp.get("school", ""))
+		sp["color"] = _parse_color(sp.get("color", "#ffffff"))
+		for key in ["mana_cost", "cooldown", "radius", "duration", "upkeep"]:
+			sp[key] = float(sp.get(key, 0.0))
+		spell_by_id[sp["id"]] = sp
 
 
 func _load_json(file_name: String) -> Dictionary:
