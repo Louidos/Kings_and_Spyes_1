@@ -161,11 +161,41 @@ Füsse im unteren Drittel). Fehlt eine Datei, zeichnet das Spiel einen farbigen 
 Lebensbalken, Auswahlringe, Rahmenauswahl, Befehlsmarkierungen, Sammelpunkt-Fahne, Treffer und
 Gefallene zeichnet das Spiel selbst.
 
-## 🕓 Phase 4 – Forschung und Magie
+## ✅ Phase 4 – Forschung und Magie
 
-Gebäude: `mana_tower_good.png` / `mana_tower_evil.png`, `library_good.png` / `sanctum_evil.png`
-Zauber-Icons (`assets/ui/icons/`, 32 × 32): je Zauber `spell_<name>.png`
-Effekte: `fx_heal.png`, `fx_summon.png`, `fx_stealth.png`, `fx_weather.png`
+GUT = helles Licht (Gold, Weiss), BÖSE = dunkles Violett, Flüche.
+
+**Gebäude** (`assets/sprites/buildings/`, 128 × 128, transparent):
+
+| Datei GUT | Datei BÖSE | Gebäude |
+|---|---|---|
+| `library_good.png` | `library_evil.png` | Bibliothek (heller Turm mit Büchern, Gold) / Dunkles Archiv (violett, Schriftrollen, Kerzen) |
+
+**Beschworene Einheiten** (`assets/sprites/units/`, 64 × 64, transparent):
+
+| Datei | Einheit | Aussehen |
+|---|---|---|
+| `light_guardian.png` | Lichtgeist (GUT) | leuchtende, halb durchsichtige Gestalt aus goldenem Licht, Schwert |
+| `shadow_servant.png` | Schattendiener (BÖSE) | dunkle, rauchige Gestalt mit violetten Augen, Klauen |
+
+**Zauber-Symbole** (`assets/ui/icons/`, 64 × 64, transparent – werden in der Zauberleiste auf ~56 px
+verkleinert). Fehlt eine Datei, zeichnet das Spiel ein Feld in der Zauberfarbe mit Buchstaben.
+
+| Datei | Zauber | Motiv |
+|---|---|---|
+| `spell_light_blessing.png` | Lichtsegen (GUT) | goldenes Schwert in einem Lichtkranz |
+| `spell_healing_light.png` | Heilendes Licht (GUT) | weiss-goldene Hand mit Lichtfunken |
+| `spell_light_veil.png` | Lichtschleier (GUT) | heller, durchscheinender Schleier |
+| `spell_blessed_rain.png` | Segensregen (GUT) | Wolke mit goldenen Regentropfen über einer Ähre |
+| `spell_call_guardians.png` | Ruf des Lichts (GUT) | Lichtsäule mit Gestalt |
+| `spell_curse_weakness.png` | Fluch der Schwäche (BÖSE) | gebrochenes Schwert in violettem Rauch |
+| `spell_dark_mending.png` | Dunkle Erneuerung (BÖSE) | violettes Herz mit dunklen Ranken |
+| `spell_shadow_cloak.png` | Schattenmantel (BÖSE) | Kapuzenumhang aus Schatten |
+| `spell_dark_fog.png` | Finsterer Nebel (BÖSE) | violette Nebelschwaden mit Augen |
+| `spell_shadow_brood.png` | Schattenbrut (BÖSE) | dunkles Portal mit Klauen |
+
+Zauberwirkungen (Lichtringe, Regen, Nebel, Auren, Beschwörungs-Licht), Forschungsfenster und
+Zauberleiste zeichnet das Spiel selbst.
 
 ## 🕓 Phase 5 – Helden
 

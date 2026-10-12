@@ -37,10 +37,12 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Armee speichern / wählen | Strg + 1…9 speichern, Umschalt + 1…9 hinzufügen, 1…9 auswählen, zweimal drücken = Kamera hin |
 | Formation Block / Linie | F oder Button im Auswahlfenster |
 | Sammelpunkt | Burg/Kaserne/Krankenstation auswählen → Rechtsklick in die Welt |
-| Einheiten beschwören | Burg (Späher), Kaserne (Kämpfer, Schützen, Elite), Krankenstation (Heiler) auswählen → Buttons |
+| Einheiten beschwören | Burg (Späher), Kaserne (Kämpfer, Schützen, Elite – nach Forschung), Krankenstation (Heiler) auswählen → Buttons |
+| Forschung | R oder Button „Forschung (R)“ oben: Forschungsbaum und Reiter „Kampfpunkte“ (Esc oder R schliesst) |
+| Zaubern | Zauber in der Zauberleiste (unten rechts) anklicken → Kreis an die Stelle führen → Linksklick; Umschalttaste = gleich nochmal; Rechtsklick/Esc bricht ab |
 | Arbeitsverteilung ein/aus | J |
-| Spielmenü | Esc (wenn nichts gebaut/ausgewählt wird) |
-| Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu (zum Testen) |
+| Spielmenü | Esc (wenn kein Fenster offen ist und nichts gebaut/ausgewählt wird) |
+| Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu, F11 setzt 3 Wölfe an die Maus (zum Testen) |
 
 Alle Tasten lassen sich im Editor unter *Projekt → Projekteinstellungen → Eingabe-Zuordnung* ändern.
 
@@ -102,7 +104,16 @@ assets/
   `CombatSystem` (Zielsuche, Schaden, Heilung, Tod; Schaden immer über `apply_damage`),
   `CommandSystem` (Befehle mit Bedeutungstabelle `COMMANDS`, Formationen, Gruppenmarsch hinter einem
   Anführer, Armeen 1–9 je Reich), `SummonSystem` (Beschwörung mit Warteschlange und Sammelpunkt),
-  `MonsterSystem` (Monsterlager; Lager ohne fremde Einheiten in der Nähe ruhen und kosten nichts).
+  `MonsterSystem` (Monsterlager; Lager ohne fremde Einheiten in der Nähe ruhen und kosten nichts),
+  `ResearchSystem` (Forschung mit Warteschlange je Reich, Kampfpunkt-Verbesserungen),
+  `MagicSystem` (Zauber des Königs: Wirkungen, Wettergebiete, Tarnung, Beschwörung).
+- **Quellen**: Was ein Reich verändert, wird mit seiner Quelle gespeichert (`"research:<id>"`,
+  `"upgrade:<id>"`, `"spell:<id>"`, ab Phase 6 z. B. Bündnisse): Freischaltungen (`grant_unlock`),
+  Faktoren (`set_modifiers`), Zuschläge (`set_bonus`, z. B. Mana-Maximum) und laufende Kosten
+  (`set_upkeep`, zieht das `EconomySystem` ab). Eine Quelle kann so alles wieder entziehen, ohne
+  andere zu stören; beim Laden baut `ResearchSystem.restore` alles aus dem Forschungsstand neu auf.
+- **Zauberwirkungen** auf Einheiten laufen nur über `MagicSystem.add_unit_effect` (mit Ablaufzeit);
+  `Unit.refresh_stats()` rechnet daraus die Werte und die Tarnung ab.
 - **Einheiten**: Bewohner, Truppen, König und Monster sind alle `Unit`. Ihre Werte kommen aus
   `units.json` und werden mit Modifikatoren des Reichs (Forschung, Schwierigkeit) und Wirkungen
   (Zauber, Helden) in `Unit.refresh_stats()` berechnet. Wer arbeitet (Befehl leer), wird nur vom
@@ -135,6 +146,9 @@ Alle Dateien in `data/` enthalten `_hinweis`-Felder mit Erklärungen. Beispiele:
 - Billigere Truppen: `units.json` → `cost` und `summon_time`.
 - Weniger oder mehr Monsterlager: `combat.json` → `camps.per_1000_tiles`, Übungslager `camps.near_start`.
 - Stärkerer Heimvorteil: `combat.json` → `territory_bonus`.
+- Schnellere Forschung: `research.json` → `time` (Sekunden), Kosten unter `cost`.
+- Billigere Zauber: `spells.json` → `mana_cost`, `cooldown`; Reichweite ausserhalb des Gebiets: `settings.cast_range_outside`.
+- Mehr Mana-Maximum: `resources.json` → *mana* → `cap`; Kampfpunkt-Verbesserungen: `spells.json` → `upgrades`.
 
 ## Phase 2 testen
 
@@ -164,7 +178,7 @@ Alle Dateien in `data/` enthalten `_hinweis`-Felder mit Erklärungen. Beispiele:
    erscheint er vor der Burg. Mehrfach klicken = Warteschlange (max. 5); Klick auf ein Symbol in der
    Warteschlange bricht ab (Kosten zurück).
 3. **Kaserne** bauen (braucht Mana: Manabrunnen + Manawirker). Fertig auswählen → Schwertkämpfer,
-   Bogenschützen, Ritter beschwören. Mit Rechtsklick in die Welt einen **Sammelpunkt** setzen.
+   Bogenschützen beschwören; Ritter erst nach der Forschung *Ritterorden* (ab Phase 4, siehe unten). Mit Rechtsklick in die Welt einen **Sammelpunkt** setzen.
 4. Truppen mit gedrückter linker Maustaste **einrahmen** (Bewohner werden dabei nicht mitgenommen).
    **Rechtsklick** ins Gelände: sie marschieren in Formation (F wechselt Block/Linie).
 5. **Strg+1** speichert die Auswahl als Armee 1 (Leiste über dem Auswahlfenster), **1** wählt sie,
@@ -173,12 +187,50 @@ Alle Dateien in `data/` enthalten `_hinweis`-Felder mit Erklärungen. Beispiele:
    schiessen Pfeile, Treffer blitzen auf, Gefallene verblassen. Eine zerstörte Höhle gibt Beute und
    **Kampfpunkte** (Tooltip bei „Truppen“ oben). Bewohner sammeln nicht in der Nähe von Höhlen.
 7. Verletzte erholen sich nach 5 Sekunden ohne Kampf; **Krankenstation** (heilt in der Nähe) und
-   **Heiler** heilen schneller.
+   **Heiler** heilen schneller. Die Krankenstation gibt es ab Phase 4 erst nach der Forschung
+   *Heilkunde* (Bibliothek bauen, R drücken, Magie Stufe 1).
 8. Wird ein Bewohner angegriffen, flieht er zur Burg und arbeitet danach weiter. Ein Späher, der als
    Holzfäller arbeitet, wehrt sich und arbeitet danach weiter. Beschworene Einheiten brauchen zum
    Arbeiten Wohnraum.
 9. Spielende testen: F3 (Debug) und dann mehrmals F10 → der König verliert Leben, flieht verletzt in
    die Burg; stirbt er, erscheint „Der König ist gefallen“ mit „Neu starten (gleiche Karte)“.
+
+## Phase 4 testen
+
+Tipp: Mit F3 (Debug) gibt F9 Ressourcen und F11 setzt 3 Wölfe an die Maus – so lassen sich Flüche,
+Nebel, Tarnung und Heilung auch im eigenen Gebiet ausprobieren. Monster folgen bis 12 Felder von
+ihrer Höhle; man kann sie also auch an die Grenze locken.
+
+1. Neues Spiel. **Bibliothek** bauen (GUT; BÖSE: *Dunkles Archiv*, 40 Holz, 80 Stein, 10 Mana).
+   **R** oder der Button „Forschung (R)“ oben öffnet den Forschungsbaum: vier Zweige (Militär, Magie,
+   Wirtschaft, Mana), Stufen 1–4. Ohne Bibliothek steht im Fenster, was zu bauen ist.
+2. **Heilkunde** (Magie, Stufe 1) anklicken: die Kosten werden bezahlt, oben laufen Fortschritt und
+   Restzeit, der Button zeigt „Forschung (R) · 45 %“. Bis zu 3 Forschungen einreihen; Klick auf eine
+   laufende oder eingereihte bricht sie ab (zweiter Klick bestätigt, volle Erstattung). Ist die
+   Bibliothek untätig, zeigt der Button „Forschung ruht“. Eine zweite Bibliothek forscht 25 % schneller.
+3. Nach *Heilkunde*: die **Krankenstation** ist baubar (vorher grau, Tooltip „Benötigt Forschung:
+   Heilkunde“) und der Zauber *Heilendes Licht* ist in der Zauberleiste frei. Nach *Ritterorden*
+   (Militär 2): Ritter in der Kaserne. Wirkungen wie „+10 % Angriff“ zeigt der Tooltip der Werte im
+   Auswahlfenster („Angriff 12 → 13,2 (Waffenschmiede +10 %)“).
+4. **Mana**: Maximum 100 („M 80/100“ oben; voll = gelb, Überschuss geht verloren). **Kampfpunkte**
+   (KP oben) gibt es für besiegte Monster und zerstörte Höhlen. Im Forschungsfenster, Reiter
+   „Kampfpunkte“: *Manakristall* (+40 Maximum je Stufe) und *Manaherz* (die Burg erzeugt Mana).
+5. **Zaubern** (nur der König; stirbt er, ist das Spiel verloren): Zauber in der Leiste anklicken –
+   gesperrte zeigen, welche Forschung fehlt. Der Kreis folgt der Maus; erlaubt ist das eigene Gebiet
+   und 16 Felder darum (leicht eingefärbt). Neben der Maus steht, wie viele Einheiten getroffen werden.
+   Linksklick zaubert (Mana und Abklingzeit), Rechtsklick/Esc bricht ab. Ein Kreis, der niemanden
+   trifft, wird abgelehnt – es geht kein Mana verloren.
+6. **GUT** (Licht, gold/weiss): *Lichtsegen* auf eigene Truppen (+25 % Angriff, mehr Rüstung; im
+   Auswahlfenster „Lichtsegen · 24 s“), *Heilendes Licht*, *Lichtschleier* (Truppen werden durchsichtig,
+   Monster lassen von ihnen ab, sie greifen selbst nicht an – erst ein Angriffsbefehl oder
+   Angriff-Vorrücken hebt die Tarnung auf; kostet 0,5 Mana/s), *Segensregen* über Höfen und
+   Holzfällern (+50 % Nahrung und Holz), *Ruf des Lichts* (3 Lichtgeister für 60 Sekunden).
+7. **BÖSE** (dunkel violett, Flüche): *Fluch der Schwäche* auf Monster (schwächer, schlechter
+   geschützt), *Dunkle Erneuerung*, *Schattenmantel*, *Finsterer Nebel* (Feinde werden langsam und
+   verlieren Ziele, die mehr als 2 Felder entfernt sind – damit entkommt man), *Schattenbrut*.
+8. Forschung *Manafokus* (Mana 2) senkt alle Zauberkosten um 20 %, *Zauberfluss* (Mana 3) die
+   Abklingzeiten um 25 %, *Weitreichende Magie* / *Lange Schatten* (Magie 2) erweitert die Reichweite
+   um 8 Felder. Die Werte im Tooltip der Zauberleiste ändern sich entsprechend.
 
 ## Grafiken austauschen
 
@@ -191,7 +243,7 @@ beim nächsten Start automatisch verwendet – ohne Code-Änderung.
 - [x] Phase 1 – Projekt-Setup, Kamera, prozedurale Karte mit Biomen, Spieltempo und Pause
 - [x] Phase 2 – Dorf: Gebäude, Ressourcen, Bewohner, Arbeitsverteilung
 - [x] Phase 3 – Einheiten: Beschwören, Auswahl, Bewegung, Kampf, Armeen
-- [ ] Phase 4 – Forschung, Mana und Magie
+- [x] Phase 4 – Forschung, Mana und Magie
 - [ ] Phase 5 – Helden
 - [ ] Phase 6 – Neutrale Dörfer, Diplomatie, Handel, Ruf, Boten
 - [ ] Phase 7 – Gegnerische Königreiche mit KI, Entdeckung, Spionage
