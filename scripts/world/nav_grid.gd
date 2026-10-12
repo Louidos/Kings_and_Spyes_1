@@ -16,6 +16,9 @@ extends RefCounted
 ## Grösste "Tasche" (von Gebäuden eingeschlossene freie Fläche), die vor einer
 ## Wegsuche erkannt wird. Grössere Flächen gelten als offen.
 const POCKET_LIMIT := 300
+## Suchradius für "Gebäude in der Nähe?": Eine Tasche bis POCKET_LIMIT Kacheln
+## passt immer in ein Quadrat mit diesem Radius ((2r+1)² > POCKET_LIMIT).
+const POCKET_RADIUS := 9
 
 var astar := AStarGrid2D.new()
 var region := Rect2i()
@@ -167,7 +170,7 @@ func _pocket(cell: Vector2i) -> Dictionary:
 
 
 func _find_pocket(cell: Vector2i) -> Dictionary:
-	if not _solid_near(cell, 3):
+	if not _solid_near(cell, POCKET_RADIUS):
 		return {}
 	var seen := {cell: true}
 	var queue: Array[Vector2i] = [cell]
@@ -189,6 +192,7 @@ func _solid_near(cell: Vector2i, r: int) -> bool:
 	for dy in range(-r, r + 1):
 		for dx in range(-r, r + 1):
 			var c := cell + Vector2i(dx, dy)
-			if region.has_point(c) and astar.is_point_solid(c):
+			# Kartenrand zählt wie eine Wand
+			if not region.has_point(c) or astar.is_point_solid(c):
 				return true
 	return false
