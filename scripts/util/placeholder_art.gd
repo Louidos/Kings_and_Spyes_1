@@ -150,6 +150,35 @@ static func _pattern_lava(img: Image, _base: Color, rng: RandomNumberGenerator, 
 
 
 # ---------------------------------------------------------------------------
+# Einheiten
+# ---------------------------------------------------------------------------
+
+## Platzhalter-Spielfigur: farbige Scheibe ("circle") oder Raute ("diamond",
+## Monster) mit dunklem Rand, Glanzlicht und Schatten. Wird einmal je Farbe
+## erzeugt und dann für alle Einheiten wiederverwendet (ein Zeichenaufruf).
+static func make_unit_token(color: Color, shape: String, size: int = 48) -> Image:
+	var s := size * _SS
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c := Vector2(s, s) * 0.5
+	var r := s * 0.44
+	var border := color.darkened(0.5)
+	var light := color.lightened(0.25)
+	if shape == "diamond":
+		var outer := PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)])
+		_polygon(img, _offset_poly(outer, Vector2(s * 0.02, s * 0.04)), Color(0, 0, 0, 0.3))
+		_polygon(img, outer, border)
+		_polygon(img, _scale_poly(outer, c, 0.86), color)
+		_polygon(img, _offset_poly(_scale_poly(outer, c, 0.4), Vector2(-r * 0.18, -r * 0.18)), light)
+	else:
+		_circle(img, c + Vector2(s * 0.02, s * 0.04), r, Color(0, 0, 0, 0.3))
+		_circle(img, c, r, border)
+		_circle(img, c, r * 0.88, color)
+		_ellipse(img, c + Vector2(-r * 0.25, -r * 0.3), Vector2(r * 0.38, r * 0.26), color.lerp(light, 0.55))
+	return _downsample(img, size, _SS)
+
+
+# ---------------------------------------------------------------------------
 # Zeichen-Helfer (direkt auf Image)
 # ---------------------------------------------------------------------------
 

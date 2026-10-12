@@ -269,6 +269,8 @@ func _load_buildings() -> void:
 		b["player_buildable"] = bool(b.get("player_buildable", true))
 		b["is_road"] = bool(b.get("is_road", false))
 		b["hp"] = float(b.get("hp", 300.0))
+		b["armor"] = float(b.get("armor", 0.0))
+		b["sight"] = float(b.get("sight", 5.0))
 		if not b.has("summons"):
 			b["summons"] = []
 		if not b.has("dropoff"):
@@ -319,6 +321,22 @@ func _load_units() -> void:
 			u[key] = float(u.get(key, 0.0))
 		u["hp"] = maxf(u["hp"], 1.0)
 		u["attack_interval"] = maxf(u["attack_interval"], 0.1)
+		u["sight"] = float(u.get("sight", 6.0))
+		u["building_damage"] = float(u.get("building_damage", 1.0))
+		u["people"] = str(u.get("people", ""))
+		var req: Array = u.get("requires", [])
+		u["requires"] = req
+		# Verhalten: aus der Rolle abgeleitet, wenn nicht ausdrücklich angegeben
+		var role: String = u["role"]
+		u["flee_on_hit"] = bool(u.get("flee_on_hit", role == "worker"))
+		u["joins_fights"] = bool(u.get("joins_fights", role in ["combat", "king", "monster"]))
+		u["target_priority"] = float(u.get("target_priority", 1.6 if role == "worker" else 1.0))
+		var rank := 0
+		if role == "worker" or role == "support":
+			rank = 2
+		elif u["range"] >= 2.0:
+			rank = 1
+		u["formation_rank"] = int(u.get("formation_rank", rank))
 		if u.has("color"):
 			u["color"] = _parse_color(u["color"])
 		var cost := {}

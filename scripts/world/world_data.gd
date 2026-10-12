@@ -68,8 +68,10 @@ var deposit_version := 0
 var regrowing: Dictionary = {}
 ## Übersichtsbild wurde verändert und muss neu hochgeladen werden
 var overview_dirty := false
-## Monsterlager aus der Generierung: Array von {"cell": Vector2i, "biome": String}
-var camps: Array = []
+## Besondere Plätze aus der Generierung: Array von {"kind", "cell", "biome", …}.
+## kind: "start" (Startplatz), "camp" (Monsterlager; ab Phase 6/7 auch
+## "village", "ai_start"). Lager haben optional "kinds" und "size".
+var sites: Array = []
 ## Gefahrenzonen um Monsterhöhlen: Anzahl Höhlen, deren Umkreis die Kachel
 ## abdeckt (0 = sicher). Bewohner sammeln dort nicht.
 var danger := PackedByteArray()
@@ -286,6 +288,15 @@ func mark_danger(center: Vector2i, radius: int, delta: int) -> void:
 			danger[i] = clampi(danger[i] + delta, 0, 255)
 	# Sammler, die nichts gefunden haben, sollen neu suchen
 	deposit_version += 1
+
+
+## Alle Plätze einer Art
+func get_sites(kind: String) -> Array:
+	var list: Array = []
+	for site in sites:
+		if site.get("kind", "") == kind:
+			list.append(site)
+	return list
 
 
 func get_owner(cell: Vector2i) -> int:

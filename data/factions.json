@@ -1,5 +1,5 @@
 {
-	"_hinweis": "Fraktionen und Völker. Werte für Stärken/Schwächen der Völker (Gelände, Tag/Nacht usw.) folgen in späteren Phasen.",
+	"_hinweis": "Fraktionen und Völker. economy: false = keine Wirtschaft (Nahrung, Wachstum), z. B. Monster. Werte für Stärken/Schwächen der Völker (Gelände, Tag/Nacht usw.) folgen in späteren Phasen.",
 
 	"factions": [
 		{ "id": "good",    "name": "GUT",     "color": "#5aa0e6", "playable": true,
@@ -8,7 +8,7 @@
 		  "description": "Die Reiche der Finsternis. Deine Späher sind kleine Monster." },
 		{ "id": "neutral", "name": "NEUTRAL", "color": "#c9b458", "playable": false,
 		  "description": "Freie Völker, die sich jeder Seite anschliessen können." },
-		{ "id": "wild", "name": "Wilde Monster", "color": "#e07b22", "playable": false,
+		{ "id": "wild", "name": "Wilde Monster", "color": "#e07b22", "playable": false, "economy": false,
 		  "description": "Monster, die alle Reiche angreifen." }
 	],
 

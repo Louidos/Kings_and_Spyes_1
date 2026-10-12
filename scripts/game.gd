@@ -6,8 +6,19 @@
 ## Andere Systeme erreichen sich gegenseitig über diese Node (game.xyz).
 extends Node2D
 
+## Beziehung zweier Reiche geändert ("war", "peace", "alliance")
+signal relation_changed(a: Kingdom, b: Kingdom, state: String)
+## Ein Reich hat verloren (reason z. B. "king")
+signal kingdom_defeated(kingdom: Kingdom, reason: String)
+## Die Formation des Spielers wurde gewechselt
+signal formation_changed(formation: String)
+
 @onready var world_map: WorldMap = $WorldMap
 @onready var entities: Node2D = $Entities
+## Einheiten (eigene y-sortierte Ebene in Entities, damit sie beim Herauszoomen
+## gemeinsam ausgeblendet werden können)
+@onready var unit_layer: Node2D = $Entities/Units
+@onready var unit_overlay: UnitOverlay = $UnitOverlay
 @onready var placement: PlacementController = $Placement
 @onready var camera: RTSCamera = $Camera
 @onready var building_system: BuildingSystem = $Systems/BuildingSystem
@@ -36,6 +47,8 @@ var territory := TerritorySystem.new()
 var nav: NavGrid
 ## Zähler für eindeutige Nummern von Gebäuden und Einheiten (wird gespeichert)
 var uid_counter := 0
+## uid -> Unit oder Building (für Verweise in Spielständen und Armeen)
+var entity_by_uid: Dictionary = {}
 var _gen_thread: Thread
 ## Im Hauptthread angelegt, damit das Laden abgebrochen werden kann
 var _generator: WorldGenerator
@@ -96,10 +109,12 @@ func _start_game() -> void:
 	summon_system.setup(self)
 	placement.setup(self)
 	selection.setup(self)
-	combat_system.king_died.connect(_on_king_died)
+	unit_overlay.setup(self)
+	kingdom_defeated.connect(_on_kingdom_defeated)
 
 	player = create_kingdom({"faction_id": GameSession.faction_id, "controller": "player"})
 	found_settlement(player, world.start_cell)
+	# Wilde Monster: ein eigenes Reich, mit allen im Krieg
 	wild = create_kingdom({"faction_id": "wild", "controller": "wild", "display_name": "Wilde Monster"})
 	monster_system.setup(self, wild)
 	monster_system.spawn_camps()
@@ -124,6 +139,20 @@ func next_uid() -> int:
 	return uid_counter
 
 
+func register_entity(e: Object) -> void:
+	entity_by_uid[e.uid] = e
+
+
+func unregister_entity(e: Object) -> void:
+	entity_by_uid.erase(e.uid)
+
+
+## Einheit oder Gebäude mit dieser Nummer (null, wenn es sie nicht mehr gibt)
+func find_by_uid(uid: int) -> Variant:
+	var e: Variant = entity_by_uid.get(uid, null)
+	return e if is_instance_valid(e) else null
+
+
 ## Legt ein Reich an. setup: faction_id, controller ("player"/"ai"/"neutral"/"wild"),
 ## optional id, color, display_name.
 func create_kingdom(setup: Dictionary) -> Kingdom:
@@ -136,6 +165,10 @@ func create_kingdom(setup: Dictionary) -> Kingdom:
 		k.display_name = setup["display_name"]
 	kingdoms.append(k)
 	kingdom_by_id[id] = k
+	# Monster sind mit allen verfeindet
+	for other in kingdoms:
+		if other != k and (other.controller == "wild" or k.controller == "wild"):
+			set_relation(k, other, "war")
 	return k
 
 
@@ -143,12 +176,46 @@ func get_kingdom(id: int) -> Kingdom:
 	return kingdom_by_id.get(id, null)
 
 
-## Sind zwei Reiche verfeindet? Monster sind mit allen verfeindet; ab Phase 6/7
-## kommen Diplomatie und gegnerische Reiche dazu.
+## Setzt die Beziehung zweier Reiche (gilt in beide Richtungen):
+## "war" (Krieg), "peace" (Frieden) oder "alliance" (Bündnis).
+func set_relation(a: Kingdom, b: Kingdom, state: String) -> void:
+	if a == null or b == null or a == b:
+		return
+	a.relations[b.id] = state
+	b.relations[a.id] = state
+	relation_changed.emit(a, b, state)
+
+
+## Sind zwei Reiche im Krieg?
 func are_hostile(a: Kingdom, b: Kingdom) -> bool:
 	if a == null or b == null or a == b:
 		return false
-	return a.controller == "wild" or b.controller == "wild"
+	return a.relations.get(b.id, "peace") == "war"
+
+
+## Gleiches Reich oder verbündet? (Heilen, Hilfe rufen)
+func are_allied(a: Kingdom, b: Kingdom) -> bool:
+	if a == null or b == null:
+		return false
+	return a == b or a.relations.get(b.id, "peace") == "alliance"
+
+
+## Kann das Reich observer dieses Objekt (Unit/Building) sehen? In Phase 3 ist
+## alles sichtbar, ausser getarnten Einheiten fremder Reiche (Phase 7: Spione).
+func can_see(observer: Kingdom, obj: Object) -> bool:
+	if obj == null or not is_instance_valid(obj):
+		return false
+	if obj.get("stealthed") == true and not are_allied(observer, obj.kingdom):
+		return false
+	return true
+
+
+## Ein Reich hat verloren. Für den Spieler: Spielende-Bildschirm.
+func defeat_kingdom(k: Kingdom, reason: String, _by: Kingdom = null) -> void:
+	if k == null or k.defeated:
+		return
+	k.defeated = true
+	kingdom_defeated.emit(k, reason)
 
 
 ## Gründet eine Siedlung: Startressourcen, Burg, König, Startbewohner und ihre Berufe.
@@ -180,8 +247,8 @@ func found_settlement(kingdom: Kingdom, center_cell: Vector2i) -> void:
 			kingdom.king = king
 
 
-## Stirbt der König des Spielers, ist das Spiel verloren.
-func _on_king_died(kingdom: Kingdom) -> void:
+## Verliert der Spieler (sein König stirbt), ist das Spiel vorbei.
+func _on_kingdom_defeated(kingdom: Kingdom, reason: String) -> void:
 	if not kingdom.is_player or _game_over != null:
 		return
 	GameClock.set_paused(true)
@@ -190,9 +257,10 @@ func _on_king_died(kingdom: Kingdom) -> void:
 	camera.input_enabled = false
 	_game_over = GameOverScreen.new()
 	add_child(_game_over)
-	_game_over.open("Der König ist gefallen",
-			"Dein Reich hat seinen Herrscher verloren. Das Spiel ist vorbei.\n%s · Siegpunkte: %d" % [
-			GameClock.get_time_string(), kingdom.kill_points])
+	var title := "Der König ist gefallen" if reason == "king" else "Dein Reich ist untergegangen"
+	_game_over.open(title, "Das Spiel ist vorbei.\n\nGespielt: %s\nBeschworene Einheiten: %d\nBesiegte Feinde: %d\nKampfpunkte: %d" % [
+			GameClock.get_time_string(), int(kingdom.stats.get("summoned", 0)), int(kingdom.stats.get("kills", 0)),
+			kingdom.kill_points_total])
 
 
 func _on_territory_changed(kingdom_id: int, bbox: Rect2i, dirty: Rect2i) -> void:
@@ -220,12 +288,19 @@ func _unhandled_input(event: InputEvent) -> void:
 		for r in DataDB.resources:
 			player.add_resource(r["id"], 100.0)
 		Notify.info("Debug: +100 von jeder Ressource")
+	elif event.is_action_pressed("debug_damage_king") and hud.is_debug_visible():
+		# Zum Testen des Spielendes: der König erleidet 150 Schaden
+		if is_instance_valid(player.king):
+			combat_system.apply_damage(player.king, 150.0, null, null, "event")
+			Notify.warning("Debug: König −150 Leben", player.king.position)
 	elif event.is_action_pressed("game_pause"):
 		GameClock.toggle_pause()
-	elif event.is_action_pressed("game_speed_up"):
+	elif event.is_action_pressed("game_speed_up") or _is_char(event, "+"):
 		GameClock.faster()
-	elif event.is_action_pressed("game_speed_down"):
+	elif event.is_action_pressed("game_speed_down") or _is_char(event, "-"):
 		GameClock.slower()
+	elif event.is_action_pressed("toggle_formation"):
+		toggle_formation()
 	elif event.is_action_pressed("camera_home"):
 		camera.focus_on(player.castle.get_center() if is_instance_valid(player.castle) else world.cell_to_world(world.start_cell))
 	elif event.is_action_pressed("toggle_debug"):
@@ -233,6 +308,19 @@ func _unhandled_input(event: InputEvent) -> void:
 	else:
 		return
 	get_viewport().set_input_as_handled()
+
+
+## Formation des Spielers wechseln (Block <-> Linie); gilt für die nächsten Marschbefehle
+func toggle_formation() -> void:
+	player.formation = "line" if player.formation == "block" else "block"
+	formation_changed.emit(player.formation)
+	Notify.info("Formation: %s" % CommandSystem.get_formation_name(player.formation))
+
+
+## Taste mit diesem Zeichen gedrückt? (z. B. "+" liegt auf Schweizer Tastaturen auf Shift+1)
+func _is_char(event: InputEvent, ch: String) -> bool:
+	var key := event as InputEventKey
+	return key != null and key.pressed and not key.echo and key.unicode == ch.unicode_at(0)
 
 
 func _open_pause_menu() -> void:

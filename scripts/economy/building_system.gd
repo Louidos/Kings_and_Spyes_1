@@ -80,6 +80,7 @@ func place_building(def: Dictionary, cell: Vector2i, kingdom: Kingdom, instant: 
 				game.nav.set_solid(c, true)
 	kingdom.buildings.append(b)
 	game.entities.add_child(b)
+	game.register_entity(b)
 	b.finished.connect(_on_building_finished)
 	building_placed.emit(b)
 	if instant or float(def.get("build_time", 0.0)) <= 0.0:
@@ -229,6 +230,7 @@ func remove_building(b: Building, refund_factor: float = 0.0) -> void:
 	kingdom.buildings.erase(b)
 	if kingdom.castle == b:
 		kingdom.castle = null
+	game.unregister_entity(b)
 	building_removed.emit(b)
 	if b.constructed:
 		if int(b.def.get("territory_radius", 0)) > 0:

@@ -67,6 +67,8 @@ func generate(world_seed: int, size: int) -> WorldData:
 	_report(0.95, "Suche Startplatz …")
 	world.start_cell = _find_start_cell(world)
 	_prepare_start_area(world)
+	world.sites.append({"kind": "start", "cell": world.start_cell,
+			"biome": str(world.get_biome(world.start_cell).get("id", ""))})
 
 	# 8: Monsterlager (die Höhlen selbst setzt das MonsterSystem beim Spielstart)
 	_place_camps(world)
@@ -477,10 +479,11 @@ func _put_deposit(world: WorldData, c: Vector2i, d: Dictionary, rng: RandomNumbe
 # Monsterlager
 # ---------------------------------------------------------------------------
 
-## Wählt Plätze für Monsterhöhlen (2×2): weit genug vom Startplatz und
+## Wählt Plätze für Monsterhöhlen (2×2): weit genug von Siedlungsplätzen und
 ## voneinander entfernt, nicht im Grenzgebirge, ohne Rohstoffvorkommen.
-## Ergebnis in world.camps als {"cell": obere linke Kachel, "biome": Biom-ID},
-## Übungslager zusätzlich mit "kinds" (Monsterarten) und "size" (Anzahl).
+## Ergebnis in world.sites als {"kind": "camp", "cell": obere linke Kachel,
+## "biome": Biom-ID}; Übungslager zusätzlich mit "kinds" und "size".
+## Lager werden zuletzt gesetzt, damit sie Siedlungsplätze meiden können.
 func _place_camps(world: WorldData) -> void:
 	var cfg: Dictionary = DataDB.combat.get("camps", {})
 	var area := world.width * world.height
@@ -513,7 +516,7 @@ func _place_camps(world: WorldData) -> void:
 		var biome_id := str(world.get_biome(c).get("id", ""))
 		if not near_biomes.is_empty() and not near_biomes.has(biome_id):
 			continue
-		world.camps.append({"cell": c, "biome": biome_id, "kinds": near.get("monsters", []),
+		world.sites.append({"kind": "camp", "cell": c, "biome": biome_id, "kinds": near.get("monsters", []),
 				"size": int(near.get("size", 3))})
 		near_placed += 1
 
@@ -523,12 +526,12 @@ func _place_camps(world: WorldData) -> void:
 		if placed >= count:
 			break
 		var c := Vector2i(rng.randi_range(lo, hi_x), rng.randi_range(lo, hi_y))
-		if (Vector2(c) + Vector2.ONE).distance_to(start) < min_start:
+		if not _far_from_settlements(world, c, min_start):
 			continue
 		var biome_id := str(world.get_biome(c).get("id", ""))
 		if not by_biome.has(biome_id) or not _camp_spot_ok(world, c, min_between):
 			continue
-		world.camps.append({"cell": c, "biome": biome_id})
+		world.sites.append({"kind": "camp", "cell": c, "biome": biome_id})
 		placed += 1
 
 
@@ -539,8 +542,17 @@ func _camp_spot_ok(world: WorldData, c: Vector2i, min_between: float) -> bool:
 			if not _is_free_for_deposit(world, Vector2i(x, y)):
 				return false
 	var center := Vector2(c) + Vector2.ONE
-	for other in world.camps:
-		if center.distance_to(Vector2(other["cell"]) + Vector2.ONE) < min_between:
+	for other in world.sites:
+		if other["kind"] == "camp" and center.distance_to(Vector2(other["cell"]) + Vector2.ONE) < min_between:
+			return false
+	return true
+
+
+## Weit genug von allen Siedlungsplätzen (alles ausser Lagern)?
+func _far_from_settlements(world: WorldData, c: Vector2i, min_dist: float) -> bool:
+	var center := Vector2(c) + Vector2.ONE
+	for site in world.sites:
+		if site["kind"] != "camp" and center.distance_to(Vector2(site["cell"])) < min_dist:
 			return false
 	return true
 

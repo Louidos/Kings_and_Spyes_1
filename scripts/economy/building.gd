@@ -46,6 +46,9 @@ var summon_count := 0
 var hit_flash := 0.0
 ## Faktor auf die Beute (Monsterhöhlen: stärkere Lager geben mehr)
 var loot_factor := 1.0
+## Zusätzlicher Zustand einzelner Systeme, der gespeichert werden muss
+## (z. B. Monsterhöhle: {"kinds", "size", "respawn", "last_fight"})
+var extra: Dictionary = {}
 
 var _tile_size := 64
 var _world: WorldData

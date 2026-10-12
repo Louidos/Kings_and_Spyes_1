@@ -14,6 +14,8 @@ signal resources_changed
 ## Wird von den Systemen ausgelöst (Einheit neu/entfernt, Wohnraum geändert)
 @warning_ignore("unused_signal")
 signal population_changed
+## Ein Modifikator hat sich geändert (Einheiten berechnen ihre Werte neu)
+signal modifiers_changed
 
 ## Eindeutige Nummer (> 0). Wird auch im Gebietsraster gespeichert.
 var id: int = 0
@@ -36,17 +38,42 @@ var units: Array = []
 var castle: Building
 ## Der König (Einheit). Stirbt er, ist das Spiel für dieses Reich verloren.
 var king: Unit = null
-## Punkte für besiegte Feinde (ab Phase 4 für Mana-Verbesserungen)
+## Kampfpunkte für besiegte Feinde: ausgebbar (ab Phase 4 für Mana-Verbesserungen)
 var kill_points: int = 0
+## Alle je verdienten Kampfpunkte (Statistik)
+var kill_points_total: int = 0
+## Hat dieses Reich verloren (König tot, ab Phase 7 auch anders)?
+var defeated: bool = false
+## Beziehungen zu anderen Reichen: Kingdom.id -> "war" | "peace" | "alliance".
+## Nicht eingetragen = Frieden. Wird über Game.set_relation gesetzt.
+var relations: Dictionary = {}
+## Armeen (Steuergruppen): Nummer 1–9 -> Array von Einheiten-uids
+var armies: Dictionary = {}
+## Formation für Marschbefehle dieses Reichs ("block" oder "line")
+var formation: String = "block"
+## Freigeschaltete Dinge (Forschung ab Phase 4): ID -> true
+var unlocks: Dictionary = {}
+## Statistik für den Spielende-Bildschirm: Name -> Zahl
+var stats: Dictionary = {}
+## Hat dieses Reich eine Wirtschaft (Nahrung, Wachstum)? Monster nicht.
+var has_economy: bool = true
 ## Herrscht Hungersnot?
 var starving: bool = false
 ## Fortschritt bis zum nächsten Bewohner (Spielsekunden)
 var growth_timer := 0.0
 ## Merker für einmalige Meldungen u. Ä. (Name -> Wert)
 var flags: Dictionary = {}
-## Faktoren für Forschung, Schwierigkeit, Helden usw. (Schlüssel -> Faktor).
-## Beispiele: "gather", "gather.wood", "build", "speed", "food_use",
-## "growth", "production.food". Nicht gesetzt = 1.0.
+## Faktoren für Forschung, Schwierigkeit, Helden usw., nach Quelle getrennt:
+## Quelle -> {Schlüssel -> Faktor}. mod(key) liefert das Produkt aller Quellen.
+## Schlüssel (nicht gesetzt = 1.0):
+## Wirtschaft: "gather", "gather.<res>", "build", "food_use", "growth",
+##   "production", "production.<res>", "cap.<res>"
+## Einheiten: "hp", "attack", "attack_interval", "range", "armor", "aggro_range",
+##   "sight", "speed", "regen", "heal", "heal_range" – jeweils auch
+##   "<wert>.<stufe>" (z. B. "attack.archer"); dazu "defense" (erlittener
+##   Schaden wird geteilt), "summon" (Beschwörungstempo), "building_hp".
+var modifier_sources: Dictionary = {}
+## Produkt je Schlüssel (aus modifier_sources berechnet)
 var modifiers: Dictionary = {}
 
 ## Seit der letzten Messung eingenommene/verbrauchte Mengen
@@ -59,6 +86,7 @@ func setup(p_id: int, p_faction_id: String, p_controller: String = "player") -> 
 	controller = p_controller
 	var faction := DataDB.get_faction(faction_id)
 	color = faction.get("color", Color.WHITE)
+	has_economy = bool(faction.get("economy", true))
 	display_name = "Dein Königreich" if is_player else "Reich %d" % id
 	for r in DataDB.resources:
 		resources[r["id"]] = 0.0
@@ -69,6 +97,41 @@ func setup(p_id: int, p_faction_id: String, p_controller: String = "player") -> 
 ## Faktor für einen Modifikator-Schlüssel (1.0 wenn nicht gesetzt)
 func mod(key: String) -> float:
 	return float(modifiers.get(key, 1.0))
+
+
+## Setzt einen Faktor einer Quelle (z. B. "difficulty", "research:schmiede")
+func set_modifier(source: String, key: String, factor: float) -> void:
+	var entry: Dictionary = modifier_sources.get(source, {})
+	entry[key] = factor
+	modifier_sources[source] = entry
+	_recompute_modifiers()
+
+
+## Entfernt alle Faktoren einer Quelle
+func clear_modifiers(source: String) -> void:
+	if modifier_sources.erase(source):
+		_recompute_modifiers()
+
+
+func _recompute_modifiers() -> void:
+	modifiers.clear()
+	for source in modifier_sources:
+		var entry: Dictionary = modifier_sources[source]
+		for key in entry:
+			modifiers[key] = float(modifiers.get(key, 1.0)) * float(entry[key])
+	modifiers_changed.emit()
+
+
+## Beziehung zu einem anderen Reich ("war", "peace", "alliance"); eigenes Reich = "self"
+func get_relation(other: Kingdom) -> String:
+	if other == self:
+		return "self"
+	return str(relations.get(other.id, "peace"))
+
+
+## Zählt einen Statistikwert hoch
+func add_stat(key: String, amount: int = 1) -> void:
+	stats[key] = int(stats.get(key, 0)) + amount
 
 
 ## Meldung an den Spieler – nur wenn dieses Reich vom Spieler gesteuert wird.

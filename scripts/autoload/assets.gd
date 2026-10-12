@@ -26,5 +26,15 @@ func texture(path: String) -> Texture2D:
 	return tex
 
 
+## Platzhalter-Spielfigur in dieser Farbe und Form (einmal erzeugt, dann gemerkt)
+func unit_token(color: Color, shape: String) -> Texture2D:
+	var key := "token:%s:%s" % [color.to_html(), shape]
+	if _cache.has(key):
+		return _cache[key]
+	var tex := ImageTexture.create_from_image(PlaceholderArt.make_unit_token(color, shape))
+	_cache[key] = tex
+	return tex
+
+
 func clear_cache() -> void:
 	_cache.clear()

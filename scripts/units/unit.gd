@@ -1,14 +1,21 @@
 ## Unit
 ##
-## Eine Einheit auf der Karte: in Phase 2 der Bewohner, ab Phase 3 auch
-## Späher, Kämpfer usw. Jede Einheit kann laufen (UnitSystem) und – wenn ihr
-## Typ es erlaubt – einen Beruf ausüben (WorkSystem).
+## Eine Einheit auf der Karte: Bewohner, König, Späher, Kämpfer, Heiler oder
+## Monster. Jede Einheit kann laufen (UnitSystem), kämpfen (CombatSystem),
+## Befehle ausführen (CommandSystem) und – wenn ihr Typ es erlaubt – einen
+## Beruf ausüben (WorkSystem).
 ## Die Node hält nur Zustand und Darstellung; die Logik steckt in den Systemen.
+## Lebensbalken und Auswahlringe zeichnet das UnitOverlay für alle Einheiten
+## gemeinsam (spart Zeichenaufrufe).
 class_name Unit
 extends Node2D
 
 ## Arbeitszustand (vom WorkSystem gesetzt)
 enum State { IDLE, MOVING, GATHERING, BUILDING, WORKING, WAITING }
+
+## Buchstaben auf Platzhaltern zeichnen? (Die Kamera schaltet sie beim
+## Herauszoomen ab.)
+static var show_letters := true
 
 ## Eindeutige Nummer innerhalb der Partie (für Spielstände)
 var uid: int = 0
@@ -25,18 +32,30 @@ var moving := false
 ## Wartet auf eine Wegberechnung (Warteschlange im UnitSystem)
 var path_pending := false
 var path_target := Vector2.ZERO
+## Endziel langer Wege, die in Abschnitten berechnet werden (sonst leer)
+var path_final := Vector2.ZERO
+var has_path_final := false
+## Kacheln, die der aktuelle Weg berührt (für Neuplanung bei neuen Gebäuden)
+var path_bounds := Rect2i()
+## Höchsttempo beim Marsch in der Gruppe (Kacheln/s, 0 = keins)
+var speed_cap := 0.0
 
-## Befehl: "" (frei für Arbeit), "move", "attack_move", "attack", "hold" (steht
-## und verteidigt), "flee" (Arbeiter flieht zur Burg)
+# --- Befehle (CommandSystem, siehe CommandSystem.COMMANDS) ---
+## "" (frei: Arbeit bzw. Wache), "move", "attack_move", "attack", "hold",
+## "defend", "flee", "return"
 var command: String = ""
-## Zielpunkt des Befehls (Bewegung, Formationsplatz)
+## Zielpunkt des Befehls (Bewegung, Formationsplatz, Wachposten)
 var command_pos := Vector2.ZERO
+## Marsch in Formation: Anführer (Unit) und eigener Abstand zu ihm
+var follow_leader: Variant = null
+var follow_offset := Vector2.ZERO
 ## Gebäude, in dem sich die Einheit gerade aufhält (dann unsichtbar), sonst null
 var inside: Building = null
 
-# --- Kampf (CombatSystem) ---
-## Werte aus units.json, beim Erzeugen übernommen (schneller als Nachschlagen)
+# --- Kampfwerte (aus units.json, mit Modifikatoren; refresh_stats) ---
 var role := "worker"
+var tier := ""
+var max_hp := 1.0
 var attack := 0.0
 var attack_interval := 1.0
 ## Reichweite in Kacheln
@@ -44,12 +63,28 @@ var attack_range := 0.8
 var armor := 0.0
 ## Sichtweite für selbstständige Angriffe in Kacheln (0 = nie)
 var aggro_range := 0.0
+## Sichtweite in Kacheln (ab Phase 7: Entdeckung)
+var sight := 6.0
+## Tempo in Kacheln pro Sekunde (auf Gelände mit Kosten 1.0)
+var speed := 2.0
 var regen := 0.0
 var heal := 0.0
 var heal_range := 0.0
+## Faktor gegen Gebäude
+var building_damage := 1.0
+# Verhalten (units.json, sonst aus der Rolle abgeleitet)
+var flee_on_hit := false
+var joins_fights := false
+var target_priority := 1.0
+var formation_rank := 0
+## Zeitlich begrenzte oder dauerhafte Wirkungen (Zauber, Helden, Ereignisse):
+## Array von {"id", "key", "mult", "add", "until" (Spielzeit, -1 = dauerhaft), "source"}
+var effects: Array = []
+
+# --- Kampfzustand (CombatSystem) ---
 var hp := 1.0
-var max_hp := 1.0
-## Angriffsziel: Unit oder Building (oder null)
+## Angriffsziel: Unit oder Building (oder null). Kann bereits gelöscht sein –
+## immer zuerst mit is_instance_valid prüfen.
 var target: Object = null
 var attack_cooldown := 0.0
 ## Spielzeit des letzten erlittenen Schadens (für Erholung)
@@ -58,11 +93,14 @@ var last_damaged_at := -1000.0
 var think_timer := 0.0
 var repath_timer := 0.0
 var last_target_pos := Vector2.ZERO
-## Monster: Heimatpunkt (Höhle), zu dem sie zurückkehren
+## Monster: Heimat (Höhle) – uid und Punkt, zu dem sie zurückkehren
+var home_uid := 0
 var has_home := false
 var home_pos := Vector2.ZERO
-## Kurzes Aufblitzen nach einem Treffer (Echtzeit-Sekunden)
-var hit_flash := 0.0
+## Ruhendes Monster (niemand in der Nähe): der Kampftakt überspringt es
+var dormant := false
+## Getarnt: für fremde Reiche unsichtbar (ab Phase 7: Spione)
+var stealthed := false
 
 # --- Arbeit (WorkSystem) ---
 var job_id: String = "idle":
@@ -85,7 +123,7 @@ var target_building: Building = null
 var target_road := Vector2i(-1, -1)
 var dropoff: Building
 var work_building: Building
-## Zeitgeber in Spielsekunden (Sammeln, Warten ...)
+## Zeitgeber in Spielsekunden (Sammeln, Warten, Umherstreifen ...)
 var timer := 0.0
 ## Teilmengen beim Sammeln (bis eine ganze Einheit erreicht ist)
 var work_acc := 0.0
@@ -96,12 +134,13 @@ var problem: String = ""
 ## Stand der Vorkommen/Gebäude bei der letzten erfolglosen Suche (-1 = keine)
 var failed_search_version := -1
 
-var selected := false:
-	set(value):
-		selected = value
-		queue_redraw()
+## Ausgewählt (der Ring wird vom UnitOverlay gezeichnet)
+var selected := false
+## Kurzes Aufblitzen nach einem Treffer (Echtzeit-Sekunden)
+var hit_flash := 0.0
 
 var _texture: Texture2D
+var _token: Texture2D
 var _radius := 13.0
 
 
@@ -110,21 +149,69 @@ func setup(p_type_def: Dictionary, p_kingdom: Kingdom, p_uid: int) -> void:
 	type_def = p_type_def
 	type_id = str(type_def.get("id", ""))
 	kingdom = p_kingdom
-	_radius = float(type_def.get("radius", 13.0))
-	_texture = Assets.texture(DataDB.get_unit_sprite(type_def, kingdom.faction_id))
 	role = str(type_def.get("role", "worker"))
-	attack = float(type_def.get("attack", 0.0))
-	attack_interval = maxf(float(type_def.get("attack_interval", 1.0)), 0.1)
-	attack_range = float(type_def.get("range", 0.8))
-	armor = float(type_def.get("armor", 0.0))
-	aggro_range = float(type_def.get("aggro_range", 0.0))
-	regen = float(type_def.get("regen", 0.0))
-	heal = float(type_def.get("heal", 0.0))
-	heal_range = float(type_def.get("heal_range", 0.0))
-	max_hp = float(type_def.get("hp", 1.0)) * kingdom.mod("hp")
+	tier = str(type_def.get("tier", ""))
+	_radius = float(type_def.get("radius", 13.0))
+	flee_on_hit = bool(type_def.get("flee_on_hit", false))
+	joins_fights = bool(type_def.get("joins_fights", false))
+	target_priority = float(type_def.get("target_priority", 1.0))
+	formation_rank = int(type_def.get("formation_rank", 0))
+	_texture = Assets.texture(DataDB.get_unit_sprite(type_def, kingdom.faction_id))
+	if _texture == null:
+		var color: Color = type_def.get("color", kingdom.color)
+		_token = Assets.unit_token(color, "diamond" if role == "monster" else "circle")
+	refresh_stats()
 	hp = max_hp
 	set_process(false)
 	queue_redraw()
+
+
+## Berechnet alle Werte neu: Grundwert aus units.json × Modifikatoren des
+## Reichs (Schlüssel und Schlüssel.Stufe) × Wirkungen. Der Anteil der
+## Lebenspunkte bleibt erhalten.
+func refresh_stats() -> void:
+	var ratio := 1.0 if max_hp <= 0.0 else hp / max_hp
+	max_hp = maxf(_stat("hp"), 1.0)
+	attack = _stat("attack")
+	attack_interval = maxf(_stat("attack_interval"), 0.1)
+	attack_range = _stat("range")
+	armor = _stat("armor")
+	aggro_range = _stat("aggro_range")
+	sight = _stat("sight")
+	speed = maxf(_stat("speed"), 0.1)
+	regen = _stat("regen")
+	heal = _stat("heal")
+	heal_range = _stat("heal_range")
+	building_damage = _stat("building_damage")
+	hp = clampf(ratio, 0.0, 1.0) * max_hp
+
+
+func _stat(key: String) -> float:
+	var value := float(type_def.get(key, 0.0))
+	var add := 0.0
+	var mult := 1.0
+	for e in effects:
+		if e.get("key", "") == key:
+			add += float(e.get("add", 0.0))
+			mult *= float(e.get("mult", 1.0))
+	if kingdom != null:
+		mult *= kingdom.mod(key) * kingdom.mod(key + "." + tier)
+	return (value + add) * mult
+
+
+## Wirkung hinzufügen (ersetzt eine gleichnamige) und Werte neu berechnen
+func add_effect(effect: Dictionary) -> void:
+	remove_effect(str(effect.get("id", "")), false)
+	effects.append(effect)
+	refresh_stats()
+
+
+func remove_effect(effect_id: String, refresh: bool = true) -> void:
+	for i in range(effects.size() - 1, -1, -1):
+		if str(effects[i].get("id", "")) == effect_id:
+			effects.remove_at(i)
+	if refresh:
+		refresh_stats()
 
 
 func can_work() -> bool:
@@ -155,18 +242,7 @@ func get_radius() -> float:
 
 
 func get_command_text() -> String:
-	match command:
-		"move":
-			return "marschiert"
-		"attack_move":
-			return "marschiert kampfbereit"
-		"attack":
-			return "greift an"
-		"hold":
-			return "hält die Stellung"
-		"flee":
-			return "flieht zur Burg"
-	return ""
+	return CommandSystem.get_command_text(command)
 
 
 func get_display_name() -> String:
@@ -182,8 +258,8 @@ func get_job_name() -> String:
 func get_status_text() -> String:
 	if not command.is_empty() or not can_work():
 		var t := get_command_text()
-		if is_instance_valid(target) and target != null:
-			t = "kämpft gegen %s" % target.get_display_name()
+		if is_instance_valid(target) and target != null and target.has_method("get_display_name"):
+			t = ("heilt %s" if can_heal() else "kämpft gegen %s") % target.get_display_name()
 		return t if not t.is_empty() else "bereit"
 	var text := get_job_name()
 	if not activity.is_empty():
@@ -195,54 +271,47 @@ func get_status_text() -> String:
 	return text
 
 
+## Kurz aufblitzen lassen (nach einem Treffer). Färbt nur ein, ohne neu zu zeichnen.
+func flash() -> void:
+	hit_flash = 0.15
+	self_modulate = Color(1.8, 1.5, 1.5)
+	set_process(true)
+
+
+func _process(delta: float) -> void:
+	# Trefferblitz abklingen lassen (reine Darstellung, Echtzeit)
+	hit_flash -= delta
+	if hit_flash <= 0.0:
+		hit_flash = 0.0
+		self_modulate = Color.WHITE
+		set_process(false)
+
+
 func _draw() -> void:
 	var r := _radius
-	var rect := Rect2(Vector2(-r, -r), Vector2(r, r) * 2.0)
 	if _texture != null:
 		# Grafik etwas grösser als der Platzhalter, Füsse auf der Position
 		var tex_size := r * 3.0
-		rect = Rect2(Vector2(-tex_size * 0.5, -tex_size * 0.75), Vector2(tex_size, tex_size))
-	if selected:
-		draw_arc(Vector2(0, r * 0.35), r + 5.0, 0.0, TAU, 28, Color(1, 1, 0.6, 0.95), 2.5, true)
-	# Buchstabe: Bewohner zeigen ihren Beruf, alle anderen ihren Typ
-	var letter := str(type_def.get("letter", ""))
-	if letter.is_empty():
-		letter = str(DataDB.get_job(job_id).get("letter", ""))
-	var color: Color = type_def.get("color", kingdom.color if kingdom else Color.WHITE)
-	var tint := Color(1.6, 1.6, 1.6) if hit_flash > 0.0 else Color.WHITE
-	SpriteDraw.draw_entity(self, _texture, rect, color, letter, "circle", tint)
-	if get_role() == "king" and _texture == null:
-		# Krone über dem König
-		var crown := PackedVector2Array([Vector2(-r * 0.6, -r * 1.05), Vector2(-r * 0.6, -r * 1.45),
-				Vector2(-r * 0.3, -r * 1.2), Vector2(0, -r * 1.55), Vector2(r * 0.3, -r * 1.2),
-				Vector2(r * 0.6, -r * 1.45), Vector2(r * 0.6, -r * 1.05)])
-		draw_colored_polygon(crown, Color(1.0, 0.82, 0.25))
-		draw_polyline(crown + PackedVector2Array([crown[0]]), Color(0.35, 0.22, 0.05), 1.5)
+		draw_texture_rect(_texture, Rect2(Vector2(-tex_size * 0.5, -tex_size * 0.75), Vector2(tex_size, tex_size)), false)
+	else:
+		# Platzhalter: einmal erzeugte Grafik (Kreis bzw. Raute für Monster)
+		var size := r * 2.0 + 4.0
+		draw_texture_rect(_token, Rect2(Vector2(-size * 0.5, -size * 0.5 + 1.0), Vector2(size, size)), false)
+		if show_letters:
+			# Buchstabe: Bewohner zeigen ihren Beruf, alle anderen ihren Typ
+			var letter := str(type_def.get("letter", ""))
+			if letter.is_empty():
+				letter = str(DataDB.get_job(job_id).get("letter", ""))
+			if not letter.is_empty():
+				SpriteDraw.draw_label(self, letter, Vector2.ZERO, clampi(int(r * 1.1), 10, 22))
+		if role == "king":
+			# Krone über dem König
+			var crown := PackedVector2Array([Vector2(-r * 0.6, -r * 1.05), Vector2(-r * 0.6, -r * 1.45),
+					Vector2(-r * 0.3, -r * 1.2), Vector2(0, -r * 1.55), Vector2(r * 0.3, -r * 1.2),
+					Vector2(r * 0.6, -r * 1.45), Vector2(r * 0.6, -r * 1.05)])
+			draw_colored_polygon(crown, Color(1.0, 0.82, 0.25))
 	if carry_amount >= 1.0 and not carry_res.is_empty():
 		var c: Color = DataDB.get_resource(carry_res).get("color", Color.WHITE)
 		var box := Rect2(Vector2(r * 0.35, -r * 1.05), Vector2(r * 0.8, r * 0.8))
 		draw_rect(box, c, true)
 		draw_rect(box, Color(0, 0, 0, 0.7), false, 1.5)
-	# Lebensbalken, wenn verletzt oder ausgewählt
-	if hp < max_hp or selected:
-		var w := maxf(r * 2.2, 26.0)
-		var bar := Rect2(Vector2(-w * 0.5, r + 4.0), Vector2(w, 5.0))
-		var ratio := clampf(hp / max_hp, 0.0, 1.0)
-		var bar_color := Color(0.3, 0.9, 0.3) if ratio > 0.5 else (Color(0.95, 0.8, 0.2) if ratio > 0.25 else Color(0.95, 0.25, 0.2))
-		SpriteDraw.draw_bar(self, bar, ratio, bar_color)
-
-
-## Kurz aufblitzen lassen (nach einem Treffer)
-func flash() -> void:
-	hit_flash = 0.15
-	set_process(true)
-	queue_redraw()
-
-
-func _process(delta: float) -> void:
-	# Trefferblitz abklingen lassen (reine Darstellung, Echtzeit)
-	if hit_flash > 0.0:
-		hit_flash -= delta
-		if hit_flash <= 0.0:
-			set_process(false)
-			queue_redraw()

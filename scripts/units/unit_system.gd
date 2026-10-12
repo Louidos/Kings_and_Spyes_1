@@ -20,6 +20,11 @@ signal path_failed(unit: Unit)
 ## Höchstens so viele Wegberechnungen bzw. so viel Zeit (µs) pro Frame
 const MAX_PATHS_PER_FRAME := 8
 const PATH_BUDGET_USEC := 2000
+## Lange Wege werden in Abschnitten dieser Länge (Kacheln) berechnet, damit
+## keine einzelne Berechnung das Spiel ruckeln lässt.
+const LEG_TILES := 48.0
+## So nah am Abschnittsende wird schon der nächste Abschnitt angefordert
+const LEG_EARLY_TILES := 6.0
 
 var game: Node
 var world: WorldData
@@ -43,8 +48,10 @@ func spawn_unit(kingdom: Kingdom, type_id: String, pos: Vector2) -> Unit:
 	var u := Unit.new()
 	u.setup(def, kingdom, game.next_uid())
 	u.position = pos
-	game.entities.add_child(u)
+	game.unit_layer.add_child(u)
 	units.append(u)
+	game.register_entity(u)
+	kingdom.modifiers_changed.connect(u.refresh_stats)
 	kingdom.units.append(u)
 	kingdom.population_changed.emit()
 	unit_spawned.emit(u)
@@ -57,21 +64,53 @@ func remove_unit(u: Unit) -> void:
 		return
 	units.erase(u)
 	u.kingdom.units.erase(u)
+	if u.kingdom.modifiers_changed.is_connected(u.refresh_stats):
+		u.kingdom.modifiers_changed.disconnect(u.refresh_stats)
+	game.unregister_entity(u)
 	u.kingdom.population_changed.emit()
 	unit_removed.emit(u)
 	u.queue_free()
 
 
 ## Schickt eine Einheit zu einer Weltposition. Der Weg wird in der
-## Warteschlange berechnet; bis dahin steht die Einheit.
-func move_to(u: Unit, target: Vector2) -> void:
-	u.path = PackedVector2Array()
-	u.path_index = 0
-	u.moving = false
+## Warteschlange berechnet; bis dahin steht die Einheit – ausser mit
+## keep_path: dann läuft sie auf dem alten Weg weiter, bis der neue fertig ist.
+## Weite Ziele werden in Abschnitten angesteuert (siehe LEG_TILES).
+func move_to(u: Unit, target: Vector2, keep_path: bool = false) -> void:
+	var leg := target
+	u.has_path_final = false
+	if u.position.distance_to(target) > LEG_TILES * world.tile_size:
+		u.has_path_final = true
+		u.path_final = target
+		leg = _leg_point(u.position, target)
+	_request(u, leg, keep_path)
+
+
+func _request(u: Unit, target: Vector2, keep_path: bool) -> void:
+	if not keep_path or not u.moving:
+		u.path = PackedVector2Array()
+		u.path_index = 0
+		u.moving = false
 	u.path_target = target
 	if not u.path_pending:
 		u.path_pending = true
 		_path_queue.append(u)
+
+
+## Zwischenziel LEG_TILES Kacheln in Richtung to (nächste freie Kachel)
+func _leg_point(from: Vector2, to: Vector2) -> Vector2:
+	var p := from + (to - from).normalized() * LEG_TILES * world.tile_size
+	return world.cell_to_world(game.nav.nearest_free(world.world_to_cell(p), 6))
+
+
+## Nächster Abschnitt eines langen Weges (vom Ende des aktuellen aus)
+func _request_next_leg(u: Unit) -> void:
+	var from: Vector2 = u.path[u.path.size() - 1] if not u.path.is_empty() else u.position
+	if from.distance_to(u.path_final) <= LEG_TILES * world.tile_size:
+		u.has_path_final = false
+		_request(u, u.path_final, true)
+	else:
+		_request(u, _leg_point(from, u.path_final), true)
 
 
 ## Kurze Strecke ohne Wegsuche: läuft geradeaus, wenn unterwegs nichts
@@ -86,6 +125,8 @@ func move_direct(u: Unit, target: Vector2, max_tiles: float = 4.0) -> void:
 	u.path_index = 0
 	u.path_target = target
 	u.path_pending = false
+	u.has_path_final = false
+	u.path_bounds = Rect2i(world.world_to_cell(u.position), Vector2i.ZERO).expand(world.world_to_cell(target))
 	u.moving = dist > 0.5
 
 
@@ -104,6 +145,7 @@ func stop(u: Unit) -> void:
 	u.path_index = 0
 	u.moving = false
 	u.path_pending = false
+	u.has_path_final = false
 
 
 ## Einheit eines Reichs (oder beliebigen, wenn kingdom null) nahe einer Position.
@@ -140,11 +182,17 @@ func _process(_delta: float) -> void:
 		return
 	var ts := float(world.tile_size)
 	var arrivals: Array = []
+	var leg_early := LEG_EARLY_TILES * ts
 	for u in units:
 		if not u.moving:
 			continue
+		# Langer Weg: nächsten Abschnitt rechtzeitig anfordern (ohne anzuhalten)
+		if u.has_path_final and not u.path_pending \
+				and u.position.distance_to(u.path[u.path.size() - 1]) < leg_early:
+			_request_next_leg(u)
 		# Wegbudget dieses Frames; kann über mehrere Wegpunkte reichen
-		var base_speed: float = u.type_def.get("speed", 2.0) * ts * u.kingdom.mod("speed")
+		var unit_speed: float = u.speed if u.speed_cap <= 0.0 else minf(u.speed, u.speed_cap)
+		var base_speed: float = unit_speed * ts
 		var budget := dt
 		while budget > 0.0 and u.path_index < u.path.size():
 			var cost := world.get_move_cost(world.world_to_cell(u.position))
@@ -161,6 +209,11 @@ func _process(_delta: float) -> void:
 				budget = 0.0
 		if u.path_index >= u.path.size():
 			u.moving = false
+			if u.has_path_final:
+				# Abschnittsende: weiter, sobald der nächste Abschnitt berechnet ist
+				if not u.path_pending:
+					_request_next_leg(u)
+				continue
 			arrivals.append(u)
 	# Erst nach der Schleife melden: Empfänger dürfen Einheiten verändern
 	for u in arrivals:
@@ -174,16 +227,18 @@ func _on_building_placed(b: Building) -> void:
 	if not b.blocks_movement():
 		return
 	var fp := b.get_footprint()
+	var near := fp.grow(1)
 	for u in units:
 		if u.inside != null:
 			continue
 		if fp.has_point(world.world_to_cell(u.position)):
 			u.position = b.get_approach_point(u.position)
-		if not u.moving:
+		# Nur Wege prüfen, deren Bereich das Gebäude überhaupt berührt
+		if not u.moving or not u.path_bounds.grow(1).intersects(near):
 			continue
 		for i in range(u.path_index, u.path.size()):
 			if fp.has_point(world.world_to_cell(u.path[i])):
-				move_to(u, u.path[u.path.size() - 1])
+				move_to(u, u.path_final if u.has_path_final else u.path[u.path.size() - 1])
 				break
 
 
@@ -200,8 +255,18 @@ func _process_path_queue() -> void:
 		done += 1
 		var p: PackedVector2Array = game.nav.find_path(world, u.position, u.path_target)
 		if p.is_empty():
+			u.has_path_final = false
+			u.moving = false
 			path_failed.emit(u)
 			continue
 		u.path = p
 		u.path_index = 0
 		u.moving = true
+		u.path_bounds = _bounds_of(p)
+
+
+func _bounds_of(p: PackedVector2Array) -> Rect2i:
+	var r := Rect2i(world.world_to_cell(p[0]), Vector2i.ZERO)
+	for pt in p:
+		r = r.expand(world.world_to_cell(pt))
+	return r

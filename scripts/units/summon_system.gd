@@ -24,12 +24,22 @@ func setup(p_game: Node) -> void:
 	game.building_system.building_removed.connect(_on_building_removed)
 
 
-## Einheitentypen (Dictionaries aus units.json), die dieses Gebäude beschwören kann
+## Einheitentypen (Dictionaries aus units.json), die dieses Gebäude beschwören
+## kann. Einträge in "summons" sind Stufen (z. B. "fighter", dann die Einheit
+## der eigenen Fraktion) oder Einheiten-IDs; dazu kommen Freischaltungen des
+## Reichs (kingdom.unlocks "summon:<gebäude>:<einheit>", ab Phase 4/6).
 func get_options(b: Building) -> Array:
 	var list: Array = []
-	for tier in b.def.get("summons", []):
-		var def := DataDB.get_unit_for_tier(b.kingdom.faction_id, str(tier))
-		if not def.is_empty():
+	var entries: Array = b.def.get("summons", []).duplicate()
+	var prefix := "summon:%s:" % str(b.def.get("id", ""))
+	for key in b.kingdom.unlocks:
+		if str(key).begins_with(prefix):
+			entries.append(str(key).substr(prefix.length()))
+	for entry in entries:
+		var def := DataDB.get_unit_type(str(entry))
+		if def.is_empty():
+			def = DataDB.get_unit_for_tier(b.kingdom.faction_id, str(entry))
+		if not def.is_empty() and not list.has(def):
 			list.append(def)
 	return list
 
@@ -43,6 +53,9 @@ func can_summon(b: Building, type_id: String) -> String:
 	var def := DataDB.get_unit_type(type_id)
 	if def.is_empty():
 		return "Unbekannte Einheit"
+	for req in def.get("requires", []):
+		if not b.kingdom.unlocks.has(req):
+			return "Benötigt: %s" % str(req)
 	if b.summon_queue.size() >= _queue_limit:
 		return "Warteschlange voll (%d)" % _queue_limit
 	var cost: Dictionary = def.get("cost", {})
@@ -100,17 +113,20 @@ func _on_sim_tick(dt: float) -> void:
 			b.queue_redraw()
 			if float(entry["progress"]) >= float(entry["time"]):
 				b.summon_queue.remove_at(0)
-				_spawn(b, str(entry["type_id"]))
+				spawn_summoned(b, str(entry["type_id"]))
 				queue_changed.emit(b)
 
 
-func _spawn(b: Building, type_id: String) -> void:
+## Lässt eine beschworene Einheit am Gebäude erscheinen (auch für Zauber und
+## Ereignisse nutzbar). Ohne Sammelpunkt stellt sie sich in Reihen auf.
+func spawn_summoned(b: Building, type_id: String) -> Unit:
 	var toward := b.rally_point if b.has_rally else b.get_center() + Vector2(0, 1000)
 	var pos := b.get_approach_point(toward)
 	var u := unit_system.spawn_unit(b.kingdom, type_id, pos)
 	if u == null:
-		return
+		return null
 	b.summon_count += 1
+	b.kingdom.add_stat("summoned")
 	# Neue Truppen halten ihren Platz und verteidigen ihn
 	u.command = "hold"
 	if b.has_rally:
@@ -123,6 +139,7 @@ func _spawn(b: Building, type_id: String) -> void:
 		unit_system.move_direct(u, slot)
 	b.kingdom.notify("%s beschworen" % u.get_display_name(), "good", pos)
 	unit_summoned.emit(u, b)
+	return u
 
 
 ## Platz Nummer n (4 je Reihe, 3 Reihen, dann von vorn) vor dem Gebäude

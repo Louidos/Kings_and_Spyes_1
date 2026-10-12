@@ -46,6 +46,11 @@ func _ready() -> void:
 	_menu_button.pressed.connect(func() -> void:
 		GameClock.stop()
 		get_tree().change_scene_to_file("res://scenes/main_menu.tscn"))
+	var restart := _make_button("Neu starten (gleiche Karte)", box)
+	restart.pressed.connect(func() -> void:
+		# GameSession behält Fraktion, Schwierigkeit, Grösse und Seed
+		GameClock.stop()
+		get_tree().change_scene_to_file("res://scenes/game.tscn"))
 	var quit := _make_button("Spiel beenden", box)
 	quit.pressed.connect(func() -> void: get_tree().quit())
 
@@ -64,6 +69,7 @@ func is_open() -> bool:
 func _make_button(text: String, parent: Control) -> Button:
 	var b := Button.new()
 	b.text = text
+	b.focus_mode = Control.FOCUS_ALL
 	b.custom_minimum_size = Vector2(0, 40)
 	b.add_theme_font_size_override("font_size", 18)
 	parent.add_child(b)

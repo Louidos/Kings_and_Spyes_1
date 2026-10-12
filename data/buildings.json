@@ -18,7 +18,7 @@
 			"id": "castle", "name": "Königsburg", "label": "Burg",
 			"description": "Sitz des Königs. Lager für alle Ressourcen und Wohnraum.",
 			"size": [4, 4], "cost": {}, "build_time": 0, "player_buildable": false,
-			"housing": 6, "territory_radius": 14, "hp": 2000, "summons": ["scout"],
+			"housing": 6, "territory_radius": 14, "hp": 2000, "sight": 9, "summons": ["scout"],
 			"dropoff": ["wood", "stone", "ore", "food", "mana"], "gather_radius": 10,
 			"color": "#c9a640",
 			"sprites": { "good": "res://assets/sprites/buildings/castle_good.png", "evil": "res://assets/sprites/buildings/castle_evil.png" }
