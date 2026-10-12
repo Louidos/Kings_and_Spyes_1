@@ -22,6 +22,26 @@ var peoples: Array = []
 var difficulties: Array = []
 var default_difficulty: String = "normal"
 
+## Ressourcen (resources.json) in fester Reihenfolge
+var resources: Array = []
+var resource_by_id: Dictionary = {}
+## Rohstoffvorkommen. Auf der Karte gespeichert als Index + 1 (0 = kein Vorkommen).
+var deposits: Array = []
+var deposit_index_by_id: Dictionary = {}
+## Ganze resources.json (Start-Garantien usw.)
+var deposit_cfg: Dictionary = {}
+## Gebäude (buildings.json)
+var buildings: Array = []
+var building_by_id: Dictionary = {}
+## Berufe (jobs.json)
+var jobs: Array = []
+var job_by_id: Dictionary = {}
+## Wirtschaft und Bevölkerung (economy.json)
+var economy: Dictionary = {}
+## Einheitentypen (units.json), z. B. "villager"
+var units: Array = []
+var unit_by_id: Dictionary = {}
+
 
 func _ready() -> void:
 	reload()
@@ -40,6 +60,11 @@ func reload() -> void:
 	var diff_data := _load_json("difficulties.json")
 	difficulties = diff_data.get("difficulties", [])
 	default_difficulty = diff_data.get("default", "normal")
+	_load_resources()
+	_load_buildings()
+	_load_jobs()
+	economy = _load_json("economy.json")
+	_load_units()
 
 
 ## Liest einen Wert aus game_config.json über einen Punkt-Pfad, z. B. "camera.zoom_max".
@@ -73,6 +98,66 @@ func get_peoples_of_faction(faction_id: String) -> Array:
 	return peoples.filter(func(p): return p.get("faction") == faction_id)
 
 
+## Liest einen Wert aus economy.json über einen Punkt-Pfad, z. B. "villager.speed".
+func eco(path: String, default_value: Variant = null) -> Variant:
+	var node: Variant = economy
+	for key in path.split("."):
+		if node is Dictionary and node.has(key):
+			node = node[key]
+		else:
+			return default_value
+	return node
+
+
+func get_resource(id: String) -> Dictionary:
+	return resource_by_id.get(id, {})
+
+
+## Vorkommen nach Array-Index ({} wenn ungültig)
+func get_deposit(index: int) -> Dictionary:
+	if index < 0 or index >= deposits.size():
+		return {}
+	return deposits[index]
+
+
+func get_deposit_by_id(id: String) -> Dictionary:
+	return get_deposit(deposit_index_by_id.get(id, -1))
+
+
+func get_building(id: String) -> Dictionary:
+	return building_by_id.get(id, {})
+
+
+func get_job(id: String) -> Dictionary:
+	return job_by_id.get(id, {})
+
+
+func get_unit_type(id: String) -> Dictionary:
+	return unit_by_id.get(id, {})
+
+
+## Grafikpfad eines Einheitentyps für eine Fraktion ("" wenn keiner)
+func get_unit_sprite(def: Dictionary, faction_id: String) -> String:
+	var sprites: Dictionary = def.get("sprites", {})
+	return str(sprites.get(faction_id, sprites.get("good", "")))
+
+
+## Pfad der Gebäudegrafik für eine Fraktion ("" wenn keine angegeben)
+func get_building_sprite(def: Dictionary, faction_id: String) -> String:
+	var sprites: Dictionary = def.get("sprites", {})
+	return str(sprites.get(faction_id, sprites.get("good", "")))
+
+
+## Kosten als lesbarer Text, z. B. "25 Holz, 10 Stein"
+func cost_to_text(cost: Dictionary) -> String:
+	var parts: PackedStringArray = []
+	for r in resources:
+		var amount := float(cost.get(r["id"], 0.0))
+		if amount > 0.0:
+			parts.append("%d %s" % [ceili(amount), r["name"]])
+	return "kostenlos" if parts.is_empty() else ", ".join(parts)
+
+
 # ---------------------------------------------------------------------------
 # Intern
 # ---------------------------------------------------------------------------
@@ -99,6 +184,98 @@ func _load_biomes() -> void:
 	default_biome_index = biome_index_by_id.get(data.get("default_biome", ""), maxi(biomes.size() - 1, 0))
 	if biomes.is_empty():
 		push_error("biomes.json enthält keine Biome – die Karte kann nicht erzeugt werden.")
+
+
+func _load_resources() -> void:
+	deposit_cfg = _load_json("resources.json")
+	resources = deposit_cfg.get("resources", [])
+	resource_by_id.clear()
+	for r in resources:
+		r["color"] = _parse_color(r.get("color", "#ffffff"))
+		resource_by_id[r["id"]] = r
+	deposits = deposit_cfg.get("deposits", [])
+	deposit_index_by_id.clear()
+	if deposits.size() > 254:
+		push_error("resources.json: Maximal 254 Vorkommen erlaubt.")
+		deposits.resize(254)
+	for i in deposits.size():
+		var d: Dictionary = deposits[i]
+		d["index"] = i
+		d["color"] = _parse_color(d.get("color", "#ffffff"))
+		var amount: Variant = d.get("amount", [100, 100])
+		if amount is Array:
+			d["amount"] = [int(amount[0]), int(amount[amount.size() - 1])]
+		else:
+			d["amount"] = [int(amount), int(amount)]
+		d["max_gatherers"] = int(d.get("max_gatherers", 1))
+		d["gatherable"] = bool(d.get("gatherable", true))
+		d["biome_deposit"] = bool(d.get("biome_deposit", false))
+		d["regrow_per_hour"] = int(d.get("regrow_per_hour", 0))
+		if not resource_by_id.has(d.get("resource", "")):
+			push_warning("Vorkommen '%s': unbekannte Ressource '%s'" % [d.get("id"), d.get("resource")])
+		deposit_index_by_id[d["id"]] = i
+
+
+func _load_buildings() -> void:
+	var data := _load_json("buildings.json")
+	buildings = data.get("buildings", [])
+	building_by_id.clear()
+	for b in buildings:
+		var size: Array = b.get("size", [2, 2])
+		b["size"] = Vector2i(int(size[0]), int(size[1]))
+		b["color"] = _parse_color(b.get("color", "#888888"))
+		var cost := {}
+		for k in b.get("cost", {}):
+			cost[k] = float(b["cost"][k])
+		b["cost"] = cost
+		b["build_time"] = float(b.get("build_time", 10.0))
+		b["housing"] = int(b.get("housing", 0))
+		b["territory_radius"] = int(b.get("territory_radius", 0))
+		b["workers"] = int(b.get("workers", 0))
+		b["gather_radius"] = int(b.get("gather_radius", 0))
+		b["gather_bonus"] = float(b.get("gather_bonus", 0.0))
+		b["player_buildable"] = bool(b.get("player_buildable", true))
+		b["is_road"] = bool(b.get("is_road", false))
+		if not b.has("dropoff"):
+			b["dropoff"] = []
+		building_by_id[b["id"]] = b
+
+
+func _load_jobs() -> void:
+	var data := _load_json("jobs.json")
+	jobs = data.get("jobs", [])
+	job_by_id.clear()
+	for j in jobs:
+		var indices := PackedInt32Array()
+		for dep_id in j.get("deposits", []):
+			if deposit_index_by_id.has(dep_id):
+				indices.append(deposit_index_by_id[dep_id])
+			else:
+				push_warning("Beruf '%s': unbekanntes Vorkommen '%s'" % [j.get("id"), dep_id])
+		j["deposit_indices"] = indices
+		# Maske über den Kartenwert (Vorkommen-Index + 1) für schnelle Suchen
+		var mask := PackedByteArray()
+		mask.resize(256)
+		for idx in indices:
+			mask[idx + 1] = 1
+		j["deposit_mask"] = mask
+		if not j.has("buildings"):
+			j["buildings"] = []
+		job_by_id[j["id"]] = j
+
+
+func _load_units() -> void:
+	var data := _load_json("units.json")
+	units = data.get("units", [])
+	unit_by_id.clear()
+	for u in units:
+		u["speed"] = float(u.get("speed", 2.0))
+		u["radius"] = float(u.get("radius", 13.0))
+		u["food_per_day"] = float(u.get("food_per_day", 0.0))
+		u["can_work"] = bool(u.get("can_work", false))
+		u["carry"] = int(u.get("carry", 0))
+		u["needs_housing"] = bool(u.get("needs_housing", false))
+		unit_by_id[u["id"]] = u
 
 
 func _load_json(file_name: String) -> Dictionary:

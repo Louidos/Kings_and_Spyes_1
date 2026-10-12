@@ -1,0 +1,32 @@
+{
+	"_hinweis": [
+		"Wirtschaft und Bevölkerung. Zeiten in Spielsekunden (ein Spieltag = time.seconds_per_day aus game_config.json).",
+		"start: Startressourcen, Anzahl Bewohner und ihre Berufe.",
+		"Werte der Bewohner selbst (Tempo, Traglast, Nahrung) stehen in units.json. work: Unbeschäftigte laufen in diesem Umkreis um die Burg herum; retry_seconds = Wartezeit, bevor ein Arbeiter erneut nach Arbeit sucht.",
+		"population: alle growth_interval Sekunden kommt ein Bewohner dazu, wenn Wohnraum frei ist und mindestens growth_food_min Nahrung da ist (kostet growth_food_cost).",
+		"starvation.work_factor: Arbeitstempo bei Hungersnot. road.speed_mult: Tempo auf fertigen Strassen.",
+		"demolish_refund / cancel_refund: Rückerstattung beim Abreissen bzw. beim Abbrechen einer Baustelle."
+	],
+
+	"start": {
+		"resources": { "wood": 80, "stone": 20, "ore": 0, "food": 60, "mana": 10 },
+		"villagers": 5,
+		"jobs": { "woodcutter": 2, "gatherer": 1, "builder": 2 }
+	},
+
+	"work": {
+		"idle_wander_radius": 4,
+		"retry_seconds": 3.0
+	},
+
+	"population": {
+		"growth_interval": 45,
+		"growth_food_min": 30,
+		"growth_food_cost": 10
+	},
+
+	"starvation": { "work_factor": 0.5 },
+	"road": { "speed_mult": 1.6 },
+	"demolish_refund": 0.5,
+	"cancel_refund": 1.0
+}

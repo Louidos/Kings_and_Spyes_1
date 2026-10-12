@@ -50,9 +50,15 @@ func generate(world_seed: int, size: int) -> WorldData:
 	_report(0.85, "Zeichne Landkarte …")
 	world.overview_image = _build_overview(world)
 
-	# 6: Startplatz
+	# 6: Rohstoffvorkommen
+	_report(0.9, "Verteile Rohstoffe …")
+	_place_biome_deposits(world)
+	_place_scattered_deposits(world)
+
+	# 7: Startplatz und gesicherte Rohstoffe in seiner Nähe
 	_report(0.95, "Suche Startplatz …")
 	world.start_cell = _find_start_cell(world)
+	_prepare_start_area(world)
 
 	_report(1.0, "Fertig")
 	print("Welt erzeugt: %d×%d Kacheln, Seed %d, %d ms" % [size, size, world_seed, Time.get_ticks_msec() - t_start])
@@ -211,9 +217,10 @@ func _build_overview(world: WorldData) -> Image:
 			var i := y * w + x
 			var e := float(elev[i])
 			# Höhe hellt leicht auf, Hang zur Lichtquelle (NW) hellt auf, Gegenhang dunkelt ab
-			var shade := 0.82 + e * 0.0011
+			var shade := WorldData.SHADE_BASE + e * WorldData.SHADE_PER_HEIGHT
 			if x > 0 and y > 0:
-				shade += clampf((e - float(elev[i - w - 1])) * 0.012, -0.18, 0.18)
+				shade += clampf((e - float(elev[i - w - 1])) * WorldData.SHADE_SLOPE,
+						-WorldData.SHADE_SLOPE_MAX, WorldData.SHADE_SLOPE_MAX)
 			var b := bio[i] * 3
 			px[o] = clampi(int(base[b] * shade), 0, 255)
 			px[o + 1] = clampi(int(base[b + 1] * shade), 0, 255)
@@ -270,6 +277,187 @@ func _find_start_cell(world: WorldData) -> Vector2i:
 		if ratio >= min_ratio:
 			break
 	return best
+
+
+# ---------------------------------------------------------------------------
+# Rohstoffvorkommen
+# ---------------------------------------------------------------------------
+
+## Biom-Vorkommen (z. B. Holz im Wald) liegen auf jeder Kachel des Bioms.
+## Die Menge wird per Hash aus Kachel und Seed bestimmt (schnell und reproduzierbar).
+func _place_biome_deposits(world: WorldData) -> void:
+	var by_biome := PackedInt32Array()  # Biom-Index -> Vorkommen-Index + 1
+	by_biome.resize(DataDB.biomes.size())
+	var amount_min := PackedInt32Array()
+	var amount_span := PackedInt32Array()
+	amount_min.resize(DataDB.deposits.size())
+	amount_span.resize(DataDB.deposits.size())
+	var any := false
+	for d in DataDB.deposits:
+		amount_min[d["index"]] = d["amount"][0]
+		amount_span[d["index"]] = maxi(1, d["amount"][1] - d["amount"][0] + 1)
+		if not d["biome_deposit"]:
+			continue
+		for biome_id in d.get("on_biomes", []):
+			if DataDB.biome_index_by_id.has(biome_id):
+				by_biome[DataDB.biome_index_by_id[biome_id]] = d["index"] + 1
+				any = true
+	if not any:
+		return
+	var bio := world.biomes
+	var types := world.deposit_type
+	var amounts := world.deposit_amount
+	var salt := world.world_seed & 0x7fffffff
+	for i in bio.size():
+		var t := by_biome[bio[i]]
+		if t == 0:
+			continue
+		types[i] = t
+		var h := ((i * 2654435761) ^ salt) & 0x7fffffff
+		amounts[i] = amount_min[t - 1] + (h >> 7) % amount_span[t - 1]
+
+
+## Verstreute Vorkommen (Steine, Erz, Beeren, Manaquellen ...) in kleinen Gruppen.
+func _place_scattered_deposits(world: WorldData) -> void:
+	var border := int(DataDB.worldgen.get("border", {}).get("width", 0))
+	var total_tiles := world.width * world.height
+	for d in DataDB.deposits:
+		if d["biome_deposit"]:
+			continue
+		var allowed := _biome_mask(d.get("on_biomes", []))
+		var rng := RandomNumberGenerator.new()
+		rng.seed = hash(world.world_seed + 7919 * (d["index"] + 1))
+		var groups := int(round(float(d.get("per_1000_tiles", 0.0)) * total_tiles / 1000.0))
+		var cluster: Array = d.get("cluster", [1, 1])
+		var placed := 0
+		var attempts := 0
+		while placed < groups and attempts < groups * 6:
+			attempts += 1
+			var c := Vector2i(rng.randi_range(border, world.width - 1 - border),
+					rng.randi_range(border, world.height - 1 - border))
+			if not _can_hold_deposit(world, c, allowed, d):
+				continue
+			placed += 1
+			_put_deposit(world, c, d, rng)
+			var extra := rng.randi_range(int(cluster[0]), int(cluster[cluster.size() - 1])) - 1
+			for _k in extra:
+				var n := c + Vector2i(rng.randi_range(-2, 2), rng.randi_range(-2, 2))
+				if _can_hold_deposit(world, n, allowed, d):
+					_put_deposit(world, n, d, rng)
+
+
+## Räumt den Platz für die Burg frei und stellt sicher, dass die wichtigsten
+## Rohstoffe in der Nähe des Startplatzes vorkommen.
+func _prepare_start_area(world: WorldData) -> void:
+	var cfg := DataDB.deposit_cfg
+	var keep := int(cfg.get("start_keep_clear_radius", 4))
+	var start := world.start_cell
+	for dy in range(-keep, keep + 1):
+		for dx in range(-keep, keep + 1):
+			var c := start + Vector2i(dx, dy)
+			var d := world.get_deposit(c)
+			if not d.is_empty() and not d["biome_deposit"]:
+				world.set_deposit(c, -1, 0)
+
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(world.world_seed + 4243)
+	for g in cfg.get("start_guarantees", []):
+		var d := DataDB.get_deposit_by_id(str(g.get("deposit", "")))
+		if d.is_empty():
+			continue
+		var radius := int(g.get("radius", 12))
+		var allowed := _biome_mask(d.get("on_biomes", []) + g.get("allow_biomes", []))
+		# Vorhandene zählen (ausserhalb des freigehaltenen Bereichs)
+		var have := 0
+		for dy in range(-radius, radius + 1):
+			for dx in range(-radius, radius + 1):
+				var c := start + Vector2i(dx, dy)
+				if Vector2(dx, dy).length() <= radius and world.get_deposit_index(c) == d["index"]:
+					have += 1
+		var missing := int(g.get("count", 1)) - have
+		var tries := 0
+		while missing > 0 and tries < 400:
+			tries += 1
+			var off := Vector2.from_angle(rng.randf() * TAU) * rng.randf_range(keep + 1.5, radius)
+			var c := start + Vector2i(roundi(off.x), roundi(off.y))
+			if maxi(absi(c.x - start.x), absi(c.y - start.y)) <= keep:
+				continue
+			if not _can_hold_deposit(world, c, allowed, d):
+				continue
+			_put_deposit(world, c, d, rng)
+			missing -= 1
+
+
+## Biom-IDs -> Maske (1 = erlaubt) über alle Biom-Indizes
+func _biome_mask(biome_ids: Array) -> PackedByteArray:
+	var mask := PackedByteArray()
+	mask.resize(DataDB.biomes.size())
+	for id in biome_ids:
+		if DataDB.biome_index_by_id.has(id):
+			mask[DataDB.biome_index_by_id[id]] = 1
+	return mask
+
+
+## Kachel frei für ein verstreutes Vorkommen? Biom-Vorkommen (Wald) zählen als
+## frei. Direkt neben Vorkommen mit eigenem Bauplatz (Manaquelle) bleibt alles frei.
+## Braucht das Vorkommen selbst einen Bauplatz (needs_footprint), muss es einen
+## bebaubaren, freien Bereich dieser Grösse geben, der die Kachel enthält.
+func _can_hold_deposit(world: WorldData, c: Vector2i, allowed: PackedByteArray, d: Dictionary = {}) -> bool:
+	if not world.in_bounds(c):
+		return false
+	var i := world.cell_index(c)
+	if allowed[world.biomes[i]] == 0:
+		return false
+	if not _is_free_for_deposit(world, c):
+		return false
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			var n := world.get_deposit(c + Vector2i(dx, dy))
+			if not n.is_empty() and n.has("needs_footprint"):
+				return false
+	if d.has("needs_footprint"):
+		var fp: Array = d["needs_footprint"]
+		return _has_free_footprint(world, c, Vector2i(int(fp[0]), int(fp[1])))
+	return true
+
+
+## Kein verstreutes Vorkommen auf der Kachel (Wald zählt als frei)
+func _is_free_for_deposit(world: WorldData, c: Vector2i) -> bool:
+	var existing := world.deposit_type[world.cell_index(c)]
+	return existing == 0 or DataDB.deposits[existing - 1]["biome_deposit"]
+
+
+## Gibt es einen size-grossen, bebaubaren Bereich ohne andere Vorkommen, der c enthält?
+func _has_free_footprint(world: WorldData, c: Vector2i, size: Vector2i) -> bool:
+	for oy in range(size.y):
+		for ox in range(size.x):
+			var top_left := c - Vector2i(ox, oy)
+			var ok := true
+			for y in range(top_left.y, top_left.y + size.y):
+				for x in range(top_left.x, top_left.x + size.x):
+					var cell := Vector2i(x, y)
+					if not world.in_bounds(cell) or not world.get_biome(cell).get("buildable", false) \
+							or (cell != c and not _is_free_for_deposit(world, cell)):
+						ok = false
+						break
+				if not ok:
+					break
+			if ok:
+				return true
+	return false
+
+
+func _put_deposit(world: WorldData, c: Vector2i, d: Dictionary, rng: RandomNumberGenerator) -> void:
+	var amount: int = -1 if d["amount"][0] < 0 else rng.randi_range(d["amount"][0], d["amount"][1])
+	var i := world.cell_index(c)
+	# Liegt hier Wald, entsteht eine Lichtung (sonst bliebe nach dem Abbau Wald ohne Holz)
+	var existing := world.deposit_type[i]
+	if existing != 0:
+		var after := str(DataDB.deposits[existing - 1].get("depleted_biome", ""))
+		if DataDB.biome_index_by_id.has(after):
+			world.set_biome(c, DataDB.biome_index_by_id[after])
+	world.deposit_type[i] = d["index"] + 1
+	world.deposit_amount[i] = amount
 
 
 # ---------------------------------------------------------------------------

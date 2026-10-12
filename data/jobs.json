@@ -1,0 +1,34 @@
+{
+	"_hinweis": [
+		"Berufe der Bewohner (Arbeitsverteilung).",
+		"type: idle = unbeschäftigt, builder = baut Baustellen und Strassen, gather = sammelt Vorkommen (deposits) und liefert sie ab, building = arbeitet in einem Gebäude (buildings).",
+		"gather_rate = gesammelte Einheiten pro Spielsekunde. work_rate = Bauarbeit pro Spielsekunde. max_per_site = höchstens so viele Bauarbeiter pro Baustelle.",
+		"letter = Buchstabe auf dem Platzhalter des Bewohners. hint = Tipp, wenn der Beruf nichts zu tun findet. activity = Tätigkeit im Auswahlfenster.",
+		"food_job = true: Nahrungsberufe arbeiten auch bei Hungersnot mit vollem Tempo (sonst käme man nie heraus)."
+	],
+
+	"jobs": [
+		{ "id": "idle", "name": "Unbeschäftigt", "type": "idle", "letter": "" },
+		{ "id": "builder", "name": "Bauarbeiter", "type": "builder", "letter": "B",
+		  "work_rate": 1.0, "max_per_site": 4, "activity": "baut",
+		  "hint": "Keine Baustellen vorhanden." },
+		{ "id": "woodcutter", "name": "Holzfäller", "type": "gather", "resource": "wood",
+		  "deposits": ["forest", "trees"], "gather_rate": 1.0, "letter": "H", "activity": "fällt Bäume",
+		  "hint": "Keine Bäume in Reichweite – baue eine Holzfällerhütte nahe am Wald." },
+		{ "id": "stonecutter", "name": "Steinhauer", "type": "gather", "resource": "stone",
+		  "deposits": ["stone"], "gather_rate": 0.8, "letter": "S", "activity": "bricht Steine",
+		  "hint": "Keine Steinbrocken in Reichweite – baue eine Steinmetzhütte in ihrer Nähe." },
+		{ "id": "miner", "name": "Bergleute", "type": "gather", "resource": "ore",
+		  "deposits": ["ore"], "gather_rate": 0.6, "letter": "E", "activity": "baut Erz ab",
+		  "hint": "Keine Erzadern in Reichweite – baue eine Erzmine in ihrer Nähe." },
+		{ "id": "gatherer", "name": "Sammler & Jäger", "type": "gather", "resource": "food",
+		  "deposits": ["berries"], "gather_rate": 1.0, "letter": "N", "activity": "sammelt Nahrung", "food_job": true,
+		  "hint": "Keine Beeren oder Wild in Reichweite – baue eine Jägerhütte oder einen Bauernhof." },
+		{ "id": "farmer", "name": "Bauern", "type": "building", "buildings": ["farm"], "letter": "F",
+		  "activity": "bestellt die Felder", "food_job": true,
+		  "hint": "Kein freier Platz – baue einen Bauernhof." },
+		{ "id": "mana_worker", "name": "Manawirker", "type": "building", "buildings": ["mana_well"], "letter": "M",
+		  "activity": "bündelt Mana",
+		  "hint": "Kein freier Platz – baue einen Manabrunnen auf einer Manaquelle." }
+	]
+}

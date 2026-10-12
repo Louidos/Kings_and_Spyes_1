@@ -68,25 +68,57 @@ dann in `data/biomes.json` bei `sprites` einfach weniger Pfade eintragen.
 
 ---
 
-## 🕓 Phase 2 – Dorf und Wirtschaft
+## ✅ Phase 2 – Dorf und Wirtschaft
 
-**Ressourcen-Icons** (`assets/ui/icons/`, 32 × 32):
-`icon_wood.png` (Holz), `icon_stone.png` (Stein), `icon_ore.png` (Erz), `icon_food.png` (Nahrung),
-`icon_mana.png` (Mana), `icon_population.png` (Bewohner), `icon_happiness.png` (Zufriedenheit)
+**Ressourcen-Icons** (`assets/ui/icons/`, 32 × 32, transparent) – Ressourcenleiste oben:
 
-**Ressourcen auf der Karte** (`assets/sprites/resources/`, 64 × 64):
-`res_wood.png` (Baumgruppe), `res_stone.png` (Felsbrocken), `res_ore.png` (Erzader),
-`res_food.png` (Beerensträucher / Wild), `res_mana_spring.png` (leuchtende Manaquelle)
+| Datei | Inhalt |
+|---|---|
+| `icon_wood.png` | Holz (Holzscheite) |
+| `icon_stone.png` | Stein (Steinblock) |
+| `icon_ore.png` | Erz (Erzbrocken mit blauem Schimmer) |
+| `icon_food.png` | Nahrung (Brotlaib, Äpfel) |
+| `icon_mana.png` | Mana (leuchtender violetter Kristall) |
 
-**Gebäude** (`assets/sprites/buildings/`, 128 × 128) – je Fraktion eine eigene Optik:
-`castle_good.png` / `castle_evil.png` (Königsburg, 256 × 256),
-`house_good.png` / `house_evil.png`, `farm_good.png` / `farm_evil.png`,
-`lumberyard_good.png` / `lumberyard_evil.png`, `quarry_good.png` / `quarry_evil.png`,
-`mine_good.png` / `mine_evil.png`, `storehouse_good.png` / `storehouse_evil.png`,
-`road.png` (Strassenkachel 64 × 64)
+**Rohstoffvorkommen auf der Karte** (`assets/sprites/resources/`, 64 × 64, transparent, von oben):
 
-**Bewohner** (`assets/sprites/units/`, 64 × 64):
-`villager_good.png`, `villager_evil.png`
+| Datei | Inhalt |
+|---|---|
+| `res_trees.png` | Baumgruppe (2–3 Baumkronen) auf freiem Feld |
+| `res_stone.png` | Haufen grauer Felsbrocken |
+| `res_ore.png` | dunkler Fels mit blauen Erzkristallen |
+| `res_berries.png` | Beerenstrauch / Wildspuren |
+| `res_berries_empty.png` | derselbe Strauch abgeerntet (ohne Beeren) – optional |
+| `res_mana_spring.png` | leuchtende violette Quelle mit Steinkreis |
+
+Wald selbst braucht kein eigenes Bild – das Waldgelände ist die Grafik.
+
+**Strasse** (`assets/sprites/terrain/`, 64 × 64, **voll deckend, nahtlos kachelbar**):
+`terrain_road.png` – festgetretener Weg / Kopfsteinpflaster. Die Kanten müssen so gestaltet sein,
+dass beliebig viele Strassenkacheln nebeneinander einen durchgehenden Weg ergeben.
+
+**Gebäude** (`assets/sprites/buildings/`, transparent, von oben) – je Fraktion eine eigene Optik
+(GUT: hell, Fachwerk/Stein, blaue Dächer – BÖSE: dunkel, Stacheln, rote Akzente):
+
+| Datei GUT | Datei BÖSE | Gebäude | Grösse |
+|---|---|---|---|
+| `castle_good.png` | `castle_evil.png` | Königsburg | 256 × 256 |
+| `house_good.png` | `house_evil.png` | Wohnhaus | 128 × 128 |
+| `storehouse_good.png` | `storehouse_evil.png` | Lager | 128 × 128 |
+| `lumberyard_good.png` | `lumberyard_evil.png` | Holzfällerhütte | 128 × 128 |
+| `quarry_good.png` | `quarry_evil.png` | Steinmetzhütte | 128 × 128 |
+| `mine_good.png` | `mine_evil.png` | Erzmine | 128 × 128 |
+| `hunter_good.png` | `hunter_evil.png` | Jägerhütte | 128 × 128 |
+| `farm_good.png` | `farm_evil.png` | Bauernhof (mit Feldern) | 128 × 128 |
+| `mana_well_good.png` | `mana_well_evil.png` | Manabrunnen | 128 × 128 |
+
+Die Grafik füllt die Grundfläche des Gebäudes (Burg 4 × 4 Felder, sonst 2 × 2 Felder).
+Baustellen zeichnet das Spiel selbst (halbtransparent mit Gerüst).
+
+**Bewohner** (`assets/sprites/units/`, 64 × 64, transparent):
+`villager_good.png` (einfacher Mensch in Leinen, freundlich), `villager_evil.png` (kleiner Kobold/Goblin-Diener).
+Die Figur steht mit den Füssen im unteren Drittel des Bildes. Der Beruf wird vom Spiel nicht über die
+Grafik gezeigt (später eventuell eigene Grafiken pro Beruf).
 
 ## 🕓 Phase 3 – Einheiten
 

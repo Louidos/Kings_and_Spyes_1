@@ -1,0 +1,21 @@
+{
+	"_hinweis": [
+		"Einheitentypen. In Phase 2 gibt es nur den Bewohner; ab Phase 3 kommen Späher, Kämpfer usw. dazu.",
+		"speed = Kacheln pro Spielsekunde auf Gelände mit Bewegungskosten 1.0. radius = Grösse des Platzhalters in Pixeln.",
+		"food_per_day = Nahrungsverbrauch pro Spieltag. can_work = kann Berufe ausüben (sammeln, bauen). carry = Traglast.",
+		"needs_housing = zählt zur Bevölkerung und braucht Wohnraum.",
+		"sprites: Grafik je Fraktion (64x64 PNG). Fehlt sie, wird ein Kreis in Fraktionsfarbe mit dem Berufsbuchstaben gezeichnet."
+	],
+
+	"units": [
+		{
+			"id": "villager", "name": "Bewohner",
+			"speed": 2.2, "radius": 16, "food_per_day": 40,
+			"can_work": true, "carry": 10, "needs_housing": true,
+			"sprites": {
+				"good": "res://assets/sprites/units/villager_good.png",
+				"evil": "res://assets/sprites/units/villager_evil.png"
+			}
+		}
+	]
+}

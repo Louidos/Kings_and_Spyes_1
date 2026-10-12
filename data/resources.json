@@ -1,0 +1,75 @@
+{
+	"_hinweis": [
+		"Ressourcen und Rohstoffvorkommen auf der Karte.",
+		"resources: die fünf Ressourcen mit Name, Farbe (für Platzhalter) und Icon (32x32 PNG).",
+		"deposits: Vorkommen. amount = [min, max] Menge pro Vorkommen (-1 = unendlich). per_1000_tiles = Häufigkeit. cluster = [min, max] Vorkommen pro Gruppe.",
+		"biome_deposit: das Vorkommen liegt auf JEDER Kachel des Bioms (z. B. Wald). depleted_biome: daraus wird die Kachel, wenn sie leer ist.",
+		"regrow_per_hour: leere Vorkommen wachsen pro Spielstunde um diese Menge nach und können erst wieder gesammelt werden, wenn sie voll sind. gatherable=false: kann nicht direkt gesammelt werden (Manaquelle -> Manabrunnen bauen).",
+		"Manaquellen liegen immer so, dass daneben ein Manabrunnen (2x2) gebaut werden kann.",
+		"max_gatherers: wie viele Bewohner gleichzeitig am selben Vorkommen arbeiten dürfen.",
+		"sprite / sprite_empty: Grafik (64x64 PNG) und optional die Grafik im leeren Zustand. Fehlt sie, wird ein Platzhalter gezeichnet.",
+		"start_guarantees: Vorkommen, die es in der Nähe des Startplatzes sicher gibt (radius in Kacheln)."
+	],
+
+	"resources": [
+		{ "id": "wood",  "name": "Holz",    "color": "#a0703c", "icon": "res://assets/ui/icons/icon_wood.png" },
+		{ "id": "stone", "name": "Stein",   "color": "#a9a6a0", "icon": "res://assets/ui/icons/icon_stone.png" },
+		{ "id": "ore",   "name": "Erz",     "color": "#6f8fb0", "icon": "res://assets/ui/icons/icon_ore.png" },
+		{ "id": "food",  "name": "Nahrung", "color": "#e0a83a", "icon": "res://assets/ui/icons/icon_food.png" },
+		{ "id": "mana",  "name": "Mana",    "color": "#9a6cf5", "icon": "res://assets/ui/icons/icon_mana.png" }
+	],
+
+	"deposits": [
+		{
+			"id": "forest", "name": "Wald", "resource": "wood",
+			"biome_deposit": true, "on_biomes": ["forest"],
+			"amount": [60, 100], "max_gatherers": 1, "depleted_biome": "plains"
+		},
+		{
+			"id": "trees", "name": "Baumgruppe", "resource": "wood",
+			"on_biomes": ["plains"], "per_1000_tiles": 5, "cluster": [1, 3],
+			"amount": [150, 250], "max_gatherers": 2,
+			"pattern": "trees", "color": "#2f6b34",
+			"sprite": "res://assets/sprites/resources/res_trees.png"
+		},
+		{
+			"id": "stone", "name": "Steinbrocken", "resource": "stone",
+			"on_biomes": ["plains", "desert", "forest", "mountains"], "per_1000_tiles": 3, "cluster": [2, 4],
+			"amount": [300, 500], "max_gatherers": 3,
+			"pattern": "rocks", "color": "#9a9690",
+			"sprite": "res://assets/sprites/resources/res_stone.png"
+		},
+		{
+			"id": "ore", "name": "Erzader", "resource": "ore",
+			"on_biomes": ["mountains", "volcanic"], "per_1000_tiles": 2.5, "cluster": [1, 3],
+			"amount": [250, 450], "max_gatherers": 3,
+			"pattern": "ore", "color": "#5f7fa8",
+			"sprite": "res://assets/sprites/resources/res_ore.png"
+		},
+		{
+			"id": "berries", "name": "Beeren & Wild", "resource": "food",
+			"on_biomes": ["plains", "forest"], "per_1000_tiles": 4, "cluster": [1, 3],
+			"amount": [80, 120], "max_gatherers": 2, "regrow_per_hour": 2,
+			"pattern": "berries", "color": "#b0344a",
+			"sprite": "res://assets/sprites/resources/res_berries.png",
+			"sprite_empty": "res://assets/sprites/resources/res_berries_empty.png"
+		},
+		{
+			"id": "mana_spring", "name": "Manaquelle", "resource": "mana",
+			"on_biomes": ["plains", "forest", "desert"],
+			"per_1000_tiles": 0.25, "cluster": [1, 1], "needs_footprint": [2, 2],
+			"amount": -1, "gatherable": false, "max_gatherers": 0,
+			"pattern": "mana", "color": "#9a6cf5",
+			"sprite": "res://assets/sprites/resources/res_mana_spring.png"
+		}
+	],
+
+	"start_guarantees": [
+		{ "deposit": "trees",       "count": 3, "radius": 12 },
+		{ "deposit": "stone",       "count": 2, "radius": 14 },
+		{ "deposit": "berries",     "count": 3, "radius": 10 },
+		{ "deposit": "ore",         "count": 1, "radius": 18, "allow_biomes": ["plains", "forest", "desert"] },
+		{ "deposit": "mana_spring", "count": 1, "radius": 10 }
+	],
+	"start_keep_clear_radius": 4
+}

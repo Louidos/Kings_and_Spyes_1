@@ -7,6 +7,9 @@
 ##   die Chunks im Sichtbereich der Kamera aufgebaut (Culling); weit entfernte
 ##   werden abgebaut und ihre Nodes wiederverwendet (Pool).
 ## - Pro Frame werden nur wenige Chunks gebaut, damit das Bild nicht ruckelt.
+## - Jeder Chunk hat eine zweite Ebene für Rohstoffvorkommen. Strassen liegen
+##   in einer gemeinsamen, dünn besetzten Ebene. Darüber die Reichsgrenze.
+## - Ändert sich eine Kachel (abgeholzt, abgebaut), wird nur diese neu gesetzt.
 class_name WorldMap
 extends Node2D
 
@@ -15,7 +18,11 @@ signal hovered_cell_changed(cell: Vector2i)
 
 var world: WorldData
 var tileset: TileSet
+var deposit_tileset: TileSet
+var road_tileset: TileSet
 var overview_texture: ImageTexture
+## Reichsgrenze des Spielers (wird von der Spielszene gefüllt)
+var territory_border: TerritoryBorder
 var hovered_cell := Vector2i(-1, -1)
 
 var chunk_size: int = 32
@@ -26,10 +33,14 @@ var max_builds_per_frame: int = 3
 var _overview: Sprite2D
 var _chunk_root: Node2D
 var _cursor: CellCursor
-## Chunk-Koordinate -> TileMapLayer
+var _roads: TileMapLayer
+## Chunk-Koordinate -> TileMapLayer (Gelände; Kind 0 = Vorkommen-Ebene)
 var _chunks: Dictionary = {}
 var _pool: Array[TileMapLayer] = []
 var _chunk_count := Vector2i.ZERO
+## Übersichtsbild höchstens so oft neu hochladen (Sekunden)
+var _overview_refresh_interval := 1.0
+var _overview_timer := 0.0
 
 
 func _ready() -> void:
@@ -44,6 +55,10 @@ func setup(world_data: WorldData) -> void:
 	world = world_data
 	_clear()
 	tileset = TerrainTileset.build(world.tile_size, tile_variants)
+	deposit_tileset = DepositTileset.build(world.tile_size)
+	road_tileset = DepositTileset.build_roads(world.tile_size)
+	world.cell_changed.connect(refresh_cell)
+	world.road_changed.connect(func(c: Vector2i) -> void: set_road_visual(c, world.get_road(c)))
 
 	overview_texture = ImageTexture.create_from_image(world.overview_image)
 	_overview = Sprite2D.new()
@@ -59,6 +74,19 @@ func setup(world_data: WorldData) -> void:
 	_chunk_root.name = "Chunks"
 	add_child(_chunk_root)
 
+	_roads = TileMapLayer.new()
+	_roads.name = "Roads"
+	_roads.tile_set = road_tileset
+	_roads.collision_enabled = false
+	_roads.navigation_enabled = false
+	_roads.z_index = 1
+	add_child(_roads)
+
+	territory_border = TerritoryBorder.new()
+	territory_border.name = "TerritoryBorder"
+	territory_border.z_index = 2
+	add_child(territory_border)
+
 	_cursor = CellCursor.new()
 	_cursor.name = "CellCursor"
 	_cursor.tile_size = world.tile_size
@@ -68,7 +96,7 @@ func setup(world_data: WorldData) -> void:
 	_chunk_count = Vector2i(ceili(float(world.width) / chunk_size), ceili(float(world.height) / chunk_size))
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if world == null:
 		return
 	var cam := get_viewport().get_camera_2d()
@@ -76,6 +104,12 @@ func _process(_delta: float) -> void:
 		return
 	_update_chunks(cam)
 	_update_hover(cam)
+	# Geänderte Kacheln (z. B. abgeholzter Wald) im Übersichtsbild nachziehen
+	_overview_timer += delta
+	if world.overview_dirty and _overview_timer >= _overview_refresh_interval:
+		_overview_timer = 0.0
+		world.overview_dirty = false
+		overview_texture.update(world.overview_image)
 
 
 # ---------------------------------------------------------------------------
@@ -85,6 +119,7 @@ func _process(_delta: float) -> void:
 func _update_chunks(cam: Camera2D) -> void:
 	var show_detail := cam.zoom.x >= detail_min_zoom
 	_chunk_root.visible = show_detail
+	_roads.visible = show_detail
 	if not show_detail:
 		return  # Fernansicht: nur Übersichtsbild, keine Chunks nachladen
 
@@ -121,18 +156,18 @@ func _update_chunks(cam: Camera2D) -> void:
 
 func _build_chunk(c: Vector2i) -> void:
 	var layer: TileMapLayer
+	var deposits: TileMapLayer
 	if _pool.is_empty():
-		layer = TileMapLayer.new()
-		layer.tile_set = tileset
-		# Ein Chunk = ein Render-Quadrant -> wenige Draw-Calls
-		layer.rendering_quadrant_size = chunk_size
-		layer.collision_enabled = false
-		layer.navigation_enabled = false
+		layer = _new_layer(tileset)
 		_chunk_root.add_child(layer)
+		deposits = _new_layer(deposit_tileset)
+		layer.add_child(deposits)
 	else:
 		layer = _pool.pop_back()
 		layer.clear()
 		layer.visible = true
+		deposits = layer.get_child(0)
+		deposits.clear()
 
 	var x0 := c.x * chunk_size
 	var y0 := c.y * chunk_size
@@ -146,7 +181,64 @@ func _build_chunk(c: Vector2i) -> void:
 		for x in range(x0, x1):
 			var variant := _variant_for(x, y)
 			layer.set_cell(Vector2i(x - x0, y - y0), TerrainTileset.SOURCE_ID, Vector2i(variant, biomes[row + x]))
+			if world.deposit_type[row + x] != 0:
+				_set_deposit_tile(deposits, Vector2i(x, y), Vector2i(x - x0, y - y0))
 	_chunks[c] = layer
+
+
+func _new_layer(source_set: TileSet) -> TileMapLayer:
+	var layer := TileMapLayer.new()
+	layer.tile_set = source_set
+	# Ein Chunk = ein Render-Quadrant -> wenige Draw-Calls
+	layer.rendering_quadrant_size = chunk_size
+	layer.collision_enabled = false
+	layer.navigation_enabled = false
+	return layer
+
+
+## Setzt das Bild des Vorkommens einer Kachel (oder löscht es).
+func _set_deposit_tile(deposits: TileMapLayer, cell: Vector2i, local: Vector2i) -> void:
+	var d := world.get_deposit(cell)
+	if d.is_empty() or d["biome_deposit"]:
+		deposits.erase_cell(local)
+		return
+	var empty := world.regrowing.has(cell) or world.get_deposit_amount(cell) == 0
+	var column := DepositTileset.COLUMN_EMPTY if empty else DepositTileset.COLUMN_NORMAL
+	deposits.set_cell(local, DepositTileset.SOURCE_ID, Vector2i(column, d["index"]))
+
+
+## Zeichnet eine einzelne Kachel neu (Biom und Vorkommen), falls ihr Chunk geladen ist.
+func refresh_cell(cell: Vector2i) -> void:
+	var c := Vector2i(floori(float(cell.x) / chunk_size), floori(float(cell.y) / chunk_size))
+	if not _chunks.has(c):
+		return
+	var layer: TileMapLayer = _chunks[c]
+	var local := cell - c * chunk_size
+	layer.set_cell(local, TerrainTileset.SOURCE_ID, Vector2i(_variant_for(cell.x, cell.y), world.get_biome_index(cell)))
+	_set_deposit_tile(layer.get_child(0), cell, local)
+
+
+## Zeichnet alles aus den Weltdaten neu, was nicht in Chunks liegt
+## (Strassen, Übersichtsbild) – z. B. nach dem Laden eines Spielstands.
+func refresh_all() -> void:
+	_roads.clear()
+	for c in world.roads:
+		set_road_visual(c, world.roads[c])
+	for c in _chunks.keys():
+		_release_chunk(c)
+	overview_texture.update(world.overview_image)
+	world.overview_dirty = false
+
+
+## Strassenbild setzen: state = WorldData.ROAD_NONE / ROAD_PLANNED / ROAD_BUILT
+func set_road_visual(cell: Vector2i, state: int) -> void:
+	match state:
+		WorldData.ROAD_BUILT:
+			_roads.set_cell(cell, DepositTileset.SOURCE_ID, DepositTileset.ROAD_BUILT_COORDS)
+		WorldData.ROAD_PLANNED:
+			_roads.set_cell(cell, DepositTileset.SOURCE_ID, DepositTileset.ROAD_PLANNED_COORDS)
+		_:
+			_roads.erase_cell(cell)
 
 
 func _release_chunk(c: Vector2i) -> void:

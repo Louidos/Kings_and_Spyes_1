@@ -41,12 +41,20 @@ func _ready() -> void:
 
 
 ## Wird von der Spielszene aufgerufen, sobald die Welt erzeugt ist.
-func setup(p_world: WorldData, p_camera: RTSCamera, p_world_map: WorldMap) -> void:
-	world = p_world
-	camera = p_camera
-	world_map = p_world_map
+func setup(game: Node) -> void:
+	world = game.world
+	camera = game.camera
+	world_map = game.world_map
 	minimap.setup(world_map.overview_texture, world.get_pixel_size(), camera)
 	world_map.hovered_cell_changed.connect(_on_hovered_cell_changed)
+
+
+func toggle_job_panel() -> void:
+	pass
+
+
+func is_debug_visible() -> bool:
+	return debug_label.visible
 
 
 func _process(delta: float) -> void:

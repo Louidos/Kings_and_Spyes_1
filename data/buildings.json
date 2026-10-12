@@ -1,0 +1,106 @@
+{
+	"_hinweis": [
+		"Gebäude. Alle Zeitangaben in Spielsekunden, Produktion pro Spielsekunde.",
+		"size = [Breite, Höhe] in Kacheln. cost = Baukosten. build_time = nötige Bauarbeit (Sekunden Arbeit eines Bauarbeiters).",
+		"player_buildable=false: erscheint nicht im Baumenü (z. B. die Königsburg).",
+		"housing = Wohnplätze. territory_radius = Gebiet, das das fertige Gebäude dem Reich hinzufügt (Kacheln).",
+		"dropoff = Ressourcen, die hier abgeliefert werden können. gather_radius = wie weit Sammler von hier aus arbeiten. gather_bonus = +Sammeltempo (0.25 = +25 %).",
+		"workers = Arbeitsplätze, job = Beruf der dort arbeitet, production = Menge pro Arbeiter und Sekunde, base_production = Menge ohne Arbeiter.",
+		"biome_efficiency = Faktor je Biom (Durchschnitt der Grundfläche, nicht genannte Biome = 1.0). requires_deposit = Vorkommen, das unter dem Gebäude liegen muss.",
+		"blocks_movement (Standard: true): Einheiten laufen um das Gebäude herum. placement = \"line\": wird mit der Maus als Linie gezogen (Strassen, ab Phase 9 Mauern).",
+		"sprites: Grafik je Fraktion (128x128, Burg 256x256). Fehlt die Datei, wird ein Platzhalter in 'color' mit 'label' gezeichnet."
+	],
+
+	"buildings": [
+		{
+			"id": "castle", "name": "Königsburg", "label": "Burg",
+			"description": "Sitz des Königs. Lager für alle Ressourcen und Wohnraum.",
+			"size": [4, 4], "cost": {}, "build_time": 0, "player_buildable": false,
+			"housing": 6, "territory_radius": 14,
+			"dropoff": ["wood", "stone", "ore", "food", "mana"], "gather_radius": 10,
+			"color": "#c9a640",
+			"sprites": { "good": "res://assets/sprites/buildings/castle_good.png", "evil": "res://assets/sprites/buildings/castle_evil.png" }
+		},
+		{
+			"id": "house", "name": "Wohnhaus", "label": "Haus",
+			"description": "Wohnraum für 4 Bewohner. Erweitert das Gebiet.",
+			"size": [2, 2], "cost": { "wood": 25 }, "build_time": 20,
+			"housing": 4, "territory_radius": 5,
+			"color": "#b5835a",
+			"sprites": { "good": "res://assets/sprites/buildings/house_good.png", "evil": "res://assets/sprites/buildings/house_evil.png" }
+		},
+		{
+			"id": "storehouse", "name": "Lager", "label": "Lager",
+			"description": "Annahmestelle für Holz, Stein, Erz und Nahrung. Verkürzt die Wege der Sammler.",
+			"size": [2, 2], "cost": { "wood": 40, "stone": 10 }, "build_time": 30,
+			"territory_radius": 4,
+			"dropoff": ["wood", "stone", "ore", "food"], "gather_radius": 12,
+			"color": "#8d7a5c",
+			"sprites": { "good": "res://assets/sprites/buildings/storehouse_good.png", "evil": "res://assets/sprites/buildings/storehouse_evil.png" }
+		},
+		{
+			"id": "lumberyard", "name": "Holzfällerhütte", "label": "Holz",
+			"description": "Holzfäller liefern hier ab und arbeiten 25 % schneller. Am besten nahe am Wald bauen.",
+			"size": [2, 2], "cost": { "wood": 30 }, "build_time": 20,
+			"territory_radius": 4,
+			"dropoff": ["wood"], "gather_radius": 14, "gather_bonus": 0.25,
+			"color": "#7a5230",
+			"sprites": { "good": "res://assets/sprites/buildings/lumberyard_good.png", "evil": "res://assets/sprites/buildings/lumberyard_evil.png" }
+		},
+		{
+			"id": "quarry", "name": "Steinmetzhütte", "label": "Stein",
+			"description": "Steinhauer liefern hier ab und arbeiten 25 % schneller. Nahe an Steinbrocken bauen.",
+			"size": [2, 2], "cost": { "wood": 35 }, "build_time": 25,
+			"territory_radius": 4,
+			"dropoff": ["stone"], "gather_radius": 14, "gather_bonus": 0.25,
+			"color": "#8a8a8a",
+			"sprites": { "good": "res://assets/sprites/buildings/quarry_good.png", "evil": "res://assets/sprites/buildings/quarry_evil.png" }
+		},
+		{
+			"id": "mine", "name": "Erzmine", "label": "Mine",
+			"description": "Bergleute liefern hier ab und arbeiten 25 % schneller. Nahe an Erzadern bauen.",
+			"size": [2, 2], "cost": { "wood": 40, "stone": 20 }, "build_time": 35,
+			"territory_radius": 4,
+			"dropoff": ["ore"], "gather_radius": 14, "gather_bonus": 0.25,
+			"color": "#4f6a8a",
+			"sprites": { "good": "res://assets/sprites/buildings/mine_good.png", "evil": "res://assets/sprites/buildings/mine_evil.png" }
+		},
+		{
+			"id": "hunter", "name": "Jägerhütte", "label": "Jagd",
+			"description": "Sammler und Jäger liefern hier Nahrung ab und arbeiten 25 % schneller.",
+			"size": [2, 2], "cost": { "wood": 25 }, "build_time": 20,
+			"territory_radius": 4,
+			"dropoff": ["food"], "gather_radius": 14, "gather_bonus": 0.25,
+			"color": "#6b7d3a",
+			"sprites": { "good": "res://assets/sprites/buildings/hunter_good.png", "evil": "res://assets/sprites/buildings/hunter_evil.png" }
+		},
+		{
+			"id": "farm", "name": "Bauernhof", "label": "Hof",
+			"description": "Bis zu 3 Bauern erzeugen dauerhaft Nahrung. Am besten auf Ebene, schlecht in der Wüste.",
+			"size": [2, 2], "cost": { "wood": 40 }, "build_time": 30,
+			"territory_radius": 4,
+			"workers": 3, "job": "farmer", "production": { "food": 0.4 },
+			"biome_efficiency": { "plains": 1.0, "forest": 0.7, "desert": 0.35 },
+			"color": "#c8b04a",
+			"sprites": { "good": "res://assets/sprites/buildings/farm_good.png", "evil": "res://assets/sprites/buildings/farm_evil.png" }
+		},
+		{
+			"id": "mana_well", "name": "Manabrunnen", "label": "Mana",
+			"description": "Muss auf einer Manaquelle stehen. Erzeugt etwas Mana, mit Manawirkern deutlich mehr.",
+			"size": [2, 2], "cost": { "wood": 30, "stone": 30 }, "build_time": 40,
+			"territory_radius": 4,
+			"workers": 2, "job": "mana_worker", "production": { "mana": 0.08 }, "base_production": { "mana": 0.03 },
+			"requires_deposit": "mana_spring",
+			"color": "#7d55d6",
+			"sprites": { "good": "res://assets/sprites/buildings/mana_well_good.png", "evil": "res://assets/sprites/buildings/mana_well_evil.png" }
+		},
+		{
+			"id": "road", "name": "Strasse", "label": "",
+			"description": "Bewohner laufen auf Strassen schneller. Mit gedrückter Maustaste ziehen.",
+			"size": [1, 1], "cost": { "stone": 1 }, "build_time": 2,
+			"is_road": true, "placement": "line", "blocks_movement": false,
+			"color": "#8a7556",
+			"sprites": { "good": "res://assets/sprites/terrain/terrain_road.png", "evil": "res://assets/sprites/terrain/terrain_road.png" }
+		}
+	]
+}
