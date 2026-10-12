@@ -11,8 +11,9 @@
 ##
 ## Zeit: Geschosse, Treffer, Gefallene und die Fahne laufen mit
 ## GameClock.frame_delta (Pause friert sie ein, Tempo beschleunigt sie).
-## Befehlsmarkierungen laufen in Echtzeit – sie sind die Rückmeldung auf einen
-## Klick und sollen auch in der Pause und bei 3x Tempo gleich lang sichtbar sein.
+## Befehlsmarkierungen stehen in der Pause ebenfalls still, laufen sonst aber
+## in Echtzeit: sie sind die Rückmeldung auf einen Klick und sollen bei 3x
+## Tempo nicht dreimal so schnell verschwinden.
 ## Neu gezeichnet wird nur, solange Effekte existieren oder eine Fahne sichtbar ist.
 class_name CombatEffects
 extends Node2D
@@ -258,7 +259,7 @@ func _process(delta: float) -> void:
 	var gd := GameClock.frame_delta
 	if gd > 0.0:
 		_advance(gd)
-	if not _markers.is_empty():
+	if gd > 0.0 and not _markers.is_empty():
 		_advance_markers(delta)
 	_update_flags(gd > 0.0)
 	var has_any := not (_projectiles.is_empty() and _sparks.is_empty() and _corpses.is_empty()
@@ -429,8 +430,8 @@ func _draw_arrow() -> void:
 
 ## Magisches Geschoss (lokal): violetter Schein, Schweif, dunkler Kern, heller Kopf
 func _draw_bolt() -> void:
-	draw_circle(Vector2(-5.0, 0), 11.0, Color(BOLT_GLOW, 0.16))
-	draw_circle(Vector2(-3.0, 0), 6.5, Color(BOLT_GLOW, 0.38))
+	draw_circle(Vector2(-5.0, 0), 11.0, Color(BOLT_GLOW, 0.22))
+	draw_circle(Vector2(-3.0, 0), 6.5, Color(BOLT_GLOW, 0.45))
 	draw_line(Vector2(-30.0, 0), Vector2(-10.0, 0), Color(BOLT_SHINE, 0.3), 3.0)
 	draw_line(Vector2(-16.0, 0), Vector2(0, 0), BOLT_CORE, 5.0)
 	draw_line(Vector2(-14.0, 0), Vector2(-1.0, 0), BOLT_SHINE, 2.0)
@@ -489,16 +490,16 @@ func _draw_flags() -> void:
 		var kc: Color = b.kingdom.color
 		var wave := sin(_wave_time * 4.0) * 2.0
 		draw_set_transform(p, 0.0, Vector2(k, k * 0.4))
-		draw_circle(Vector2.ZERO, 7.0, Color(0, 0, 0, 0.3))
+		draw_circle(Vector2.ZERO, 8.0, Color(0, 0, 0, 0.3))
 		draw_set_transform(p, 0.0, Vector2(k, k))
-		var top := Vector2(0, -34.0)
-		draw_line(Vector2.ZERO, top, Color(0.12, 0.08, 0.04), 4.0)
-		draw_line(Vector2.ZERO, top, Color(0.55, 0.38, 0.2), 2.0)
-		var flag := PackedVector2Array([top, top + Vector2(20.0, 6.0 + wave), top + Vector2(0, 13.0)])
+		var top := Vector2(0, -40.0)
+		draw_line(Vector2.ZERO, top, Color(0.12, 0.08, 0.04), 4.5)
+		draw_line(Vector2.ZERO, top, Color(0.55, 0.38, 0.2), 2.5)
+		var flag := PackedVector2Array([top, top + Vector2(25.0, 7.5 + wave), top + Vector2(0, 16.0)])
 		draw_colored_polygon(flag, kc)
 		flag.append(top)
 		draw_polyline(flag, Color(0, 0, 0, 0.75), 1.5)
-		draw_circle(top, 2.5, Color(1.0, 0.85, 0.3))
+		draw_circle(top, 3.0, Color(1.0, 0.85, 0.3))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 

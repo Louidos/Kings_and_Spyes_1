@@ -362,7 +362,19 @@ func _engage(u: Unit) -> void:
 ## der eigenen Richtung (so verteilen sich Angreifer rundherum).
 func _chase_point(u: Unit, t: Object) -> Vector2:
 	if t is Building:
-		return t.get_approach_point(u.position)
+		# Platz knapp ausserhalb der Grundfläche: Richtung vom Gebäude zum
+		# Angreifer, je Einheit etwas gedreht – so verteilen sich die Angreifer
+		# rund um das Gebäude, statt sich an einer Ecke anzustellen.
+		var center: Vector2 = t.get_center()
+		var half := Vector2(t.size) * _ts * 0.5 + Vector2.ONE * (u.get_radius() + 4.0)
+		var angle := (u.position - center).angle() + float((u.uid * 7) % 9 - 4) * 0.2
+		var d := Vector2.from_angle(angle)
+		var k := minf(half.x / maxf(absf(d.x), 0.001), half.y / maxf(absf(d.y), 0.001))
+		var p: Vector2 = center + d * k
+		var c := world.world_to_cell(p)
+		if not world.in_bounds(c) or game.nav.is_solid(c):
+			return t.get_approach_point(u.position)
+		return p
 	var dir: Vector2 = (u.position - t.position)
 	if dir.length() < 1.0:
 		dir = Vector2.RIGHT.rotated(_rng.randf() * TAU)

@@ -488,16 +488,19 @@ func _build_summon_box(parent: Control) -> void:
 		queue_row.add_child(slot)
 		_queue_slots.append(slot)
 		_queue_icons.append(icon)
+	# Text neben den Plätzen: immer genau zwei Zeilen hoch (siehe _fix_two_lines),
+	# sonst verschöbe ein längerer Text die Beschwören-Buttons darüber.
 	_queue_label = Label.new()
 	_queue_label.add_theme_font_size_override("font_size", SMALL_FONT_SIZE)
 	_queue_label.add_theme_color_override("font_color", COLOR_DIM)
 	_queue_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_queue_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_queue_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_queue_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	queue_row.add_child(_queue_label)
+	_fix_two_lines(_queue_label)
 
-	# Sammelpunkt: Hinweis und (falls gesetzt) "löschen"; feste Höhe
+	# Sammelpunkt: Hinweis und (falls gesetzt) "löschen"; feste Höhe, auch wenn
+	# der Löschen-Button erscheint und der Hinweis dadurch umbricht
 	var rally_row := HBoxContainer.new()
 	rally_row.add_theme_constant_override("separation", 6)
 	rally_row.custom_minimum_size = Vector2(0, 42)
@@ -507,9 +510,9 @@ func _build_summon_box(parent: Control) -> void:
 	_rally_label.add_theme_color_override("font_color", COLOR_GREY)
 	_rally_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_rally_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_rally_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_rally_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	rally_row.add_child(_rally_label)
+	_fix_two_lines(_rally_label)
 	_rally_clear = _make_compact_button("Sammelpunkt löschen", SMALL_FONT_SIZE)
 	_rally_clear.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_rally_clear.tooltip_text = "Neue Einheiten stellen sich wieder vor dem Gebäude auf"
@@ -647,14 +650,15 @@ func _refresh_summons(b: Building) -> void:
 				icon.clear()
 			slot.disabled = true
 			slot.tooltip_text = ""
-	var queue_text := "Warteschlange leer – Klick auf eine Einheit oben"
+	# Beide Fassungen haben genau zwei kurze Zeilen (Höhe bleibt gleich)
+	var queue_text := "Warteschlange leer\nEinheit oben anklicken"
 	if not queue.is_empty():
 		var first: Dictionary = queue[0]
 		var first_def := DataDB.get_unit_type(str(first.get("type_id", "")))
 		var left := (float(first.get("time", 0.0)) - float(first.get("progress", 0.0))) / maxf(k.mod("summon"), 0.01)
 		queue_text = "%s\nnoch %d s" % [str(first_def.get("name", "?")), maxi(ceili(left), 0)]
 		if queue.size() > 1:
-			queue_text += "  ·  %d weitere" % (queue.size() - 1)
+			queue_text += " · %d weitere" % (queue.size() - 1)
 	_set_label_text(_queue_label, queue_text)
 
 	# Sammelpunkt
@@ -1109,6 +1113,22 @@ func _set_text(label: Label, text: String) -> void:
 	if label.text != text:
 		label.text = text
 	label.visible = not text.is_empty()
+
+
+## Feste Höhe von zwei Zeilen, egal wie lang der Text ist: höchstens zwei
+## Zeilen zählen für die Höhe (max_lines_visible), einzeilige Texte bekommen
+## dieselbe Höhe über custom_minimum_size. Kein Kürzen mit "…": dann fiele die
+## Mindesthöhe auf eine Zeile und die zweite Zeile verschwände, sobald die
+## Schrift (Fenstergrösse) etwas höher rechnet als hier geschätzt.
+## Muss nach add_child aufgerufen werden (Schrift aus dem Theme).
+func _fix_two_lines(label: Label) -> void:
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.max_lines_visible = 2
+	var font := label.get_theme_font("font")
+	var font_size := label.get_theme_font_size("font_size")
+	var h := font.get_height(font_size) * 2.0 + float(label.get_theme_constant("line_spacing"))
+	# Etwas Luft, damit Rundung je nach Fenstergrösse die Höhe nicht ändert
+	label.custom_minimum_size.y = ceilf(h) + 4.0
 
 
 ## Setzt nur den Text (Label bleibt sichtbar)

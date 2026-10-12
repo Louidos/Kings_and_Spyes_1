@@ -54,6 +54,9 @@ func setup(p_game: Node) -> void:
 		var job: Dictionary = j
 		_add_row(job)
 	game.work_system.jobs_changed.connect(_on_jobs_changed)
+	# Um einen halben Takt versetzt zur Ressourcenleiste: beide zählen alle
+	# Einheiten durch und sollen das nicht im selben Bild tun
+	_timer = REFRESH_INTERVAL * 0.5
 	_refresh()
 
 

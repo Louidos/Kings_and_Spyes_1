@@ -464,20 +464,43 @@ func _pick_building(world: Vector2) -> Building:
 # ---------------------------------------------------------------------------
 
 ## Rechtsklick (bzw. scharfer Linksklick) mit eigenen Einheiten: Feind unter
-## der Maus angreifen, sonst dorthin marschieren.
+## der Maus angreifen, sonst dorthin marschieren. Die Zielmarke erscheint nur,
+## wenn mindestens eine Einheit den Befehl angenommen hat (der König etwa
+## verweigert Ziele ausserhalb seines Reichs).
 func _issue_order(units: Array, world: Vector2, attack_move: bool) -> void:
 	var target: Node2D = _pick_unit(world, true)
 	if target == null:
 		var b := _pick_building(world)
 		if b != null and b.is_alive() and game.are_hostile(game.player, b.kingdom):
 			target = b
+	var before := _order_ids(units)
 	if target != null:
 		game.command_system.order_attack(units, target)
-		command_issued.emit(target.position, "attack")
+		if _any_order_taken(units, before):
+			command_issued.emit(target.position, "attack")
 	else:
 		game.command_system.order_move(units, world, attack_move)
-		command_issued.emit(world, "attack_move" if attack_move else "move")
+		if _any_order_taken(units, before):
+			command_issued.emit(world, "attack_move" if attack_move else "move")
 	cancel_arm()
+
+
+## order_id je Einheit vor einem Befehl (CommandSystem zählt ihn bei jedem
+## angenommenen Befehl hoch)
+func _order_ids(units: Array) -> Dictionary:
+	var ids := {}
+	for u in units:
+		if is_instance_valid(u) and u is Unit:
+			ids[u] = u.order_id
+	return ids
+
+
+## Hat mindestens eine Einheit seit before einen neuen Befehl bekommen?
+func _any_order_taken(units: Array, before: Dictionary) -> bool:
+	for u in units:
+		if is_instance_valid(u) and u is Unit and before.has(u) and u.order_id != before[u]:
+			return true
+	return false
 
 
 ## Eigenes fertiges Beschwörungsgebäude in der Auswahl (für den Sammelpunkt)
