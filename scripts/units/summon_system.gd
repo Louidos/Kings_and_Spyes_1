@@ -55,7 +55,8 @@ func can_summon(b: Building, type_id: String) -> String:
 		return "Unbekannte Einheit"
 	for req in def.get("requires", []):
 		if not b.kingdom.unlocks.has(req):
-			return "Benötigt: %s" % str(req)
+			var r := DataDB.find_research_unlocking(b.kingdom.faction_id, str(req))
+			return "Benötigt Forschung: %s" % str(r.get("name", req))
 	if b.summon_queue.size() >= _queue_limit:
 		return "Warteschlange voll (%d)" % _queue_limit
 	var cost: Dictionary = def.get("cost", {})

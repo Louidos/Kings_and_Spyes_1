@@ -383,7 +383,10 @@ func _chase_point(u: Unit, t: Object) -> Vector2:
 
 
 ## Ein Angriff: Schaden sofort, Fernkampf zeigt zusätzlich ein Geschoss.
+## Getarnte Angreifer werden dabei sichtbar.
 func _attack(u: Unit, t: Object) -> void:
+	if u.stealthed:
+		game.magic_system.reveal(u)
 	var dmg := _damage_value(u, t, _rng.randf_range(1.0 - _variance, 1.0 + _variance))
 	var kind := str(u.type_def.get("projectile", ""))
 	if not kind.is_empty():

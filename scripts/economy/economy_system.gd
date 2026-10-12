@@ -58,6 +58,9 @@ func _on_sim_tick(dt: float) -> void:
 			continue  # z. B. Monster: essen nicht, vermehren sich über ihre Höhlen
 		_consume_food(kingdom, dt)
 		_grow(kingdom, dt)
+		# Mana aus Forschung und Kampfpunkt-Verbesserungen (die Burg erzeugt es)
+		if kingdom.mana_regen > 0.0 and is_instance_valid(kingdom.castle):
+			kingdom.add_resource("mana", kingdom.mana_regen * dt)
 	_rate_timer += dt
 	if _rate_timer >= RATE_INTERVAL:
 		for kingdom in game.kingdoms:

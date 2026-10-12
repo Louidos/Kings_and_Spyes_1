@@ -49,7 +49,7 @@ func setup(p_game: Node) -> void:
 		if not bool(def.get("player_buildable", false)):
 			continue
 		var id := str(def.get("id", ""))
-		var b := _make_button(str(def.get("name", id)))
+		var b := _make_button(DataDB.get_building_name(def, game.player.faction_id))
 		var tex := Assets.texture(DataDB.get_building_sprite(def, game.player.faction_id))
 		if tex != null:
 			b.icon = tex

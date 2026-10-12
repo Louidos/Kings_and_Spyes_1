@@ -188,6 +188,12 @@ func get_building_name(def: Dictionary, faction_id: String) -> String:
 	return str(names.get(faction_id, def.get("name", "Gebäude")))
 
 
+## Kurzbeschriftung eines Gebäudes (Platzhalter) für eine Fraktion
+func get_building_label(def: Dictionary, faction_id: String) -> String:
+	var labels: Dictionary = def.get("labels", {})
+	return str(labels.get(faction_id, def.get("label", "")))
+
+
 func get_research(id: String) -> Dictionary:
 	return research_by_id.get(id, {})
 
@@ -212,6 +218,51 @@ func get_spells_for_faction(faction_id: String) -> Array:
 		if sp["faction"] == faction_id or sp["faction"] == "any":
 			list.append(sp)
 	return list
+
+
+## Forschung der Fraktion, die diese Freischaltung bringt ({} wenn keine)
+func find_research_unlocking(faction_id: String, unlock_id: String) -> Dictionary:
+	for r in get_research_for_faction(faction_id):
+		for e in r.get("effects", []):
+			if e.get("type", "") == "unlock" and str(e.get("id", "")) == unlock_id:
+				return r
+	return {}
+
+
+## Lesbarer Name einer Freischaltung: "unit:elite_good" -> "Ritter",
+## "building:infirmary" -> "Krankenstation", "spell:x" -> "Zauber „…“"
+func describe_unlock(unlock_id: String, faction_id: String) -> String:
+	var parts := unlock_id.split(":", true, 1)
+	if parts.size() < 2:
+		return unlock_id
+	match parts[0]:
+		"unit":
+			return str(get_unit_type(parts[1]).get("name", parts[1]))
+		"building":
+			return get_building_name(get_building(parts[1]), faction_id)
+		"spell":
+			return "Zauber „%s“" % str(get_spell(parts[1]).get("name", parts[1]))
+	return unlock_id
+
+
+const _MOD_NAMES := {"attack": "Angriff", "armor": "Rüstung", "hp": "Leben", "speed": "Tempo",
+	"range": "Reichweite", "regen": "Erholung", "heal": "Heilung", "gather": "Sammeltempo",
+	"build": "Bautempo", "production": "Produktion", "research": "Forschungstempo",
+	"summon": "Beschwörungstempo", "growth": "Wachstum", "food_use": "Nahrungsverbrauch"}
+const _TIER_NAMES := {"fighter": "Kämpfer", "archer": "Schützen", "elite": "Elite", "scout": "Späher",
+	"medic": "Heiler", "king": "König", "villager": "Bewohner"}
+
+
+## Lesbare Wirkung eines Modifikators, z. B. "+10 % Angriff (Kämpfer)"
+func describe_modifier(key: String, factor: float) -> String:
+	var parts := key.split(".", true, 1)
+	var label := str(_MOD_NAMES.get(parts[0], parts[0]))
+	if parts.size() > 1:
+		if parts[0] == "production" or parts[0] == "gather":
+			label += " (%s)" % str(get_resource(parts[1]).get("name", parts[1]))
+		else:
+			label += " (%s)" % str(_TIER_NAMES.get(parts[1], parts[1]))
+	return "%+d %% %s" % [roundi((factor - 1.0) * 100.0), label]
 
 
 ## Liest einen Wert aus spells.json (Einstellungen, Mana-Verbesserungen) über einen Punkt-Pfad.

@@ -35,6 +35,11 @@ func can_place(def: Dictionary, cell: Vector2i, kingdom: Kingdom) -> String:
 		if reason.is_empty():
 			reason = kingdom.missing_text(def.get("cost", {}))
 		return reason
+	# Muss erst erforscht werden?
+	for req in def.get("requires", []):
+		if not kingdom.unlocks.has(req):
+			var r := DataDB.find_research_unlocking(kingdom.faction_id, str(req))
+			return "Benötigt Forschung: %s" % str(r.get("name", req))
 	var size: Vector2i = def.get("size", Vector2i(2, 2))
 	var required_id := str(def.get("requires_deposit", ""))
 	var required_found := required_id.is_empty()
@@ -316,7 +321,9 @@ func _on_sim_tick(dt: float) -> void:
 				gains[res_id] = float(per_worker[res_id]) * working * factor
 			for res_id in base:
 				gains[res_id] = float(gains.get(res_id, 0.0)) + float(base[res_id])
+			# Wetterzauber (Segensregen) im Gebiet des Gebäudes
+			var weather: float = game.magic_system.get_production_factor(kingdom, b.position)
 			for res_id in gains:
 				if gains[res_id] > 0.0:
-					var mult: float = kingdom.mod("production") * kingdom.mod("production." + res_id)
+					var mult: float = kingdom.mod("production") * kingdom.mod("production." + res_id) * weather
 					kingdom.add_resource(res_id, gains[res_id] * b.biome_efficiency * mult * dt)

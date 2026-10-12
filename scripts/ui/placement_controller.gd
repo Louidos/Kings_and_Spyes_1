@@ -199,10 +199,10 @@ func _draw_building_preview(ts: float, font_size: int) -> void:
 		draw_rect(area, Color(1, 1, 1, 0.06), true)
 		draw_rect(area, Color(1, 1, 1, 0.5), false, 2.0)
 	var tex := Assets.texture(DataDB.get_building_sprite(def, game.player.faction_id))
-	SpriteDraw.draw_entity(self, tex, rect, def.get("color", Color.GRAY), str(def.get("label", "")), "rect", Color(1, 1, 1, 0.6))
+	SpriteDraw.draw_entity(self, tex, rect, def.get("color", Color.GRAY), DataDB.get_building_label(def, game.player.faction_id), "rect", Color(1, 1, 1, 0.6))
 	draw_rect(rect, Color(color, 0.25), true)
 	draw_rect(rect, color, false, 3.0)
-	var lines: PackedStringArray = [str(def.get("name", ""))]
+	var lines: PackedStringArray = [DataDB.get_building_name(def, game.player.faction_id)]
 	if ok:
 		lines.append("Kosten: " + DataDB.cost_to_text(def.get("cost", {})))
 		var eff := _preview_efficiency(size)

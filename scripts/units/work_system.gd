@@ -428,7 +428,8 @@ func _tick_gather(u: Unit, dt: float) -> void:
 	var capacity := _carry_capacity(u)
 	var res_id := str(job.get("resource", ""))
 	var bonus := u.dropoff.get_gather_bonus() if is_instance_valid(u.dropoff) else 0.0
-	var mult := u.kingdom.mod("gather") * u.kingdom.mod("gather." + res_id) * work_factor(u.kingdom, job)
+	var mult: float = u.kingdom.mod("gather") * u.kingdom.mod("gather." + res_id) * work_factor(u.kingdom, job) \
+			* game.magic_system.get_production_factor(u.kingdom, u.position)
 	u.work_acc += float(job.get("gather_rate", 1.0)) * (1.0 + bonus) * mult * dt
 	while u.work_acc >= 1.0 and u.carry_amount < capacity:
 		u.work_acc -= 1.0

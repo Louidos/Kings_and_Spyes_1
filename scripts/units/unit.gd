@@ -103,8 +103,10 @@ var home_pos := Vector2.ZERO
 var dormant := false
 ## Ziel verloren: nach der nächsten erfolglosen Suche zurück auf den Posten usw.
 var regroup_pending := false
-## Getarnt: für fremde Reiche unsichtbar (ab Phase 7: Spione)
+## Getarnt: für fremde Reiche unsichtbar (Tarnzauber, ab Phase 7 Spione)
 var stealthed := false
+## Beschworene Zaubereinheit: verschwindet zu dieser Spielzeit (-1 = nie)
+var expires_at := -1.0
 
 # --- Arbeit (WorkSystem) ---
 var job_id: String = "idle":

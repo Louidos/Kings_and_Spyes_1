@@ -107,13 +107,23 @@
 		},
 		{
 			"id": "infirmary", "name": "Krankenstation", "label": "Heil",
-			"description": "Beschwört Heiler. Eigene Einheiten in der Nähe erholen sich schneller. Wird mit Mana errichtet.",
+			"description": "Beschwört Heiler. Eigene Einheiten in der Nähe erholen sich schneller. Wird mit Mana errichtet. Muss erforscht werden.",
+			"requires": ["building:infirmary"],
 			"size": [2, 2], "cost": { "wood": 50, "stone": 20, "mana": 25 }, "build_time": 40,
 			"territory_radius": 4, "hp": 400,
 			"summons": ["medic"],
 			"heal_aura": { "radius": 4, "hp_per_sec": 3 },
 			"color": "#d8d0c0",
 			"sprites": { "good": "res://assets/sprites/buildings/infirmary_good.png", "evil": "res://assets/sprites/buildings/infirmary_evil.png" }
+		},
+		{
+			"id": "library", "name": "Bibliothek", "names": { "good": "Bibliothek", "evil": "Dunkles Archiv" },
+			"label": "Bib.", "labels": { "good": "Bib.", "evil": "Archiv" },
+			"description": "Forschungsstätte: hier wird geforscht (Forschung mit R). Jede weitere forscht 25 % schneller.",
+			"size": [2, 2], "cost": { "wood": 60, "stone": 60, "mana": 20 }, "build_time": 50,
+			"territory_radius": 4, "hp": 500, "research": true,
+			"color": "#5d6fb3",
+			"sprites": { "good": "res://assets/sprites/buildings/library_good.png", "evil": "res://assets/sprites/buildings/library_evil.png" }
 		},
 		{
 			"id": "monster_lair", "name": "Monsterhöhle", "label": "Höhle",

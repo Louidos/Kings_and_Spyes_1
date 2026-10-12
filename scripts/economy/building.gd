@@ -225,7 +225,7 @@ func _draw() -> void:
 	var px := Vector2(size) * _tile_size
 	var rect := Rect2(-px * 0.5, px)
 	var tint := Color.WHITE if constructed else Color(1, 1, 1, 0.55)
-	SpriteDraw.draw_entity(self, _texture, rect, def.get("color", Color.GRAY), str(def.get("label", "")), "rect", tint)
+	SpriteDraw.draw_entity(self, _texture, rect, def.get("color", Color.GRAY), DataDB.get_building_label(def, kingdom.faction_id), "rect", tint)
 	if not constructed:
 		# Baugerüst andeuten und Fortschritt zeigen
 		var scaffold := Color(0.45, 0.32, 0.18, 0.9)

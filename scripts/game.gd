@@ -30,6 +30,8 @@ signal formation_changed(formation: String)
 @onready var command_system: CommandSystem = $Systems/CommandSystem
 @onready var summon_system: SummonSystem = $Systems/SummonSystem
 @onready var monster_system: MonsterSystem = $Systems/MonsterSystem
+@onready var research_system: ResearchSystem = $Systems/ResearchSystem
+@onready var magic_system: MagicSystem = $Systems/MagicSystem
 @onready var selection: SelectionController = $Selection
 @onready var hud: CanvasLayer = $HUD
 @onready var pause_menu: CanvasLayer = $PauseMenu
@@ -108,6 +110,8 @@ func _start_game() -> void:
 	combat_system.setup(self)
 	command_system.setup(self)
 	summon_system.setup(self)
+	research_system.setup(self)
+	magic_system.setup(self)
 	placement.setup(self)
 	selection.setup(self)
 	unit_overlay.setup(self)
