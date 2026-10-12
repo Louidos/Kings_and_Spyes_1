@@ -148,13 +148,20 @@ func _refresh() -> void:
 		return
 	var ws: WorkSystem = game.work_system
 	var idle := ws.get_idle_count(k)
-	# Einheiten mit Befehl je Beruf (ein Durchlauf für alle Zeilen)
+	# Ein Durchlauf für alle Zeilen statt einer Suche je Beruf (viele Einheiten):
+	# Anzahl, Einheiten mit Befehl ("pausiert") und erstes Problem je Beruf
+	var count_by_job := {}
 	var paused_by_job := {}
+	var problem_by_job := {}
 	for u in k.units:
+		var job_id: String = u.job_id
+		count_by_job[job_id] = int(count_by_job.get(job_id, 0)) + 1
 		var cmd: String = u.command
 		if not cmd.is_empty():
-			var job_id: String = u.job_id
 			paused_by_job[job_id] = int(paused_by_job.get(job_id, 0)) + 1
+		var unit_problem: String = u.problem
+		if not unit_problem.is_empty() and not problem_by_job.has(job_id):
+			problem_by_job[job_id] = unit_problem
 	for r in _rows:
 		var row: Dictionary = r
 		var id := str(row["id"])
@@ -165,7 +172,7 @@ func _refresh() -> void:
 			_set_text(count_label, str(idle))
 			_set_color(count_label, COLOR_WARN if idle > 0 else COLOR_NORMAL)
 			continue
-		var n := ws.get_job_count(k, id)
+		var n := int(count_by_job.get(id, 0))
 		var cap := ws.get_job_capacity(k, id)
 		_set_text(count_label, "%d/%d" % [n, cap] if cap >= 0 else str(n))
 		var paused_label: Label = row["paused"]
@@ -173,7 +180,7 @@ func _refresh() -> void:
 		_set_text(paused_label, "(%d pausiert)" % paused if paused > 0 else "")
 		paused_label.visible = paused > 0
 		var job := DataDB.get_job(id)
-		var problem := ws.get_job_problem(k, id)
+		var problem := str(problem_by_job.get(id, ""))
 		_set_text(warn, "" if problem.is_empty() else "(!)")
 		var tip := problem
 		if tip.is_empty():
@@ -191,7 +198,7 @@ func _refresh() -> void:
 		if idle == 0:
 			can_add = false
 			plus_tip = NO_IDLE_TIP
-		elif str(row["type"]) == "building" and not ws.has_free_slot(k, id):
+		elif str(row["type"]) == "building" and cap >= 0 and n >= cap:
 			can_add = false
 			plus_tip = str(job.get("hint", "Kein freier Platz."))
 		plus.disabled = not can_add

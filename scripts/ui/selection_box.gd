@@ -9,6 +9,7 @@ extends Control
 
 const FILL_COLOR := Color(1.0, 0.95, 0.55, 0.12)
 const LINE_COLOR := Color(1.0, 0.95, 0.6, 0.95)
+const LINE_WIDTH := 1.5
 ## Dunkler Schatten unter der Linie: bleibt auch auf hellem Sand/Schnee sichtbar
 const SHADOW_COLOR := Color(0.0, 0.0, 0.0, 0.35)
 
@@ -43,7 +44,8 @@ func _draw() -> void:
 	if _rect.size.x < 1.0 and _rect.size.y < 1.0:
 		return
 	draw_rect(_rect, FILL_COLOR, true)
-	# Auf halbe Pixel legen, damit die 1-px-Linie scharf statt verwaschen ist
+	# Auf halbe Pixel legen, damit die dünne Linie scharf statt verwaschen ist;
+	# 1.5 px, weil das Fenster meist kleiner als die 1920er-Basisgrösse skaliert
 	var line := Rect2(_rect.position.floor() + Vector2(0.5, 0.5), _rect.size.floor())
-	draw_rect(line.grow(1.0), SHADOW_COLOR, false, 1.0)
-	draw_rect(line, LINE_COLOR, false, 1.0)
+	draw_rect(line.grow(1.25), SHADOW_COLOR, false, 1.0)
+	draw_rect(line, LINE_COLOR, false, LINE_WIDTH)

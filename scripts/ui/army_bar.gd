@@ -15,6 +15,18 @@ const DOUBLE_CLICK_MS := 350
 const FONT_SIZE := 15
 const MAX_ARMIES := 9
 
+
+## Button einer Armee: der Tooltip (Anzahl je Typ) entsteht erst beim Zeigen,
+## nicht bei jeder Aktualisierung
+class ArmyButton:
+	extends Button
+	var bar: ArmyBar
+	var army := 0
+
+	func _get_tooltip(_at_position: Vector2) -> String:
+		return bar.tooltip_for(army) if is_instance_valid(bar) else ""
+
+
 var game: Node
 
 var _flow: HFlowContainer
@@ -108,13 +120,7 @@ func _refresh() -> void:
 		var text := "%d · %d" % [n, units.size()]
 		if button.text != text:
 			button.text = text
-		var tip := _tooltip(n, units)
-		if button.tooltip_text != tip:
-			button.tooltip_text = tip
-		var uids: Array = []
-		for u in units:
-			uids.append((u as Unit).uid)
-		_army_uids[n] = uids
+		_army_uids[n] = k.armies[n]
 	visible = any
 	_update_pressed()
 
@@ -123,9 +129,17 @@ func _refresh() -> void:
 func _update_pressed() -> void:
 	if _buttons.is_empty():
 		return
+	# Nur wenn eine Armee gleich gross ist wie die Auswahl, lohnt der Vergleich
+	var sel: Array = game.selection.selected
+	var candidate := false
+	for n in _army_uids:
+		if (_army_uids[n] as Array).size() == sel.size():
+			candidate = true
 	var selected := {}
-	for u in game.selection.get_own_units():
-		selected[(u as Unit).uid] = true
+	if candidate:
+		for o in sel:
+			if is_instance_valid(o) and o is Unit:
+				selected[(o as Unit).uid] = true
 	for n in _buttons:
 		var button: Button = _buttons[n]
 		var uids: Array = _army_uids.get(n, [])
@@ -139,7 +153,13 @@ func _update_pressed() -> void:
 			button.set_pressed_no_signal(match_all)
 
 
-func _tooltip(n: int, units: Array) -> String:
+## Tooltip einer Armee: Anzahl je Einheitentyp und Bedienung
+func tooltip_for(n: int) -> String:
+	if game == null:
+		return ""
+	var units: Array = game.command_system.get_army(game.player, n)
+	if units.is_empty():
+		return ""
 	var counts := {}
 	for u in units:
 		var unit_name: String = (u as Unit).get_display_name()
@@ -156,7 +176,9 @@ func _tooltip(n: int, units: Array) -> String:
 
 
 func _make_button(n: int) -> Button:
-	var b := Button.new()
+	var b := ArmyButton.new()
+	b.bar = self
+	b.army = n
 	b.toggle_mode = true
 	# Kein Tastaturfokus, sonst würde die Leertaste (Pause) den Button auslösen
 	b.focus_mode = Control.FOCUS_NONE

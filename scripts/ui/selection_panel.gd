@@ -28,12 +28,13 @@ const COLOR_GREY := Color(0.64, 0.62, 0.58)
 const COLOR_TEXT := Color(0.95, 0.92, 0.85)
 const COLOR_BAD := Color(1.0, 0.45, 0.38)
 const FONT_SIZE := 16
-const SMALL_FONT_SIZE := 14
+const SMALL_FONT_SIZE := 15
 const QUEUE_SLOTS := 5
 const QUEUE_SLOT_SIZE := 40.0
 ## Unter dieser Reichweite (Kacheln) heisst es "Nahkampf"
 const MELEE_RANGE := 1.5
-const MULTI_HINT := "Rechtsklick: bewegen/angreifen · Strg+Rechtsklick: angreifend vorrücken · Strg+1–9: Armee speichern · F: Formation"
+## Feste Zeilenumbrüche: sonst bricht die Zeile mitten in "F: Formation"
+const MULTI_HINT := "Rechtsklick: bewegen/angreifen\nStrg+Rechtsklick: angreifend vorrücken\nStrg+1–9: Armee speichern · F: Formation"
 const KING_NOTE := "Der König verlässt sein Reich nicht."
 const NO_JOB_TIP := "Kein Beruf – wähle oben einen Beruf"
 const ATTACK_MOVE_TIP := "Nächster Rechtsklick: angreifend vorrücken (auch Strg+Rechtsklick)"
@@ -94,6 +95,12 @@ var _confirm_left := 0.0
 var _timer := 0.0
 ## Ein Signal hat eine Änderung gemeldet: im nächsten Bild neu aufbauen
 var _dirty := false
+## Zwischenspeicher der Mehrfachauswahl (-1 = neu zählen)
+var _multi_size := -1
+var _multi_counts := ""
+var _multi_workers := 0
+var _multi_with_job := 0
+var _multi_army := 0
 
 
 func _ready() -> void:
@@ -176,6 +183,8 @@ func setup(p_game: Node) -> void:
 	game.summon_system.queue_changed.connect(_on_queue_changed)
 	game.formation_changed.connect(_on_formation_changed)
 	game.player.resources_changed.connect(_on_resources_changed)
+	game.work_system.jobs_changed.connect(_on_jobs_changed)
+	game.command_system.armies_changed.connect(_on_armies_changed)
 	_on_selection_changed(game.selection.selected)
 
 
@@ -198,10 +207,15 @@ func _process(delta: float) -> void:
 
 
 func _on_selection_changed(_objs: Array) -> void:
-	var primary: Object = game.selection.get_primary()
+	# Untypisiert übernehmen: ein bereits gelöschtes Objekt darf nicht in eine
+	# typisierte Variable
+	var primary: Variant = game.selection.get_primary()
+	if not is_instance_valid(primary):
+		primary = null
 	if primary != _target:
 		_confirm_left = 0.0
 	_target = primary
+	_multi_size = -1
 	_timer = 0.0
 	_dirty = false
 	_refresh()
@@ -218,6 +232,19 @@ func _on_resources_changed() -> void:
 		_dirty = true
 
 
+## Berufe oder Armeen geändert: Zusammensetzung der Mehrfachauswahl neu zählen
+func _on_jobs_changed(k: Kingdom) -> void:
+	if k == game.player and _mode != "":
+		_multi_size = -1
+		_dirty = true
+
+
+func _on_armies_changed(k: Kingdom) -> void:
+	if k == game.player and _mode != "":
+		_multi_size = -1
+		_dirty = true
+
+
 func _on_formation_changed(_formation: String) -> void:
 	_update_formation_button()
 
@@ -230,7 +257,9 @@ func _refresh() -> void:
 	# Zuerst prüfen, ob das Objekt noch existiert – erst dann den Typ
 	if not is_instance_valid(_target) or not _target.is_alive():
 		_target = null
-	var own_units: Array = game.selection.get_own_units()
+	# Mehrfachauswahl nur prüfen, wenn mehr als ein Objekt gewählt ist
+	var sel: Array = game.selection.selected
+	var own_units: Array = _own_units(sel) if sel.size() > 1 else []
 	if own_units.size() > 1:
 		_mode = "units"
 		visible = true
@@ -368,11 +397,10 @@ func _lair_text(lair: Building) -> String:
 	var next_spawn: float = info.get("next_spawn", -1.0)
 	lines.append("Lager voll" if next_spawn < 0.0 else "Nachwuchs in %d s" % ceili(next_spawn))
 	var loot: Dictionary = info.get("loot", {})
-	var loot_text := DataDB.cost_to_text(loot) if not loot.is_empty() else "keine"
+	lines.append("Beute: " + (DataDB.cost_to_text(loot) if not loot.is_empty() else "keine"))
 	var points := int(lair.def.get("kill_points", 0))
 	if points > 0:
-		loot_text += ", %d Kampfpunkte" % points
-	lines.append("Beute: " + loot_text)
+		lines.append("Kampfpunkte: %d" % points)
 	var recommended: int = info.get("recommended", 1)
 	lines.append("Empfohlen: mindestens %d Kämpfer" % recommended)
 	return "\n".join(lines)
@@ -499,7 +527,9 @@ func _ensure_summon_buttons(b: Building) -> void:
 		return
 	_summon_building = b
 	_summon_ids = ids
+	# Sofort aus dem Baum nehmen, sonst stünden alte und neue Buttons ein Bild lang untereinander
 	for child in _summon_list.get_children():
+		_summon_list.remove_child(child)
 		child.queue_free()
 	_summon_entries.clear()
 	for o in options:
@@ -622,9 +652,9 @@ func _refresh_summons(b: Building) -> void:
 		var first: Dictionary = queue[0]
 		var first_def := DataDB.get_unit_type(str(first.get("type_id", "")))
 		var left := (float(first.get("time", 0.0)) - float(first.get("progress", 0.0))) / maxf(k.mod("summon"), 0.01)
-		queue_text = "%s: noch %d s" % [str(first_def.get("name", "?")), maxi(ceili(left), 0)]
+		queue_text = "%s\nnoch %d s" % [str(first_def.get("name", "?")), maxi(ceili(left), 0)]
 		if queue.size() > 1:
-			queue_text += "  (+%d)" % (queue.size() - 1)
+			queue_text += "  ·  %d weitere" % (queue.size() - 1)
 	_set_label_text(_queue_label, queue_text)
 
 	# Sammelpunkt
@@ -741,29 +771,41 @@ func _show_unit(u: Unit) -> void:
 
 ## Mehrere eigene Einheiten: Anzahl je Typ, gesamtes Leben, Befehle
 func _show_units(units: Array) -> void:
-	_set_text(_title, "%d Einheiten" % units.size())
-	_owner.visible = false
-	var counts := {}
+	# Zusammensetzung nur neu zählen, wenn sich Auswahl, Anzahl oder Berufe
+	# geändert haben (grosse Armeen); das Leben in jedem Durchgang
+	if units.size() != _multi_size:
+		_multi_size = units.size()
+		var counts := {}
+		_multi_workers = 0
+		_multi_with_job = 0
+		for o in units:
+			var u: Unit = o
+			var n := u.get_display_name()
+			counts[n] = int(counts.get(n, 0)) + 1
+			if u.can_work():
+				_multi_workers += 1
+				if u.job_id != "idle":
+					_multi_with_job += 1
+		_multi_counts = _count_text(counts)
+		_multi_army = _army_of(units)
 	var hp := 0.0
 	var max_hp := 0.0
-	var workers := 0
-	var with_job := 0
 	for o in units:
-		var u: Unit = o
-		var n := u.get_display_name()
-		counts[n] = int(counts.get(n, 0)) + 1
-		hp += u.hp
-		max_hp += u.max_hp
-		if u.can_work():
-			workers += 1
-			if u.job_id != "idle":
-				with_job += 1
+		hp += (o as Unit).hp
+		max_hp += (o as Unit).max_hp
+	var workers := _multi_workers
+	var with_job := _multi_with_job
+	var title := "%d Einheiten" % units.size()
+	if _multi_army > 0:
+		title += " · Armee %d" % _multi_army
+	_set_text(_title, title)
+	_owner.visible = false
 	_hp_bar.visible = true
 	_hp_bar.set_value(hp, max_hp)
 	_stats_grid.visible = false
 	_set_text(_status, "")
 	_set_text(_warn, "")
-	_set_text(_facts, _count_text(counts))
+	_set_text(_facts, _multi_counts)
 	_set_text(_bonus, "")
 	_set_text(_note, MULTI_HINT)
 	_summon_box.visible = false
@@ -774,10 +816,15 @@ func _show_units(units: Array) -> void:
 	_actions.visible = true
 	_halt_button.visible = true
 	_halt_button.tooltip_text = "Alle bleiben stehen und verteidigen ihren Platz"
-	_work_button.visible = workers > 0
+	# Immer sichtbar (2×2-Raster bleibt gleich), ohne Beruf gesperrt
+	_work_button.visible = true
 	_work_button.disabled = with_job == 0
-	_work_button.tooltip_text = NO_JOB_TIP if with_job == 0 \
-			else "Befehl aufheben – Einheiten mit Beruf arbeiten weiter, die anderen halten ihren Platz"
+	if workers == 0:
+		_work_button.tooltip_text = "Keine dieser Einheiten kann einen Beruf ausüben"
+	elif with_job == 0:
+		_work_button.tooltip_text = NO_JOB_TIP
+	else:
+		_work_button.tooltip_text = "Befehl aufheben – Einheiten mit Beruf arbeiten weiter, die anderen halten ihren Platz"
 	_attack_move_button.visible = true
 	_attack_move_button.set_pressed_no_signal(game.selection.is_attack_move_armed())
 	_formation_button.visible = true
@@ -956,6 +1003,33 @@ func _command_units() -> Array:
 # ---------------------------------------------------------------------------
 # Hilfen
 # ---------------------------------------------------------------------------
+
+## Eigene, lebende Einheiten der Auswahl (gelöschte zuerst aussortieren)
+func _own_units(sel: Array) -> Array:
+	var list: Array = []
+	var k: Kingdom = game.player
+	for o in sel:
+		if is_instance_valid(o) and o is Unit and (o as Unit).kingdom == k and (o as Unit).is_alive():
+			list.append(o)
+	return list
+
+
+## Nummer der Armee, die genau aus diesen Einheiten besteht (0 = keine)
+func _army_of(units: Array) -> int:
+	var n: int = game.command_system.get_army_number(units[0])
+	if n <= 0:
+		return 0
+	var uids: Array = game.player.armies.get(n, [])
+	if uids.size() != units.size():
+		return 0
+	var lookup := {}
+	for uid in uids:
+		lookup[uid] = true
+	for u in units:
+		if not lookup.has((u as Unit).uid):
+			return 0
+	return n
+
 
 ## Reich des Objekts (nur bei fremden): Name in Reichsfarbe, ggf. "feindlich"
 func _show_owner(k: Kingdom) -> void:

@@ -13,6 +13,17 @@ const ICON_SIZE := 24.0
 const COLOR_NORMAL := Color(0.95, 0.92, 0.85)
 const COLOR_BAD := Color(1.0, 0.42, 0.36)
 
+
+## Eintrag der Leiste. Teure Tooltips (Verbrauch, Statistik) entstehen erst,
+## wenn sie gezeigt werden (source), nicht bei jeder Aktualisierung.
+class TipBox:
+	extends HBoxContainer
+	var source := Callable()
+
+	func _get_tooltip(_at_position: Vector2) -> String:
+		return str(source.call()) if source.is_valid() else tooltip_text
+
+
 var game: Node
 
 ## Ressource -> Label der Menge
@@ -34,6 +45,7 @@ func setup(p_game: Node) -> void:
 	for r in DataDB.resources:
 		var res_id := str(r["id"])
 		var entry := _make_entry()
+		entry.source = _resource_tip.bind(r)
 		var icon := ResourceIcon.new()
 		icon.setup(res_id, ICON_SIZE)
 		entry.add_child(icon)
@@ -46,6 +58,7 @@ func setup(p_game: Node) -> void:
 	pop_entry.add_child(_pop_label)
 	_entries["_population"] = pop_entry
 	var troops_entry := _make_entry()
+	troops_entry.source = _troops_tip
 	_troops_label = _make_label(0)
 	troops_entry.add_child(_troops_label)
 	_entries["_troops"] = troops_entry
@@ -79,12 +92,16 @@ func _refresh() -> void:
 		var amount := k.get_amount(res_id)
 		var bad := res_id == "food" and k.starving
 		_set_label(label, str(floori(amount)), COLOR_BAD if bad else COLOR_NORMAL)
-		var tip := _resource_tooltip(k, r, amount)
-		if entry.tooltip_text != tip:
-			entry.tooltip_text = tip
 	_refresh_population(k)
 	_refresh_troops(k)
 	_refresh_king(k)
+
+
+func _resource_tip(r: Dictionary) -> String:
+	var k: Kingdom = game.player
+	if k == null:
+		return ""
+	return _resource_tooltip(k, r, k.get_amount(str(r["id"])))
 
 
 func _resource_tooltip(k: Kingdom, r: Dictionary, amount: float) -> String:
@@ -133,12 +150,15 @@ func _refresh_troops(k: Kingdom) -> void:
 		if role != "worker" and role != "king":
 			troops += 1
 	_set_label(_troops_label, "Truppen %d" % troops, COLOR_NORMAL)
-	var tip := "Beschworene Einheiten: %d\nKampfpunkte: %d (gesamt %d)\nBesiegte Feinde: %d  ·  Verluste: %d" % [
+
+
+func _troops_tip() -> String:
+	var k: Kingdom = game.player
+	if k == null:
+		return ""
+	return "Beschworene Einheiten: %d\nKampfpunkte: %d (gesamt %d)\nBesiegte Feinde: %d  ·  Verluste: %d" % [
 		int(k.stats.get("summoned", 0)), k.kill_points, k.kill_points_total,
 		int(k.stats.get("kills", 0)), int(k.stats.get("losses", 0))]
-	var entry: Control = _entries.get("_troops")
-	if entry != null and entry.tooltip_text != tip:
-		entry.tooltip_text = tip
 
 
 ## "König 600/600", rot unter halbem Leben; ohne König ausgeblendet
@@ -156,8 +176,8 @@ func _refresh_king(k: Kingdom) -> void:
 	_set_label(_king_label, "König %d/%d" % [ceili(u.hp), roundi(u.max_hp)], COLOR_BAD if low else COLOR_NORMAL)
 
 
-func _make_entry() -> HBoxContainer:
-	var entry := HBoxContainer.new()
+func _make_entry() -> TipBox:
+	var entry := TipBox.new()
 	entry.add_theme_constant_override("separation", 6)
 	# STOP, damit der Tooltip über Symbol und Zahl erscheint
 	entry.mouse_filter = Control.MOUSE_FILTER_STOP
