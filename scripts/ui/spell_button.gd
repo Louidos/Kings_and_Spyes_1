@@ -37,6 +37,7 @@ var _cd_ratio := 0.0
 var _cd_seconds := 0
 var _no_mana := false
 var _targeting := false
+var _is_ready := false
 var _flash := 0.0
 var _pulse := 0.0
 var _style := StyleBoxFlat.new()
@@ -67,20 +68,22 @@ func setup(def: Dictionary) -> void:
 	queue_redraw()
 
 
-## Zustand setzen; zeichnet nur bei einer sichtbaren Änderung neu
-func set_state(known: bool, cd_ratio: float, cd_seconds: int, no_mana: bool, targeting: bool) -> void:
+## Zustand setzen (ready = can_cast_now ohne Grund); zeichnet nur bei einer
+## sichtbaren Änderung neu
+func set_state(known: bool, cd_ratio: float, cd_seconds: int, no_mana: bool, targeting: bool, ready: bool) -> void:
 	var ratio := snappedf(clampf(cd_ratio, 0.0, 1.0), 0.004)
 	if known == _known and is_equal_approx(ratio, _cd_ratio) and cd_seconds == _cd_seconds \
-			and no_mana == _no_mana and targeting == _targeting:
+			and no_mana == _no_mana and targeting == _targeting and ready == _is_ready:
 		return
-	# Abklingzeit gerade vorbei: kurz aufblitzen
-	if _known and known and _cd_ratio > 0.0 and ratio <= 0.0:
+	# Gerade wieder bereit (Abklingzeit vorbei oder genug Mana): kurz aufblitzen
+	if _known and known and not _is_ready and ready:
 		_flash = 1.0
 	_known = known
 	_cd_ratio = ratio
 	_cd_seconds = cd_seconds
 	_no_mana = no_mana
 	_targeting = targeting
+	_is_ready = ready
 	set_process(_flash > 0.0 or _targeting)
 	queue_redraw()
 
@@ -134,7 +137,8 @@ func _draw() -> void:
 		draw_rect(inner, Color(0, 0, 0, 0.25))
 
 	# Rahmen
-	var border := Color(_color, 0.85)
+	# Bereit: kräftiger Rahmen in der Zauberfarbe, sonst gedämpft
+	var border := Color(bright, 0.95) if _is_ready else Color(_color, 0.45)
 	var width := 2
 	if not _known:
 		border = COLOR_LOCKED

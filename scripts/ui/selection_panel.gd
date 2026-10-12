@@ -45,6 +45,8 @@ const CANCEL_TIP := "Abbrechen – Kosten werden erstattet"
 ## Höchstens so viele Zeilen mit Zauberwirkungen
 const MAGIC_LINES := 4
 const COLOR_RESEARCH := Color(0.45, 0.64, 1.0)
+## Durch Forschung oder Zauber gestärkter Wert
+const COLOR_UP := Color(0.62, 0.94, 0.55)
 
 var game: Node
 
@@ -901,38 +903,130 @@ func _build_stats_grid(parent: Control) -> void:
 		_stat_values.append(value)
 
 
-## Kampfwerte: Angriff (Heiler: Heilung), Rüstung, Reichweite, Tempo
+## Kampfwerte: Angriff (Heiler: Heilung), Rüstung, Reichweite, Tempo.
+## Gestärkte Werte grün, geschwächte rot (Forschung, Zauber, Flüche).
 func _fill_stats(u: Unit) -> void:
 	_stats_grid.visible = true
 	var pairs: Array = []
 	if u.can_heal():
-		pairs.append(["Heilung", "%s/s" % ResourceBar.format_number(u.heal)])
+		pairs.append(["Heilung", "%s/s" % ResourceBar.format_number(u.heal), _trend(u, "heal", u.heal)])
 	else:
-		pairs.append(["Angriff", ResourceBar.format_number(u.attack)])
-	pairs.append(["Rüstung", "%d %%" % roundi(u.armor * 100.0)])
-	pairs.append(["Reichweite", _range_text(u.heal_range if u.can_heal() else u.attack_range)])
-	pairs.append(["Tempo", ResourceBar.format_number(u.speed)])
+		pairs.append(["Angriff", ResourceBar.format_number(u.attack), _trend(u, "attack", u.attack)])
+	pairs.append(["Rüstung", "%d %%" % roundi(u.armor * 100.0), _trend(u, "armor", u.armor)])
+	if u.can_heal():
+		pairs.append(["Reichweite", _range_text(u.heal_range), _trend(u, "heal_range", u.heal_range)])
+	else:
+		pairs.append(["Reichweite", _range_text(u.attack_range), _trend(u, "range", u.attack_range)])
+	pairs.append(["Tempo", ResourceBar.format_number(u.speed), _trend(u, "speed", u.speed)])
 	for i in 4:
 		var pair: Array = pairs[i]
 		_set_label_text(_stat_keys[i], str(pair[0]))
 		_set_label_text(_stat_values[i], str(pair[1]))
+		var trend := int(pair[2])
+		_set_color(_stat_values[i], COLOR_TEXT if trend == 0 else (COLOR_UP if trend > 0 else COLOR_BAD))
 	var tip: PackedStringArray = []
 	if u.is_combatant():
-		tip.append("Angriff: %s Schaden alle %s s (%s pro Sekunde)" % [ResourceBar.format_number(u.attack),
-				ResourceBar.format_number(u.attack_interval), ResourceBar.format_number(u.attack / u.attack_interval)])
+		tip.append("Angriff: %s Schaden alle %s s (%s pro Sekunde)" % [_num(u.attack),
+				_num(u.attack_interval), _num(u.attack / u.attack_interval)])
 	if u.can_heal():
-		tip.append("Heilung: %s Leben pro Sekunde im Umkreis von %s Feldern" % [ResourceBar.format_number(u.heal),
-				ResourceBar.format_number(u.heal_range)])
+		tip.append("Heilung: %s Leben pro Sekunde im Umkreis von %s Feldern" % [_num(u.heal),
+				_num(u.heal_range)])
 	tip.append("Rüstung: %d %% weniger Schaden" % roundi(u.armor * 100.0))
-	tip.append("Reichweite: %s Felder" % ResourceBar.format_number(u.attack_range))
-	tip.append("Tempo: %s Felder pro Sekunde" % ResourceBar.format_number(u.speed))
+	tip.append("Reichweite: %s Felder" % _num(u.attack_range))
+	tip.append("Tempo: %s Felder pro Sekunde" % _num(u.speed))
 	if u.aggro_range > 0.0:
-		tip.append("Greift Feinde im Umkreis von %s Feldern selbst an" % ResourceBar.format_number(u.aggro_range))
+		tip.append("Greift Feinde im Umkreis von %s Feldern selbst an" % _num(u.aggro_range))
 	if u.regen > 0.0:
-		tip.append("Erholung: %s Leben pro Sekunde ausser Kampf" % ResourceBar.format_number(u.regen))
+		tip.append("Erholung: %s Leben pro Sekunde ausser Kampf" % _num(u.regen))
+	# Grundwert → jetzt, mit allen Quellen (Forschung, Zauber, Flüche)
+	tip.append("")
+	if u.can_heal():
+		tip.append(_stat_source_line(u, "heal", "Heilung", u.heal, false))
+	else:
+		tip.append(_stat_source_line(u, "attack", "Angriff", u.attack, false))
+	var interval := _stat_source_line(u, "attack_interval", "Angriffspause", u.attack_interval, false, " s")
+	if interval.contains("("):
+		tip.append(interval)
+	tip.append(_stat_source_line(u, "armor", "Rüstung", u.armor, true))
+	tip.append(_stat_source_line(u, "hp", "Leben", u.max_hp, false))
+	tip.append(_stat_source_line(u, "speed", "Tempo", u.speed, false))
 	var text := "\n".join(tip)
 	if _stats_grid.tooltip_text != text:
 		_stats_grid.tooltip_text = text
+
+
+## +1 = besser als der Grundwert aus units.json, −1 = schlechter, 0 = gleich
+static func _trend(u: Unit, key: String, value: float) -> int:
+	var base := float(u.type_def.get(key, 0.0))
+	if value > base * 1.001 + 0.0001:
+		return 1
+	if value < base * 0.999 - 0.0001:
+		return -1
+	return 0
+
+
+## "Angriff 12 → 13,2 (Waffenschmiede +10 %, Lichtsegen +25 %)": Grundwert aus
+## units.json, jetziger Wert der Einheit und alle Quellen – Faktoren des Reichs
+## (Schlüssel, Schlüssel.Stufe, Schlüssel@Rolle wie Unit._stat) und Wirkungen
+## auf der Einheit. as_percent: Wert ist ein Anteil (Rüstung 0.2 = 20 %).
+func _stat_source_line(u: Unit, key: String, label: String, value: float, as_percent: bool,
+		unit_suffix: String = "") -> String:
+	var base := float(u.type_def.get(key, 0.0))
+	var parts: PackedStringArray = []
+	var k := u.kingdom
+	if k != null:
+		var keys: PackedStringArray = [key, key + "." + u.tier, key + "@" + u.role]
+		for source in k.modifier_sources:
+			var entry: Dictionary = k.modifier_sources[source]
+			for mod_key in keys:
+				if entry.has(mod_key):
+					parts.append("%s %s" % [_source_name(str(source)), _factor_text(float(entry[mod_key]), key)])
+	for e in u.effects:
+		var eff: Dictionary = e
+		if str(eff.get("key", "")) != key:
+			continue
+		var source_name := _source_name(str(eff.get("source", "")))
+		var mult := float(eff.get("mult", 1.0))
+		var add := float(eff.get("add", 0.0))
+		if not is_equal_approx(mult, 1.0):
+			parts.append("%s %s" % [source_name, _factor_text(mult, key)])
+		if absf(add) > 0.0001:
+			var add_text := ("%+d %%" % roundi(add * 100.0)) if as_percent else ("%s%s" % ["+" if add > 0.0 else "−", _num(absf(add))])
+			parts.append("%s %s" % [source_name, add_text.replace("-", "−")])
+	var text := "%s %s" % [label, _stat_value(base, as_percent, unit_suffix)]
+	if not parts.is_empty() or absf(value - base) > 0.0001:
+		text += " → " + _stat_value(value, as_percent, unit_suffix)
+	if not parts.is_empty():
+		text += " (" + ", ".join(parts) + ")"
+	return text
+
+
+static func _stat_value(v: float, as_percent: bool, unit_suffix: String) -> String:
+	if as_percent:
+		return "%d %%" % roundi(v * 100.0)
+	return _num(v) + unit_suffix
+
+
+## Faktor als Text: Rüstung "×1,3", sonst "+10 %" / "−25 %"
+static func _factor_text(factor: float, key: String) -> String:
+	if key == "armor":
+		return "×" + String.num(factor, 2).replace(".", ",")
+	var p := roundi((factor - 1.0) * 100.0)
+	return ("+%d %%" % p) if p >= 0 else ("−%d %%" % -p)
+
+
+## Lesbarer Name einer Quelle ("research:x" -> Forschung, "spell:x" -> Zauber)
+static func _source_name(source: String) -> String:
+	if source == "difficulty":
+		return "Schwierigkeit"
+	return DataDB.describe_effect_source(source)
+
+
+## Zahl mit Komma: "13,2", "2,2", "12"
+static func _num(v: float) -> String:
+	if absf(v - roundf(v)) < 0.05:
+		return str(roundi(v))
+	return ("%.1f" % v).replace(".", ",")
 
 
 func _range_text(tiles: float) -> String:
@@ -1054,32 +1148,27 @@ func _command_units() -> Array:
 # Magie und Forschung
 # ---------------------------------------------------------------------------
 
-## Laufende Zauberwirkungen ("Segen des Lichts · 12 s" in der Zauberfarbe),
-## Tarnung und die Restzeit beschworener Einheiten
+## Laufende Zauberwirkungen ("Lichtsegen · 12 s" in der Zauberfarbe, ohne
+## Ablauf "bis zum Ende"), Tarnung ("Getarnt · Lichtschleier · 40 s") und die
+## Restzeit beschworener Einheiten ("Verschwindet in 34 s")
 func _show_magic(u: Unit) -> void:
 	var texts: PackedStringArray = []
 	var colors: Array[Color] = []
-	var now := GameClock.game_time
-	# Name des Tarnzaubers (seine Wirkung wird mit "Getarnt" zusammengefasst)
-	var stealth_name := ""
-	if u.stealthed:
-		for e in u.effects:
-			var eff: Dictionary = e
-			if str(eff.get("id", "")) == "stealth":
-				stealth_name = str(DataDB.get_spell(str(eff.get("source", ""))).get("name", ""))
-		if stealth_name.is_empty():
-			texts.append("Getarnt – unsichtbar bis zum ersten Angriff")
-			colors.append(COLOR_DIM)
+	var stealth_named := false
 	for entry in game.magic_system.get_active_effects(u):
 		var e: Dictionary = entry
-		var spell_name := str(e.get("name", ""))
-		var line := "%s · %d s" % [spell_name, ceili(float(e.get("seconds", 0.0)))]
-		if u.stealthed and spell_name == stealth_name:
+		var line := "%s · %s" % [str(e.get("name", "")), _seconds_text(float(e.get("seconds", -1.0)))]
+		if u.stealthed and _has_stealth_from(u, str(e.get("source", ""))):
 			line = "Getarnt · " + line
+			stealth_named = true
 		texts.append(line)
 		colors.append(_spell_text_color(e.get("color", Color.WHITE)))
+	# Getarnt ohne Zauber (z. B. ab Phase 7 Spione)
+	if u.stealthed and not stealth_named:
+		texts.insert(0, "Getarnt – für Feinde unsichtbar")
+		colors.insert(0, COLOR_DIM)
 	if u.expires_at >= 0.0:
-		texts.append("Verschwindet in %d s" % maxi(ceili(u.expires_at - now), 0))
+		texts.append("Verschwindet in %d s" % maxi(ceili(u.expires_at - GameClock.game_time), 0))
 		colors.append(COLOR_WARN)
 	_magic_box.visible = not texts.is_empty()
 	for i in MAGIC_LINES:
@@ -1089,6 +1178,19 @@ func _show_magic(u: Unit) -> void:
 			_set_color(label, colors[i])
 		else:
 			label.visible = false
+
+
+## Tarnt diese Quelle ("spell:<id>") die Einheit?
+static func _has_stealth_from(u: Unit, source: String) -> bool:
+	for e in u.effects:
+		var eff: Dictionary = e
+		if str(eff.get("key", "")) == "stealth" and str(eff.get("source", "")) == source:
+			return true
+	return false
+
+
+static func _seconds_text(seconds: float) -> String:
+	return "bis zum Ende" if seconds < 0.0 else "%d s" % ceili(seconds)
 
 
 ## Forschungsstätte: laufende Forschung mit Fortschritt und "Forschung öffnen (R)"
