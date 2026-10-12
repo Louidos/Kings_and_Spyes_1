@@ -89,6 +89,11 @@ func setup(p_game: Node) -> void:
 	army_bar.setup(game)
 
 
+## Forschungsfenster ein-/ausblenden (Taste R). (Wird in Phase 4 ausgebaut.)
+func toggle_research() -> void:
+	pass
+
+
 ## Arbeitsverteilung ein-/ausblenden (Taste J)
 func toggle_job_panel() -> void:
 	job_panel.toggle()

@@ -20,6 +20,9 @@ signal formation_changed(formation: String)
 @onready var unit_layer: Node2D = $Entities/Units
 @onready var unit_overlay: UnitOverlay = $UnitOverlay
 @onready var combat_effects: CombatEffects = $CombatEffects
+@onready var magic_effects: MagicEffects = $MagicEffects
+## Zielmodus für Zauber (letzter Knoten: bekommt Mausklicks vor der Auswahl)
+@onready var spell_targeting: SpellTargeting = $SpellTargeting
 @onready var placement: PlacementController = $Placement
 @onready var camera: RTSCamera = $Camera
 @onready var building_system: BuildingSystem = $Systems/BuildingSystem
@@ -116,6 +119,8 @@ func _start_game() -> void:
 	selection.setup(self)
 	unit_overlay.setup(self)
 	combat_effects.setup(self)
+	magic_effects.setup(self)
+	spell_targeting.setup(self)
 	kingdom_defeated.connect(_on_kingdom_defeated)
 
 	player = create_kingdom({"faction_id": GameSession.faction_id, "controller": "player"})
@@ -279,8 +284,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _playing or pause_menu.is_open or _game_over != null:
 		return
 	if event.is_action_pressed("game_menu"):
-		# Esc: erst Bauen abbrechen, dann Auswahl aufheben, dann Menü
-		if placement.is_active():
+		# Esc: erst Zielmodus/Bauen abbrechen, dann Auswahl aufheben, dann Menü
+		if spell_targeting.is_active():
+			spell_targeting.cancel()
+		elif placement.is_active():
 			placement.cancel()
 		elif not selection.selected.is_empty():
 			selection.clear()
@@ -288,6 +295,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			_open_pause_menu()
 	elif event.is_action_pressed("toggle_jobs"):
 		hud.toggle_job_panel()
+	elif event.is_action_pressed("toggle_research"):
+		hud.toggle_research()
 	elif event.is_action_pressed("demolish_mode"):
 		placement.start_demolish()
 	elif event.is_action_pressed("debug_resources") and hud.is_debug_visible():
