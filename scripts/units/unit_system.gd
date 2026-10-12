@@ -74,6 +74,31 @@ func move_to(u: Unit, target: Vector2) -> void:
 		_path_queue.append(u)
 
 
+## Kurze Strecke ohne Wegsuche: läuft geradeaus, wenn unterwegs nichts
+## blockiert (spart Wegberechnungen beim Verfolgen und Umherstreifen),
+## sonst normal über move_to.
+func move_direct(u: Unit, target: Vector2, max_tiles: float = 4.0) -> void:
+	var dist := u.position.distance_to(target)
+	if dist > max_tiles * world.tile_size or not can_walk_direct(u.position, target):
+		move_to(u, target)
+		return
+	u.path = PackedVector2Array([target])
+	u.path_index = 0
+	u.path_target = target
+	u.path_pending = false
+	u.moving = dist > 0.5
+
+
+## Führt die gerade Linie von a nach b an keiner blockierten Kachel vorbei?
+func can_walk_direct(a: Vector2, b: Vector2) -> bool:
+	var steps := ceili(a.distance_to(b) / (world.tile_size * 0.4))
+	for i in range(1, steps + 1):
+		var c := world.world_to_cell(a.lerp(b, float(i) / steps))
+		if not world.in_bounds(c) or game.nav.is_solid(c):
+			return false
+	return true
+
+
 func stop(u: Unit) -> void:
 	u.path = PackedVector2Array()
 	u.path_index = 0

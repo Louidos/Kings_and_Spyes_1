@@ -68,7 +68,7 @@
 		{ "deposit": "trees",       "count": 3, "radius": 9 },
 		{ "deposit": "stone",       "count": 2, "radius": 9 },
 		{ "deposit": "berries",     "count": 3, "radius": 9 },
-		{ "deposit": "ore",         "count": 1, "radius": 18, "allow_biomes": ["plains", "forest", "desert"] },
+		{ "deposit": "ore",         "count": 2, "radius": 18, "allow_biomes": ["plains", "forest", "desert"] },
 		{ "deposit": "mana_spring", "count": 1, "radius": 10 }
 	],
 	"start_keep_clear_radius": 4

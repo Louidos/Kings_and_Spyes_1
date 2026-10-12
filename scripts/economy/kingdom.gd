@@ -34,6 +34,10 @@ var buildings: Array = []
 ## Einheiten-Nodes (Bewohner, ab Phase 3 auch Kämpfer)
 var units: Array = []
 var castle: Building
+## Der König (Einheit). Stirbt er, ist das Spiel für dieses Reich verloren.
+var king: Unit = null
+## Punkte für besiegte Feinde (ab Phase 4 für Mana-Verbesserungen)
+var kill_points: int = 0
 ## Herrscht Hungersnot?
 var starving: bool = false
 ## Fortschritt bis zum nächsten Bewohner (Spielsekunden)
@@ -138,11 +142,12 @@ func get_housing() -> int:
 	return total
 
 
-## Bevölkerung = Einheiten, die Wohnraum brauchen (Bewohner)
+## Bevölkerung = Einheiten, die Wohnraum brauchen: Bewohner und beschworene
+## Einheiten, die einen Beruf haben (wer arbeitet, wohnt im Dorf).
 func get_population() -> int:
 	var n := 0
 	for u in units:
-		if u.type_def.get("needs_housing", false):
+		if u.type_def.get("needs_housing", false) or (u.role != "worker" and u.job_id != "idle"):
 			n += 1
 	return n
 

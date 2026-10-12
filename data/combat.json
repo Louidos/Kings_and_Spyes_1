@@ -1,0 +1,49 @@
+{
+	"_hinweis": [
+		"Kampfregeln. Zeiten in Spielsekunden, Entfernungen in Kacheln.",
+		"territory_bonus: im eigenen Gebiet +15 % Schaden und 15 % weniger erlittener Schaden (nach Rüstung). Dazu kommt der Verteidigungsbonus des Geländes (biomes.json -> defense_bonus) für den Verteidiger.",
+		"damage_variance: zufällige Streuung des Schadens (0.15 = ±15 %). armor_cap: höchstens so viel Schadensminderung.",
+		"regen_delay: so lange ohne Schaden, bevor Einheiten sich erholen. retarget_seconds: wie oft untätige Kämpfer nach Feinden suchen.",
+		"leash_radius: Monster kehren um, wenn sie sich weiter von ihrer Höhle entfernen. camp_radius: Monster stehen in diesem Umkreis um die Höhle.",
+		"formation.spacing: Abstand in Formationen. worker_flee: angegriffene Arbeiter fliehen zur Burg.",
+		"camps: Monsterlager. per_1000_tiles = Häufigkeit (mindestens min_count), min_distance_from_start = Abstand zum Startplatz, size = Anzahl Monster, by_biome = Monsterarten je Biom."
+	],
+
+	"territory_bonus": 0.15,
+	"damage_variance": 0.15,
+	"min_damage": 1,
+	"armor_cap": 0.8,
+	"regen_delay": 5,
+	"retarget_seconds": 0.8,
+	"chase_repath_seconds": 0.7,
+	"leash_radius": 12,
+	"camp_radius": 3,
+	"worker_flee": true,
+	"corpse_seconds": 4,
+	"queue_limit": 5,
+	"king_flee_ratio": 0.35,
+
+	"formation": { "spacing": 0.9, "default": "block" },
+
+	"camps": {
+		"per_1000_tiles": 0.05,
+		"min_count": 3,
+		"min_distance_from_start": 28,
+		"min_distance_between": 12,
+		"size": [3, 5],
+		"max_size_with": { "golem": 3 },
+		"respawn_quiet_seconds": 30,
+		"danger_radius": 10,
+		"loot_reference_points": 5,
+		"near_start": { "count": 2, "min": 30, "max": 45, "monsters": ["wolf", "wolf", "spider"], "size": 3,
+			"biomes": ["plains", "forest", "swamp", "desert"] },
+		"by_biome": {
+			"plains": ["wolf", "wolf", "spider"],
+			"forest": ["spider", "wolf", "spider"],
+			"swamp": ["spider", "spider", "wolf"],
+			"desert": ["wolf", "golem", "wolf"],
+			"mountains": ["golem", "wolf"],
+			"volcanic": ["golem", "golem", "spider"]
+		}
+	}
+}

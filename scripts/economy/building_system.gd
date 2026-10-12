@@ -264,6 +264,8 @@ func _on_building_finished(b: Building) -> void:
 		var text := "%s fertiggestellt" % b.get_display_name()
 		if b.get_worker_slots() > 0:
 			text += " – weise in der Arbeitsverteilung (J) Arbeiter zu"
+		elif not b.def.get("summons", []).is_empty():
+			text += " – auswählen, um Einheiten zu beschwören"
 		kingdom.notify(text, "good", b.get_center())
 	building_completed.emit(b)
 

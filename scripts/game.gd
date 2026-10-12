@@ -14,6 +14,10 @@ extends Node2D
 @onready var unit_system: UnitSystem = $Systems/UnitSystem
 @onready var work_system: WorkSystem = $Systems/WorkSystem
 @onready var economy_system: EconomySystem = $Systems/EconomySystem
+@onready var combat_system: CombatSystem = $Systems/CombatSystem
+@onready var command_system: CommandSystem = $Systems/CommandSystem
+@onready var summon_system: SummonSystem = $Systems/SummonSystem
+@onready var monster_system: MonsterSystem = $Systems/MonsterSystem
 @onready var selection: SelectionController = $Selection
 @onready var hud: CanvasLayer = $HUD
 @onready var pause_menu: CanvasLayer = $PauseMenu
@@ -22,6 +26,8 @@ extends Node2D
 var world: WorldData
 ## Reich des Spielers
 var player: Kingdom
+## Reich der wilden Monster (feindlich zu allen)
+var wild: Kingdom
 ## Alle Reiche (ab Phase 7 auch die Gegner)
 var kingdoms: Array = []
 ## Kingdom.id -> Kingdom
@@ -36,6 +42,7 @@ var _generator: WorldGenerator
 var _nav_builder: NavGrid
 var _playing := false
 var _was_paused_before_menu := false
+var _game_over: GameOverScreen
 
 
 func _ready() -> void:
@@ -84,11 +91,18 @@ func _start_game() -> void:
 	unit_system.setup(self)
 	work_system.setup(self)
 	economy_system.setup(self)
+	combat_system.setup(self)
+	command_system.setup(self)
+	summon_system.setup(self)
 	placement.setup(self)
 	selection.setup(self)
+	combat_system.king_died.connect(_on_king_died)
 
 	player = create_kingdom({"faction_id": GameSession.faction_id, "controller": "player"})
 	found_settlement(player, world.start_cell)
+	wild = create_kingdom({"faction_id": "wild", "controller": "wild", "display_name": "Wilde Monster"})
+	monster_system.setup(self, wild)
+	monster_system.spawn_camps()
 
 	camera.set_map_rect(world.get_pixel_rect())
 	camera.focus_on(player.castle.get_center(), float(DataDB.cfg("camera.zoom_start", 0.8)))
@@ -99,6 +113,8 @@ func _start_game() -> void:
 	_playing = true
 	GameClock.start_new_game()
 	Notify.info("Willkommen, König! Baue dein Dorf aus: Baumenü unten, Arbeitsverteilung links (J).",
+			player.castle.get_center())
+	Notify.info("Burg anklicken: Späher beschwören. Monsterlager (orange auf der Minikarte) bringen Beute.",
 			player.castle.get_center())
 
 
@@ -127,7 +143,15 @@ func get_kingdom(id: int) -> Kingdom:
 	return kingdom_by_id.get(id, null)
 
 
-## Gründet eine Siedlung: Startressourcen, Burg, Startbewohner und ihre Berufe.
+## Sind zwei Reiche verfeindet? Monster sind mit allen verfeindet; ab Phase 6/7
+## kommen Diplomatie und gegnerische Reiche dazu.
+func are_hostile(a: Kingdom, b: Kingdom) -> bool:
+	if a == null or b == null or a == b:
+		return false
+	return a.controller == "wild" or b.controller == "wild"
+
+
+## Gründet eine Siedlung: Startressourcen, Burg, König, Startbewohner und ihre Berufe.
 ## Wird für den Spieler genutzt und ab Phase 7 genauso für die KI-Reiche.
 func found_settlement(kingdom: Kingdom, center_cell: Vector2i) -> void:
 	var start_res: Dictionary = DataDB.eco("start.resources", {})
@@ -145,6 +169,30 @@ func found_settlement(kingdom: Kingdom, center_cell: Vector2i) -> void:
 	for job_id in jobs:
 		for _i in int(jobs[job_id]):
 			work_system.assign_job(kingdom, job_id)
+	# Der König steht vor seiner Burg und verteidigt sie
+	var king_def := DataDB.get_unit_for_tier(kingdom.faction_id, "king")
+	if not king_def.is_empty():
+		var king_pos := kingdom.castle.get_approach_point(center + Vector2(0, 1000))
+		var king := unit_system.spawn_unit(kingdom, str(king_def["id"]), king_pos)
+		if king != null:
+			king.command = "hold"
+			king.command_pos = king_pos
+			kingdom.king = king
+
+
+## Stirbt der König des Spielers, ist das Spiel verloren.
+func _on_king_died(kingdom: Kingdom) -> void:
+	if not kingdom.is_player or _game_over != null:
+		return
+	GameClock.set_paused(true)
+	placement.cancel()
+	selection.clear()
+	camera.input_enabled = false
+	_game_over = GameOverScreen.new()
+	add_child(_game_over)
+	_game_over.open("Der König ist gefallen",
+			"Dein Reich hat seinen Herrscher verloren. Das Spiel ist vorbei.\n%s · Siegpunkte: %d" % [
+			GameClock.get_time_string(), kingdom.kill_points])
 
 
 func _on_territory_changed(kingdom_id: int, bbox: Rect2i, dirty: Rect2i) -> void:
@@ -154,7 +202,7 @@ func _on_territory_changed(kingdom_id: int, bbox: Rect2i, dirty: Rect2i) -> void
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _playing or pause_menu.is_open:
+	if not _playing or pause_menu.is_open or _game_over != null:
 		return
 	if event.is_action_pressed("game_menu"):
 		# Esc: erst Bauen abbrechen, dann Auswahl aufheben, dann Menü

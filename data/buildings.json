@@ -8,7 +8,9 @@
 		"workers = Arbeitsplätze, job = Beruf der dort arbeitet, production = Menge pro Arbeiter und Sekunde, base_production = Menge ohne Arbeiter.",
 		"biome_efficiency = Faktor je Biom (Durchschnitt der Grundfläche, nicht genannte Biome = 1.0). requires_deposit = Vorkommen, das unter dem Gebäude liegen muss.",
 		"blocks_movement (Standard: true): Einheiten laufen um das Gebäude herum. placement = \"line\": wird mit der Maus als Linie gezogen (Strassen, ab Phase 9 Mauern).",
-		"sprites: Grafik je Fraktion (128x128, Burg 256x256). Fehlt die Datei, wird ein Platzhalter in 'color' mit 'label' gezeichnet."
+		"hp: Lebenspunkte (Standard 300). summons: Einheitenstufen, die hier beschworen werden (units.json -> tier). heal_aura: heilt eigene Einheiten im Umkreis (Kacheln, Lebenspunkte pro Sekunde).",
+		"loot / kill_points: Beute und Punkte für den, der das Gebäude zerstört. respawn_seconds / max_monsters: Monsterhöhlen bringen neue Monster hervor.",
+		"sprites: Grafik je Fraktion (128x128, Burg 256x256); sprite: eine Grafik für alle. Fehlt die Datei, wird ein Platzhalter in 'color' mit 'label' gezeichnet."
 	],
 
 	"buildings": [
@@ -16,7 +18,7 @@
 			"id": "castle", "name": "Königsburg", "label": "Burg",
 			"description": "Sitz des Königs. Lager für alle Ressourcen und Wohnraum.",
 			"size": [4, 4], "cost": {}, "build_time": 0, "player_buildable": false,
-			"housing": 6, "territory_radius": 14,
+			"housing": 6, "territory_radius": 14, "hp": 2000, "summons": ["scout"],
 			"dropoff": ["wood", "stone", "ore", "food", "mana"], "gather_radius": 10,
 			"color": "#c9a640",
 			"sprites": { "good": "res://assets/sprites/buildings/castle_good.png", "evil": "res://assets/sprites/buildings/castle_evil.png" }
@@ -93,6 +95,35 @@
 			"requires_deposit": "mana_spring",
 			"color": "#7d55d6",
 			"sprites": { "good": "res://assets/sprites/buildings/mana_well_good.png", "evil": "res://assets/sprites/buildings/mana_well_evil.png" }
+		},
+		{
+			"id": "barracks", "name": "Kaserne", "label": "Kas.",
+			"description": "Hier beschwört der König Schwertkämpfer, Bogenschützen und Elitekrieger. Wird mit Mana errichtet.",
+			"size": [2, 2], "cost": { "wood": 60, "stone": 40, "mana": 30 }, "build_time": 45,
+			"territory_radius": 4, "hp": 600,
+			"summons": ["fighter", "archer", "elite"],
+			"color": "#8c3b3b",
+			"sprites": { "good": "res://assets/sprites/buildings/barracks_good.png", "evil": "res://assets/sprites/buildings/barracks_evil.png" }
+		},
+		{
+			"id": "infirmary", "name": "Krankenstation", "label": "Heil",
+			"description": "Beschwört Heiler. Eigene Einheiten in der Nähe erholen sich schneller. Wird mit Mana errichtet.",
+			"size": [2, 2], "cost": { "wood": 50, "stone": 20, "mana": 25 }, "build_time": 40,
+			"territory_radius": 4, "hp": 400,
+			"summons": ["medic"],
+			"heal_aura": { "radius": 4, "hp_per_sec": 3 },
+			"color": "#d8d0c0",
+			"sprites": { "good": "res://assets/sprites/buildings/infirmary_good.png", "evil": "res://assets/sprites/buildings/infirmary_evil.png" }
+		},
+		{
+			"id": "monster_lair", "name": "Monsterhöhle", "label": "Höhle",
+			"description": "Ein Unterschlupf wilder Monster. Zerstöre ihn, um die Gegend zu sichern und Beute zu machen.",
+			"size": [2, 2], "cost": {}, "build_time": 0, "player_buildable": false,
+			"territory_radius": 0, "hp": 500,
+			"loot": { "ore": 40, "mana": 30, "food": 30 }, "kill_points": 10,
+			"respawn_seconds": 90, "max_monsters": 5,
+			"color": "#5a2020",
+			"sprite": "res://assets/sprites/buildings/monster_lair.png"
 		},
 		{
 			"id": "road", "name": "Strasse", "label": "",

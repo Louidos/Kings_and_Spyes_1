@@ -54,6 +54,8 @@ func _growth_interval(kingdom: Kingdom) -> float:
 
 func _on_sim_tick(dt: float) -> void:
 	for kingdom in game.kingdoms:
+		if kingdom.controller == "wild":
+			continue  # Monster essen nicht und vermehren sich über ihre Höhlen
 		_consume_food(kingdom, dt)
 		_grow(kingdom, dt)
 	_rate_timer += dt

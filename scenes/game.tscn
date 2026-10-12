@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/world/world_map.gd" id="2_worldmap"]
@@ -12,6 +12,10 @@
 [ext_resource type="Script" path="res://scripts/units/work_system.gd" id="10_work"]
 [ext_resource type="Script" path="res://scripts/economy/economy_system.gd" id="11_economy"]
 [ext_resource type="Script" path="res://scripts/ui/selection_controller.gd" id="12_selection"]
+[ext_resource type="Script" path="res://scripts/units/combat_system.gd" id="13_combat"]
+[ext_resource type="Script" path="res://scripts/units/command_system.gd" id="14_command"]
+[ext_resource type="Script" path="res://scripts/units/summon_system.gd" id="15_summon"]
+[ext_resource type="Script" path="res://scripts/units/monster_system.gd" id="16_monster"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
@@ -43,6 +47,18 @@ script = ExtResource("10_work")
 
 [node name="EconomySystem" type="Node" parent="Systems"]
 script = ExtResource("11_economy")
+
+[node name="CombatSystem" type="Node" parent="Systems"]
+script = ExtResource("13_combat")
+
+[node name="CommandSystem" type="Node" parent="Systems"]
+script = ExtResource("14_command")
+
+[node name="SummonSystem" type="Node" parent="Systems"]
+script = ExtResource("15_summon")
+
+[node name="MonsterSystem" type="Node" parent="Systems"]
+script = ExtResource("16_monster")
 
 [node name="Selection" type="Node" parent="."]
 script = ExtResource("12_selection")

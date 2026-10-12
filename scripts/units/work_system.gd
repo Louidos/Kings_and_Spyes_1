@@ -79,13 +79,17 @@ func set_unit_job(u: Unit, job_id: String, workplace: Building = null) -> bool:
 	if not is_instance_valid(u):
 		return false
 	var job := DataDB.get_job(job_id)
-	if job.is_empty() or (job_id != "idle" and not u.can_work()):
+	if job.is_empty() or not get_job_block_reason(u, job_id).is_empty():
 		return false
 	if job.get("type") == "building":
 		if workplace == null:
 			workplace = _find_free_workplace(u.kingdom, job, u.position)
 		if workplace == null or not workplace.has_free_slot():
 			return false
+	# Ein neuer Beruf hebt einen Befehl auf (Einheit kehrt zur Arbeit zurück)
+	if job_id != "idle" and not u.command.is_empty():
+		u.command = ""
+		u.target = null
 	_release(u)
 	u.job_id = job_id
 	if workplace != null:
@@ -96,6 +100,51 @@ func set_unit_job(u: Unit, job_id: String, workplace: Building = null) -> bool:
 	_think(u)
 	jobs_changed.emit(u.kingdom)
 	return true
+
+
+## Unterbricht die Arbeit, weil die Einheit einen Befehl bekommt (Kampf,
+## Marsch, Flucht). Der Beruf und ein Arbeitsplatz im Gebäude bleiben ihr,
+## Getragenes behält sie. resume() setzt die Arbeit fort.
+func suspend(u: Unit) -> void:
+	if not is_instance_valid(u) or not u.can_work():
+		return
+	_release_reservation(u)
+	_release_site(u)
+	if u.inside != null:
+		unit_system.set_inside(u, null)
+	u.on_arrive = ""
+	u.activity = ""
+	u.problem = ""
+	u.state = Unit.State.IDLE
+	u.failed_search_version = -1
+	unit_system.stop(u)
+
+
+## Befehl aufheben und weiterarbeiten (Arbeiter) bzw. stehen bleiben.
+func resume(u: Unit) -> void:
+	if not is_instance_valid(u):
+		return
+	u.command = ""
+	u.target = null
+	if not u.can_work():
+		return
+	if u.inside == null:
+		unit_system.stop(u)
+	u.on_arrive = ""
+	u.state = Unit.State.IDLE
+	u.timer = 0.0
+
+
+## Warum kann die Einheit diesen Beruf nicht annehmen? "" = sie kann.
+## Beschworene Einheiten brauchen zum Arbeiten Wohnraum wie Bewohner.
+func get_job_block_reason(u: Unit, job_id: String) -> String:
+	if job_id == "idle":
+		return ""
+	if not u.can_work():
+		return "Diese Einheit kann nicht arbeiten"
+	if u.role != "worker" and u.job_id == "idle" and u.kingdom.get_population() >= u.kingdom.get_housing():
+		return "Kein Wohnraum frei – baue Wohnhäuser"
+	return ""
 
 
 ## Nimmt einen freien Unbeschäftigten (nahe der Burg) und gibt ihm den Beruf.
@@ -123,11 +172,12 @@ func get_job_count(kingdom: Kingdom, job_id: String) -> int:
 	return n
 
 
-## Anzahl Einheiten, die einen Beruf annehmen könnten (unbeschäftigt, ohne Befehl)
+## Anzahl unbeschäftigter Bewohner ohne Befehl (beschworene Einheiten zählen
+## nicht – sie bekommen Berufe nur einzeln im Auswahlfenster)
 func get_idle_count(kingdom: Kingdom) -> int:
 	var n := 0
 	for u in kingdom.units:
-		if is_available(u):
+		if u.role == "worker" and is_available(u):
 			n += 1
 	return n
 
@@ -688,6 +738,9 @@ func _cell_ok(c: Vector2i, mask: PackedByteArray) -> bool:
 	var t := world.deposit_type[i]
 	if mask[t] == 0 or world.deposit_amount[i] == 0 or world.regrowing.has(c):
 		return false
+	# Nicht bei Monsterhöhlen sammeln (bis das Lager besiegt ist)
+	if not world.danger.is_empty() and world.danger[i] > 0:
+		return false
 	if _unreachable.has(c):
 		if int(_unreachable[c]) == game.nav.solid_version:
 			return false
@@ -731,6 +784,9 @@ func _pick_unit(kingdom: Kingdom, job_id: String, pos: Vector2, prefer_empty_han
 	var best_score := INF
 	for u in kingdom.units:
 		if u.job_id != job_id or not u.can_work() or not u.command.is_empty():
+			continue
+		# Armeen werden nie über die Arbeitsverteilung eingezogen
+		if job_id == "idle" and u.role != "worker":
 			continue
 		var score: float = u.position.distance_squared_to(pos)
 		if prefer_empty_handed and u.carry_amount >= 1.0:

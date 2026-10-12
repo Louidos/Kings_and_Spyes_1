@@ -68,6 +68,9 @@ func generate(world_seed: int, size: int) -> WorldData:
 	world.start_cell = _find_start_cell(world)
 	_prepare_start_area(world)
 
+	# 8: Monsterlager (die Höhlen selbst setzt das MonsterSystem beim Spielstart)
+	_place_camps(world)
+
 	_report(1.0, "Fertig")
 	print("Welt erzeugt: %d×%d Kacheln, Seed %d, %d ms" % [size, size, world_seed, Time.get_ticks_msec() - t_start])
 	return world
@@ -468,6 +471,78 @@ func _put_deposit(world: WorldData, c: Vector2i, d: Dictionary, rng: RandomNumbe
 			world.set_biome(c, DataDB.biome_index_by_id[after])
 	world.deposit_type[i] = d["index"] + 1
 	world.deposit_amount[i] = amount
+
+
+# ---------------------------------------------------------------------------
+# Monsterlager
+# ---------------------------------------------------------------------------
+
+## Wählt Plätze für Monsterhöhlen (2×2): weit genug vom Startplatz und
+## voneinander entfernt, nicht im Grenzgebirge, ohne Rohstoffvorkommen.
+## Ergebnis in world.camps als {"cell": obere linke Kachel, "biome": Biom-ID},
+## Übungslager zusätzlich mit "kinds" (Monsterarten) und "size" (Anzahl).
+func _place_camps(world: WorldData) -> void:
+	var cfg: Dictionary = DataDB.combat.get("camps", {})
+	var area := world.width * world.height
+	var count := maxi(int(cfg.get("min_count", 3)), roundi(float(cfg.get("per_1000_tiles", 0.05)) * area / 1000.0))
+	var min_start := float(cfg.get("min_distance_from_start", 28))
+	var min_between := float(cfg.get("min_distance_between", 12))
+	var by_biome: Dictionary = cfg.get("by_biome", {})
+	var bw := int(DataDB.worldgen.get("border", {}).get("width", 0))
+	var lo := bw + 1
+	var hi_x := world.width - bw - 3
+	var hi_y := world.height - bw - 3
+	if hi_x <= lo or hi_y <= lo:
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(world.world_seed + 6007)
+	var start := Vector2(world.start_cell)
+	var bounds := Rect2i(lo, lo, hi_x - lo + 1, hi_y - lo + 1)
+
+	# Zuerst kleine Übungslager in Startnähe (feste Monster, wenige)
+	var near: Dictionary = cfg.get("near_start", {})
+	var near_biomes: Array = near.get("biomes", [])
+	var near_placed := 0
+	for _a in int(near.get("count", 0)) * 300:
+		if near_placed >= int(near.get("count", 0)):
+			break
+		var dist := rng.randf_range(float(near.get("min", 30)), float(near.get("max", 45)))
+		var c := Vector2i((start + Vector2.from_angle(rng.randf() * TAU) * dist).round()) - Vector2i.ONE
+		if not bounds.has_point(c) or not _camp_spot_ok(world, c, min_between):
+			continue
+		var biome_id := str(world.get_biome(c).get("id", ""))
+		if not near_biomes.is_empty() and not near_biomes.has(biome_id):
+			continue
+		world.camps.append({"cell": c, "biome": biome_id, "kinds": near.get("monsters", []),
+				"size": int(near.get("size", 3))})
+		near_placed += 1
+
+	# Dann die übrigen Lager über die ganze Karte
+	var placed := 0
+	for _a in count * 40:
+		if placed >= count:
+			break
+		var c := Vector2i(rng.randi_range(lo, hi_x), rng.randi_range(lo, hi_y))
+		if (Vector2(c) + Vector2.ONE).distance_to(start) < min_start:
+			continue
+		var biome_id := str(world.get_biome(c).get("id", ""))
+		if not by_biome.has(biome_id) or not _camp_spot_ok(world, c, min_between):
+			continue
+		world.camps.append({"cell": c, "biome": biome_id})
+		placed += 1
+
+
+## 2×2 frei von Vorkommen und weit genug von anderen Lagern?
+func _camp_spot_ok(world: WorldData, c: Vector2i, min_between: float) -> bool:
+	for y in range(c.y, c.y + 2):
+		for x in range(c.x, c.x + 2):
+			if not _is_free_for_deposit(world, Vector2i(x, y)):
+				return false
+	var center := Vector2(c) + Vector2.ONE
+	for other in world.camps:
+		if center.distance_to(Vector2(other["cell"]) + Vector2.ONE) < min_between:
+			return false
+	return true
 
 
 # ---------------------------------------------------------------------------

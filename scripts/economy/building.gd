@@ -30,6 +30,23 @@ var selected := false:
 		selected = value
 		queue_redraw()
 
+# --- Kampf und Beschwörung (Phase 3) ---
+var hp := 1.0
+var max_hp := 1.0
+## Spielzeit des letzten erlittenen Schadens
+var last_damaged_at := -1000.0
+## Beschwörungen in Arbeit: Array von {"type_id", "progress", "time", "cost"}
+var summon_queue: Array = []
+## Sammelpunkt für neu beschworene Einheiten (Weltpixel)
+var rally_point := Vector2.ZERO
+var has_rally := false
+## Anzahl bisher beschworener Einheiten (für ihre Aufstellung)
+var summon_count := 0
+## Kurzes Aufblitzen nach einem Treffer (Echtzeit-Sekunden)
+var hit_flash := 0.0
+## Faktor auf die Beute (Monsterhöhlen: stärkere Lager geben mehr)
+var loot_factor := 1.0
+
 var _tile_size := 64
 var _world: WorldData
 var _texture: Texture2D
@@ -46,6 +63,9 @@ func setup(p_def: Dictionary, p_kingdom: Kingdom, p_cell: Vector2i, world: World
 	name = "%s_%d_%d" % [def.get("id", "building"), cell.x, cell.y]
 	position = get_center()
 	_texture = Assets.texture(DataDB.get_building_sprite(def, kingdom.faction_id))
+	max_hp = maxf(float(def.get("hp", 300.0)) * kingdom.mod("building_hp"), 1.0)
+	hp = max_hp
+	set_process(false)
 	queue_redraw()
 
 
@@ -163,6 +183,29 @@ func get_display_name() -> String:
 	return str(def.get("name", "Gebäude"))
 
 
+func is_alive() -> bool:
+	return hp > 0.0
+
+
+## Halbe Kantenlänge in Pixeln (für Reichweiten im Kampf)
+func get_radius() -> float:
+	return minf(size.x, size.y) * _tile_size * 0.5
+
+
+## Beute für den Zerstörer (Ressource -> Menge)
+func get_loot() -> Dictionary:
+	var loot := {}
+	var base: Dictionary = def.get("loot", {})
+	for res_id in base:
+		loot[res_id] = roundf(float(base[res_id]) * loot_factor)
+	return loot
+
+
+## Einheitenstufen, die hier beschworen werden können (nur fertige Gebäude)
+func get_summon_tiers() -> Array:
+	return def.get("summons", []) if constructed else []
+
+
 ## Kurzer Zustandstext für Auswahl und Tooltip
 func get_status_text() -> String:
 	if not constructed:
@@ -191,5 +234,31 @@ func _draw() -> void:
 		draw_line(Vector2(rect.end.x, rect.position.y), Vector2(rect.position.x, rect.end.y), scaffold, 2.0)
 		SpriteDraw.draw_bar(self, Rect2(rect.position.x + 6, rect.end.y - 14, px.x - 12, 8),
 				get_progress_ratio(), Color(0.95, 0.8, 0.3))
+	if hit_flash > 0.0:
+		draw_rect(rect, Color(1, 0.3, 0.2, 0.35), true)
+	if constructed and (hp < max_hp or selected):
+		var ratio := clampf(hp / max_hp, 0.0, 1.0)
+		var bar_color := Color(0.3, 0.9, 0.3) if ratio > 0.5 else (Color(0.95, 0.8, 0.2) if ratio > 0.25 else Color(0.95, 0.25, 0.2))
+		SpriteDraw.draw_bar(self, Rect2(rect.position.x + 6, rect.position.y - 12, px.x - 12, 7), ratio, bar_color)
+	if not summon_queue.is_empty():
+		# Fortschritt der laufenden Beschwörung
+		var first: Dictionary = summon_queue[0]
+		var r := clampf(float(first.get("progress", 0.0)) / maxf(float(first.get("time", 1.0)), 0.01), 0.0, 1.0)
+		SpriteDraw.draw_bar(self, Rect2(rect.position.x + 6, rect.end.y - 12, px.x - 12, 6), r, Color(0.6, 0.5, 1.0))
 	if selected:
 		draw_rect(rect.grow(3.0), Color(1, 1, 0.6, 0.95), false, 3.0)
+
+
+## Kurz aufblitzen lassen (nach einem Treffer)
+func flash() -> void:
+	hit_flash = 0.15
+	set_process(true)
+	queue_redraw()
+
+
+func _process(delta: float) -> void:
+	if hit_flash > 0.0:
+		hit_flash -= delta
+		if hit_flash <= 0.0:
+			set_process(false)
+			queue_redraw()

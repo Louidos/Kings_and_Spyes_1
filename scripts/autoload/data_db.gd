@@ -41,6 +41,8 @@ var economy: Dictionary = {}
 ## Einheitentypen (units.json), z. B. "villager"
 var units: Array = []
 var unit_by_id: Dictionary = {}
+## Kampfregeln (combat.json)
+var combat: Dictionary = {}
 
 
 func _ready() -> void:
@@ -65,6 +67,7 @@ func reload() -> void:
 	_load_jobs()
 	economy = _load_json("economy.json")
 	_load_units()
+	combat = _load_json("combat.json")
 
 
 ## Liest einen Wert aus game_config.json über einen Punkt-Pfad, z. B. "camera.zoom_max".
@@ -136,14 +139,43 @@ func get_unit_type(id: String) -> Dictionary:
 	return unit_by_id.get(id, {})
 
 
+## Einheitentyp einer Stufe für eine Fraktion (z. B. "fighter" für "evil").
+## Typen mit faction "any" passen zu jeder Fraktion. {} wenn es keinen gibt.
+func get_unit_for_tier(faction_id: String, tier: String) -> Dictionary:
+	var fallback := {}
+	for u in units:
+		if u.get("tier", "") != tier:
+			continue
+		if u.get("faction", "any") == faction_id:
+			return u
+		if u.get("faction", "any") == "any":
+			fallback = u
+	return fallback
+
+
 ## Grafikpfad eines Einheitentyps für eine Fraktion ("" wenn keiner)
 func get_unit_sprite(def: Dictionary, faction_id: String) -> String:
+	if def.has("sprite"):
+		return str(def["sprite"])
 	var sprites: Dictionary = def.get("sprites", {})
 	return str(sprites.get(faction_id, sprites.get("good", "")))
 
 
+## Liest einen Wert aus combat.json über einen Punkt-Pfad, z. B. "camps.size".
+func cmb(path: String, default_value: Variant = null) -> Variant:
+	var node: Variant = combat
+	for key in path.split("."):
+		if node is Dictionary and node.has(key):
+			node = node[key]
+		else:
+			return default_value
+	return node
+
+
 ## Pfad der Gebäudegrafik für eine Fraktion ("" wenn keine angegeben)
 func get_building_sprite(def: Dictionary, faction_id: String) -> String:
+	if def.has("sprite"):
+		return str(def["sprite"])
 	var sprites: Dictionary = def.get("sprites", {})
 	return str(sprites.get(faction_id, sprites.get("good", "")))
 
@@ -236,6 +268,9 @@ func _load_buildings() -> void:
 		b["gather_bonus"] = float(b.get("gather_bonus", 0.0))
 		b["player_buildable"] = bool(b.get("player_buildable", true))
 		b["is_road"] = bool(b.get("is_road", false))
+		b["hp"] = float(b.get("hp", 300.0))
+		if not b.has("summons"):
+			b["summons"] = []
 		if not b.has("dropoff"):
 			b["dropoff"] = []
 		building_by_id[b["id"]] = b
@@ -275,6 +310,22 @@ func _load_units() -> void:
 		u["can_work"] = bool(u.get("can_work", false))
 		u["carry"] = int(u.get("carry", 0))
 		u["needs_housing"] = bool(u.get("needs_housing", false))
+		u["faction"] = str(u.get("faction", "any"))
+		u["tier"] = str(u.get("tier", ""))
+		u["role"] = str(u.get("role", "worker"))
+		u["letter"] = str(u.get("letter", ""))
+		for key in ["hp", "attack", "attack_interval", "range", "armor", "aggro_range", "regen", "heal",
+				"heal_range", "summon_time", "kill_points"]:
+			u[key] = float(u.get(key, 0.0))
+		u["hp"] = maxf(u["hp"], 1.0)
+		u["attack_interval"] = maxf(u["attack_interval"], 0.1)
+		if u.has("color"):
+			u["color"] = _parse_color(u["color"])
+		var cost := {}
+		for k in u.get("cost", {}):
+			cost[k] = float(u["cost"][k])
+		u["cost"] = cost
+		u["projectile"] = str(u.get("projectile", ""))
 		unit_by_id[u["id"]] = u
 
 

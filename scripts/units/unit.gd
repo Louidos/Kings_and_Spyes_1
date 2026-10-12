@@ -26,10 +26,43 @@ var moving := false
 var path_pending := false
 var path_target := Vector2.ZERO
 
-## Befehl des Spielers (ab Phase 3: "move", "attack" ...). Leer = frei für Arbeit.
+## Befehl: "" (frei für Arbeit), "move", "attack_move", "attack", "hold" (steht
+## und verteidigt), "flee" (Arbeiter flieht zur Burg)
 var command: String = ""
+## Zielpunkt des Befehls (Bewegung, Formationsplatz)
+var command_pos := Vector2.ZERO
 ## Gebäude, in dem sich die Einheit gerade aufhält (dann unsichtbar), sonst null
 var inside: Building = null
+
+# --- Kampf (CombatSystem) ---
+## Werte aus units.json, beim Erzeugen übernommen (schneller als Nachschlagen)
+var role := "worker"
+var attack := 0.0
+var attack_interval := 1.0
+## Reichweite in Kacheln
+var attack_range := 0.8
+var armor := 0.0
+## Sichtweite für selbstständige Angriffe in Kacheln (0 = nie)
+var aggro_range := 0.0
+var regen := 0.0
+var heal := 0.0
+var heal_range := 0.0
+var hp := 1.0
+var max_hp := 1.0
+## Angriffsziel: Unit oder Building (oder null)
+var target: Object = null
+var attack_cooldown := 0.0
+## Spielzeit des letzten erlittenen Schadens (für Erholung)
+var last_damaged_at := -1000.0
+## Zeitgeber für Zielsuche und Neuplanung der Verfolgung
+var think_timer := 0.0
+var repath_timer := 0.0
+var last_target_pos := Vector2.ZERO
+## Monster: Heimatpunkt (Höhle), zu dem sie zurückkehren
+var has_home := false
+var home_pos := Vector2.ZERO
+## Kurzes Aufblitzen nach einem Treffer (Echtzeit-Sekunden)
+var hit_flash := 0.0
 
 # --- Arbeit (WorkSystem) ---
 var job_id: String = "idle":
@@ -79,11 +112,61 @@ func setup(p_type_def: Dictionary, p_kingdom: Kingdom, p_uid: int) -> void:
 	kingdom = p_kingdom
 	_radius = float(type_def.get("radius", 13.0))
 	_texture = Assets.texture(DataDB.get_unit_sprite(type_def, kingdom.faction_id))
+	role = str(type_def.get("role", "worker"))
+	attack = float(type_def.get("attack", 0.0))
+	attack_interval = maxf(float(type_def.get("attack_interval", 1.0)), 0.1)
+	attack_range = float(type_def.get("range", 0.8))
+	armor = float(type_def.get("armor", 0.0))
+	aggro_range = float(type_def.get("aggro_range", 0.0))
+	regen = float(type_def.get("regen", 0.0))
+	heal = float(type_def.get("heal", 0.0))
+	heal_range = float(type_def.get("heal_range", 0.0))
+	max_hp = float(type_def.get("hp", 1.0)) * kingdom.mod("hp")
+	hp = max_hp
+	set_process(false)
 	queue_redraw()
 
 
 func can_work() -> bool:
 	return bool(type_def.get("can_work", false))
+
+
+## Rolle aus units.json: worker, king, combat, support, monster
+func get_role() -> String:
+	return role
+
+
+func is_alive() -> bool:
+	return hp > 0.0
+
+
+## Kann angreifen (Schaden > 0)
+func is_combatant() -> bool:
+	return attack > 0.0
+
+
+func can_heal() -> bool:
+	return heal > 0.0
+
+
+## Radius des Platzhalters in Pixeln (auch für Abstände im Kampf)
+func get_radius() -> float:
+	return _radius
+
+
+func get_command_text() -> String:
+	match command:
+		"move":
+			return "marschiert"
+		"attack_move":
+			return "marschiert kampfbereit"
+		"attack":
+			return "greift an"
+		"hold":
+			return "hält die Stellung"
+		"flee":
+			return "flieht zur Burg"
+	return ""
 
 
 func get_display_name() -> String:
@@ -97,6 +180,11 @@ func get_job_name() -> String:
 
 
 func get_status_text() -> String:
+	if not command.is_empty() or not can_work():
+		var t := get_command_text()
+		if is_instance_valid(target) and target != null:
+			t = "kämpft gegen %s" % target.get_display_name()
+		return t if not t.is_empty() else "bereit"
 	var text := get_job_name()
 	if not activity.is_empty():
 		text += " – " + activity
@@ -116,10 +204,45 @@ func _draw() -> void:
 		rect = Rect2(Vector2(-tex_size * 0.5, -tex_size * 0.75), Vector2(tex_size, tex_size))
 	if selected:
 		draw_arc(Vector2(0, r * 0.35), r + 5.0, 0.0, TAU, 28, Color(1, 1, 0.6, 0.95), 2.5, true)
-	var letter := str(DataDB.get_job(job_id).get("letter", ""))
-	SpriteDraw.draw_entity(self, _texture, rect, kingdom.color if kingdom else Color.WHITE, letter, "circle")
+	# Buchstabe: Bewohner zeigen ihren Beruf, alle anderen ihren Typ
+	var letter := str(type_def.get("letter", ""))
+	if letter.is_empty():
+		letter = str(DataDB.get_job(job_id).get("letter", ""))
+	var color: Color = type_def.get("color", kingdom.color if kingdom else Color.WHITE)
+	var tint := Color(1.6, 1.6, 1.6) if hit_flash > 0.0 else Color.WHITE
+	SpriteDraw.draw_entity(self, _texture, rect, color, letter, "circle", tint)
+	if get_role() == "king" and _texture == null:
+		# Krone über dem König
+		var crown := PackedVector2Array([Vector2(-r * 0.6, -r * 1.05), Vector2(-r * 0.6, -r * 1.45),
+				Vector2(-r * 0.3, -r * 1.2), Vector2(0, -r * 1.55), Vector2(r * 0.3, -r * 1.2),
+				Vector2(r * 0.6, -r * 1.45), Vector2(r * 0.6, -r * 1.05)])
+		draw_colored_polygon(crown, Color(1.0, 0.82, 0.25))
+		draw_polyline(crown + PackedVector2Array([crown[0]]), Color(0.35, 0.22, 0.05), 1.5)
 	if carry_amount >= 1.0 and not carry_res.is_empty():
 		var c: Color = DataDB.get_resource(carry_res).get("color", Color.WHITE)
 		var box := Rect2(Vector2(r * 0.35, -r * 1.05), Vector2(r * 0.8, r * 0.8))
 		draw_rect(box, c, true)
 		draw_rect(box, Color(0, 0, 0, 0.7), false, 1.5)
+	# Lebensbalken, wenn verletzt oder ausgewählt
+	if hp < max_hp or selected:
+		var w := maxf(r * 2.2, 26.0)
+		var bar := Rect2(Vector2(-w * 0.5, r + 4.0), Vector2(w, 5.0))
+		var ratio := clampf(hp / max_hp, 0.0, 1.0)
+		var bar_color := Color(0.3, 0.9, 0.3) if ratio > 0.5 else (Color(0.95, 0.8, 0.2) if ratio > 0.25 else Color(0.95, 0.25, 0.2))
+		SpriteDraw.draw_bar(self, bar, ratio, bar_color)
+
+
+## Kurz aufblitzen lassen (nach einem Treffer)
+func flash() -> void:
+	hit_flash = 0.15
+	set_process(true)
+	queue_redraw()
+
+
+func _process(delta: float) -> void:
+	# Trefferblitz abklingen lassen (reine Darstellung, Echtzeit)
+	if hit_flash > 0.0:
+		hit_flash -= delta
+		if hit_flash <= 0.0:
+			set_process(false)
+			queue_redraw()

@@ -7,7 +7,9 @@
 		{ "id": "evil",    "name": "BÖSE",    "color": "#c0392b", "playable": true,
 		  "description": "Die Reiche der Finsternis. Deine Späher sind kleine Monster." },
 		{ "id": "neutral", "name": "NEUTRAL", "color": "#c9b458", "playable": false,
-		  "description": "Freie Völker, die sich jeder Seite anschliessen können." }
+		  "description": "Freie Völker, die sich jeder Seite anschliessen können." },
+		{ "id": "wild", "name": "Wilde Monster", "color": "#e07b22", "playable": false,
+		  "description": "Monster, die alle Reiche angreifen." }
 	],
 
 	"peoples": [

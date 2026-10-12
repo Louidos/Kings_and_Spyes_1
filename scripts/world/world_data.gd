@@ -68,6 +68,11 @@ var deposit_version := 0
 var regrowing: Dictionary = {}
 ## Übersichtsbild wurde verändert und muss neu hochgeladen werden
 var overview_dirty := false
+## Monsterlager aus der Generierung: Array von {"cell": Vector2i, "biome": String}
+var camps: Array = []
+## Gefahrenzonen um Monsterhöhlen: Anzahl Höhlen, deren Umkreis die Kachel
+## abdeckt (0 = sicher). Bewohner sammeln dort nicht.
+var danger := PackedByteArray()
 
 var _road_speed_mult := 1.6
 
@@ -263,6 +268,26 @@ func regrow(hours: int) -> void:
 # ---------------------------------------------------------------------------
 
 ## Besitzer der Kachel (Kingdom.id), 0 = niemand
+## Liegt die Kachel in der Gefahrenzone einer Monsterhöhle?
+func is_dangerous(cell: Vector2i) -> bool:
+	return not danger.is_empty() and in_bounds(cell) and danger[cell_index(cell)] > 0
+
+
+## Gefahrenzone (Kreis) hinzufügen (delta 1) oder entfernen (delta -1)
+func mark_danger(center: Vector2i, radius: int, delta: int) -> void:
+	if danger.is_empty():
+		danger.resize(width * height)
+	for y in range(center.y - radius, center.y + radius + 1):
+		for x in range(center.x - radius, center.x + radius + 1):
+			var c := Vector2i(x, y)
+			if not in_bounds(c) or (c - center).length_squared() > radius * radius:
+				continue
+			var i := cell_index(c)
+			danger[i] = clampi(danger[i] + delta, 0, 255)
+	# Sammler, die nichts gefunden haben, sollen neu suchen
+	deposit_version += 1
+
+
 func get_owner(cell: Vector2i) -> int:
 	if not in_bounds(cell):
 		return 0
