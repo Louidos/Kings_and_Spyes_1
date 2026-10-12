@@ -46,6 +46,8 @@ var speed_cap := 0.0
 var command: String = ""
 ## Zielpunkt des Befehls (Bewegung, Formationsplatz, Wachposten)
 var command_pos := Vector2.ZERO
+## Zählt jeden neuen Befehl (für Gruppenmärsche)
+var order_id := 0
 ## Marsch in Formation: Anführer (Unit) und eigener Abstand zu ihm
 var follow_leader: Variant = null
 var follow_offset := Vector2.ZERO

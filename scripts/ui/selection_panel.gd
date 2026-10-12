@@ -741,8 +741,9 @@ func _show_unit(u: Unit) -> void:
 	_worker_row.visible = false
 	_demolish_button.visible = false
 	if own:
-		# Das Warnzeichen fehlt in manchen Schriften – "(!)" ist überall lesbar
-		_set_text(_status, u.get_status_text().replace("⚠", "(!)"))
+		# Das Warnzeichen fehlt in manchen Schriften – "(!)" ist überall lesbar.
+		# Befehlstexte beginnen klein ("hält die Stellung"), als Zeile gross.
+		_set_text(_status, _capitalize(u.get_status_text().replace("⚠", "(!)")))
 		_set_text(_bonus, game.combat_system.get_bonus_text(u))
 		_set_text(_note, KING_NOTE if u.role == "king" else "")
 	else:
@@ -1054,6 +1055,11 @@ func _count_text(counts: Dictionary) -> String:
 	for n in names:
 		parts.append("%d× %s" % [int(counts[n]), str(n)])
 	return ", ".join(parts)
+
+
+## Erster Buchstabe gross ("kämpft gegen Wolf" -> "Kämpft gegen Wolf")
+static func _capitalize(text: String) -> String:
+	return text.left(1).to_upper() + text.substr(1)
 
 
 ## Angezeigtes Gebäude, falls es noch existiert

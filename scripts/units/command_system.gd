@@ -145,10 +145,11 @@ func order_stop(units: Array) -> void:
 
 
 ## Befehl aufheben: Arbeiter arbeiten weiter, andere halten ihren Platz.
+## Beschworene Einheiten ohne Beruf bleiben als Wache stehen.
 func order_return_to_work(units: Array) -> void:
 	for u in _commandable(units):
 		_stop_following(u)
-		if u.can_work():
+		if u.can_work() and (u.role == "worker" or u.job_id != "idle"):
 			work_system.resume(u)
 		else:
 			u.command = "hold"
@@ -281,6 +282,11 @@ func _finish(u: Unit, ok: bool) -> void:
 		"resume_work":
 			if u.can_work():
 				_resume_later(u, cmd)
+			elif u.role == "king" and cmd == "flee" and is_instance_valid(u.kingdom.castle):
+				# Der verletzte König ruht in der Burg, bis er sich erholt hat (CombatSystem)
+				unit_system.set_inside(u, u.kingdom.castle)
+				u.command = "hold"
+				u.kingdom.notify("Der König zieht sich in die Burg zurück.", "warning", u.position)
 			else:
 				u.command = "hold"
 				u.command_pos = u.position
@@ -322,15 +328,16 @@ func _start_march(list: Array, slots: Array, dest: Vector2) -> void:
 			continue
 		members.append(i)
 		slowest = minf(slowest, u.speed)
-		if d < best:
+		# Heiler führen nicht (sie bleiben zum Heilen stehen)
+		if d < best and not u.can_heal():
 			best = d
 			leader_i = i
-	if members.size() < 3 or centroid.distance_to(dest) < MARCH_MIN_TILES * ts:
+	if members.size() < 3 or leader_i < 0 or centroid.distance_to(dest) < MARCH_MIN_TILES * ts:
 		for i in list.size():
 			unit_system.move_to(list[i], slots[i])
 		return
 	var leader: Unit = list[leader_i]
-	var march := {"leader": leader, "members": [], "command": leader.command}
+	var march := {"leader": leader, "members": [], "command": leader.command, "order": leader.order_id}
 	leader.speed_cap = slowest
 	unit_system.move_to(leader, slots[leader_i])
 	for i in list.size():
@@ -362,7 +369,8 @@ func _on_sim_tick(_dt: float) -> void:
 				members.remove_at(i)
 		if not is_instance_valid(leader) or not leader.is_alive():
 			leader = _promote_leader(march)
-		if leader == null or leader.command != march["command"]:
+		# Ende: Anführer am Ziel (Befehl gewechselt) oder hat einen neuen Befehl bekommen
+		if leader == null or leader.command != march["command"] or leader.order_id != march["order"]:
 			# Anführer ist am Ziel (oder hat einen neuen Befehl): alle auf ihre Plätze
 			for m in members:
 				_stop_following(m)
@@ -393,6 +401,7 @@ func _promote_leader(march: Dictionary) -> Variant:
 		return null
 	var new_leader: Unit = members.pop_front()
 	_stop_following(new_leader)
+	march["order"] = new_leader.order_id
 	for m in members:
 		m.follow_leader = new_leader
 		m.follow_offset = m.command_pos - new_leader.command_pos
@@ -439,8 +448,11 @@ func _commandable(units: Array) -> Array:
 
 
 ## Vor einem Befehl: Arbeit unterbrechen, Gebäude verlassen, Marsch beenden.
+## order_id zählt jeden neuen Befehl (ein Gruppenmarsch endet, wenn sein
+## Anführer einen neuen Befehl bekommt).
 func _prepare(u: Unit) -> void:
 	_stop_following(u)
+	u.order_id += 1
 	if u.can_work() and (u.command.is_empty() or u.command == "defend" or u.command == "flee"):
 		work_system.suspend(u)
 	elif u.inside != null:

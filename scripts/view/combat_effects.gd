@@ -46,7 +46,7 @@ const SPARK_BUILDING_COLOR := Color(1.0, 0.6, 0.15)
 const ARROW_SHAFT := Color(0.45, 0.29, 0.14)
 const ARROW_TIP := Color(0.88, 0.88, 0.82)
 const ARROW_FLETCH := Color(0.95, 0.93, 0.85)
-const BOLT_GLOW := Color(0.62, 0.3, 0.95, 0.32)
+const BOLT_GLOW := Color(0.68, 0.34, 1.0)
 const BOLT_CORE := Color(0.28, 0.08, 0.42)
 const BOLT_SHINE := Color(0.82, 0.62, 1.0)
 
@@ -375,7 +375,22 @@ func _draw_ground() -> void:
 
 
 func _draw_projectiles() -> void:
-	var has_tex := _arrow_tex != null or _bolt_tex != null
+	var k := _fx_scale()
+	# Erst alle Schatten am Boden (unter den Geschossen), dann die Geschosse.
+	# Gezeichnet wird in lokalen Koordinaten (draw_set_transform): Dreiecke an
+	# grossen Weltkoordinaten scheitern sonst an der Rechengenauigkeit.
+	for p in _projectiles:
+		if p.arc <= 0.0:
+			continue
+		var s := clampf(p.t / p.dur, 0.0, 1.0)
+		var ground := p.from.lerp(p.to, s)
+		var lift := p.arc * 4.0 * s * (1.0 - s)
+		if lift < 3.0 or not _view.has_point(ground):
+			continue
+		var gdir := (p.to - p.from).normalized()
+		# Schatten wird blasser, je höher der Pfeil fliegt
+		var a := 0.28 - 0.14 * clampf(lift / ARC_MAX, 0.0, 1.0)
+		draw_line(ground - gdir * 14.0 * k, ground, Color(0, 0, 0, a), 2.5 * k)
 	for p in _projectiles:
 		var s := clampf(p.t / p.dur, 0.0, 1.0)
 		var ground := p.from.lerp(p.to, s)
@@ -383,62 +398,63 @@ func _draw_projectiles() -> void:
 			continue
 		var lift := p.arc * 4.0 * s * (1.0 - s)
 		var pos := ground - Vector2(0, lift)
-		# Flugrichtung = Ableitung der Bahn (Bogen kippt die Spitze nach unten)
+		# Flugrichtung = Ableitung der Bahn (im Bogen kippt die Spitze nach unten)
 		var vel := (p.to - p.from) - Vector2(0, p.arc * 4.0 * (1.0 - 2.0 * s))
-		var dir := vel.normalized() if vel.length_squared() > 0.01 else Vector2.RIGHT
+		var angle := vel.angle() if vel.length_squared() > 0.01 else 0.0
+		draw_set_transform(pos, angle, Vector2(k, k))
 		var tex := _bolt_tex if p.bolt else _arrow_tex
 		if tex != null:
-			# Grafik zeigt nach rechts, Spitze an der Position
+			# Grafik zeigt nach rechts, die Spitze liegt am rechten Rand
 			var ts := tex.get_size()
-			draw_set_transform(pos, dir.angle(), Vector2.ONE)
 			draw_texture(tex, Vector2(-ts.x, -ts.y * 0.5))
-			continue
-		if p.bolt:
-			_draw_bolt(pos, dir)
+		elif p.bolt:
+			_draw_bolt()
 		else:
-			_draw_arrow(pos, ground, dir, lift)
-	if has_tex:
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+			_draw_arrow()
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-## Pfeil: brauner Schaft, helle Spitze, Federn; Schatten am Boden zeigt die Höhe
-func _draw_arrow(pos: Vector2, ground: Vector2, dir: Vector2, lift: float) -> void:
-	var n := dir.orthogonal()
-	if lift > 2.0:
-		var gdir := Vector2(dir.x, 0.0).normalized() if absf(dir.x) > 0.05 else dir
-		draw_line(ground - gdir * 16.0, ground, Color(0, 0, 0, 0.22), 2.0)
-	var tail := pos - dir * 22.0
-	draw_line(tail, pos - dir * 5.0, ARROW_SHAFT, 2.0)
-	draw_colored_polygon(PackedVector2Array([pos + dir * 1.5, pos - dir * 6.0 + n * 3.2, pos - dir * 6.0 - n * 3.2]),
+## Pfeil (lokal, Spitze bei 0, zeigt nach rechts): brauner Schaft mit dunklem
+## Rand (auf hellem Boden sichtbar), helle Spitze, Federn
+func _draw_arrow() -> void:
+	draw_line(Vector2(-23.0, 0), Vector2(-4.0, 0), Color(0, 0, 0, 0.35), 3.5)
+	draw_line(Vector2(-22.0, 0), Vector2(-4.0, 0), ARROW_SHAFT, 2.0)
+	draw_colored_polygon(PackedVector2Array([Vector2(2.5, 0), Vector2(-6.5, 3.6), Vector2(-6.5, -3.6)]),
+			Color(0, 0, 0, 0.45))
+	draw_colored_polygon(PackedVector2Array([Vector2(1.5, 0), Vector2(-6.0, 2.8), Vector2(-6.0, -2.8)]),
 			ARROW_TIP)
-	draw_line(tail + dir * 5.0, tail - n * 3.5, ARROW_FLETCH, 1.5)
-	draw_line(tail + dir * 5.0, tail + n * 3.5, ARROW_FLETCH, 1.5)
+	draw_line(Vector2(-17.0, 0), Vector2(-22.5, -3.8), ARROW_FLETCH, 1.6)
+	draw_line(Vector2(-17.0, 0), Vector2(-22.5, 3.8), ARROW_FLETCH, 1.6)
 
 
-## Magisches Geschoss: violetter Schein, dunkler Kern, heller Kopf
-func _draw_bolt(pos: Vector2, dir: Vector2) -> void:
-	draw_circle(pos - dir * 4.0, 9.0, BOLT_GLOW)
-	draw_line(pos - dir * 28.0, pos - dir * 12.0, Color(BOLT_SHINE, 0.25), 3.0)
-	draw_line(pos - dir * 15.0, pos, BOLT_CORE, 5.0)
-	draw_line(pos - dir * 13.0, pos - dir * 1.0, BOLT_SHINE, 2.0)
-	draw_circle(pos, 3.0, BOLT_SHINE)
+## Magisches Geschoss (lokal): violetter Schein, Schweif, dunkler Kern, heller Kopf
+func _draw_bolt() -> void:
+	draw_circle(Vector2(-5.0, 0), 11.0, Color(BOLT_GLOW, 0.16))
+	draw_circle(Vector2(-3.0, 0), 6.5, Color(BOLT_GLOW, 0.38))
+	draw_line(Vector2(-30.0, 0), Vector2(-10.0, 0), Color(BOLT_SHINE, 0.3), 3.0)
+	draw_line(Vector2(-16.0, 0), Vector2(0, 0), BOLT_CORE, 5.0)
+	draw_line(Vector2(-14.0, 0), Vector2(-1.0, 0), BOLT_SHINE, 2.0)
+	draw_circle(Vector2.ZERO, 3.0, Color(0.95, 0.85, 1.0))
 
 
 func _draw_sparks() -> void:
+	var k := _fx_scale()
 	for sp in _sparks:
 		if not _view.has_point(sp.pos):
 			continue
 		var s := clampf(sp.t / SPARK_TIME, 0.0, 1.0)
 		var base := SPARK_BUILDING_COLOR if sp.building else SPARK_UNIT_COLOR
 		var alpha := 1.0 - s
-		var r := sp.size * (0.45 + 0.9 * s)
+		var size := sp.size * k
+		var r := size * (0.45 + 0.9 * s)
 		if s < 0.5:
 			# Heller Kern im ersten Moment
-			draw_circle(sp.pos, sp.size * 0.45 * (1.0 - s * 2.0), Color(1.0, 0.92, 0.7, 0.9 * alpha))
-		draw_arc(sp.pos, r, 0.0, TAU, 18, Color(base, alpha), 1.0 + 2.5 * alpha)
+			draw_circle(sp.pos, size * 0.45 * (1.0 - s * 2.0), Color(1.0, 0.92, 0.7, 0.9 * alpha))
+		draw_arc(sp.pos, r, 0.0, TAU, 18, Color(0, 0, 0, 0.3 * alpha), (2.5 + 2.5 * alpha) * k)
+		draw_arc(sp.pos, r, 0.0, TAU, 18, Color(base, alpha), (1.0 + 2.5 * alpha) * k)
 		for i in 4:
 			var d := Vector2.RIGHT.rotated(sp.angle + i * TAU * 0.25)
-			draw_line(sp.pos + d * r * 0.6, sp.pos + d * r * 1.25, Color(base.lightened(0.3), alpha), 1.5)
+			draw_line(sp.pos + d * r * 0.6, sp.pos + d * r * 1.3, Color(base.lightened(0.3), alpha), 1.5 * k)
 
 
 func _draw_markers() -> void:
@@ -460,7 +476,8 @@ func _draw_markers() -> void:
 			draw_circle(m.pos, 2.5 * px, c)
 
 
-## Fahne am Sammelpunkt: Stange und weisendes Dreieck in Reichsfarbe
+## Fahne am Sammelpunkt: Stange und wehendes Dreieck in Reichsfarbe
+## (lokal um den Fusspunkt gezeichnet, siehe _draw_projectiles)
 func _draw_flags() -> void:
 	var k := _ui_scale()
 	for b in _flags:
@@ -470,21 +487,27 @@ func _draw_flags() -> void:
 		if not _view.has_point(p):
 			continue
 		var kc: Color = b.kingdom.color
-		var top := p + Vector2(0, -34.0 * k)
-		var wave := sin(_wave_time * 4.0) * 2.0 * k
-		draw_set_transform(p, 0.0, Vector2(1.0, 0.4))
-		draw_circle(Vector2.ZERO, 7.0 * k, Color(0, 0, 0, 0.3))
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-		draw_line(p, top, Color(0.12, 0.08, 0.04), 4.0 * k)
-		draw_line(p, top, Color(0.55, 0.38, 0.2), 2.0 * k)
-		var flag := PackedVector2Array([top, top + Vector2(20.0 * k, 6.0 * k + wave), top + Vector2(0, 13.0 * k)])
+		var wave := sin(_wave_time * 4.0) * 2.0
+		draw_set_transform(p, 0.0, Vector2(k, k * 0.4))
+		draw_circle(Vector2.ZERO, 7.0, Color(0, 0, 0, 0.3))
+		draw_set_transform(p, 0.0, Vector2(k, k))
+		var top := Vector2(0, -34.0)
+		draw_line(Vector2.ZERO, top, Color(0.12, 0.08, 0.04), 4.0)
+		draw_line(Vector2.ZERO, top, Color(0.55, 0.38, 0.2), 2.0)
+		var flag := PackedVector2Array([top, top + Vector2(20.0, 6.0 + wave), top + Vector2(0, 13.0)])
 		draw_colored_polygon(flag, kc)
-		var outline := flag.duplicate()
-		outline.append(top)
-		draw_polyline(outline, Color(0, 0, 0, 0.75), 1.5 * k)
-		draw_circle(top, 2.5 * k, Color(1.0, 0.85, 0.3))
+		flag.append(top)
+		draw_polyline(flag, Color(0, 0, 0, 0.75), 1.5)
+		draw_circle(top, 2.5, Color(1.0, 0.85, 0.3))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## Vergrösserung für Fahne und Linie: beim Herauszoomen gut sichtbar bleiben
 func _ui_scale() -> float:
 	return clampf(1.0 / _zoom, 1.0, 4.0)
+
+
+## Vergrösserung für Geschosse und Treffer: beim Herauszoomen etwas grösser,
+## damit Kämpfe aus der Ferne erkennbar bleiben (nah: Originalgrösse)
+func _fx_scale() -> float:
+	return clampf(0.7 / _zoom, 1.0, 3.0)

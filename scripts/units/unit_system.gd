@@ -38,6 +38,7 @@ func setup(p_game: Node) -> void:
 	game = p_game
 	world = game.world
 	game.building_system.building_placed.connect(_on_building_placed)
+	game.building_system.building_removed.connect(_on_building_removed)
 
 
 func spawn_unit(kingdom: Kingdom, type_id: String, pos: Vector2) -> Unit:
@@ -209,8 +210,9 @@ func _process(_delta: float) -> void:
 				budget = 0.0
 		if u.path_index >= u.path.size():
 			u.moving = false
-			if u.has_path_final:
-				# Abschnittsende: weiter, sobald der nächste Abschnitt berechnet ist
+			if u.has_path_final or u.path_pending:
+				# Abschnittsende (oder neuer Weg unterwegs): weiter, sobald er berechnet
+				# ist – noch nicht als angekommen melden
 				if not u.path_pending:
 					_request_next_leg(u)
 				continue
@@ -240,6 +242,13 @@ func _on_building_placed(b: Building) -> void:
 			if fp.has_point(world.world_to_cell(u.path[i])):
 				move_to(u, u.path_final if u.has_path_final else u.path[u.path.size() - 1])
 				break
+
+
+## Ein Gebäude verschwindet: wer darin ist, kommt heraus.
+func _on_building_removed(b: Building) -> void:
+	for u in units:
+		if u.inside == b:
+			set_inside(u, null)
 
 
 func _process_path_queue() -> void:

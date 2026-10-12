@@ -90,6 +90,8 @@ func set_unit_job(u: Unit, job_id: String, workplace: Building = null) -> bool:
 	if job_id != "idle" and not u.command.is_empty():
 		u.command = ""
 		u.target = null
+		u.follow_leader = null
+		u.speed_cap = 0.0
 	_release(u)
 	u.job_id = job_id
 	if workplace != null:
@@ -297,7 +299,7 @@ func _think(u: Unit) -> void:
 
 
 func _on_arrived(u: Unit) -> void:
-	if not u.can_work() or not u.command.is_empty():
+	if not u.can_work() or not u.command.is_empty() or u.follow_leader != null:
 		return
 	var action := u.on_arrive
 	u.on_arrive = ""
@@ -343,6 +345,8 @@ func _on_path_failed(u: Unit) -> void:
 
 
 func _on_unit_removed(u: Unit) -> void:
+	# Getragenes geht mit der Einheit verloren (nicht ins Lager buchen)
+	u.carry_amount = 0.0
 	_release(u)
 
 

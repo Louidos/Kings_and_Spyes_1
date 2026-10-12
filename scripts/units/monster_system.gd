@@ -227,9 +227,12 @@ func _update_dormant(lair: Building, monsters: Array) -> void:
 	var awake: bool = game.combat_system.index.has_other_kingdom(lair.position, radius, wild.id) \
 			or GameClock.game_time - float(lair.extra.get("last_fight", -1000.0)) < _quiet
 	for u in monsters:
+		if u.dormant and u.hp < u.max_hp:
+			# Ruhende Monster erholen sich trotzdem (diese Prüfung läuft 1x pro Spielsekunde)
+			u.hp = minf(u.hp + u.regen, u.max_hp)
 		if awake:
 			u.dormant = false
-		elif not u.dormant and u.target == null and u.command == "":
+		elif not u.dormant and u.target == null and u.command == "" and u.hp >= u.max_hp:
 			u.dormant = true
 			if u.moving:
 				unit_system.stop(u)

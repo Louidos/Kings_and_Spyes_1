@@ -36,7 +36,7 @@ var bbox_refresh_interval := 0.5
 ## Karte, Gebäude und Einheiten höchstens so oft neu zeichnen (Sekunden)
 var redraw_interval := 0.25
 ## Halbe Grösse eines Lager-Symbols in Pixeln
-var lair_marker_radius := 4.0
+var lair_marker_radius := 3.0
 ## Messwerte der letzten Aktualisierung in Mikrosekunden (Debug, Tests)
 var last_cache_usec := 0
 var last_draw_usec := 0
@@ -196,17 +196,20 @@ func _draw_markers(r: Rect2) -> void:
 			draw_rect(rect, fill, true)
 
 
-## Einheitenpunkte und Lager aus den vorbereiteten Listen
+## Lager und Einheitenpunkte aus den vorbereiteten Listen. Reihenfolge:
+## Lager zuunterst (Monster stehen meist darauf und sollen sichtbar bleiben),
+## dann Monster, fremde Reiche, eigene Einheiten zuoberst.
 func _draw_units() -> void:
+	var lr := lair_marker_radius
+	var lo := lr + 1.5
+	for c in _lair_points:
+		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -lo), c + Vector2(lo, 0),
+				c + Vector2(0, lo), c + Vector2(-lo, 0)]), OUTLINE_COLOR)
+		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -lr), c + Vector2(lr, 0),
+				c + Vector2(0, lr), c + Vector2(-lr, 0)]), LAIR_COLOR)
 	if not _monster_outline.is_empty():
 		draw_multiline(_monster_outline, OUTLINE_COLOR, 4.0)
 		draw_multiline(_monster_fill, _monster_color, 2.0)
-	var lr := lair_marker_radius
-	for c in _lair_points:
-		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -lr - 1.5), c + Vector2(lr + 1.5, 0),
-				c + Vector2(0, lr + 1.5), c + Vector2(-lr - 1.5, 0)]), OUTLINE_COLOR)
-		draw_colored_polygon(PackedVector2Array([c + Vector2(0, -lr), c + Vector2(lr, 0),
-				c + Vector2(0, lr), c + Vector2(-lr, 0)]), LAIR_COLOR)
 	for g in _dot_groups:
 		var group: Dictionary = g
 		draw_multiline(group["points"], group["color"], 2.0)

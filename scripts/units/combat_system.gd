@@ -206,7 +206,11 @@ func _on_sim_tick(dt: float) -> void:
 	for u in unit_system.units:
 		# Felder direkt lesen statt Hilfsfunktionen: diese Schleife läuft für
 		# alle Einheiten in jedem Takt
-		if u.dormant or u.inside != null or u.hp <= 0.0:
+		if u.inside != null:
+			if u.role == "king":
+				_tick_king_resting(u, dt)
+			continue
+		if u.dormant or u.hp <= 0.0:
 			continue
 		if u.hp < u.max_hp:
 			_tick_regen(u, dt, now)
@@ -220,7 +224,9 @@ func _on_sim_tick(dt: float) -> void:
 		u.repath_timer -= dt
 		if not CommandSystem.flag(u.command, "engage"):
 			continue
-		if u.target != null and not is_valid_target(u.kingdom, u.target):
+		# is_same: ein gelöschtes Objekt gilt bei "!= null" als null – so wird
+		# auch ein getötetes (bereits freigegebenes) Ziel bemerkt
+		if not is_same(u.target, null) and not is_valid_target(u.kingdom, u.target):
 			# Ziel weg: nicht alle Angreifer im selben Takt neu suchen lassen
 			u.target = null
 			u.regroup_pending = true
@@ -408,6 +414,11 @@ func _damage_unit(v: Unit, dmg: float, source: Object, source_kingdom: Kingdom) 
 		return
 	if v.role == "king":
 		_warn_king(v)
+		# Schwer verletzt zieht sich der König in die Burg zurück (egal wodurch)
+		if v.hp < v.max_hp * _king_flee_ratio and v.command != "flee" and v.inside == null \
+				and is_instance_valid(v.kingdom.castle):
+			_flee(v, source if is_instance_valid(source) else null)
+			return
 	else:
 		_warn_attacked(v.kingdom, v.position, "Bewohner werden angegriffen!" if v.flee_on_hit else "Deine Einheiten werden angegriffen!")
 	if source is Unit and is_instance_valid(source):
@@ -434,10 +445,6 @@ func _react_to_hit(v: Unit, attacker: Unit) -> void:
 	if v.flee_on_hit:
 		if _worker_flee:
 			_flee(v, attacker)
-		return
-	# Der König zieht sich schwer verletzt in die Burg zurück
-	if v.role == "king" and v.hp < v.max_hp * _king_flee_ratio and is_instance_valid(v.kingdom.castle):
-		_flee(v, attacker)
 		return
 	if not v.joins_fights or v.attack <= 0.0:
 		return
@@ -466,8 +473,9 @@ func _call_for_help(k: Kingdom, pos: Vector2, radius_tiles: float, attacker: Uni
 			w.dormant = false
 
 
-## Läuft zur Burg (oder vom Angreifer weg); Arbeiter arbeiten danach weiter.
-func _flee(v: Unit, attacker: Unit) -> void:
+## Läuft zur Burg (oder vom Angreifer weg); Arbeiter arbeiten danach weiter,
+## der König ruht sich in der Burg aus (siehe CommandSystem._finish).
+func _flee(v: Unit, attacker: Variant) -> void:
 	if v.command.is_empty() and v.can_work():
 		work_system.suspend(v)
 	v.command = "flee"
@@ -477,8 +485,10 @@ func _flee(v: Unit, attacker: Unit) -> void:
 	var dest: Vector2
 	if is_instance_valid(castle):
 		dest = castle.get_approach_point(v.position)
-	else:
+	elif attacker != null and is_instance_valid(attacker):
 		dest = v.position + (v.position - attacker.position).normalized() * 6.0 * _ts
+	else:
+		dest = v.position
 	v.command_pos = dest
 	unit_system.move_to(v, dest)
 
@@ -586,6 +596,19 @@ func _tick_healer(u: Unit, dt: float) -> void:
 	if u.command == "move" or u.command == "flee":
 		return
 	var heal_range := u.heal_range * _ts
+	# Den aktuellen Patienten weiter heilen, solange er verletzt und in Reichweite ist;
+	# neu gesucht wird nur alle 0.4 s (spart viele Umgebungssuchen)
+	u.think_timer -= dt
+	var cur: Variant = u.target
+	if not is_same(cur, null) and is_instance_valid(cur) and cur is Unit and cur.hp > 0.0 and cur.hp < cur.max_hp \
+			and cur.inside == null and u.position.distance_to(cur.position) <= heal_range + cur.get_radius() \
+			and u.think_timer > 0.0:
+		_heal(cur, u.heal * dt)
+		return
+	if u.think_timer > 0.0:
+		_healer_idle(u)
+		return
+	u.think_timer = 0.4
 	var best: Unit = null
 	var best_ratio := 1.0
 	var far: Unit = null
@@ -607,14 +630,29 @@ func _tick_healer(u: Unit, dt: float) -> void:
 		if u.moving or u.path_pending:
 			unit_system.stop(u)
 		return
-	u.repath_timer -= dt
-	if far != null and u.follow_leader == null and u.position.distance_to(u.command_pos) < 8.0 * _ts:
-		if u.repath_timer <= 0.0:
-			u.repath_timer = _chase_repath
-			unit_system.move_direct(u, far.position, DIRECT_CHASE_TILES)
-	elif u.command == "hold" and not u.moving and not u.path_pending \
-			and u.position.distance_to(u.command_pos) > _ts:
+	if far != null and u.follow_leader == null and u.command != "attack_move" \
+			and u.position.distance_to(u.command_pos) < 8.0 * _ts:
+		unit_system.move_direct(u, far.position, DIRECT_CHASE_TILES)
+		return
+	_healer_idle(u)
+
+
+## Heiler ohne Patient: zurück auf den Posten bzw. weiter zum Marschziel
+func _healer_idle(u: Unit) -> void:
+	if u.moving or u.path_pending or u.follow_leader != null:
+		return
+	if (u.command == "hold" or u.command == "attack_move") and u.position.distance_to(u.command_pos) > _ts:
 		unit_system.move_to(u, u.command_pos)
+
+
+## Der König ruht in der Burg: erholt sich schnell und kommt fast geheilt wieder heraus.
+func _tick_king_resting(u: Unit, dt: float) -> void:
+	_heal(u, maxf(u.regen, 1.0) * 3.0 * dt)
+	if u.hp >= u.max_hp * 0.8:
+		unit_system.set_inside(u, null)
+		u.command = "hold"
+		u.command_pos = u.position
+		u.kingdom.notify("Der König hat sich erholt und verlässt die Burg.", "info", u.position)
 
 
 ## Krankenstationen heilen verbündete Einheiten in ihrer Nähe.
