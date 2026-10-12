@@ -256,6 +256,10 @@ func _on_sim_tick(dt: float) -> void:
 func _may_auto_acquire(u: Unit) -> bool:
 	if u.aggro_range <= 0.0 or not u.joins_fights:
 		return false
+	# Getarnte Einheiten bleiben verborgen: nur ein Angriffsbefehl oder
+	# Angriffsmarsch lässt sie zuschlagen (und hebt die Tarnung auf)
+	if u.stealthed and u.command != "attack_move":
+		return false
 	if u.command.is_empty():
 		# Arbeitende Einheiten suchen keinen Streit, Monster und Wachen schon
 		return not u.can_work()
@@ -481,6 +485,9 @@ func _call_for_help(k: Kingdom, pos: Vector2, radius_tiles: float, attacker: Uni
 		return
 	for w in _query_allies(k, pos, (radius_tiles + QUERY_PAD_TILES) * _ts):
 		if w.target != null or not w.joins_fights or w.attack <= 0.0:
+			continue
+		# Getarnte bleiben verborgen (nur Angriffsmarsch oder Angriffsbefehl)
+		if w.stealthed and w.command != "attack_move":
 			continue
 		if w.command == "hold" or w.command == "attack_move" or (w.command.is_empty() and not w.can_work()):
 			w.target = attacker

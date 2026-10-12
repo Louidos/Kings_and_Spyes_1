@@ -16,7 +16,7 @@
 		{ "id": "stone", "name": "Stein",   "color": "#a9a6a0", "icon": "res://assets/ui/icons/icon_stone.png" },
 		{ "id": "ore",   "name": "Erz",     "color": "#6f8fb0", "icon": "res://assets/ui/icons/icon_ore.png" },
 		{ "id": "food",  "name": "Nahrung", "color": "#e0a83a", "icon": "res://assets/ui/icons/icon_food.png" },
-		{ "id": "mana",  "name": "Mana",    "color": "#9a6cf5", "icon": "res://assets/ui/icons/icon_mana.png", "cap": 150 }
+		{ "id": "mana",  "name": "Mana",    "color": "#9a6cf5", "icon": "res://assets/ui/icons/icon_mana.png", "cap": 100 }
 	],
 
 	"deposits": [

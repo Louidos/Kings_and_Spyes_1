@@ -245,28 +245,100 @@ func describe_unlock(unlock_id: String, faction_id: String) -> String:
 	return unlock_id
 
 
+## Lesbarer Text für fehlende Freischaltungen: "Lichtsegen (Forschung)" bzw.
+## mehrere durch Komma getrennt. Nennt die Forschung, die sie bringt.
+func describe_requirement(unlock_ids: Array, faction_id: String) -> String:
+	var parts: PackedStringArray = []
+	for id in unlock_ids:
+		var uid := str(id)
+		if uid.begins_with("research:"):
+			parts.append(str(get_research(uid.substr(9)).get("name", uid)))
+			continue
+		var r := find_research_unlocking(faction_id, uid)
+		parts.append(str(r.get("name", describe_unlock(uid, faction_id))))
+	return ", ".join(parts)
+
+
+## Name einer Wirkungsquelle: "spell:<id>" -> Zaubername, "research:<id>" -> Forschung,
+## "upgrade:<id>" -> Kampfpunkt-Verbesserung (für Tooltips und das Auswahlfenster)
+func describe_effect_source(source: String) -> String:
+	var parts := source.split(":", true, 1)
+	if parts.size() < 2:
+		return source
+	match parts[0]:
+		"spell":
+			return str(get_spell(parts[1]).get("name", parts[1]))
+		"research":
+			return str(get_research(parts[1]).get("name", parts[1]))
+		"upgrade":
+			for up in mag("upgrades", []):
+				if str(up.get("id", "")) == parts[1]:
+					return str(up.get("name", parts[1]))
+	return parts[1]
+
+
+## Farbe einer Wirkungsquelle (Zauberfarbe, sonst weiss)
+func get_effect_source_color(source: String) -> Color:
+	if source.begins_with("spell:"):
+		return get_spell(source.substr(6)).get("color", Color.WHITE)
+	return Color.WHITE
+
+
+## Lesbarer additiver Zuschlag: "cap.mana" +40 -> "+40 Mana-Maximum",
+## "mana_regen" 0.05 -> "+3.0 Mana pro Minute (Burg)", "spell_range" 8 -> "+8 Felder Zauberreichweite"
+func describe_bonus(key: String, add: float) -> String:
+	match key:
+		"cap.mana":
+			return "%+d Mana-Maximum" % roundi(add)
+		"mana_regen":
+			return "%+.1f Mana pro Minute (Burg)" % (add * 60.0)
+		"spell_range":
+			return "%+d Felder Zauberreichweite ausserhalb des Gebiets" % roundi(add)
+	if key.begins_with("cap."):
+		return "%+d Lager (%s)" % [roundi(add), str(get_resource(key.substr(4)).get("name", key.substr(4)))]
+	return "%+g %s" % [add, key]
+
+
 const _MOD_NAMES := {"attack": "Angriff", "armor": "Rüstung", "hp": "Leben", "speed": "Tempo",
 	"range": "Reichweite", "regen": "Erholung", "heal": "Heilung", "gather": "Sammeltempo",
 	"build": "Bautempo", "production": "Produktion", "research": "Forschungstempo",
-	"summon": "Beschwörungstempo", "growth": "Wachstum", "food_use": "Nahrungsverbrauch"}
+	"summon": "Beschwörungstempo", "growth": "Wachstum", "food_use": "Nahrungsverbrauch",
+	"aggro_range": "Sichtweite im Kampf", "sight": "Sichtweite", "mana_regen": "Mana der Burg",
+	"spell_cost": "Zauberkosten", "spell_cooldown": "Abklingzeit der Zauber",
+	"spell_radius": "Zauberradius", "spell_duration": "Zauberdauer", "spell_power": "Zauberstärke"}
 const _TIER_NAMES := {"fighter": "Kämpfer", "archer": "Schützen", "elite": "Elite", "scout": "Späher",
-	"medic": "Heiler", "king": "König", "villager": "Bewohner"}
+	"medic": "Heiler", "king": "König", "villager": "Bewohner", "summon": "Beschworene"}
+const _ROLE_NAMES := {"combat": "alle Truppen", "worker": "Bewohner", "support": "Heiler",
+	"king": "König", "monster": "Monster"}
 
 
-## Lesbare Wirkung eines Modifikators, z. B. "+10 % Angriff (Kämpfer)"
+## Lesbare Wirkung eines Modifikators, z. B. "+10 % Angriff (Kämpfer)".
+## Rüstung als Faktor ("Rüstung ×1,3"), Angriffspause als Angriffstempo.
 func describe_modifier(key: String, factor: float) -> String:
-	var role_parts := key.split("@", true, 1)
+	var stat := key
+	var qualifier := ""
+	var role_parts := key.split("	", true, 1)
 	if role_parts.size() > 1:
-		var role_label := "alle Truppen" if role_parts[1] == "combat" else role_parts[1]
-		return "%+d %% %s (%s)" % [roundi((factor - 1.0) * 100.0), str(_MOD_NAMES.get(role_parts[0], role_parts[0])), role_label]
-	var parts := key.split(".", true, 1)
-	var label := str(_MOD_NAMES.get(parts[0], parts[0]))
-	if parts.size() > 1:
-		if parts[0] == "production" or parts[0] == "gather":
-			label += " (%s)" % str(get_resource(parts[1]).get("name", parts[1]))
-		else:
-			label += " (%s)" % str(_TIER_NAMES.get(parts[1], parts[1]))
-	return "%+d %% %s" % [roundi((factor - 1.0) * 100.0), label]
+		stat = role_parts[0]
+		qualifier = str(_ROLE_NAMES.get(role_parts[1], role_parts[1]))
+	else:
+		var parts := key.split(".", true, 1)
+		stat = parts[0]
+		if parts.size() > 1:
+			if stat == "production" or stat == "gather" or stat == "cap":
+				qualifier = str(get_resource(parts[1]).get("name", parts[1]))
+			else:
+				qualifier = str(_TIER_NAMES.get(parts[1], parts[1]))
+	var suffix := "" if qualifier.is_empty() else " (%s)" % qualifier
+	match stat:
+		"armor":
+			return "Rüstung ×%s%s" % [String.num(factor, 2).replace(".", ","), suffix]
+		"attack_interval":
+			# Kürzere Pause zwischen Angriffen = schnelleres Zuschlagen
+			return "%+d %% Angriffstempo%s" % [roundi((1.0 / maxf(factor, 0.01) - 1.0) * 100.0), suffix]
+		"cap":
+			return "%+d %% Lager%s" % [roundi((factor - 1.0) * 100.0), suffix]
+	return "%+d %% %s%s" % [roundi((factor - 1.0) * 100.0), str(_MOD_NAMES.get(stat, stat)), suffix]
 
 
 ## Liest einen Wert aus spells.json (Einstellungen, Mana-Verbesserungen) über einen Punkt-Pfad.
@@ -482,6 +554,11 @@ func _load_spells() -> void:
 	spell_by_id.clear()
 	for sp in spells:
 		sp["faction"] = str(sp.get("faction", "any"))
+		# requires: Liste von Freischaltungen (ein einzelner Text wird zur Liste)
+		var req: Variant = sp.get("requires", [])
+		if req is String:
+			req = [] if (req as String).is_empty() else [req]
+		sp["requires"] = req
 		sp["school"] = str(sp.get("school", ""))
 		sp["color"] = _parse_color(sp.get("color", "#ffffff"))
 		for key in ["mana_cost", "cooldown", "radius", "duration", "upkeep"]:

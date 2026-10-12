@@ -36,10 +36,9 @@ func can_place(def: Dictionary, cell: Vector2i, kingdom: Kingdom) -> String:
 			reason = kingdom.missing_text(def.get("cost", {}))
 		return reason
 	# Muss erst erforscht werden?
-	for req in def.get("requires", []):
-		if not kingdom.unlocks.has(req):
-			var r := DataDB.find_research_unlocking(kingdom.faction_id, str(req))
-			return "Benötigt Forschung: %s" % str(r.get("name", req))
+	var requires: Array = def.get("requires", [])
+	if not kingdom.has_all_unlocks(requires):
+		return "Benötigt Forschung: %s" % DataDB.describe_requirement(requires, kingdom.faction_id)
 	var size: Vector2i = def.get("size", Vector2i(2, 2))
 	var required_id := str(def.get("requires_deposit", ""))
 	var required_found := required_id.is_empty()

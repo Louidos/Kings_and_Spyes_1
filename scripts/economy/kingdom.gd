@@ -51,8 +51,18 @@ var relations: Dictionary = {}
 var armies: Dictionary = {}
 ## Formation für Marschbefehle dieses Reichs ("block" oder "line")
 var formation: String = "block"
-## Freigeschaltete Dinge (Forschung ab Phase 4): ID -> true
+## Freigeschaltete Dinge (unit:<id>, building:<id>, spell:<id>, research:<id> …): ID -> true.
+## Zwischenspeicher – entsteht aus unlock_sources (nur über grant_unlock/revoke_unlocks ändern).
 var unlocks: Dictionary = {}
+## Wer hat was freigeschaltet: Quelle ("research:<id>", ab Phase 6 "alliance:<dorf>") -> {ID: true}.
+## So kann eine Quelle ihre Freischaltungen wieder entziehen, ohne andere zu stören.
+var unlock_sources: Dictionary = {}
+## Zuschläge (additiv), nach Quelle: Quelle -> {Schlüssel -> Wert}. bonus(key) summiert.
+## Schlüssel: "cap.mana" (Mana-Maximum), "mana_regen" (Mana/s an der Burg).
+var bonus_sources: Dictionary = {}
+## Laufende Kosten, nach Quelle: Quelle ("spell:<id>" …) -> {Ressource -> pro Sekunde}.
+## Das EconomySystem zieht sie jeden Takt ab.
+var upkeep: Dictionary = {}
 ## Statistik für den Spielende-Bildschirm: Name -> Zahl
 var stats: Dictionary = {}
 # --- Forschung und Magie (Phase 4) ---
@@ -64,10 +74,14 @@ var research_queue: Array = []
 var research_progress: float = 0.0
 ## Zauber -> Spielzeit, ab der er wieder bereit ist
 var spell_cooldowns: Dictionary = {}
-## Zusätzliches Mana-Maximum (Forschung, Kampfpunkte)
-var mana_cap_bonus: float = 0.0
-## Mana pro Sekunde an der Burg (Forschung, Kampfpunkte)
-var mana_regen: float = 0.0
+## Zusätzliches Mana-Maximum (nur lesen; aus bonus_sources)
+var mana_cap_bonus: float:
+	get:
+		return bonus("cap.mana")
+## Mana pro Sekunde an der Burg (nur lesen; aus bonus_sources, mal Faktor "mana_regen")
+var mana_regen: float:
+	get:
+		return bonus("mana_regen") * mod("mana_regen")
 ## Stufe der Mana-Verbesserungen (ID -> Stufe)
 var mana_upgrades: Dictionary = {}
 ## Hat dieses Reich eine Wirtschaft (Nahrung, Wachstum)? Monster nicht.
@@ -146,6 +160,74 @@ func _recompute_modifiers() -> void:
 	modifiers_changed.emit()
 
 
+## Schaltet etwas frei (Quelle merken, damit sie es später wieder entziehen kann)
+func grant_unlock(source: String, unlock_id: String) -> void:
+	var entry: Dictionary = unlock_sources.get(source, {})
+	entry[unlock_id] = true
+	unlock_sources[source] = entry
+	unlocks[unlock_id] = true
+
+
+## Entzieht alle Freischaltungen einer Quelle (andere Quellen bleiben gültig)
+func revoke_unlocks(source: String) -> void:
+	if not unlock_sources.erase(source):
+		return
+	unlocks.clear()
+	for src in unlock_sources:
+		for id in unlock_sources[src]:
+			unlocks[id] = true
+
+
+func has_unlock(unlock_id: String) -> bool:
+	return unlocks.has(unlock_id)
+
+
+## Sind alle Freischaltungen der Liste vorhanden?
+func has_all_unlocks(ids: Array) -> bool:
+	for id in ids:
+		if not unlocks.has(id):
+			return false
+	return true
+
+
+## Additiver Zuschlag einer Quelle (ersetzt den alten Wert der Quelle für diesen Schlüssel)
+func set_bonus(source: String, key: String, value: float) -> void:
+	var entry: Dictionary = bonus_sources.get(source, {})
+	entry[key] = value
+	bonus_sources[source] = entry
+	resources_changed.emit()
+
+
+func clear_bonuses(source: String) -> void:
+	if bonus_sources.erase(source):
+		resources_changed.emit()
+
+
+## Summe aller Zuschläge für einen Schlüssel
+func bonus(key: String) -> float:
+	var total := 0.0
+	for src in bonus_sources:
+		total += float(bonus_sources[src].get(key, 0.0))
+	return total
+
+
+## Laufende Kosten einer Quelle setzen (pro Sekunde), z. B. {"mana": 0.5}
+func set_upkeep(source: String, cost: Dictionary) -> void:
+	upkeep[source] = cost.duplicate()
+
+
+func clear_upkeep(source: String) -> void:
+	upkeep.erase(source)
+
+
+## Summe der laufenden Kosten einer Ressource pro Sekunde
+func get_upkeep(res_id: String) -> float:
+	var total := 0.0
+	for src in upkeep:
+		total += float(upkeep[src].get(res_id, 0.0))
+	return total
+
+
 ## Beziehung zu einem anderen Reich ("war", "peace", "alliance"); eigenes Reich = "self"
 func get_relation(other: Kingdom) -> String:
 	if other == self:
@@ -173,8 +255,7 @@ func get_capacity(res_id: String) -> float:
 	var cap: Variant = DataDB.get_resource(res_id).get("cap", null)
 	if cap == null:
 		return INF
-	var bonus := mana_cap_bonus if res_id == "mana" else 0.0
-	return float(cap) * mod("cap." + res_id) + bonus
+	return float(cap) * mod("cap." + res_id) + bonus("cap." + res_id)
 
 
 ## Fügt eine Menge hinzu (negativ = Verbrauch). Bestand bleibt zwischen 0 und Lagergrenze.

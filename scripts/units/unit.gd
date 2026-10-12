@@ -13,9 +13,15 @@ extends Node2D
 ## Arbeitszustand (vom WorkSystem gesetzt)
 enum State { IDLE, MOVING, GATHERING, BUILDING, WORKING, WAITING }
 
+## Getarnt-Zustand hat sich geändert (Tarnzauber begonnen/beendet)
+signal stealth_changed(unit: Unit)
+
 ## Buchstaben auf Platzhaltern zeichnen? (Die Kamera schaltet sie beim
 ## Herauszoomen ab.)
 static var show_letters := true
+## Aus wessen Sicht wird gezeichnet (Reich des Spielers; -1 = alles sichtbar).
+## Getarnte eigene/verbündete Einheiten erscheinen halb durchsichtig, fremde gar nicht.
+static var viewer_kingdom_id := -1
 
 ## Eindeutige Nummer innerhalb der Partie (für Spielstände)
 var uid: int = 0
@@ -103,7 +109,9 @@ var home_pos := Vector2.ZERO
 var dormant := false
 ## Ziel verloren: nach der nächsten erfolglosen Suche zurück auf den Posten usw.
 var regroup_pending := false
-## Getarnt: für fremde Reiche unsichtbar (Tarnzauber, ab Phase 7 Spione)
+## Getarnt: für fremde Reiche unsichtbar (Tarnzauber, ab Phase 7 Spione).
+## Nur lesen – abgeleitet in refresh_stats aus type_def.stealth oder einer
+## Wirkung mit key "stealth".
 var stealthed := false
 ## Beschworene Zaubereinheit: verschwindet zu dieser Spielzeit (-1 = nie)
 var expires_at := -1.0
@@ -190,6 +198,11 @@ func refresh_stats() -> void:
 	heal_range = _stat("heal_range")
 	building_damage = _stat("building_damage")
 	hp = clampf(ratio, 0.0, 1.0) * max_hp
+	var now_stealthed := bool(type_def.get("stealth", false)) or _has_effect_key("stealth")
+	if now_stealthed != stealthed:
+		stealthed = now_stealthed
+		update_stealth_look()
+		stealth_changed.emit(self)
 
 
 func _stat(key: String) -> float:
@@ -206,7 +219,27 @@ func _stat(key: String) -> float:
 	return (value + add) * mult
 
 
-## Wirkung hinzufügen (ersetzt eine gleichnamige) und Werte neu berechnen
+func _has_effect_key(key: String) -> bool:
+	for e in effects:
+		if e.get("key", "") == key:
+			return true
+	return false
+
+
+## Darstellung der Tarnung (nur Optik): eigene/verbündete halb durchsichtig,
+## fremde unsichtbar. Läuft bei Änderung der Tarnung.
+func update_stealth_look() -> void:
+	if not stealthed:
+		modulate.a = 1.0
+	elif viewer_kingdom_id < 0 or kingdom == null or kingdom.id == viewer_kingdom_id \
+			or kingdom.relations.get(viewer_kingdom_id, "") == "alliance":
+		modulate.a = 0.45
+	else:
+		modulate.a = 0.0
+
+
+## Wirkung hinzufügen (ersetzt eine gleichnamige) und Werte neu berechnen.
+## Zeitlich begrenzte Wirkungen bitte über MagicSystem.add_unit_effect (Ablauf).
 func add_effect(effect: Dictionary) -> void:
 	remove_effect(str(effect.get("id", "")), false)
 	effects.append(effect)

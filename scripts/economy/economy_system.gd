@@ -5,8 +5,14 @@
 ## - Bevölkerungswachstum (Wohnraum + Nahrung nötig)
 ## - Ertrag pro Minute je Ressource (für die Anzeige)
 ## - stündliches Nachwachsen geernteter Vorkommen (Beeren, Wild)
+## - Mana der Burg (Kampfpunkt-Verbesserungen) und laufende Kosten (Kingdom.upkeep,
+##   z. B. Tarnzauber)
 class_name EconomySystem
 extends Node
+
+## Laufende Kosten einer Quelle konnten nicht bezahlt werden. Die Quelle ist
+## schon entfernt; ihr Besitzer (z. B. MagicSystem) beendet die Wirkung.
+signal upkeep_unpaid(kingdom: Kingdom, source: String)
 
 ## Alle so viele Spielsekunden werden die Ertragsraten neu berechnet
 const RATE_INTERVAL := 6.0
@@ -58,9 +64,10 @@ func _on_sim_tick(dt: float) -> void:
 			continue  # z. B. Monster: essen nicht, vermehren sich über ihre Höhlen
 		_consume_food(kingdom, dt)
 		_grow(kingdom, dt)
-		# Mana aus Forschung und Kampfpunkt-Verbesserungen (die Burg erzeugt es)
+		# Mana aus Kampfpunkt-Verbesserungen (die Burg erzeugt es)
 		if kingdom.mana_regen > 0.0 and is_instance_valid(kingdom.castle):
 			kingdom.add_resource("mana", kingdom.mana_regen * dt)
+		_charge_upkeep(kingdom, dt)
 	_rate_timer += dt
 	if _rate_timer >= RATE_INTERVAL:
 		for kingdom in game.kingdoms:
@@ -70,6 +77,26 @@ func _on_sim_tick(dt: float) -> void:
 				# Glätten, damit die Anzeige nicht springt
 				kingdom.income_rate[res_id] = lerpf(float(kingdom.income_rate.get(res_id, 0.0)), rate, 0.5)
 		_rate_timer = 0.0
+
+
+## Laufende Kosten abziehen (über add_resource, damit sie im Ertrag pro Minute
+## erscheinen). Reicht der Vorrat für eine Quelle nicht, endet sie: upkeep_unpaid.
+func _charge_upkeep(kingdom: Kingdom, dt: float) -> void:
+	if kingdom.upkeep.is_empty():
+		return
+	for source in kingdom.upkeep.keys():
+		var cost: Dictionary = kingdom.upkeep[source]
+		var affordable := true
+		for res_id in cost:
+			if kingdom.get_amount(res_id) + 0.0001 < float(cost[res_id]) * dt:
+				affordable = false
+				break
+		if not affordable:
+			kingdom.clear_upkeep(source)
+			upkeep_unpaid.emit(kingdom, source)
+			continue
+		for res_id in cost:
+			kingdom.add_resource(res_id, -float(cost[res_id]) * dt)
 
 
 func _on_hour_passed(_day: int, _hour: int) -> void:

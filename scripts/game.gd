@@ -124,6 +124,8 @@ func _start_game() -> void:
 	kingdom_defeated.connect(_on_kingdom_defeated)
 
 	player = create_kingdom({"faction_id": GameSession.faction_id, "controller": "player"})
+	# Getarnte Einheiten aus Sicht des Spielers zeichnen
+	Unit.viewer_kingdom_id = player.id
 	found_settlement(player, world.start_cell)
 	# Wilde Monster: ein eigenes Reich, mit allen im Krieg
 	wild = create_kingdom({"faction_id": "wild", "controller": "wild", "display_name": "Wilde Monster"})

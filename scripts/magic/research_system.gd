@@ -4,9 +4,11 @@
 ## wird beim Einreihen, Abbrechen erstattet alles. Geforscht wird nur, wenn
 ## das Reich mindestens eine fertige Forschungsstätte hat (Bibliothek bzw.
 ## Dunkles Archiv); jede weitere beschleunigt.
-## Wirkungen (research.json → effects) gehen über das Reich: Freischaltungen
-## (Kingdom.unlocks), Modifikatoren (Kingdom.set_modifier) und Mana-Boni.
-## Ausserdem: Mana-Verbesserungen gegen Kampfpunkte (spells.json → upgrades).
+## Wirkungen (research.json → effects) gehen über das Reich, jeweils mit der
+## Quelle "research:<id>": Freischaltungen (Kingdom.grant_unlock), Modifikatoren
+## (Kingdom.set_modifiers) und Zuschläge (Kingdom.set_bonus, z. B. spell_range).
+## Ausserdem: Mana-Verbesserungen gegen Kampfpunkte (spells.json → upgrades,
+## Quelle "upgrade:<id>").
 ## Gleiche Schnittstelle für Spieler und (ab Phase 7) KI-Reiche.
 class_name ResearchSystem
 extends Node
@@ -21,6 +23,8 @@ signal upgrade_bought(kingdom: Kingdom, upgrade_id: String, level: int)
 const QUEUE_LIMIT := 3
 ## Jede weitere Forschungsstätte forscht so viel schneller (+25 %)
 const EXTRA_BUILDING_SPEED := 0.25
+## Schlüssel in spells.json → upgrades.per_level -> Zuschlag-Schlüssel des Reichs
+const UPGRADE_KEYS := {"mana_cap": "cap.mana", "mana_regen": "mana_regen"}
 
 var game: Node
 
@@ -129,10 +133,12 @@ func describe_effects(k: Kingdom, id: String) -> PackedStringArray:
 				lines.append("Schaltet frei: " + DataDB.describe_unlock(str(e.get("id", "")), k.faction_id))
 			"modifier":
 				lines.append(DataDB.describe_modifier(str(e.get("key", "")), float(e.get("factor", 1.0))))
+			"bonus":
+				lines.append(DataDB.describe_bonus(str(e.get("key", "")), float(e.get("add", 0.0))))
 			"mana_cap":
-				lines.append("+%d Mana-Maximum" % int(e.get("add", 0)))
+				lines.append(DataDB.describe_bonus("cap.mana", float(e.get("add", 0.0))))
 			"mana_regen":
-				lines.append("+%.2f Mana pro Sekunde (Burg)" % float(e.get("add", 0.0)))
+				lines.append(DataDB.describe_bonus("mana_regen", float(e.get("add", 0.0))))
 	return lines
 
 
@@ -185,41 +191,47 @@ func cancel(k: Kingdom, id: String) -> void:
 	queue_changed.emit(k)
 
 
-## Wendet die Wirkungen einer Forschung an. Mehrfach aufrufbar (z. B. beim Laden).
+## Wendet die Wirkungen einer Forschung an. Mehrfach aufrufbar (z. B. beim Laden):
+## alles läuft über die Quelle "research:<id>" und ersetzt deren alten Stand.
 func apply_effects(k: Kingdom, id: String) -> void:
+	var source := "research:" + id
+	# Die Forschung selbst gilt auch als Freischaltung (für requires anderer Dinge)
+	k.grant_unlock(source, source)
 	var factors := {}
 	for e in DataDB.get_research(id).get("effects", []):
 		match str(e.get("type", "")):
 			"unlock":
-				k.unlocks[str(e.get("id", ""))] = true
+				k.grant_unlock(source, str(e.get("id", "")))
 			"modifier":
 				factors[str(e.get("key", ""))] = float(e.get("factor", 1.0))
+			"bonus":
+				k.set_bonus(source, str(e.get("key", "")), float(e.get("add", 0.0)))
+			"mana_cap":
+				k.set_bonus(source, "cap.mana", float(e.get("add", 0.0)))
+			"mana_regen":
+				k.set_bonus(source, "mana_regen", float(e.get("add", 0.0)))
 	# Alle Faktoren auf einmal: die Einheiten rechnen nur einmal neu
 	if not factors.is_empty():
-		k.set_modifiers("research:" + id, factors)
+		k.set_modifiers(source, factors)
+
+
+## Nach dem Laden (Phase 10): alle Wirkungen aus researched und mana_upgrades
+## neu aufbauen (Modifikatoren, Freischaltungen und Zuschläge sind abgeleitet).
+func restore(k: Kingdom) -> void:
+	for rid in k.researched:
+		apply_effects(k, str(rid))
 	recompute_mana(k)
 
 
-## Mana-Maximum und -Regeneration aus Forschung und Kampfpunkt-Verbesserungen
-## neu berechnen (immer aus dem Zustand, daher beliebig oft aufrufbar).
+## Zuschläge der Kampfpunkt-Verbesserungen neu setzen (Quelle "upgrade:<id>").
+## per_level: "mana_cap" -> Mana-Maximum, "mana_regen" -> Mana/s an der Burg.
 func recompute_mana(k: Kingdom) -> void:
-	var cap := 0.0
-	var regen := 0.0
-	for rid in k.researched:
-		for e in DataDB.get_research(str(rid)).get("effects", []):
-			match str(e.get("type", "")):
-				"mana_cap":
-					cap += float(e.get("add", 0.0))
-				"mana_regen":
-					regen += float(e.get("add", 0.0))
 	for up in DataDB.mag("upgrades", []):
-		var level := int(k.mana_upgrades.get(str(up.get("id", "")), 0))
+		var up_id := str(up.get("id", ""))
+		var level := int(k.mana_upgrades.get(up_id, 0))
 		var per: Dictionary = up.get("per_level", {})
-		cap += float(per.get("mana_cap", 0.0)) * level
-		regen += float(per.get("mana_regen", 0.0)) * level
-	k.mana_cap_bonus = cap
-	k.mana_regen = regen
-	k.resources_changed.emit()
+		for key in per:
+			k.set_bonus("upgrade:" + up_id, str(UPGRADE_KEYS.get(key, key)), float(per[key]) * level)
 
 
 # ---------------------------------------------------------------------------

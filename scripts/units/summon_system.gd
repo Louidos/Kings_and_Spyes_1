@@ -27,7 +27,7 @@ func setup(p_game: Node) -> void:
 ## Einheitentypen (Dictionaries aus units.json), die dieses Gebäude beschwören
 ## kann. Einträge in "summons" sind Stufen (z. B. "fighter", dann die Einheit
 ## der eigenen Fraktion) oder Einheiten-IDs; dazu kommen Freischaltungen des
-## Reichs (kingdom.unlocks "summon:<gebäude>:<einheit>", ab Phase 4/6).
+## Reichs (Kingdom.grant_unlock mit "summon:<gebäude>:<einheit>", ab Phase 6).
 func get_options(b: Building) -> Array:
 	var list: Array = []
 	var entries: Array = b.def.get("summons", []).duplicate()
@@ -53,10 +53,9 @@ func can_summon(b: Building, type_id: String) -> String:
 	var def := DataDB.get_unit_type(type_id)
 	if def.is_empty():
 		return "Unbekannte Einheit"
-	for req in def.get("requires", []):
-		if not b.kingdom.unlocks.has(req):
-			var r := DataDB.find_research_unlocking(b.kingdom.faction_id, str(req))
-			return "Benötigt Forschung: %s" % str(r.get("name", req))
+	var requires: Array = def.get("requires", [])
+	if not b.kingdom.has_all_unlocks(requires):
+		return "Benötigt Forschung: %s" % DataDB.describe_requirement(requires, b.kingdom.faction_id)
 	if b.summon_queue.size() >= _queue_limit:
 		return "Warteschlange voll (%d)" % _queue_limit
 	var cost: Dictionary = def.get("cost", {})

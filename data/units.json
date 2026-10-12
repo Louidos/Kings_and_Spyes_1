@@ -117,16 +117,18 @@
 		},
 
 		{
-			"id": "light_guardian", "name": "Lichtwächter", "faction": "good", "tier": "summon", "role": "combat", "letter": "L", "color": "#f3d36b",
-			"speed": 2.4, "radius": 17, "sight": 6, "food_per_day": 0, "temporary": true,
-			"hp": 150, "attack": 14, "attack_interval": 1.1, "range": 0.9, "armor": 0.25, "aggro_range": 6, "regen": 0,
+			"id": "light_guardian", "name": "Lichtgeist", "faction": "good", "tier": "summon", "role": "combat", "letter": "L", "color": "#f3d36b",
+			"description": "Beschworen mit „Ruf des Lichts“. Verschwindet nach einer Minute.",
+			"speed": 2.4, "radius": 17, "sight": 6, "food_per_day": 0, "temporary": true, "can_work": false, "needs_housing": false,
+			"hp": 150, "attack": 14, "attack_interval": 1.2, "range": 0.8, "armor": 0.25, "aggro_range": 5, "regen": 0,
 			"kill_points": 1,
 			"sprite": "res://assets/sprites/units/light_guardian.png"
 		},
 		{
 			"id": "shadow_servant", "name": "Schattendiener", "faction": "evil", "tier": "summon", "role": "combat", "letter": "D", "color": "#7d3c98",
-			"speed": 2.6, "radius": 16, "sight": 6, "food_per_day": 0, "temporary": true,
-			"hp": 120, "attack": 16, "attack_interval": 1.1, "range": 0.9, "armor": 0.15, "aggro_range": 6, "regen": 0,
+			"description": "Beschworen mit „Schattenbrut“. Verschwindet nach einer Minute.",
+			"speed": 2.4, "radius": 17, "sight": 6, "food_per_day": 0, "temporary": true, "can_work": false, "needs_housing": false,
+			"hp": 120, "attack": 16, "attack_interval": 1.2, "range": 0.8, "armor": 0.15, "aggro_range": 5, "regen": 0,
 			"kill_points": 1,
 			"sprite": "res://assets/sprites/units/shadow_servant.png"
 		},
