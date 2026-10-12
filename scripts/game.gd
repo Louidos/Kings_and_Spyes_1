@@ -19,6 +19,7 @@ signal formation_changed(formation: String)
 ## gemeinsam ausgeblendet werden können)
 @onready var unit_layer: Node2D = $Entities/Units
 @onready var unit_overlay: UnitOverlay = $UnitOverlay
+@onready var combat_effects: CombatEffects = $CombatEffects
 @onready var placement: PlacementController = $Placement
 @onready var camera: RTSCamera = $Camera
 @onready var building_system: BuildingSystem = $Systems/BuildingSystem
@@ -110,6 +111,7 @@ func _start_game() -> void:
 	placement.setup(self)
 	selection.setup(self)
 	unit_overlay.setup(self)
+	combat_effects.setup(self)
 	kingdom_defeated.connect(_on_kingdom_defeated)
 
 	player = create_kingdom({"faction_id": GameSession.faction_id, "controller": "player"})

@@ -134,8 +134,8 @@ theme_override_colors/font_color = Color(1, 1, 1, 0.9)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 15
-text = "Linksklick: auswählen  ·  Baumenü unten  ·  J: Arbeitsverteilung  ·  X: Abreissen  ·  Rechtsklick / Esc: abbrechen
-WASD / Pfeile / Rand: Kamera  ·  Mausrad, Q/E: Zoom  ·  Leertaste: Pause  ·  + / −: Tempo  ·  H: Burg  ·  Esc: Menü"
+text = "Linksklick / Ziehen: auswählen  ·  Rechtsklick: bewegen / angreifen  ·  Strg+1–9: Armee  ·  J: Arbeitsverteilung  ·  X: Abreissen
+WASD / Pfeile / Rand: Kamera  ·  Mausrad, Q/E: Zoom  ·  Leertaste: Pause  ·  + / −: Tempo  ·  H: Burg  ·  Esc: abbrechen / Menü"
 horizontal_alignment = 1
 
 [node name="BuildMenu" type="PanelContainer" parent="Root/BottomCenter"]

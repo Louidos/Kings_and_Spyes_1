@@ -2,12 +2,13 @@
 ##
 ## Ressourcenleiste in der oberen Leiste: je Ressource Symbol und Menge
 ## (Tooltip: Ertrag pro Minute, bei Nahrung auch Verbrauch und Hungersnot),
-## danach Bewohner/Wohnraum mit dem Wachstumszustand im Tooltip.
-## Zeigt nur an – wird etwa fünfmal pro Sekunde aktualisiert.
+## danach Bewohner/Wohnraum mit dem Wachstumszustand im Tooltip, die Truppen
+## (beschworene Einheiten, Tooltip mit Kampfpunkten) und das Leben des Königs.
+## Zeigt nur an – wird viermal pro Sekunde aktualisiert, nicht in jedem Bild.
 class_name ResourceBar
 extends HBoxContainer
 
-const REFRESH_INTERVAL := 0.2
+const REFRESH_INTERVAL := 0.25
 const ICON_SIZE := 24.0
 const COLOR_NORMAL := Color(0.95, 0.92, 0.85)
 const COLOR_BAD := Color(1.0, 0.42, 0.36)
@@ -19,6 +20,8 @@ var _amount_labels: Dictionary = {}
 ## Ressource -> Eintrag (trägt den Tooltip)
 var _entries: Dictionary = {}
 var _pop_label: Label
+var _troops_label: Label
+var _king_label: Label
 var _timer := 0.0
 
 
@@ -42,6 +45,15 @@ func setup(p_game: Node) -> void:
 	_pop_label = _make_label(0)
 	pop_entry.add_child(_pop_label)
 	_entries["_population"] = pop_entry
+	var troops_entry := _make_entry()
+	_troops_label = _make_label(0)
+	troops_entry.add_child(_troops_label)
+	_entries["_troops"] = troops_entry
+	var king_entry := _make_entry()
+	_king_label = _make_label(0)
+	king_entry.add_child(_king_label)
+	king_entry.tooltip_text = "Leben des Königs – fällt er, ist das Spiel verloren"
+	_entries["_king"] = king_entry
 	_refresh()
 
 
@@ -67,8 +79,12 @@ func _refresh() -> void:
 		var amount := k.get_amount(res_id)
 		var bad := res_id == "food" and k.starving
 		_set_label(label, str(floori(amount)), COLOR_BAD if bad else COLOR_NORMAL)
-		entry.tooltip_text = _resource_tooltip(k, r, amount)
+		var tip := _resource_tooltip(k, r, amount)
+		if entry.tooltip_text != tip:
+			entry.tooltip_text = tip
 	_refresh_population(k)
+	_refresh_troops(k)
+	_refresh_king(k)
 
 
 func _resource_tooltip(k: Kingdom, r: Dictionary, amount: float) -> String:
@@ -107,6 +123,37 @@ func _refresh_population(k: Kingdom) -> void:
 	var entry: Control = _entries.get("_population")
 	if entry != null:
 		entry.tooltip_text = "\n".join(lines)
+
+
+## Truppen = eigene Einheiten ausser Bewohnern und König
+func _refresh_troops(k: Kingdom) -> void:
+	var troops := 0
+	for u in k.units:
+		var role: String = u.role
+		if role != "worker" and role != "king":
+			troops += 1
+	_set_label(_troops_label, "Truppen %d" % troops, COLOR_NORMAL)
+	var tip := "Beschworene Einheiten: %d\nKampfpunkte: %d (gesamt %d)\nBesiegte Feinde: %d  ·  Verluste: %d" % [
+		int(k.stats.get("summoned", 0)), k.kill_points, k.kill_points_total,
+		int(k.stats.get("kills", 0)), int(k.stats.get("losses", 0))]
+	var entry: Control = _entries.get("_troops")
+	if entry != null and entry.tooltip_text != tip:
+		entry.tooltip_text = tip
+
+
+## "König 600/600", rot unter halbem Leben; ohne König ausgeblendet
+func _refresh_king(k: Kingdom) -> void:
+	var entry: Control = _entries.get("_king")
+	if entry == null:
+		return
+	var king: Variant = k.king
+	var alive := is_instance_valid(king) and (king as Unit).is_alive()
+	entry.visible = alive
+	if not alive:
+		return
+	var u := king as Unit
+	var low := u.hp < u.max_hp * 0.5
+	_set_label(_king_label, "König %d/%d" % [ceili(u.hp), roundi(u.max_hp)], COLOR_BAD if low else COLOR_NORMAL)
 
 
 func _make_entry() -> HBoxContainer:

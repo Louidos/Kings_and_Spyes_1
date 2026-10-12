@@ -4,8 +4,8 @@
 ## - oben: Reich, Ressourcen und Bewohner (ResourceBar), Datum, Tempo
 ## - oben links: Arbeitsverteilung (JobPanel, Taste J)
 ## - oben rechts: Meldungen (NotificationPanel)
-## - unten links: Auswahlfenster (SelectionPanel) über dem Infobereich
-##   (Kachel unter der Maus)
+## - unten links: Auswahlfenster (SelectionPanel), darunter die Armeeleiste
+##   (ArmyBar) und der Infobereich (Kachel, Gebäude oder Einheit unter der Maus)
 ## - unten Mitte: Baumenü (BuildMenu) mit Steuerungshinweis darüber
 ## - unten rechts: Minikarte
 ## Das HUD zeigt nur an und leitet Klicks an die Systeme weiter –
@@ -17,6 +17,8 @@ const INFO_REFRESH_INTERVAL := 0.25
 ## Zeilen, die der Infobereich immer reserviert (damit das Auswahlfenster
 ## darüber nicht springt, wenn die Maus über die Karte fährt)
 const INFO_LINES := 7
+## Einheit unter der Maus: Suchradius in Bildschirmpixeln (wie beim Anklicken)
+const HOVER_PICK_RADIUS := 20.0
 
 @onready var kingdom_label: Label = %KingdomLabel
 @onready var resource_bar: ResourceBar = %ResourceBar
@@ -31,9 +33,13 @@ const INFO_LINES := 7
 @onready var job_panel: JobPanel = %JobPanel
 @onready var selection_panel: SelectionPanel = %SelectionPanel
 @onready var notification_panel: NotificationPanel = %NotificationPanel
+@onready var bottom_left: VBoxContainer = $Root/BottomLeft
+@onready var info_panel: PanelContainer = $Root/BottomLeft/InfoPanel
 
 var game: Node
 var world: WorldData
+## Armeeleiste (wird in setup angelegt, steht zwischen Auswahlfenster und Infobereich)
+var army_bar: ArmyBar
 var world_map: WorldMap
 var camera: RTSCamera
 
@@ -75,6 +81,12 @@ func setup(p_game: Node) -> void:
 	job_panel.setup(game)
 	selection_panel.setup(game)
 	notification_panel.setup(game)
+	# Armeeleiste direkt über dem Infobereich: ihre Lage hängt nicht von der
+	# Höhe des Auswahlfensters ab (Doppelklick trifft denselben Button)
+	army_bar = ArmyBar.new()
+	bottom_left.add_child(army_bar)
+	bottom_left.move_child(army_bar, info_panel.get_index())
+	army_bar.setup(game)
 
 
 ## Arbeitsverteilung ein-/ausblenden (Taste J)
@@ -181,14 +193,35 @@ func _update_info() -> void:
 		WorldData.ROAD_PLANNED:
 			lines.append("Strasse (geplant)")
 	var building: Object = world.get_building_at(cell)
-	if building is Building and is_instance_valid(building):
+	if is_instance_valid(building) and building is Building:
 		var bld := building as Building
 		var text := bld.get_display_name()
 		if not bld.constructed:
 			text += " (Baustelle %d %%)" % roundi(bld.get_progress_ratio() * 100.0)
+		elif bld.hp < bld.max_hp or bld.kingdom != game.player:
+			text += "  ·  Leben %d/%d" % [ceili(bld.hp), roundi(bld.max_hp)]
 		lines.append(text)
+	else:
+		# Höchstens eine Zeile mehr als ein Gebäude – der Bereich behält seine Höhe
+		var unit_text := _unit_text()
+		if not unit_text.is_empty():
+			lines.append(unit_text)
 	lines.append(_territory_text(cell))
 	_set_info("\n".join(lines))
+
+
+## Einheit unter der Maus: "Wolf (Wilde Monster)  ·  Leben 40/60"
+func _unit_text() -> String:
+	if game == null or get_viewport().gui_get_hovered_control() != null:
+		return ""
+	var radius := HOVER_PICK_RADIUS / maxf(camera.zoom.x, 0.25)
+	var u: Unit = game.unit_system.get_unit_at(world_map.get_global_mouse_position(), radius)
+	if u == null or not game.can_see(game.player, u):
+		return ""
+	var text := u.get_display_name()
+	if u.kingdom != game.player:
+		text += " (%s)" % u.kingdom.display_name
+	return text + "  ·  Leben %d/%d" % [ceili(u.hp), roundi(u.max_hp)]
 
 
 ## "Baumgruppe: 180 Holz", "Manaquelle (unerschöpflich)", "Beeren & Wild: wächst nach"

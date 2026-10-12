@@ -99,6 +99,8 @@ var has_home := false
 var home_pos := Vector2.ZERO
 ## Ruhendes Monster (niemand in der Nähe): der Kampftakt überspringt es
 var dormant := false
+## Ziel verloren: nach der nächsten erfolglosen Suche zurück auf den Posten usw.
+var regroup_pending := false
 ## Getarnt: für fremde Reiche unsichtbar (ab Phase 7: Spione)
 var stealthed := false
 

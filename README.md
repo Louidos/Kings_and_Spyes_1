@@ -29,10 +29,18 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Strassen | „Strasse“ im Baumenü → Maustaste gedrückt halten und ziehen (bleibt aktiv bis Rechtsklick/Esc) |
 | Abreissen | X oder „Abreissen“ im Baumenü: Strassen anklicken/überziehen, Gebäude anklicken → Auswahlfenster |
 | Bauen abbrechen | Rechtsklick oder Esc |
-| Auswählen | Linksklick auf Bewohner oder Gebäude (Klick ins Leere / Esc hebt auf) |
+| Auswählen | Linksklick auf Einheit oder Gebäude (Klick ins Leere / Esc hebt auf), Umschalttaste = hinzufügen |
+| Rahmenauswahl | Linke Maustaste gedrückt ziehen – wählt eigene Truppen (Bewohner nur, wenn keine Truppen im Rahmen sind) |
+| Alle gleichen Einheiten | Doppelklick auf eine Einheit (alle dieses Typs im Bild) |
+| Bewegen / Angreifen | Rechtsklick ins Gelände bzw. auf einen Feind (Monster, Höhle) |
+| Angreifend vorrücken | Strg + Rechtsklick (kämpft unterwegs) oder Button „Angriff-Vorrücken“ |
+| Armee speichern / wählen | Strg + 1…9 speichern, Umschalt + 1…9 hinzufügen, 1…9 auswählen, zweimal drücken = Kamera hin |
+| Formation Block / Linie | F oder Button im Auswahlfenster |
+| Sammelpunkt | Burg/Kaserne/Krankenstation auswählen → Rechtsklick in die Welt |
+| Einheiten beschwören | Burg (Späher), Kaserne (Kämpfer, Schützen, Elite), Krankenstation (Heiler) auswählen → Buttons |
 | Arbeitsverteilung ein/aus | J |
 | Spielmenü | Esc (wenn nichts gebaut/ausgewählt wird) |
-| Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource (zum Testen) |
+| Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu (zum Testen) |
 
 Alle Tasten lassen sich im Editor unter *Projekt → Projekteinstellungen → Eingabe-Zuordnung* ändern.
 
@@ -50,7 +58,8 @@ data/                    Spieldaten (JSON) – ohne Code änderbar
   resources.json           Ressourcen und Rohstoffvorkommen (Bäume, Steine, Erz, Beeren, Manaquellen)
   buildings.json           Gebäude: Kosten, Bauzeit, Wohnraum, Gebiet, Annahme, Produktion
   jobs.json                Berufe der Bewohner (Holzfäller, Bauer, Bauarbeiter ...)
-  units.json               Einheitentypen (Phase 2: Bewohner)
+  units.json               Einheitentypen: Bewohner, König, Späher, Kämpfer, Schützen, Elite, Heiler, Monster
+  combat.json              Kampfregeln (Gebietsbonus, Streuung, Erholung, Leine), Formationen, Monsterlager
   economy.json             Startausstattung, Wachstum, Hunger, Strassen, Rückerstattung
 scenes/                  Szenen (.tscn)
   main_menu.tscn           Hauptmenü
@@ -60,9 +69,11 @@ scripts/
   autoload/                Globale Dienste: DataDB, Settings, GameSession, GameClock, Assets, Notify
   world/                   Kartendaten, Generator, Chunk-Darstellung, Tilesets, Gebiet, Wegfindung
   economy/                 Reich (Kingdom), Gebäude, BuildingSystem, EconomySystem
-  units/                   Einheiten, UnitSystem (Bewegung), WorkSystem (Berufe und Arbeits-KI)
+  units/                   Einheiten, UnitSystem (Bewegung), WorkSystem (Berufe), CombatSystem (Kampf),
+                           CommandSystem (Befehle, Formationen, Armeen), SummonSystem, MonsterSystem
   camera/                  Strategie-Kamera
-  ui/                      HUD-Panels, Bauvorschau, Auswahl
+  view/                    Darstellung über der Welt: Lebensbalken/Auswahlringe, Kampfeffekte
+  ui/                      HUD-Panels, Bauvorschau, Auswahl und Befehle, Spielende
   util/                    Hilfen (Grafik laden / Platzhalter erzeugen und zeichnen)
 assets/
   sprites/                 terrain/, units/, buildings/, heroes/, resources/, effects/
@@ -86,9 +97,20 @@ assets/
   Reich gleich – der Spieler ist nur ein Reich mit `controller = "player"`. Ab Phase 7 nutzen die
   KI-Reiche dieselben Systeme (`Game.create_kingdom`, `Game.found_settlement`).
 - **Systeme** (in `game.tscn` unter *Systems*): `BuildingSystem` (Bauen, Strassen, Produktion),
-  `UnitSystem` (Einheiten bewegen, Wegberechnung mit Zeitbudget), `WorkSystem` (Berufe, Sammeln,
-  Bauen, Abliefern), `EconomySystem` (Nahrung, Hunger, Wachstum). Ab Phase 3 kommt ein Kampfsystem
-  dazu – Bewohner und Kämpfer sind beide `Unit` und können arbeiten oder kämpfen.
+  `UnitSystem` (Einheiten bewegen, Wegberechnung mit Zeitbudget, lange Wege in Abschnitten),
+  `WorkSystem` (Berufe, Sammeln, Bauen, Abliefern), `EconomySystem` (Nahrung, Hunger, Wachstum),
+  `CombatSystem` (Zielsuche, Schaden, Heilung, Tod; Schaden immer über `apply_damage`),
+  `CommandSystem` (Befehle mit Bedeutungstabelle `COMMANDS`, Formationen, Gruppenmarsch hinter einem
+  Anführer, Armeen 1–9 je Reich), `SummonSystem` (Beschwörung mit Warteschlange und Sammelpunkt),
+  `MonsterSystem` (Monsterlager; Lager ohne fremde Einheiten in der Nähe ruhen und kosten nichts).
+- **Einheiten**: Bewohner, Truppen, König und Monster sind alle `Unit`. Ihre Werte kommen aus
+  `units.json` und werden mit Modifikatoren des Reichs (Forschung, Schwierigkeit) und Wirkungen
+  (Zauber, Helden) in `Unit.refresh_stats()` berechnet. Wer arbeitet (Befehl leer), wird nur vom
+  WorkSystem gesteuert; ein Befehl unterbricht die Arbeit, „Zur Arbeit“ setzt sie fort.
+- **Beziehungen**: `Game.set_relation(a, b, "war" | "peace" | "alliance")`; Kampf nur bei Krieg.
+  Die wilden Monster sind ein eigenes Reich, mit allen im Krieg. `Game.can_see` ist die Stelle für
+  Sichtbarkeit (ab Phase 7: Entdeckung, Spione).
+- **Spielende**: `Game.defeat_kingdom` – stirbt der König des Spielers, ist das Spiel verloren.
 - **Trennung Simulation/Darstellung**: Die Systeme kennen weder Karte noch HUD. Die Darstellung hört
   auf Signale (`WorldData.cell_changed`, `road_changed`, `TerritorySystem.changed` …). Das ist die
   Grundlage für Speichern/Laden in Phase 10.
@@ -109,6 +131,10 @@ Alle Dateien in `data/` enthalten `_hinweis`-Felder mit Erklärungen. Beispiele:
 - Mehr Nahrung pro Bauer: `buildings.json` → *farm* → `production.food`.
 - Schnellere Bewohner: `units.json` → *villager* → `speed`.
 - Andere Startausstattung: `economy.json` → `start`.
+- Stärkere Ritter: `units.json` → *elite_good* → `attack`, `hp`, `armor`.
+- Billigere Truppen: `units.json` → `cost` und `summon_time`.
+- Weniger oder mehr Monsterlager: `combat.json` → `camps.per_1000_tiles`, Übungslager `camps.near_start`.
+- Stärkerer Heimvorteil: `combat.json` → `territory_bonus`.
 
 ## Phase 2 testen
 
@@ -129,7 +155,30 @@ Alle Dateien in `data/` enthalten `_hinweis`-Felder mit Erklärungen. Beispiele:
    Arbeit halb so schnell). Sammler wieder einsetzen → die Hungersnot endet.
 10. Mit X oder „Abreissen“ Strassen entfernen; ein Gebäude auswählen → „Abreissen“ (zweimal klicken).
 
-Erz und Mana werden ab Phase 3/4 für Kaserne, Einheiten und Magie gebraucht.
+## Phase 3 testen
+
+1. Neues Spiel. Vor der Burg steht der **König** (Krone). Er verteidigt die Burg, verlässt aber nie
+   das eigene Gebiet. Auf der Minikarte sind **Monsterlager** orange markiert; zwei kleine Übungslager
+   liegen 30–45 Kacheln vom Start entfernt.
+2. **Burg anklicken** → im Auswahlfenster „Späher“ beschwören (Kosten im Tooltip). Nach 8 Sekunden
+   erscheint er vor der Burg. Mehrfach klicken = Warteschlange (max. 5); Klick auf ein Symbol in der
+   Warteschlange bricht ab (Kosten zurück).
+3. **Kaserne** bauen (braucht Mana: Manabrunnen + Manawirker). Fertig auswählen → Schwertkämpfer,
+   Bogenschützen, Ritter beschwören. Mit Rechtsklick in die Welt einen **Sammelpunkt** setzen.
+4. Truppen mit gedrückter linker Maustaste **einrahmen** (Bewohner werden dabei nicht mitgenommen).
+   **Rechtsklick** ins Gelände: sie marschieren in Formation (F wechselt Block/Linie).
+5. **Strg+1** speichert die Auswahl als Armee 1 (Leiste über dem Auswahlfenster), **1** wählt sie,
+   zweimal **1** springt mit der Kamera hin.
+6. Armee auswählen, **Rechtsklick auf eine Monsterhöhle** oder ein Monster → Angriff. Bogenschützen
+   schiessen Pfeile, Treffer blitzen auf, Gefallene verblassen. Eine zerstörte Höhle gibt Beute und
+   **Kampfpunkte** (Tooltip bei „Truppen“ oben). Bewohner sammeln nicht in der Nähe von Höhlen.
+7. Verletzte erholen sich nach 5 Sekunden ohne Kampf; **Krankenstation** (heilt in der Nähe) und
+   **Heiler** heilen schneller.
+8. Wird ein Bewohner angegriffen, flieht er zur Burg und arbeitet danach weiter. Ein Späher, der als
+   Holzfäller arbeitet, wehrt sich und arbeitet danach weiter. Beschworene Einheiten brauchen zum
+   Arbeiten Wohnraum.
+9. Spielende testen: F3 (Debug) und dann mehrmals F10 → der König verliert Leben, flieht verletzt in
+   die Burg; stirbt er, erscheint „Der König ist gefallen“ mit „Neu starten (gleiche Karte)“.
 
 ## Grafiken austauschen
 
@@ -141,7 +190,7 @@ beim nächsten Start automatisch verwendet – ohne Code-Änderung.
 
 - [x] Phase 1 – Projekt-Setup, Kamera, prozedurale Karte mit Biomen, Spieltempo und Pause
 - [x] Phase 2 – Dorf: Gebäude, Ressourcen, Bewohner, Arbeitsverteilung
-- [ ] Phase 3 – Einheiten: Beschwören, Auswahl, Bewegung, Kampf, Armeen
+- [x] Phase 3 – Einheiten: Beschwören, Auswahl, Bewegung, Kampf, Armeen
 - [ ] Phase 4 – Forschung, Mana und Magie
 - [ ] Phase 5 – Helden
 - [ ] Phase 6 – Neutrale Dörfer, Diplomatie, Handel, Ruf, Boten

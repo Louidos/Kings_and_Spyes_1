@@ -120,17 +120,46 @@ Baustellen zeichnet das Spiel selbst (halbtransparent mit Gerüst).
 Die Figur steht mit den Füssen im unteren Drittel des Bildes. Der Beruf wird vom Spiel nicht über die
 Grafik gezeigt (später eventuell eigene Grafiken pro Beruf).
 
-## 🕓 Phase 3 – Einheiten
+## ✅ Phase 3 – Einheiten, Kampf, Monster
 
-(`assets/sprites/units/`, 64 × 64)
-`king_good.png`, `king_evil.png`,
-`scout_good.png` (schwacher Mensch), `scout_evil.png` (kleines Monster),
-`fighter_good.png`, `fighter_evil.png`, `elite_good.png`, `elite_evil.png`,
-`medic_good.png`, `medic_evil.png`, `archer_good.png`, `archer_evil.png`
+**Einheiten** (`assets/sprites/units/`, 64 × 64, transparent, von oben, Blick nach unten,
+Füsse im unteren Drittel). Fehlt eine Datei, zeichnet das Spiel einen farbigen Kreis mit Buchstaben
+(Monster: Raute).
 
-Gebäude: `barracks_good.png` / `barracks_evil.png`, `infirmary_good.png` / `infirmary_evil.png`
+| Datei GUT | Datei BÖSE | Einheit | Aussehen |
+|---|---|---|---|
+| `king_good.png` | `king_evil.png` | König / Dunkler König | prächtig, Krone, Umhang (gut: Gold/Blau, böse: Schwarz/Rot) |
+| `scout_good.png` | `scout_evil.png` | Späher / Kobold | gut: schwacher Mensch mit Lederkappe; böse: kleines, flinkes Monster |
+| `fighter_good.png` | `fighter_evil.png` | Schwertkämpfer / Schattenkrieger | Schwert und Schild |
+| `archer_good.png` | `archer_evil.png` | Bogenschütze / Dunkelschütze | Bogen bzw. Armbrust |
+| `elite_good.png` | `elite_evil.png` | Ritter / Schreckensritter | schwere Rüstung, gut: glänzend, böse: Stacheln |
+| `medic_good.png` | `medic_evil.png` | Heiler / Blutpriester | Robe, Heilstab bzw. Ritualdolch |
 
-Effekte (`assets/sprites/effects/`): `selection_ring.png`, `move_marker.png`
+**Monster** (`assets/sprites/units/`, 64 × 64, transparent):
+
+| Datei | Monster |
+|---|---|
+| `monster_wolf.png` | Wolf (grau-braun, sprungbereit) |
+| `monster_spider.png` | Riesenspinne (dunkelviolett) |
+| `monster_golem.png` | Steingolem (grosser Felskörper) |
+
+**Gebäude** (`assets/sprites/buildings/`, 128 × 128, transparent):
+
+| Datei GUT | Datei BÖSE | Gebäude |
+|---|---|---|
+| `barracks_good.png` | `barracks_evil.png` | Kaserne (Übungsplatz, Waffenständer) |
+| `infirmary_good.png` | `infirmary_evil.png` | Krankenstation (Zelt/Haus mit Heilzeichen) |
+| `monster_lair.png` | – | Monsterhöhle (Felshöhle mit Knochen, eine Grafik für alle) |
+
+**Effekte** (`assets/sprites/effects/`, transparent):
+
+| Datei | Grösse | Inhalt |
+|---|---|---|
+| `arrow.png` | 32 × 8 | Pfeil, Spitze nach rechts (wird in Flugrichtung gedreht) |
+| `bolt.png` | 32 × 8 | dunkles Geschoss mit violettem Schimmer, Spitze nach rechts |
+
+Lebensbalken, Auswahlringe, Rahmenauswahl, Befehlsmarkierungen, Sammelpunkt-Fahne, Treffer und
+Gefallene zeichnet das Spiel selbst.
 
 ## 🕓 Phase 4 – Forschung und Magie
 
@@ -155,7 +184,7 @@ Einheiten: `messenger.png` (Bote), `trader.png` (Händler/Karawane)
 
 ## 🕓 Phase 8 – Monster, Ereignisse
 
-Monster: `monster_wolf.png`, `monster_spider.png`, `monster_golem.png`, `monster_wyvern.png`
+Weitere Monster: `monster_wyvern.png` (Wolf, Spinne und Golem: siehe Phase 3)
 Weitere: `refugee.png` (Flüchtling), Ereignis-Icons `event_drought.png`, `event_plague.png`,
 `event_magic_storm.png`, `event_monster_wave.png`, `event_refugees.png`
 

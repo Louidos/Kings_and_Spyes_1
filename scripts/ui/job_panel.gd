@@ -4,7 +4,8 @@
 ## Anzahl (bei Gebäude-Berufen "belegt/Plätze") mit "−" und "+".
 ## "+" nimmt einen Unbeschäftigten, "−" macht einen Arbeiter unbeschäftigt.
 ## Findet ein Beruf nichts zu tun, erscheint ein orangefarbenes "(!)" mit dem
-## Grund als Tooltip. Ein-/Ausblenden mit J (toggle()).
+## Grund als Tooltip. Haben Arbeiter eines Berufs gerade einen Befehl (Marsch,
+## Halt …), steht hinter der Anzahl "(n pausiert)". Ein-/Ausblenden mit J (toggle()).
 class_name JobPanel
 extends PanelContainer
 
@@ -15,11 +16,14 @@ const COLOR_NORMAL := Color(0.95, 0.92, 0.85)
 const FONT_SIZE := 16
 const SMALL_BUTTON_SIZE := 28.0
 const NO_IDLE_TIP := "Keine unbeschäftigten Bewohner – drücke zuerst bei einer anderen Arbeit „−“"
+const IDLE_TIP := "Unbeschäftigte Bewohner (beschworene Einheiten zählen nicht)"
+const PAUSED_TIP := "Haben einen Befehl – im Auswahlfenster „Zur Arbeit“ drücken"
+const COLOR_PAUSED := Color(0.85, 0.75, 0.55)
 
 var game: Node
 
 var _grid: GridContainer
-## Eine Zeile je Beruf: {id, type, name, name_box, warn, count, minus, plus}
+## Eine Zeile je Beruf: {id, type, name, name_box, warn, count, paused, minus, plus}
 var _rows: Array = []
 var _timer := 0.0
 
@@ -91,17 +95,31 @@ func _add_row(job: Dictionary) -> void:
 	name_box.add_child(warn)
 	_grid.add_child(name_box)
 
+	# Anzahl, dahinter (nur bei Bedarf) "(n pausiert)"
+	var count_box := HBoxContainer.new()
+	count_box.add_theme_constant_override("separation", 4)
+	count_box.alignment = BoxContainer.ALIGNMENT_END
+	count_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_grid.add_child(count_box)
 	var count := _make_label("0")
 	count.custom_minimum_size = Vector2(46, 0)
 	count.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	count.mouse_filter = Control.MOUSE_FILTER_STOP
-	_grid.add_child(count)
+	count_box.add_child(count)
+	var paused := _make_label("")
+	paused.add_theme_font_size_override("font_size", 14)
+	paused.add_theme_color_override("font_color", COLOR_PAUSED)
+	paused.mouse_filter = Control.MOUSE_FILTER_STOP
+	paused.tooltip_text = PAUSED_TIP
+	paused.visible = false
+	count_box.add_child(paused)
 	row["name_box"] = name_box
 	row["warn"] = warn
 	row["count"] = count
+	row["paused"] = paused
 
 	if type == "idle":
-		name_box.tooltip_text = "Freie Bewohner – gib ihnen mit + Arbeit"
+		name_box.tooltip_text = IDLE_TIP
 		count.tooltip_text = name_box.tooltip_text
 		# Leere Zellen statt Buttons
 		for _i in 2:
@@ -130,6 +148,13 @@ func _refresh() -> void:
 		return
 	var ws: WorkSystem = game.work_system
 	var idle := ws.get_idle_count(k)
+	# Einheiten mit Befehl je Beruf (ein Durchlauf für alle Zeilen)
+	var paused_by_job := {}
+	for u in k.units:
+		var cmd: String = u.command
+		if not cmd.is_empty():
+			var job_id: String = u.job_id
+			paused_by_job[job_id] = int(paused_by_job.get(job_id, 0)) + 1
 	for r in _rows:
 		var row: Dictionary = r
 		var id := str(row["id"])
@@ -143,6 +168,10 @@ func _refresh() -> void:
 		var n := ws.get_job_count(k, id)
 		var cap := ws.get_job_capacity(k, id)
 		_set_text(count_label, "%d/%d" % [n, cap] if cap >= 0 else str(n))
+		var paused_label: Label = row["paused"]
+		var paused := int(paused_by_job.get(id, 0))
+		_set_text(paused_label, "(%d pausiert)" % paused if paused > 0 else "")
+		paused_label.visible = paused > 0
 		var job := DataDB.get_job(id)
 		var problem := ws.get_job_problem(k, id)
 		_set_text(warn, "" if problem.is_empty() else "(!)")

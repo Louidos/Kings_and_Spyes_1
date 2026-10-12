@@ -40,6 +40,8 @@ const KING_WARN_INTERVAL := 10.0
 const KINGDOM_ATTACK_INTERVAL := 5.0
 ## Todesmeldungen werden so lange gesammelt ("2× Schwertkämpfer gefallen")
 const DEATH_REPORT_DELAY := 3.0
+## Höchstens so viele Einheiten pro Takt auseinanderschieben (reihum)
+const SEPARATE_PER_TICK := 80
 
 var game: Node
 var world: WorldData
@@ -72,6 +74,9 @@ var _death_log: Dictionary = {}
 var _death_flush_at := -1.0
 ## "Opfer-id:Angreifer-id" -> Spielzeit der letzten Meldung kingdom_attacked
 var _attack_events: Dictionary = {}
+## Feindschaft je Reichspaar (Zwischenspeicher, wird bei Beziehungsänderung geleert)
+var _hostile_cache: Dictionary = {}
+var _separate_cursor := 0
 
 
 func setup(p_game: Node) -> void:
@@ -93,6 +98,7 @@ func setup(p_game: Node) -> void:
 	_king_flee_ratio = float(DataDB.cmb("king_flee_ratio", 0.35))
 	_rng.seed = hash(world.world_seed + 4711)
 	GameClock.sim_tick.connect(_on_sim_tick)
+	game.relation_changed.connect(func(_a: Kingdom, _b: Kingdom, _s: String) -> void: _hostile_cache.clear())
 	unit_system.path_failed.connect(_on_path_failed)
 	unit_system.unit_removed.connect(func(_u: Unit) -> void: _index_dirty = true)
 	unit_system.unit_spawned.connect(func(u: Unit) -> void:
@@ -105,15 +111,36 @@ func setup(p_game: Node) -> void:
 # ---------------------------------------------------------------------------
 
 ## Ist t ein gültiges Angriffsziel für Einheiten des Reichs k?
-## Reihenfolge wichtig: erst gültig, dann lebendig, dann Typ.
+## Reihenfolge wichtig: erst gültig, dann Typ. (Läuft für jeden Kämpfer in
+## jedem Takt – daher Felder direkt statt Hilfsfunktionen.)
 func is_valid_target(k: Kingdom, t: Variant) -> bool:
-	if t == null or not is_instance_valid(t) or not t.is_alive():
-		return false
-	if not game.are_hostile(k, t.kingdom) or not game.can_see(k, t):
+	if t == null or not is_instance_valid(t):
 		return false
 	if t is Unit:
-		return t.inside == null
-	return t is Building
+		return t.hp > 0.0 and t.inside == null and _hostile(k, t.kingdom) \
+				and (not t.stealthed or game.are_allied(k, t.kingdom))
+	if t is Building:
+		return t.hp > 0.0 and _hostile(k, t.kingdom)
+	return false
+
+
+## Einheiten des Reichs k und seiner Verbündeten im Umkreis
+func _query_allies(k: Kingdom, pos: Vector2, radius: float) -> Array:
+	var result := index.query_kingdom(pos, radius, k.id)
+	for other_id in k.relations:
+		if k.relations[other_id] == "alliance":
+			result.append_array(index.query_kingdom(pos, radius, int(other_id)))
+	return result
+
+
+## Wie Game.are_hostile, aber zwischengespeichert
+func _hostile(a: Kingdom, b: Kingdom) -> bool:
+	var key := a.id * 65536 + b.id
+	var v: Variant = _hostile_cache.get(key)
+	if v == null:
+		v = game.are_hostile(a, b)
+		_hostile_cache[key] = v
+	return v
 
 
 ## Kann u das Ziel t von hier aus treffen?
@@ -194,7 +221,10 @@ func _on_sim_tick(dt: float) -> void:
 		if not CommandSystem.flag(u.command, "engage"):
 			continue
 		if u.target != null and not is_valid_target(u.kingdom, u.target):
-			_after_fight(u)
+			# Ziel weg: nicht alle Angreifer im selben Takt neu suchen lassen
+			u.target = null
+			u.regroup_pending = true
+			u.think_timer = minf(u.think_timer, _rng.randf_range(0.0, 0.3))
 		if u.target == null:
 			if u.think_timer <= 0.0:
 				u.think_timer = _retarget
@@ -202,8 +232,12 @@ func _on_sim_tick(dt: float) -> void:
 					u.target = _find_target(u)
 					if u.target != null:
 						u.repath_timer = 0.0
+				if u.target == null and u.regroup_pending:
+					u.regroup_pending = false
+					_regroup(u)
 			if u.target == null:
 				continue
+		u.regroup_pending = false
 		_engage(u)
 	if _tick_count % 2 == 0:
 		_separate()
@@ -225,26 +259,26 @@ func _may_auto_acquire(u: Unit) -> bool:
 ## Nächster sichtbarer Feind in Sichtweite. Arbeiter zählen weiter weg
 ## (target_priority), damit Kämpfer zuerst Kämpfer angreifen. Mit
 ## Befehlen, die Gebäude erlauben, auch feindliche Gebäude.
+## Gesucht wird erst im Nahbereich (im Gedränge einer Schlacht findet sich
+## dort fast immer ein Gegner), nur ohne Treffer im ganzen Sichtbereich.
 func _find_target(u: Unit) -> Object:
 	var aggro := u.aggro_range * _ts
-	var radius := aggro + QUERY_PAD_TILES * _ts
-	var best: Object = null
-	var best_score := INF
 	var buildings := bool(CommandSystem.flag(u.command, "buildings"))
-	if not buildings and not index.has_other_kingdom(u.position, radius, u.kingdom.id):
-		return null
-	for v in index.query(u.position, radius):
-		if v.kingdom == u.kingdom or v.hp <= 0.0 or v.inside != null or not game.are_hostile(u.kingdom, v.kingdom):
+	# Feindliche Reiche mit Einheiten in der Nähe (meist keins oder eins)
+	var foes: Array = []
+	for kid in index.kingdom_ids():
+		if kid == u.kingdom.id:
 			continue
-		if u.has_home and v.position.distance_to(u.home_pos) > _leash * _ts:
-			continue
-		var d: float = u.position.distance_to(v.position)
-		if d > aggro + v.get_radius() or not game.can_see(u.kingdom, v):
-			continue
-		var score: float = d * v.target_priority
-		if score < best_score:
-			best_score = score
-			best = v
+		var k: Kingdom = game.get_kingdom(kid)
+		if k != null and _hostile(u.kingdom, k) and index.any_of_kingdom(u.position, aggro + QUERY_PAD_TILES * _ts, kid):
+			foes.append(kid)
+	var best: Object = null
+	if not foes.is_empty():
+		var near := minf(aggro, u.attack_range * _ts + 2.0 * _ts)
+		best = _best_unit_in(u, near, foes)
+		if best == null and near < aggro:
+			best = _best_unit_in(u, aggro, foes)
+	var best_score := INF if best == null else u.position.distance_to(best.position)
 	if best == null and buildings:
 		for k in game.kingdoms:
 			if k == u.kingdom or not game.are_hostile(u.kingdom, k):
@@ -254,6 +288,28 @@ func _find_target(u: Unit) -> Object:
 				if d <= aggro and d < best_score:
 					best_score = d
 					best = b
+	return best
+
+
+## Beste Einheit der feindlichen Reiche foes (ids) im Umkreis radius (Pixel) um u.
+## Getarnte Feinde sind unsichtbar (Feinde sind nie verbündet).
+func _best_unit_in(u: Unit, radius: float, foes: Array) -> Unit:
+	var best: Unit = null
+	var best_score := INF
+	var leash2 := _leash * _ts * _leash * _ts
+	for kid in foes:
+		for v in index.query_kingdom(u.position, radius + QUERY_PAD_TILES * _ts, kid):
+			if v.hp <= 0.0 or v.inside != null or v.stealthed:
+				continue
+			if u.has_home and v.position.distance_squared_to(u.home_pos) > leash2:
+				continue
+			var d: float = u.position.distance_to(v.position)
+			if d > radius + v.get_radius():
+				continue
+			var score: float = d * v.target_priority
+			if score < best_score:
+				best_score = score
+				best = v
 	return best
 
 
@@ -401,8 +457,8 @@ func _react_to_hit(v: Unit, attacker: Unit) -> void:
 func _call_for_help(k: Kingdom, pos: Vector2, radius_tiles: float, attacker: Unit) -> void:
 	if not is_instance_valid(attacker) or not attacker.is_alive():
 		return
-	for w in index.query(pos, (radius_tiles + QUERY_PAD_TILES) * _ts):
-		if w.target != null or not w.joins_fights or w.attack <= 0.0 or not game.are_allied(k, w.kingdom):
+	for w in _query_allies(k, pos, (radius_tiles + QUERY_PAD_TILES) * _ts):
+		if w.target != null or not w.joins_fights or w.attack <= 0.0:
 			continue
 		if w.command == "hold" or w.command == "attack_move" or (w.command.is_empty() and not w.can_work()):
 			w.target = attacker
@@ -458,7 +514,7 @@ func _note_attack(victim: Kingdom, attacker: Kingdom, pos: Vector2) -> void:
 	kingdom_attacked.emit(victim, attacker, pos)
 
 
-## Ziel weg (tot, ausser Reichweite, zu weit weg): nächstes Ziel suchen oder
+## Ziel aufgeben (ausser Reichweite, zu weit weg): nächstes Ziel suchen oder
 ## je nach Befehl zurückkehren, weiterarbeiten oder weitermarschieren.
 func _after_fight(u: Unit) -> void:
 	u.target = null
@@ -467,6 +523,12 @@ func _after_fight(u: Unit) -> void:
 		if u.target != null:
 			u.repath_timer = 0.0
 			return
+	_regroup(u)
+
+
+## Nach dem Kampf, je nach Befehl: zurück auf den Posten, weitermarschieren,
+## weiterarbeiten oder heim zur Höhle.
+func _regroup(u: Unit) -> void:
 	match u.command:
 		"hold":
 			if u.position.distance_to(u.command_pos) > _ts * 0.6:
@@ -528,8 +590,8 @@ func _tick_healer(u: Unit, dt: float) -> void:
 	var best_ratio := 1.0
 	var far: Unit = null
 	var far_ratio := 1.0
-	for v in index.query(u.position, heal_range + (4.0 + QUERY_PAD_TILES) * _ts):
-		if v == u or v.hp >= v.max_hp or v.hp <= 0.0 or not game.are_allied(u.kingdom, v.kingdom):
+	for v in _query_allies(u.kingdom, u.position, heal_range + (4.0 + QUERY_PAD_TILES) * _ts):
+		if v == u or v.hp >= v.max_hp or v.hp <= 0.0:
 			continue
 		var ratio: float = v.hp / v.max_hp
 		if u.position.distance_to(v.position) <= heal_range + v.get_radius():
@@ -563,8 +625,8 @@ func _tick_heal_auras(dt: float) -> void:
 				continue
 			var aura: Dictionary = b.def["heal_aura"]
 			var amount := float(aura.get("hp_per_sec", 0.0)) * dt
-			for v in index.query(b.position, float(aura.get("radius", 4.0)) * _ts):
-				if v.hp < v.max_hp and game.are_allied(k, v.kingdom):
+			for v in _query_allies(k, b.position, float(aura.get("radius", 4.0)) * _ts):
+				if v.hp < v.max_hp:
 					_heal(v, amount)
 
 
@@ -664,9 +726,18 @@ func _flush_death_reports() -> void:
 ## Kämpfende Einheiten schieben sich leicht auseinander, damit Nahkämpfer
 ## nicht auf einem Punkt kleben. Ruhende Gruppen stehen schon mit Abstand.
 func _separate() -> void:
-	for u in unit_system.units:
+	var units: Array = unit_system.units
+	var n := units.size()
+	if n == 0:
+		return
+	var done := 0
+	var i := 0
+	while i < n and done < SEPARATE_PER_TICK:
+		var u: Unit = units[(_separate_cursor + i) % n]
+		i += 1
 		if u.target == null or u.moving or u.inside != null or u.hp <= 0.0:
 			continue
+		done += 1
 		var r: float = u.get_radius()
 		var push := Vector2.ZERO
 		for v in index.query(u.position, r * 2.0):
@@ -687,3 +758,4 @@ func _separate() -> void:
 		var c := world.world_to_cell(new_pos)
 		if world.in_bounds(c) and not game.nav.is_solid(c):
 			u.position = new_pos
+	_separate_cursor = (_separate_cursor + i) % n
