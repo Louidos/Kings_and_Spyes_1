@@ -286,8 +286,11 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _playing or pause_menu.is_open or _game_over != null:
 		return
 	if event.is_action_pressed("game_menu"):
-		# Esc: erst Zielmodus/Bauen abbrechen, dann Auswahl aufheben, dann Menü
-		if spell_targeting.is_active():
+		# Esc: erst offene Fenster (Forschung, Arbeitsverteilung) schliessen, dann
+		# Zielmodus/Bauen abbrechen, dann Auswahl aufheben, dann Menü
+		if hud.close_top_panel():
+			pass
+		elif spell_targeting.is_active():
 			spell_targeting.cancel()
 		elif placement.is_active():
 			placement.cancel()
@@ -310,6 +313,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		if is_instance_valid(player.king):
 			combat_system.apply_damage(player.king, 150.0, null, null, "event")
 			Notify.warning("Debug: König −150 Leben", player.king.position)
+	elif event.is_action_pressed("debug_spawn_wolves") and hud.is_debug_visible():
+		_debug_spawn_wolves()
 	elif event.is_action_pressed("game_pause"):
 		GameClock.toggle_pause()
 	elif event.is_action_pressed("game_speed_up") or _is_char(event, "+"):
@@ -325,6 +330,20 @@ func _unhandled_input(event: InputEvent) -> void:
 	else:
 		return
 	get_viewport().set_input_as_handled()
+
+
+## Debug (F11 im F3-Modus): drei Wölfe ohne Höhle an der Maus – zum Testen der
+## Zauber im eigenen Gebiet (Fluch, Nebel, Tarnung, Heilung)
+func _debug_spawn_wolves() -> void:
+	var pos := world_map.get_global_mouse_position()
+	var spawned := 0
+	for i in 3:
+		var c: Vector2i = nav.nearest_free(world.world_to_cell(pos + Vector2.from_angle(TAU * i / 3.0) * 40.0), 4)
+		if c.x < 0:
+			continue
+		if unit_system.spawn_unit(wild, "wolf", world.cell_to_world(c)) != null:
+			spawned += 1
+	Notify.warning("Debug: %d Wölfe erscheinen" % spawned, pos)
 
 
 ## Formation des Spielers wechseln (Block <-> Linie); gilt für die nächsten Marschbefehle

@@ -99,6 +99,15 @@ func toggle_job_panel() -> void:
 	job_panel.toggle()
 
 
+## Esc: schliesst das oberste offene Fenster (Forschung, Arbeitsverteilung).
+## true = etwas wurde geschlossen (dann nichts weiter tun).
+func close_top_panel() -> bool:
+	if job_panel.visible:
+		job_panel.toggle()
+		return true
+	return false
+
+
 func is_debug_visible() -> bool:
 	return debug_label.visible
 
@@ -113,7 +122,7 @@ func _process(delta: float) -> void:
 		_blink_time += delta
 		paused_label.modulate.a = 0.6 + 0.4 * cos(_blink_time * 3.0)
 	if debug_label.visible and world_map != null:
-		debug_label.text = "FPS %d  ·  Zoom %.2f  ·  Chunks %d  ·  Seed %s  ·  F9: +100 Ressourcen" % [
+		debug_label.text = "FPS %d  ·  Zoom %.2f  ·  Chunks %d  ·  Seed %s  ·  F9: +100 Ressourcen  ·  F10: König −150  ·  F11: 3 Wölfe an der Maus" % [
 			Engine.get_frames_per_second(), camera.zoom.x,
 			world_map.get_loaded_chunk_count(), GameSession.seed_text]
 	if world != null:
