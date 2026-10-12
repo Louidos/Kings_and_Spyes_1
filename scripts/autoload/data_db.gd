@@ -255,6 +255,10 @@ const _TIER_NAMES := {"fighter": "Kämpfer", "archer": "Schützen", "elite": "El
 
 ## Lesbare Wirkung eines Modifikators, z. B. "+10 % Angriff (Kämpfer)"
 func describe_modifier(key: String, factor: float) -> String:
+	var role_parts := key.split("@", true, 1)
+	if role_parts.size() > 1:
+		var role_label := "alle Truppen" if role_parts[1] == "combat" else role_parts[1]
+		return "%+d %% %s (%s)" % [roundi((factor - 1.0) * 100.0), str(_MOD_NAMES.get(role_parts[0], role_parts[0])), role_label]
 	var parts := key.split(".", true, 1)
 	var label := str(_MOD_NAMES.get(parts[0], parts[0]))
 	if parts.size() > 1:

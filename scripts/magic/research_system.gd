@@ -187,12 +187,16 @@ func cancel(k: Kingdom, id: String) -> void:
 
 ## Wendet die Wirkungen einer Forschung an. Mehrfach aufrufbar (z. B. beim Laden).
 func apply_effects(k: Kingdom, id: String) -> void:
+	var factors := {}
 	for e in DataDB.get_research(id).get("effects", []):
 		match str(e.get("type", "")):
 			"unlock":
 				k.unlocks[str(e.get("id", ""))] = true
 			"modifier":
-				k.set_modifier("research:" + id, str(e.get("key", "")), float(e.get("factor", 1.0)))
+				factors[str(e.get("key", ""))] = float(e.get("factor", 1.0))
+	# Alle Faktoren auf einmal: die Einheiten rechnen nur einmal neu
+	if not factors.is_empty():
+		k.set_modifiers("research:" + id, factors)
 	recompute_mana(k)
 
 

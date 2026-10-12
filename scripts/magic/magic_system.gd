@@ -118,7 +118,7 @@ func cast(k: Kingdom, spell_id: String, pos: Vector2) -> bool:
 	if float(def.get("heal_instant", 0.0)) > 0.0:
 		for u in _units_in(pos, radius):
 			if game.are_allied(k, u.kingdom) and u.hp < u.max_hp:
-				u.hp = minf(u.hp + float(def["heal_instant"]), u.max_hp)
+				game.combat_system.heal_unit(u, float(def["heal_instant"]))
 	# Wirkungen auf Einheiten (Segen, Fluch, Heilung über Zeit)
 	if def.has("effects"):
 		_apply_effects(k, spell_id, def["effects"], pos, radius, now + duration)
@@ -138,17 +138,31 @@ func cast(k: Kingdom, spell_id: String, pos: Vector2) -> bool:
 	return true
 
 
-## Ertragsfaktor durch Wetter (Regen) an dieser Stelle für das Reich (1.0 = keiner)
-func get_production_factor(k: Kingdom, pos: Vector2) -> float:
+## Ertragsfaktor durch Wetter (Regen) für eine Ressource an dieser Stelle
+## (1.0 = keiner). Gilt nur für die in zone.resources genannten Ressourcen.
+func get_production_factor(k: Kingdom, pos: Vector2, res_id: String) -> float:
+	if zones.is_empty():
+		return 1.0
 	var f := 1.0
 	for z in zones:
 		if int(z["kingdom_id"]) != k.id:
 			continue
 		var zdef: Dictionary = DataDB.get_spell(str(z["spell_id"])).get("zone", {})
 		var p := float(zdef.get("production", 1.0))
-		if p != 1.0 and pos.distance_to(z["pos"]) <= float(z["radius"]):
+		if p == 1.0 or not (zdef.get("resources", []) as Array).has(res_id):
+			continue
+		if pos.distance_to(z["pos"]) <= float(z["radius"]):
 			f = maxf(f, p)
 	return f
+
+
+## Laufende Manakosten des Reichs pro Sekunde (aktive Tarnungen)
+func get_upkeep_per_sec(k: Kingdom) -> float:
+	var total := 0.0
+	for v in veils:
+		if int(v["kingdom_id"]) == k.id:
+			total += float(DataDB.get_spell(str(v["spell_id"])).get("upkeep", 0.0))
+	return total
 
 
 ## Getarnte Einheit greift an oder wird enttarnt: Tarnung endet für sie.
@@ -206,7 +220,7 @@ func _tick_effects(dt: float, now: float) -> void:
 			elif str(e.get("key", "")) == "heal_over_time":
 				hot += float(e.get("add", 0.0))
 		if hot > 0.0 and u.hp < u.max_hp:
-			u.hp = minf(u.hp + hot * dt, u.max_hp)
+			game.combat_system.heal_unit(u, hot * dt)
 		if expired:
 			var keep: Array = []
 			var lost_stealth := false
@@ -234,6 +248,9 @@ func _tick_temporary(now: float) -> void:
 			continue
 		if u.expires_at >= 0.0 and u.expires_at <= now:
 			_temporary.erase(uid)
+			# Sofort "tot" setzen: bis zum Löschen am Frame-Ende greift sie niemand mehr an
+			u.hp = 0.0
+			u.target = null
 			summon_expired.emit(u)
 			game.unit_system.remove_unit(u)
 
@@ -266,9 +283,13 @@ func _tick_veils(now: float) -> void:
 				units.append(u)
 		var upkeep := float(DataDB.get_spell(str(v["spell_id"])).get("upkeep", 0.0))
 		var ended := units.is_empty() or float(v["until"]) <= now or k == null
-		if not ended and upkeep > 0.0 and not k.spend({"mana": upkeep}):
-			ended = true
-			k.notify("%s endet – zu wenig Mana" % DataDB.get_spell(str(v["spell_id"])).get("name", ""), "warning", v["pos"])
+		if not ended and upkeep > 0.0:
+			if k.get_amount("mana") + 0.0001 < upkeep:
+				ended = true
+				k.notify("%s endet – zu wenig Mana" % DataDB.get_spell(str(v["spell_id"])).get("name", ""), "warning", v["pos"])
+			else:
+				# Über add_resource, damit die Kosten im Ertrag pro Minute erscheinen
+				k.add_resource("mana", -upkeep)
 		if ended:
 			for u in units:
 				reveal(u)
@@ -331,6 +352,8 @@ func _summon(k: Kingdom, summon: Dictionary, pos: Vector2, until: float) -> void
 	for i in count:
 		var spot := pos + Vector2.from_angle(TAU * i / maxf(count, 1.0)) * _ts * 0.9
 		var c: Vector2i = game.nav.nearest_free(world.world_to_cell(spot), 4)
+		if c.x < 0:
+			continue
 		var u: Unit = game.unit_system.spawn_unit(k, type_id, world.cell_to_world(c))
 		if u == null:
 			continue

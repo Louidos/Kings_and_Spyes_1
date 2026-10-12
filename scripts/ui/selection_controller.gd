@@ -141,6 +141,7 @@ func get_own_units() -> Array:
 func arm_attack_move() -> void:
 	if _armed or get_own_units().is_empty():
 		return
+	game.spell_targeting.cancel()
 	_armed = true
 	Input.set_default_cursor_shape(Input.CURSOR_CROSS)
 	attack_move_armed_changed.emit(true)
@@ -210,8 +211,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var mb := event as InputEventMouseButton
 	if mb != null:
-		# Beim Bauen gehören die Maustasten dem PlacementController
-		if not mb.pressed or game.placement.is_active():
+		# Beim Bauen gehören die Maustasten dem PlacementController, im Zielmodus dem Zauber
+		if not mb.pressed or game.placement.is_active() or game.spell_targeting.is_active():
 			return
 		if mb.button_index == MOUSE_BUTTON_LEFT:
 			_on_left_press(mb)
@@ -227,7 +228,7 @@ func _process(_delta: float) -> void:
 	if not _pressing:
 		set_process(false)
 		return
-	if not _accepts_input() or game.placement.is_active():
+	if not _accepts_input() or game.placement.is_active() or game.spell_targeting.is_active():
 		_cancel_press()
 		return
 	# Die Kamera kann sich beim Ziehen bewegen: Rahmen nachführen

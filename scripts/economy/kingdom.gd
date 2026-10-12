@@ -122,6 +122,15 @@ func set_modifier(source: String, key: String, factor: float) -> void:
 	_recompute_modifiers()
 
 
+## Setzt mehrere Faktoren einer Quelle auf einmal (Einheiten rechnen nur einmal neu)
+func set_modifiers(source: String, factors: Dictionary) -> void:
+	var entry: Dictionary = modifier_sources.get(source, {})
+	for key in factors:
+		entry[key] = float(factors[key])
+	modifier_sources[source] = entry
+	_recompute_modifiers()
+
+
 ## Entfernt alle Faktoren einer Quelle
 func clear_modifiers(source: String) -> void:
 	if modifier_sources.erase(source):
@@ -173,7 +182,10 @@ func add_resource(res_id: String, amount: float) -> void:
 	if amount == 0.0:
 		return
 	var before := get_amount(res_id)
-	var after := clampf(before + amount, 0.0, get_capacity(res_id))
+	# Über dem Maximum (z. B. nach Erstattung) wird nichts abgezogen, nur nichts mehr dazu
+	var after := maxf(before + amount, 0.0)
+	if amount > 0.0:
+		after = minf(after, maxf(get_capacity(res_id), before))
 	resources[res_id] = after
 	_income_acc[res_id] = float(_income_acc.get(res_id, 0.0)) + (after - before)
 	resources_changed.emit()
@@ -196,9 +208,10 @@ func spend(cost: Dictionary) -> bool:
 	return true
 
 
+## Erstattung: darf das Lagermaximum überschreiten (Erstattetes geht nie verloren)
 func refund(cost: Dictionary, factor: float = 1.0) -> void:
 	for res_id in cost:
-		resources[res_id] = minf(get_amount(res_id) + float(cost[res_id]) * factor, get_capacity(res_id))
+		resources[res_id] = get_amount(res_id) + float(cost[res_id]) * factor
 	resources_changed.emit()
 
 

@@ -598,10 +598,14 @@ func _tick_regen(u: Unit, dt: float, now: float) -> void:
 		amount *= 3.0
 	elif now - u.last_damaged_at < _regen_delay:
 		return
-	_heal(u, amount * dt)
+	heal_unit(u, amount * dt)
 
 
-func _heal(u: Unit, amount: float) -> void:
+## Heilt eine Einheit (nie über das Maximum, Tote nicht). Für Regeneration,
+## Heiler, Krankenstationen und Heilzauber.
+func heal_unit(u: Unit, amount: float) -> void:
+	if u.hp <= 0.0:
+		return
 	u.hp = minf(u.hp + amount, u.max_hp)
 
 
@@ -618,7 +622,7 @@ func _tick_healer(u: Unit, dt: float) -> void:
 	if not is_same(cur, null) and is_instance_valid(cur) and cur is Unit and cur.hp > 0.0 and cur.hp < cur.max_hp \
 			and cur.inside == null and u.position.distance_to(cur.position) <= heal_range + cur.get_radius() \
 			and u.think_timer > 0.0:
-		_heal(cur, u.heal * dt)
+		heal_unit(cur, u.heal * dt)
 		return
 	if u.think_timer > 0.0:
 		_healer_idle(u)
@@ -641,7 +645,7 @@ func _tick_healer(u: Unit, dt: float) -> void:
 			far = v
 	u.target = best
 	if best != null:
-		_heal(best, u.heal * dt)
+		heal_unit(best, u.heal * dt)
 		if u.moving or u.path_pending:
 			unit_system.stop(u)
 		return
@@ -662,7 +666,7 @@ func _healer_idle(u: Unit) -> void:
 
 ## Der König ruht in der Burg: erholt sich schnell und kommt fast geheilt wieder heraus.
 func _tick_king_resting(u: Unit, dt: float) -> void:
-	_heal(u, maxf(u.regen, 1.0) * 3.0 * dt)
+	heal_unit(u, maxf(u.regen, 1.0) * 3.0 * dt)
 	if u.hp >= u.max_hp * 0.8:
 		unit_system.set_inside(u, null)
 		u.command = "hold"
@@ -680,7 +684,7 @@ func _tick_heal_auras(dt: float) -> void:
 			var amount := float(aura.get("hp_per_sec", 0.0)) * dt
 			for v in _query_allies(k, b.position, float(aura.get("radius", 4.0)) * _ts):
 				if v.hp < v.max_hp:
-					_heal(v, amount)
+					heal_unit(v, amount)
 
 
 # ---------------------------------------------------------------------------
@@ -711,10 +715,12 @@ func _kill_unit(u: Variant, killer: Kingdom) -> void:
 		killer.add_stat("kills")
 		if killer.is_player and k.controller == "wild":
 			killer.notify("Monster besiegt: %s (+%d Kampfpunkte)" % [u.get_display_name(), points], "good", u.position)
-	k.add_stat("losses")
 	var was_king: bool = u.role == "king"
-	if k.is_player and not was_king:
-		_log_death(u)
+	# Beschworene Zaubereinheiten zählen nicht als Verluste
+	if u.expires_at < 0.0:
+		k.add_stat("losses")
+		if k.is_player and not was_king:
+			_log_death(u)
 	unit_died.emit(u, killer)
 	if was_king and k.king == u:
 		k.king = null

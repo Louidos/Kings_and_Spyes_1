@@ -201,7 +201,8 @@ func _stat(key: String) -> float:
 			add += float(e.get("add", 0.0))
 			mult *= float(e.get("mult", 1.0))
 	if kingdom != null:
-		mult *= kingdom.mod(key) * kingdom.mod(key + "." + tier)
+		# Schlüssel, Schlüssel je Stufe ("attack.archer") und je Rolle ("hp@combat" = alle Truppen)
+		mult *= kingdom.mod(key) * kingdom.mod(key + "." + tier) * kingdom.mod(key + "@" + role)
 	return (value + add) * mult
 
 

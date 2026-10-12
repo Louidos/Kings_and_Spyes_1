@@ -4,7 +4,7 @@
 		"cost: Kosten (werden beim Start bezahlt, Abbruch erstattet alles). time: Forschungsdauer in Spielsekunden mit einer Forschungsstätte.",
 		"requires: Forschungen, die vorher fertig sein müssen.",
 		"effects: unlock (schaltet frei: unit:<id>, building:<id>, spell:<id>), modifier (Faktor für einen Modifikator-Schlüssel, z. B. attack.fighter = Angriff der Kämpfer, gather = Sammeltempo), mana_cap (+Mana-Maximum), mana_regen (+Mana pro Sekunde an der Burg).",
-		"Modifikator-Schlüssel: hp, attack, armor, range, speed, regen, heal je auch mit .<stufe> (fighter, archer, elite, scout, medic, king); gather, build, production, production.food, production.mana, food_use, growth, summon (Beschwörungstempo), research (Forschungstempo)."
+		"Modifikator-Schlüssel: hp, attack, armor, range, speed, regen, heal – jeweils auch mit .<stufe> (fighter, archer, elite, scout, medic, king, summon) oder @<rolle> (@combat = alle Truppen ohne Bewohner und König); gather, build, production, production.food, production.mana, food_use, growth, summon (Beschwörungstempo), research (Forschungstempo)."
 	],
 
 	"branches": [
@@ -23,10 +23,10 @@
 		  "requires": ["good_weapons"], "effects": [ { "type": "unlock", "id": "unit:elite_good" } ] },
 		{ "id": "good_shields", "faction": "good", "branch": "military", "tier": 3, "name": "Schildwall",
 		  "description": "Alle Kämpfer tragen bessere Rüstung.", "cost": { "wood": 80, "stone": 60, "ore": 40, "mana": 40 }, "time": 110,
-		  "requires": ["good_knights"], "effects": [ { "type": "modifier", "key": "armor", "factor": 1.25 } ] },
+		  "requires": ["good_knights"], "effects": [ { "type": "modifier", "key": "armor@combat", "factor": 1.25 } ] },
 		{ "id": "good_valor", "faction": "good", "branch": "military", "tier": 4, "name": "Heldenmut",
 		  "description": "Alle Truppen haben mehr Lebenspunkte.", "cost": { "wood": 120, "stone": 80, "ore": 60, "mana": 60 }, "time": 150,
-		  "requires": ["good_shields"], "effects": [ { "type": "modifier", "key": "hp", "factor": 1.15 } ] },
+		  "requires": ["good_shields"], "effects": [ { "type": "modifier", "key": "hp@combat", "factor": 1.15 } ] },
 
 		{ "id": "good_blessing", "faction": "good", "branch": "magic", "tier": 1, "name": "Lichtsegen",
 		  "description": "Der König lernt den Zauber „Segen des Lichts“.", "cost": { "wood": 30, "stone": 20, "mana": 20 }, "time": 45,
@@ -72,10 +72,10 @@
 		  "requires": ["evil_blades"], "effects": [ { "type": "unlock", "id": "unit:elite_evil" } ] },
 		{ "id": "evil_thorns", "faction": "evil", "branch": "military", "tier": 3, "name": "Dornenpanzer",
 		  "description": "Alle Kämpfer tragen stachelbewehrte Rüstung.", "cost": { "wood": 80, "stone": 60, "ore": 40, "mana": 40 }, "time": 110,
-		  "requires": ["evil_dread"], "effects": [ { "type": "modifier", "key": "armor", "factor": 1.25 } ] },
+		  "requires": ["evil_dread"], "effects": [ { "type": "modifier", "key": "armor@combat", "factor": 1.25 } ] },
 		{ "id": "evil_frenzy", "faction": "evil", "branch": "military", "tier": 4, "name": "Blutrausch",
 		  "description": "Alle Truppen schlagen härter zu.", "cost": { "wood": 120, "stone": 80, "ore": 60, "mana": 60 }, "time": 150,
-		  "requires": ["evil_thorns"], "effects": [ { "type": "modifier", "key": "attack", "factor": 1.12 } ] },
+		  "requires": ["evil_thorns"], "effects": [ { "type": "modifier", "key": "attack@combat", "factor": 1.12 } ] },
 
 		{ "id": "evil_curse", "faction": "evil", "branch": "magic", "tier": 1, "name": "Fluch der Schwäche",
 		  "description": "Der König lernt den Zauber „Fluch der Schwäche“.", "cost": { "wood": 30, "stone": 20, "mana": 20 }, "time": 45,

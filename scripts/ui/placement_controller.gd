@@ -40,6 +40,7 @@ func setup(p_game: Node) -> void:
 
 
 func start(p_def: Dictionary) -> void:
+	game.spell_targeting.cancel()
 	def = p_def
 	mode = MODE_ROAD if str(def.get("placement", "")) == "line" else MODE_BUILD
 	_dragging = false
@@ -49,6 +50,7 @@ func start(p_def: Dictionary) -> void:
 
 
 func start_demolish() -> void:
+	game.spell_targeting.cancel()
 	def = {}
 	mode = MODE_DEMOLISH
 	_dragging = false
