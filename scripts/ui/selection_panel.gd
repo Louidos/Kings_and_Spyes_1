@@ -10,6 +10,9 @@
 ##   Arbeiter (−/+), Beschwören mit Warteschlange und Sammelpunkt, Abreissen.
 ## - Fremdes (Monsterhöhle, Monster, ab Phase 7 Gegner): nur Anzeige – Reich,
 ##   Leben, Kampfwerte bzw. was im Lager wartet.
+## - Magie: bei einer Einheit laufende Zauberwirkungen (Restzeit, in der
+##   Zauberfarbe), "Getarnt" und bei beschworenen Wächtern die Restzeit;
+##   bei der Forschungsstätte die laufende Forschung und "Forschung öffnen (R)".
 ## Aktualisiert wird bei Auswahlwechsel, bei Signalen (Warteschlange,
 ## Ressourcen, Formation) und alle 0.25 s, solange das Fenster sichtbar ist.
 ## Bedienelemente stehen unten und behalten ihre Höhe, damit sie nicht unter
@@ -39,6 +42,9 @@ const KING_NOTE := "Der König verlässt sein Reich nicht."
 const NO_JOB_TIP := "Kein Beruf – wähle oben einen Beruf"
 const ATTACK_MOVE_TIP := "Nächster Rechtsklick: angreifend vorrücken (auch Strg+Rechtsklick)"
 const CANCEL_TIP := "Abbrechen – Kosten werden erstattet"
+## Höchstens so viele Zeilen mit Zauberwirkungen
+const MAGIC_LINES := 4
+const COLOR_RESEARCH := Color(0.45, 0.64, 1.0)
 
 var game: Node
 
@@ -58,6 +64,13 @@ var _warn: Label
 var _facts: Label
 var _bonus: Label
 var _note: Label
+## Zauberwirkungen, Tarnung, Restzeit beschworener Einheiten (eine Zeile je Eintrag)
+var _magic_box: VBoxContainer
+var _magic_lines: Array[Label] = []
+# Forschungsstätte
+var _research_label: Label
+var _research_bar: HpBar
+var _research_button: Button
 
 # Beschwören
 var _summon_box: VBoxContainer
@@ -120,7 +133,23 @@ func _ready() -> void:
 	_status = _make_label(vbox, FONT_SIZE, COLOR_DIM)
 	_warn = _make_label(vbox, FONT_SIZE, COLOR_WARN)
 	_facts = _make_label(vbox, FONT_SIZE, COLOR_TEXT)
+	_research_label = _make_label(vbox, FONT_SIZE, COLOR_TEXT)
+	_research_bar = HpBar.new()
+	_research_bar.fill_color = COLOR_RESEARCH
+	_research_bar.visible = false
+	vbox.add_child(_research_bar)
 	_bonus = _make_label(vbox, SMALL_FONT_SIZE, COLOR_GREY)
+	_magic_box = VBoxContainer.new()
+	_magic_box.add_theme_constant_override("separation", 0)
+	_magic_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_magic_box.visible = false
+	vbox.add_child(_magic_box)
+	for i in MAGIC_LINES:
+		var line := _make_label(_magic_box, SMALL_FONT_SIZE, COLOR_TEXT)
+		line.autowrap_mode = TextServer.AUTOWRAP_OFF
+		line.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		line.visible = false
+		_magic_lines.append(line)
 	_note = _make_label(vbox, SMALL_FONT_SIZE, COLOR_GREY)
 
 	# Bedienelemente stehen unten, damit sie bei wechselnder Textlänge
@@ -160,6 +189,16 @@ func _ready() -> void:
 	_job_row.add_child(_job_option)
 
 	_build_actions(vbox)
+
+	_research_button = Button.new()
+	_research_button.text = "Forschung öffnen (R)"
+	_research_button.focus_mode = Control.FOCUS_NONE
+	_research_button.add_theme_font_size_override("font_size", FONT_SIZE)
+	_research_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_research_button.tooltip_text = "Forschungsfenster öffnen: Forschungen wählen, Warteschlange, Mana-Verbesserungen"
+	_research_button.visible = false
+	_research_button.pressed.connect(_on_research_pressed)
+	vbox.add_child(_research_button)
 
 	_demolish_button = Button.new()
 	_demolish_button.focus_mode = Control.FOCUS_NONE
@@ -315,6 +354,8 @@ func _show_building(b: Building) -> void:
 		_set_text(_facts, _lair_text(b))
 	else:
 		_set_text(_facts, _building_facts(b))
+	_magic_box.visible = false
+	_show_research(b, own)
 
 	# Beschwören (nur eigene, fertige Gebäude)
 	var can_summon := own and b.constructed and not summons.is_empty()
@@ -754,6 +795,8 @@ func _show_unit(u: Unit) -> void:
 		_set_text(_status, "")
 		_set_text(_bonus, "")
 		_set_text(_note, "")
+	_show_magic(u)
+	_hide_research()
 	_job_row.visible = own and u.can_work()
 	if _job_row.visible:
 		_update_job_options(u)
@@ -813,6 +856,8 @@ func _show_units(units: Array) -> void:
 	_set_text(_facts, _multi_counts)
 	_set_text(_bonus, "")
 	_set_text(_note, MULTI_HINT)
+	_magic_box.visible = false
+	_hide_research()
 	_summon_box.visible = false
 	_worker_row.visible = false
 	_job_row.visible = false
@@ -1003,6 +1048,96 @@ func _on_formation_pressed() -> void:
 ## Eigene, lebende Einheiten der Auswahl (Befehle gelten nur für sie)
 func _command_units() -> Array:
 	return game.selection.get_own_units()
+
+
+# ---------------------------------------------------------------------------
+# Magie und Forschung
+# ---------------------------------------------------------------------------
+
+## Laufende Zauberwirkungen ("Segen des Lichts · 12 s" in der Zauberfarbe),
+## Tarnung und die Restzeit beschworener Einheiten
+func _show_magic(u: Unit) -> void:
+	var texts: PackedStringArray = []
+	var colors: Array[Color] = []
+	var now := GameClock.game_time
+	# Name des Tarnzaubers (seine Wirkung wird mit "Getarnt" zusammengefasst)
+	var stealth_name := ""
+	if u.stealthed:
+		for e in u.effects:
+			var eff: Dictionary = e
+			if str(eff.get("id", "")) == "stealth":
+				stealth_name = str(DataDB.get_spell(str(eff.get("source", ""))).get("name", ""))
+		if stealth_name.is_empty():
+			texts.append("Getarnt – unsichtbar bis zum ersten Angriff")
+			colors.append(COLOR_DIM)
+	for entry in game.magic_system.get_active_effects(u):
+		var e: Dictionary = entry
+		var spell_name := str(e.get("name", ""))
+		var line := "%s · %d s" % [spell_name, ceili(float(e.get("seconds", 0.0)))]
+		if u.stealthed and spell_name == stealth_name:
+			line = "Getarnt · " + line
+		texts.append(line)
+		colors.append(_spell_text_color(e.get("color", Color.WHITE)))
+	if u.expires_at >= 0.0:
+		texts.append("Verschwindet in %d s" % maxi(ceili(u.expires_at - now), 0))
+		colors.append(COLOR_WARN)
+	_magic_box.visible = not texts.is_empty()
+	for i in MAGIC_LINES:
+		var label := _magic_lines[i]
+		if i < texts.size():
+			_set_text(label, texts[i])
+			_set_color(label, colors[i])
+		else:
+			label.visible = false
+
+
+## Forschungsstätte: laufende Forschung mit Fortschritt und "Forschung öffnen (R)"
+func _show_research(b: Building, own: bool) -> void:
+	if not (own and b.constructed and bool(b.def.get("research", false))):
+		_hide_research()
+		return
+	var rs: ResearchSystem = game.research_system
+	var k := b.kingdom
+	_research_button.visible = true
+	var active := rs.get_active(k)
+	if active.is_empty():
+		_set_text(_research_label, "Keine Forschung aktiv – wähle eine im Forschungsfenster.")
+		_set_color(_research_label, COLOR_DIM)
+		_research_bar.visible = false
+		return
+	var text := "Erforscht: %s" % str(DataDB.get_research(active).get("name", active))
+	var waiting := k.research_queue.size() - 1
+	if waiting > 0:
+		text += "  ·  %d weitere in der Warteschlange" % waiting
+	_set_text(_research_label, text)
+	_set_color(_research_label, COLOR_TEXT)
+	var ratio := rs.get_progress_ratio(k)
+	var left := rs.get_remaining_seconds(k)
+	var bar_text := "%d %%" % floori(ratio * 100.0)
+	if not is_inf(left):
+		bar_text += "  ·  noch %d s" % ceili(left)
+	_research_bar.visible = true
+	_research_bar.set_value(ratio * 100.0, 100.0, bar_text)
+
+
+func _hide_research() -> void:
+	_research_label.visible = false
+	_research_bar.visible = false
+	_research_button.visible = false
+
+
+## Öffnet das Forschungsfenster (nur wenn es noch zu ist)
+func _on_research_pressed() -> void:
+	var hud: Node = game.hud
+	if hud.has_method("is_research_open") and bool(hud.call("is_research_open")):
+		return
+	if hud.has_method("toggle_research"):
+		hud.call("toggle_research")
+
+
+## Dunkle Zauberfarben (Flüche, Schatten) auf dem dunklen Fenster lesbar machen
+static func _spell_text_color(c: Color) -> Color:
+	return c.lightened(0.4) if c.get_luminance() < 0.45 else c
 
 
 # ---------------------------------------------------------------------------
