@@ -90,8 +90,10 @@ func get_display_name() -> String:
 	return str(type_def.get("name", "Einheit"))
 
 
+## Beruf in der Einzahl ("Bergmann" statt "Bergleute")
 func get_job_name() -> String:
-	return str(DataDB.get_job(job_id).get("name", job_id))
+	var job := DataDB.get_job(job_id)
+	return str(job.get("singular", job.get("name", job_id)))
 
 
 func get_status_text() -> String:
@@ -101,7 +103,7 @@ func get_status_text() -> String:
 	if carry_amount >= 1.0 and not carry_res.is_empty():
 		text += "\nTrägt %d %s" % [int(carry_amount), DataDB.get_resource(carry_res).get("name", carry_res)]
 	if not problem.is_empty():
-		text += "\n⚠ " + problem
+		text += "\n(!) " + problem
 	return text
 
 

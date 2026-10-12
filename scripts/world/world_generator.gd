@@ -19,6 +19,8 @@ const LAYERS := ["height", "moisture", "heat", "volcanic"]
 
 ## Optionaler Fortschritts-Callback: func(progress: float 0..1, text: String)
 var progress_callback: Callable
+## Von aussen setzen, um die Erzeugung abzubrechen (Spiel wird beendet)
+var cancelled := false
 
 
 func generate(world_seed: int, size: int) -> WorldData:
@@ -35,6 +37,8 @@ func generate(world_seed: int, size: int) -> WorldData:
 		_report(0.05 + 0.12 * i, "Erzeuge %s …" % _layer_label(layer_name))
 		var raw := _noise_layer(world_seed, size, layer_cfg.get(layer_name, {}))
 		layers.append(_equalize(raw))
+		if cancelled:
+			return world
 
 	# 3: Grenzgebirge
 	_report(0.55, "Forme Grenzgebirge …")
@@ -43,6 +47,8 @@ func generate(world_seed: int, size: int) -> WorldData:
 	# 4: Biome zuordnen
 	_report(0.62, "Verteile Biome …")
 	_classify(world, layers)
+	if cancelled:
+		return world
 	world.elevation = layers[0]
 	world.moisture = layers[1]
 
@@ -50,6 +56,8 @@ func generate(world_seed: int, size: int) -> WorldData:
 	_report(0.85, "Zeichne Landkarte …")
 	world.overview_image = _build_overview(world)
 
+	if cancelled:
+		return world
 	# 6: Rohstoffvorkommen
 	_report(0.9, "Verteile Rohstoffe …")
 	_place_biome_deposits(world)
@@ -185,6 +193,8 @@ func _classify(world: WorldData, layers: Array[PackedByteArray]) -> void:
 		out[i] = biome
 		counts[biome] += 1
 		if i % 131072 == 0:
+			if cancelled:
+				return
 			_report(0.62 + 0.22 * float(i) / n, "Verteile Biome …")
 	world.biomes = out
 	world.biome_counts = counts

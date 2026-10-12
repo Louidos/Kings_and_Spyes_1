@@ -1,12 +1,25 @@
 ## HUD
 ##
-## Spieloberfläche: Leiste oben (Reich, Ressourcen ab Phase 2, Datum, Tempo),
-## Infobereich unten links (Kachel unter der Maus), Minikarte unten rechts.
-## Das HUD zeigt nur an und leitet Klicks weiter – Spiellogik liegt in den Systemen.
+## Spieloberfläche:
+## - oben: Reich, Ressourcen und Bewohner (ResourceBar), Datum, Tempo
+## - oben links: Arbeitsverteilung (JobPanel, Taste J)
+## - oben rechts: Meldungen (NotificationPanel)
+## - unten links: Auswahlfenster (SelectionPanel) über dem Infobereich
+##   (Kachel unter der Maus)
+## - unten Mitte: Baumenü (BuildMenu) mit Steuerungshinweis darüber
+## - unten rechts: Minikarte
+## Das HUD zeigt nur an und leitet Klicks an die Systeme weiter –
+## Spiellogik liegt in den Systemen.
 extends CanvasLayer
 
+## So oft pro Sekunde wird der Infobereich neu geschrieben (Mengen ändern sich)
+const INFO_REFRESH_INTERVAL := 0.25
+## Zeilen, die der Infobereich immer reserviert (damit das Auswahlfenster
+## darüber nicht springt, wenn die Maus über die Karte fährt)
+const INFO_LINES := 7
+
 @onready var kingdom_label: Label = %KingdomLabel
-@onready var resource_bar: HBoxContainer = %ResourceBar
+@onready var resource_bar: ResourceBar = %ResourceBar
 @onready var date_label: Label = %DateLabel
 @onready var speed_bar: HBoxContainer = %SpeedBar
 @onready var info_label: Label = %InfoLabel
@@ -14,7 +27,12 @@ extends CanvasLayer
 @onready var paused_label: Label = %PausedLabel
 @onready var hint_label: Label = %HintLabel
 @onready var debug_label: Label = %DebugLabel
+@onready var build_menu: BuildMenu = %BuildMenu
+@onready var job_panel: JobPanel = %JobPanel
+@onready var selection_panel: SelectionPanel = %SelectionPanel
+@onready var notification_panel: NotificationPanel = %NotificationPanel
 
+var game: Node
 var world: WorldData
 var world_map: WorldMap
 var camera: RTSCamera
@@ -23,6 +41,8 @@ var _pause_button: Button
 ## Ein Button je Tempostufe (gleiche Reihenfolge wie GameClock.speed_steps)
 var _speed_buttons: Array[Button] = []
 var _blink_time := 0.0
+var _hovered_cell := Vector2i(-1, -1)
+var _info_timer := 0.0
 
 
 func _ready() -> void:
@@ -33,6 +53,7 @@ func _ready() -> void:
 	kingdom_label.text = "Dein Königreich  ·  %s" % faction.get("name", "?")
 	kingdom_label.add_theme_color_override("font_color", faction.get("color", Color.WHITE))
 	info_label.text = "Bewege die Maus über die Karte."
+	info_label.custom_minimum_size.y = (info_label.get_line_height() + info_label.get_theme_constant("line_spacing")) * INFO_LINES
 	debug_label.visible = false
 	# Steuerungshinweis nach einer Weile ausblenden
 	var tween := create_tween()
@@ -41,20 +62,32 @@ func _ready() -> void:
 
 
 ## Wird von der Spielszene aufgerufen, sobald die Welt erzeugt ist.
-func setup(game: Node) -> void:
+func setup(p_game: Node) -> void:
+	game = p_game
 	world = game.world
 	camera = game.camera
 	world_map = game.world_map
 	minimap.setup(world_map.overview_texture, world.get_pixel_size(), camera)
+	minimap.setup_game(game)
 	world_map.hovered_cell_changed.connect(_on_hovered_cell_changed)
+	resource_bar.setup(game)
+	build_menu.setup(game)
+	job_panel.setup(game)
+	selection_panel.setup(game)
+	notification_panel.setup(game)
 
 
+## Arbeitsverteilung ein-/ausblenden (Taste J)
 func toggle_job_panel() -> void:
-	pass
+	job_panel.toggle()
 
 
 func is_debug_visible() -> bool:
 	return debug_label.visible
+
+
+func toggle_debug() -> void:
+	debug_label.visible = not debug_label.visible
 
 
 func _process(delta: float) -> void:
@@ -63,13 +96,14 @@ func _process(delta: float) -> void:
 		_blink_time += delta
 		paused_label.modulate.a = 0.6 + 0.4 * cos(_blink_time * 3.0)
 	if debug_label.visible and world_map != null:
-		debug_label.text = "FPS %d  ·  Zoom %.2f  ·  Chunks %d  ·  Seed %s" % [
+		debug_label.text = "FPS %d  ·  Zoom %.2f  ·  Chunks %d  ·  Seed %s  ·  F9: +100 Ressourcen" % [
 			Engine.get_frames_per_second(), camera.zoom.x,
 			world_map.get_loaded_chunk_count(), GameSession.seed_text]
-
-
-func toggle_debug() -> void:
-	debug_label.visible = not debug_label.visible
+	if world != null:
+		_info_timer += delta
+		if _info_timer >= INFO_REFRESH_INTERVAL:
+			_info_timer = 0.0
+			_update_info()
 
 
 # ---------------------------------------------------------------------------
@@ -116,17 +150,72 @@ func _on_speed_changed(paused: bool, _speed: float) -> void:
 
 
 # ---------------------------------------------------------------------------
-# Infobereich
+# Infobereich (Kachel unter der Maus)
 # ---------------------------------------------------------------------------
 
 func _on_hovered_cell_changed(cell: Vector2i) -> void:
-	if cell.x < 0:
-		info_label.text = "Bewege die Maus über die Karte."
+	_hovered_cell = cell
+	_info_timer = 0.0
+	_update_info()
+
+
+func _update_info() -> void:
+	var cell := _hovered_cell
+	if cell.x < 0 or not world.in_bounds(cell):
+		_set_info("Bewege die Maus über die Karte.")
 		return
 	var b := world.get_biome(cell)
 	var defense := float(b.get("defense_bonus", 0.0))
-	info_label.text = "%s\nKachel %d, %d\nBewegung: %.1f×   Verteidigung: %+d %%\nBebaubar: %s   Höhe: %d %%" % [
+	var lines: PackedStringArray = []
+	lines.append("%s\nKachel %d, %d\nBewegung: %.1f×   Verteidigung: %+d %%\nBebaubar: %s   Höhe: %d %%" % [
 		b.get("name", "?"), cell.x, cell.y,
 		float(b.get("movement_cost", 1.0)), roundi(defense * 100.0),
 		"ja" if b.get("buildable", false) else "nein",
-		roundi(world.get_elevation(cell) * 100.0)]
+		roundi(world.get_elevation(cell) * 100.0)])
+	var deposit := _deposit_text(cell)
+	if not deposit.is_empty():
+		lines.append(deposit)
+	match world.get_road(cell):
+		WorldData.ROAD_BUILT:
+			lines.append("Strasse")
+		WorldData.ROAD_PLANNED:
+			lines.append("Strasse (geplant)")
+	var building: Object = world.get_building_at(cell)
+	if building is Building and is_instance_valid(building):
+		var bld := building as Building
+		var text := bld.get_display_name()
+		if not bld.constructed:
+			text += " (Baustelle %d %%)" % roundi(bld.get_progress_ratio() * 100.0)
+		lines.append(text)
+	lines.append(_territory_text(cell))
+	_set_info("\n".join(lines))
+
+
+## "Baumgruppe: 180 Holz", "Manaquelle (unerschöpflich)", "Beeren & Wild: wächst nach"
+func _deposit_text(cell: Vector2i) -> String:
+	var dep := world.get_deposit(cell)
+	if dep.is_empty():
+		return ""
+	var dep_name := str(dep.get("name", "?"))
+	var amount := world.get_deposit_amount(cell)
+	if amount < 0:
+		return "%s (unerschöpflich)" % dep_name
+	if world.regrowing.has(cell):
+		return "%s: wächst nach" % dep_name
+	var res_name := str(DataDB.get_resource(str(dep.get("resource", ""))).get("name", ""))
+	return "%s: %d %s" % [dep_name, amount, res_name]
+
+
+func _territory_text(cell: Vector2i) -> String:
+	var owner_id := world.get_owner(cell)
+	if owner_id == 0:
+		return "Niemandsland"
+	var player: Kingdom = game.player if game != null else null
+	if player != null and owner_id == player.id:
+		return "Eigenes Gebiet"
+	return "Fremdes Gebiet"
+
+
+func _set_info(text: String) -> void:
+	if info_label.text != text:
+		info_label.text = text

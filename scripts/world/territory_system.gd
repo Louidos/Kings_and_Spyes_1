@@ -9,8 +9,9 @@
 class_name TerritorySystem
 extends RefCounted
 
-## Gebiet eines Reichs hat sich geändert (bbox = Rechteck um das ganze Gebiet)
-signal changed(kingdom_id: int, bbox: Rect2i)
+## Gebiet eines Reichs hat sich geändert (bbox = Rechteck um das ganze Gebiet,
+## dirty = Bereich, in dem sich etwas geändert haben kann)
+signal changed(kingdom_id: int, bbox: Rect2i, dirty: Rect2i)
 
 
 ## Rechteck, das der Anspruch eines Gebäudes abdeckt
@@ -76,4 +77,4 @@ func recompute_area(world: WorldData, rect: Rect2i, kingdoms: Array) -> void:
 
 	for k in kingdoms:
 		if touched.has(k.id):
-			changed.emit(k.id, kingdom_bbox(k, world))
+			changed.emit(k.id, kingdom_bbox(k, world), rect)

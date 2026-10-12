@@ -1,7 +1,12 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="1_hud"]
 [ext_resource type="Script" path="res://scripts/ui/minimap.gd" id="2_minimap"]
+[ext_resource type="Script" path="res://scripts/ui/resource_bar.gd" id="3_resbar"]
+[ext_resource type="Script" path="res://scripts/ui/job_panel.gd" id="4_jobs"]
+[ext_resource type="Script" path="res://scripts/ui/notification_panel.gd" id="5_notify"]
+[ext_resource type="Script" path="res://scripts/ui/selection_panel.gd" id="6_selection"]
+[ext_resource type="Script" path="res://scripts/ui/build_menu.gd" id="7_build"]
 
 [node name="HUD" type="CanvasLayer"]
 layer = 10
@@ -37,8 +42,9 @@ vertical_alignment = 1
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 18
+theme_override_constants/separation = 22
 alignment = 1
+script = ExtResource("3_resbar")
 
 [node name="DateLabel" type="Label" parent="Root/TopBar/HBox"]
 unique_name_in_owner = true
@@ -52,6 +58,111 @@ vertical_alignment = 1
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 4
+
+[node name="JobPanel" type="PanelContainer" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+offset_left = 12.0
+offset_top = 62.0
+offset_right = 12.0
+offset_bottom = 62.0
+script = ExtResource("4_jobs")
+
+[node name="NotificationPanel" type="VBoxContainer" parent="Root"]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -432.0
+offset_top = 62.0
+offset_right = -12.0
+offset_bottom = 62.0
+grow_horizontal = 0
+mouse_filter = 2
+script = ExtResource("5_notify")
+
+[node name="BottomLeft" type="VBoxContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -12.0
+offset_right = 12.0
+offset_bottom = -12.0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 2
+
+[node name="SelectionPanel" type="PanelContainer" parent="Root/BottomLeft"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+script = ExtResource("6_selection")
+
+[node name="InfoPanel" type="PanelContainer" parent="Root/BottomLeft"]
+custom_minimum_size = Vector2(420, 0)
+layout_mode = 2
+
+[node name="InfoLabel" type="Label" parent="Root/BottomLeft/InfoPanel"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 16
+text = "Info"
+
+[node name="BottomCenter" type="VBoxContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_top = -12.0
+offset_bottom = -12.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_constants/separation = 8
+alignment = 2
+
+[node name="HintLabel" type="Label" parent="Root/BottomCenter"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 1, 1, 0.9)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 15
+text = "Linksklick: auswählen  ·  Baumenü unten  ·  J: Arbeitsverteilung  ·  X: Abreissen  ·  Rechtsklick / Esc: abbrechen
+WASD / Pfeile / Rand: Kamera  ·  Mausrad, Q/E: Zoom  ·  Leertaste: Pause  ·  + / −: Tempo  ·  H: Burg  ·  Esc: Menü"
+horizontal_alignment = 1
+
+[node name="BuildMenu" type="PanelContainer" parent="Root/BottomCenter"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 4
+script = ExtResource("7_build")
+
+[node name="MinimapPanel" type="PanelContainer" parent="Root"]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -284.0
+offset_top = -284.0
+offset_right = -12.0
+offset_bottom = -12.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="Minimap" type="Control" parent="Root/MinimapPanel"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(244, 244)
+layout_mode = 2
+script = ExtResource("2_minimap")
 
 [node name="PausedLabel" type="Label" parent="Root"]
 unique_name_in_owner = true
@@ -75,70 +186,17 @@ horizontal_alignment = 1
 [node name="DebugLabel" type="Label" parent="Root"]
 unique_name_in_owner = true
 layout_mode = 1
-offset_left = 12.0
-offset_top = 56.0
-offset_right = 700.0
-offset_bottom = 80.0
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -380.0
+offset_top = 116.0
+offset_right = 380.0
+offset_bottom = 140.0
+grow_horizontal = 2
 theme_override_colors/font_color = Color(0.8, 1, 0.8, 1)
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 4
 theme_override_font_sizes/font_size = 15
 text = "Debug"
-
-[node name="InfoPanel" type="PanelContainer" parent="Root"]
-layout_mode = 1
-anchors_preset = 2
-anchor_top = 1.0
-anchor_bottom = 1.0
-offset_left = 12.0
-offset_top = -132.0
-offset_right = 372.0
-offset_bottom = -12.0
-grow_vertical = 0
-
-[node name="InfoLabel" type="Label" parent="Root/InfoPanel"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 16
-text = "Info"
-
-[node name="HintLabel" type="Label" parent="Root"]
-unique_name_in_owner = true
-layout_mode = 1
-anchors_preset = 7
-anchor_left = 0.5
-anchor_top = 1.0
-anchor_right = 0.5
-anchor_bottom = 1.0
-offset_left = -480.0
-offset_top = -44.0
-offset_right = 480.0
-offset_bottom = -16.0
-grow_horizontal = 2
-grow_vertical = 0
-theme_override_colors/font_color = Color(1, 1, 1, 0.9)
-theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
-theme_override_constants/outline_size = 6
-theme_override_font_sizes/font_size = 15
-text = "WASD / Pfeile / Bildschirmrand: Kamera  ·  Mausrad, Q/E: Zoom  ·  Mitte ziehen: verschieben  ·  Leertaste: Pause  ·  + / −: Tempo  ·  H: Startplatz  ·  Esc: Menü"
 horizontal_alignment = 1
-
-[node name="MinimapPanel" type="PanelContainer" parent="Root"]
-layout_mode = 1
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -284.0
-offset_top = -284.0
-offset_right = -12.0
-offset_bottom = -12.0
-grow_horizontal = 0
-grow_vertical = 0
-
-[node name="Minimap" type="Control" parent="Root/MinimapPanel"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(244, 244)
-layout_mode = 2
-script = ExtResource("2_minimap")

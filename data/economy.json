@@ -4,7 +4,7 @@
 		"start: Startressourcen, Anzahl Bewohner und ihre Berufe.",
 		"Werte der Bewohner selbst (Tempo, Traglast, Nahrung) stehen in units.json. work: Unbeschäftigte laufen in diesem Umkreis um die Burg herum; retry_seconds = Wartezeit, bevor ein Arbeiter erneut nach Arbeit sucht.",
 		"population: alle growth_interval Sekunden kommt ein Bewohner dazu, wenn Wohnraum frei ist und mindestens growth_food_min Nahrung da ist (kostet growth_food_cost).",
-		"starvation.work_factor: Arbeitstempo bei Hungersnot. road.speed_mult: Tempo auf fertigen Strassen.",
+		"starvation.work_factor: Arbeitstempo bei Hungersnot; sie endet erst, wenn wieder recover_food Nahrung im Lager ist. road.speed_mult: Tempo auf fertigen Strassen.",
 		"demolish_refund / cancel_refund: Rückerstattung beim Abreissen bzw. beim Abbrechen einer Baustelle."
 	],
 
@@ -25,7 +25,7 @@
 		"growth_food_cost": 10
 	},
 
-	"starvation": { "work_factor": 0.5 },
+	"starvation": { "work_factor": 0.5, "recover_food": 10 },
 	"road": { "speed_mult": 1.6 },
 	"demolish_refund": 0.5,
 	"cancel_refund": 1.0

@@ -47,13 +47,13 @@ func get_difficulty() -> Dictionary:
 
 ## Wandelt eine Eingabe in einen Zahlen-Seed um. Reine Zahlen werden direkt
 ## übernommen, Text wird gehasht (z. B. "Drachenland").
-static func seed_from_text(text: String) -> int:
+func seed_from_text(text: String) -> int:
 	if text.is_valid_int():
 		return text.to_int()
 	return text.hash()
 
 
-static func random_seed_text() -> String:
+func random_seed_text() -> String:
 	var rng := RandomNumberGenerator.new()
 	rng.randomize()
 	return str(rng.randi_range(1, 999_999_999))

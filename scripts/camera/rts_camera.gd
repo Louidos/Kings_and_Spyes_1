@@ -121,10 +121,10 @@ func _zoom_by(factor: float, screen_point: Vector2) -> void:
 
 ## Setzt den Zoom so, dass der Weltpunkt unter `screen_point` an seiner Stelle bleibt.
 func _apply_zoom(z: float, screen_point: Vector2) -> void:
-	var offset := screen_point - get_viewport_rect().size * 0.5
-	var world_point := position + offset / zoom.x
+	var from_center := screen_point - get_viewport_rect().size * 0.5
+	var world_point := position + from_center / zoom.x
 	zoom = Vector2(z, z)
-	position = world_point - offset / z
+	position = world_point - from_center / z
 
 
 func _edge_scroll_direction() -> Vector2:

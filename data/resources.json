@@ -8,7 +8,7 @@
 		"Manaquellen liegen immer so, dass daneben ein Manabrunnen (2x2) gebaut werden kann.",
 		"max_gatherers: wie viele Bewohner gleichzeitig am selben Vorkommen arbeiten dürfen.",
 		"sprite / sprite_empty: Grafik (64x64 PNG) und optional die Grafik im leeren Zustand. Fehlt sie, wird ein Platzhalter gezeichnet.",
-		"start_guarantees: Vorkommen, die es in der Nähe des Startplatzes sicher gibt (radius in Kacheln)."
+		"start_guarantees: Vorkommen, die es in der Nähe des Startplatzes sicher gibt (radius in Kacheln). Bäume, Steine und Beeren liegen im Sammelradius der Burg (10), Erz weiter weg (Erzmine nötig)."
 	],
 
 	"resources": [
@@ -65,9 +65,9 @@
 	],
 
 	"start_guarantees": [
-		{ "deposit": "trees",       "count": 3, "radius": 12 },
-		{ "deposit": "stone",       "count": 2, "radius": 14 },
-		{ "deposit": "berries",     "count": 3, "radius": 10 },
+		{ "deposit": "trees",       "count": 3, "radius": 9 },
+		{ "deposit": "stone",       "count": 2, "radius": 9 },
+		{ "deposit": "berries",     "count": 3, "radius": 9 },
 		{ "deposit": "ore",         "count": 1, "radius": 18, "allow_biomes": ["plains", "forest", "desert"] },
 		{ "deposit": "mana_spring", "count": 1, "radius": 10 }
 	],

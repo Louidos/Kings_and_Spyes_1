@@ -92,7 +92,7 @@ func place_building(def: Dictionary, cell: Vector2i, kingdom: Kingdom, instant: 
 func place_start_castle(kingdom: Kingdom, center_cell: Vector2i) -> Building:
 	var def := DataDB.get_building("castle")
 	var size: Vector2i = def.get("size", Vector2i(4, 4))
-	var top_left := center_cell - size / 2
+	var top_left := center_cell - Vector2i(size.x >> 1, size.y >> 1)
 	top_left = top_left.clamp(Vector2i.ZERO, Vector2i(world.width, world.height) - size)
 	var plains := int(DataDB.biome_index_by_id.get("plains", DataDB.default_biome_index))
 	for y in range(top_left.y, top_left.y + size.y):

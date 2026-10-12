@@ -34,6 +34,9 @@ var building_system: BuildingSystem
 var _reservations: Dictionary = {}
 ## Baustelle (Building oder Vector2i) -> Anzahl Bauarbeiter (Zwischenspeicher)
 var _site_workers: Dictionary = {}
+## Vorkommen-Kachel -> NavGrid.solid_version, als sie unerreichbar war
+## (eingebaut). Gilt, bis sich an den Gebäuden etwas ändert.
+var _unreachable: Dictionary = {}
 ## Zählt Änderungen an Gebäuden/Reservierungen (zusammen mit
 ## WorldData.deposit_version: "hat sich seit der letzten Suche etwas getan?")
 var _local_version := 0
@@ -174,7 +177,7 @@ func remove_worker_from_building(b: Building) -> bool:
 func get_delivering_count(b: Building) -> int:
 	var n := 0
 	for u in b.kingdom.units:
-		if u.dropoff == b:
+		if u.dropoff == b and u.state != Unit.State.WAITING:
 			n += 1
 	return n
 
@@ -281,6 +284,8 @@ func _on_arrived(u: Unit) -> void:
 func _on_path_failed(u: Unit) -> void:
 	if not u.can_work() or not u.command.is_empty():
 		return
+	if u.on_arrive == "gather" and u.target_cell.x >= 0:
+		_unreachable[u.target_cell] = game.nav.solid_version
 	u.on_arrive = ""
 	_release_reservation(u)
 	_release_site(u)
@@ -331,8 +336,12 @@ func _find_gather_work(u: Unit, job: Dictionary) -> void:
 			_wait(u, u.problem if not u.problem.is_empty() else str(job.get("hint", "")), job)
 			return
 		# Neues Ziel: Arbeitsweg (hin und zurück) plus etwas Anmarsch, geteilt
-		# durch den Bonus der Annahmestelle
-		for d in candidates:
+		# durch den Bonus der Annahmestelle. Die nächsten Annahmestellen zuerst;
+		# weiter entfernte nur, solange noch nichts gefunden wurde.
+		for n in candidates.size():
+			if n >= MAX_DROPOFF_CANDIDATES and best_dropoff != null:
+				break
+			var d: Building = candidates[n]
 			var cell := _spiral_find(world.world_to_cell(d.get_center()), d.get_gather_radius(), mask)
 			if cell.x < 0:
 				continue
@@ -389,10 +398,14 @@ func _tick_gather(u: Unit, dt: float) -> void:
 			_find_gather_work(u, job)
 
 
-## Zur nächsten Annahmestelle laufen (bei Gleichstand die mit mehr Bonus).
+## Zur Annahmestelle laufen: bevorzugt die bei der Zielwahl gewählte (deren
+## Bonus beim Sammeln galt), sonst die nächste (bei Gleichstand mit mehr Bonus).
 func _go_dropoff(u: Unit) -> void:
 	if u.carry_amount < 1.0:
 		_think(u)
+		return
+	if is_instance_valid(u.dropoff) and u.dropoff.accepts(u.carry_res):
+		_walk_to_dropoff(u, u.dropoff)
 		return
 	var candidates := _dropoffs_by_distance(u.kingdom, u.carry_res, u.position)
 	if candidates.is_empty():
@@ -406,6 +419,10 @@ func _go_dropoff(u: Unit) -> void:
 		if dist < best_d - 1.0 or (absf(dist - best_d) <= 1.0 and d.get_gather_bonus() > target.get_gather_bonus()):
 			target = d
 			best_d = dist
+	_walk_to_dropoff(u, target)
+
+
+func _walk_to_dropoff(u: Unit, target: Building) -> void:
 	u.dropoff = target
 	u.problem = ""
 	u.state = Unit.State.MOVING
@@ -600,9 +617,9 @@ func _release(u: Unit) -> void:
 	unit_system.stop(u)
 
 
-## Aktueller Stand von Vorkommen, Gebäuden und Reservierungen
+## Aktueller Stand von Vorkommen, Gebäuden, Wegen und Reservierungen
 func _version() -> int:
-	return world.deposit_version * 100003 + _local_version
+	return (world.deposit_version * 100003 + _local_version) * 31 + game.nav.solid_version
 
 
 func _reserve(u: Unit, cell: Vector2i) -> void:
@@ -671,6 +688,10 @@ func _cell_ok(c: Vector2i, mask: PackedByteArray) -> bool:
 	var t := world.deposit_type[i]
 	if mask[t] == 0 or world.deposit_amount[i] == 0 or world.regrowing.has(c):
 		return false
+	if _unreachable.has(c):
+		if int(_unreachable[c]) == game.nav.solid_version:
+			return false
+		_unreachable.erase(c)
 	var max_g: int = DataDB.deposits[t - 1]["max_gatherers"]
 	return int(_reservations.get(c, 0)) < max_g
 
@@ -682,13 +703,11 @@ func _in_reach(d: Building, cell: Vector2i, tolerance: int) -> bool:
 	return absi(cell.x - center.x) <= r and absi(cell.y - center.y) <= r
 
 
-## Fertige Annahmestellen für eine Ressource, die nächsten zuerst (begrenzt)
+## Fertige Annahmestellen für eine Ressource, die nächsten zuerst
 func _dropoffs_by_distance(kingdom: Kingdom, res_id: String, pos: Vector2) -> Array:
 	var list := building_system.get_dropoffs(kingdom, res_id)
 	list.sort_custom(func(a: Building, b: Building) -> bool:
 		return a.get_center().distance_squared_to(pos) < b.get_center().distance_squared_to(pos))
-	if list.size() > MAX_DROPOFF_CANDIDATES:
-		list.resize(MAX_DROPOFF_CANDIDATES)
 	return list
 
 

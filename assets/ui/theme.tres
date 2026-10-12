@@ -1,4 +1,4 @@
-[gd_resource type="Theme" load_steps=8 format=3]
+[gd_resource type="Theme" load_steps=9 format=3]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 content_margin_left = 14.0
@@ -98,6 +98,22 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_tooltip"]
+content_margin_left = 10.0
+content_margin_top = 6.0
+content_margin_right = 10.0
+content_margin_bottom = 6.0
+bg_color = Color(0.07, 0.063, 0.09, 0.97)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.78, 0.64, 0.36, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
 [resource]
 default_font_size = 18
 Button/colors/font_color = Color(0.95, 0.91, 0.82, 1)
@@ -118,3 +134,6 @@ OptionButton/styles/hover = SubResource("StyleBoxFlat_btn_hover")
 OptionButton/styles/normal = SubResource("StyleBoxFlat_btn_normal")
 OptionButton/styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
 PanelContainer/styles/panel = SubResource("StyleBoxFlat_panel")
+TooltipLabel/colors/font_color = Color(0.95, 0.92, 0.85, 1)
+TooltipLabel/font_sizes/font_size = 16
+TooltipPanel/styles/panel = SubResource("StyleBoxFlat_tooltip")

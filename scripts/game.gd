@@ -31,6 +31,9 @@ var nav: NavGrid
 ## Zähler für eindeutige Nummern von Gebäuden und Einheiten (wird gespeichert)
 var uid_counter := 0
 var _gen_thread: Thread
+## Im Hauptthread angelegt, damit das Laden abgebrochen werden kann
+var _generator: WorldGenerator
+var _nav_builder: NavGrid
 var _playing := false
 var _was_paused_before_menu := false
 
@@ -43,6 +46,10 @@ func _ready() -> void:
 	loading.open(GameSession.seed_text)
 
 	# Weltgenerierung im Hintergrund-Thread, damit das Fenster nicht einfriert
+	_generator = WorldGenerator.new()
+	_generator.progress_callback = func(p: float, text: String) -> void:
+		loading.set_progress.call_deferred(p, text)
+	_nav_builder = NavGrid.new()
 	_gen_thread = Thread.new()
 	_gen_thread.start(_generate_world.bind(GameSession.world_seed, GameSession.get_map_tiles()))
 
@@ -50,14 +57,11 @@ func _ready() -> void:
 ## Läuft im Thread: nur Daten erzeugen, keine Nodes anfassen.
 ## Gibt [WorldData, NavGrid] zurück.
 func _generate_world(world_seed: int, size: int) -> Array:
-	var generator := WorldGenerator.new()
-	generator.progress_callback = func(p: float, text: String) -> void:
-		loading.set_progress.call_deferred(p, text)
-	var w := generator.generate(world_seed, size)
-	loading.set_progress.call_deferred(1.0, "Berechne Wege …")
-	var grid := NavGrid.new()
-	grid.build(w)
-	return [w, grid]
+	var w := _generator.generate(world_seed, size)
+	if not _generator.cancelled:
+		loading.set_progress.call_deferred(1.0, "Berechne Wege …")
+		_nav_builder.build(w)
+	return [w, _nav_builder]
 
 
 func _process(_delta: float) -> void:
@@ -143,10 +147,10 @@ func found_settlement(kingdom: Kingdom, center_cell: Vector2i) -> void:
 			work_system.assign_job(kingdom, job_id)
 
 
-func _on_territory_changed(kingdom_id: int, bbox: Rect2i) -> void:
+func _on_territory_changed(kingdom_id: int, bbox: Rect2i, dirty: Rect2i) -> void:
 	var k := get_kingdom(kingdom_id)
 	if k != null:
-		world_map.territory_border.rebuild(world, kingdom_id, bbox, k.color)
+		world_map.territory_border.rebuild(world, kingdom_id, bbox, k.color, dirty)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -196,7 +200,9 @@ func _on_pause_menu_closed() -> void:
 
 
 func _exit_tree() -> void:
-	# Verlässt man die Szene während der Generierung, Thread sauber beenden
+	# Verlässt man die Szene während der Generierung: abbrechen und Thread beenden
 	if _gen_thread != null and _gen_thread.is_started():
+		_generator.cancelled = true
+		_nav_builder.cancelled = true
 		_gen_thread.wait_to_finish()
 	GameClock.stop()

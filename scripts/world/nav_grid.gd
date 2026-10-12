@@ -13,10 +13,21 @@
 class_name NavGrid
 extends RefCounted
 
+## Grösste "Tasche" (von Gebäuden eingeschlossene freie Fläche), die vor einer
+## Wegsuche erkannt wird. Grössere Flächen gelten als offen.
+const POCKET_LIMIT := 300
+
 var astar := AStarGrid2D.new()
 var region := Rect2i()
+## Zählt jede Änderung an blockierten Kacheln (für "unerreichbar"-Merker)
+var solid_version := 0
+## Wird beim Verlassen während des Ladens gesetzt: Aufbau abbrechen
+var cancelled := false
 ## Gewichtsfaktor: 1 / billigste Schrittkosten
 var _scale := 1.0
+## Zwischenspeicher der Taschen-Prüfung (gilt für eine solid_version)
+var _pocket_cache: Dictionary = {}
+var _pocket_cache_version := -1
 
 
 ## Baut das Raster für die ganze Karte (darf im Hintergrund-Thread laufen).
@@ -48,6 +59,8 @@ func build(world: WorldData) -> void:
 	astar.fill_weight_scale_region(region, fill)
 	var bio := world.biomes
 	for y in world.height:
+		if cancelled:
+			return
 		var row := y * world.width
 		for x in world.width:
 			var w := weights[bio[row + x]]
@@ -73,6 +86,7 @@ func set_solid(cell: Vector2i, solid: bool) -> void:
 	if astar.is_dirty() or not astar.is_in_boundsv(cell):
 		return
 	astar.set_point_solid(cell, solid)
+	solid_version += 1
 
 
 func is_solid(cell: Vector2i) -> bool:
@@ -96,32 +110,85 @@ func nearest_free(cell: Vector2i, max_ring: int = 3) -> Vector2i:
 
 
 ## Weg von from_pos nach to_pos als Weltpositionen (Kachelmitten; der letzte
-## Punkt ist genau to_pos, ausser das Ziel ist blockiert – dann endet der Weg
-## so nah wie möglich davor). Leeres Ergebnis = kein Weg.
+## Punkt ist genau to_pos). Liegt das Ziel auf einer blockierten Kachel, wird
+## die nächste freie Kachel angesteuert. Leeres Ergebnis = kein Weg.
+## Wichtig: Nie zu einer blockierten Kachel suchen – A* würde sonst die ganze
+## Karte absuchen (Ruckler von fast einer Sekunde).
 func find_path(world: WorldData, from_pos: Vector2, to_pos: Vector2) -> PackedVector2Array:
 	var result := PackedVector2Array()
 	var from_cell := world.world_to_cell(from_pos)
 	var to_cell := world.world_to_cell(to_pos)
 	if astar.is_dirty() or not contains(to_cell):
 		return result
-	if from_cell == to_cell:
-		result.append(to_pos)
+	var goal := nearest_free(to_cell)
+	if goal.x < 0:
+		return result
+	var goal_pos := to_pos if goal == to_cell else world.cell_to_world(goal)
+	if from_cell == goal:
+		result.append(goal_pos)
 		return result
 	var start := nearest_free(from_cell)
 	if start.x < 0:
 		return result
+	# Eingeschlossene Ziele (oder Starts) vorab erkennen: A* würde sonst die
+	# ganze Karte absuchen, bevor es aufgibt.
+	var goal_pocket := _pocket(goal)
+	if not goal_pocket.is_empty() and not goal_pocket.has(start):
+		return result
+	var start_pocket := _pocket(start)
+	if not start_pocket.is_empty() and not start_pocket.has(goal):
+		return result
 	if start != from_cell:
 		result.append(world.cell_to_world(start))
-		if start == to_cell:
-			result.append(to_pos)
+		if start == goal:
+			result.append(goal_pos)
 			return result
-	var ids := astar.get_id_path(start, to_cell, true)
+	var ids := astar.get_id_path(start, goal)
 	if ids.is_empty():
 		return PackedVector2Array()
 	for i in range(1, ids.size() - 1):
 		result.append(world.cell_to_world(ids[i]))
-	if ids[ids.size() - 1] == to_cell and not astar.is_point_solid(to_cell):
-		result.append(to_pos)
-	else:
-		result.append(world.cell_to_world(ids[ids.size() - 1]))
+	result.append(goal_pos)
 	return result
+
+
+## Liegt cell in einer kleinen, von Gebäuden eingeschlossenen Fläche? Gibt die
+## Kacheln dieser Fläche zurück (leer = offene Fläche). Begrenzte Breitensuche;
+## nur nötig, wenn überhaupt ein Gebäude in der Nähe ist.
+func _pocket(cell: Vector2i) -> Dictionary:
+	if _pocket_cache_version != solid_version:
+		_pocket_cache.clear()
+		_pocket_cache_version = solid_version
+	if _pocket_cache.has(cell):
+		return _pocket_cache[cell]
+	var result := _find_pocket(cell)
+	_pocket_cache[cell] = result
+	return result
+
+
+func _find_pocket(cell: Vector2i) -> Dictionary:
+	if not _solid_near(cell, 3):
+		return {}
+	var seen := {cell: true}
+	var queue: Array[Vector2i] = [cell]
+	var head := 0
+	while head < queue.size():
+		var c: Vector2i = queue[head]
+		head += 1
+		for n in [Vector2i(c.x + 1, c.y), Vector2i(c.x - 1, c.y), Vector2i(c.x, c.y + 1), Vector2i(c.x, c.y - 1)]:
+			if seen.has(n) or not region.has_point(n) or astar.is_point_solid(n):
+				continue
+			seen[n] = true
+			queue.append(n)
+			if queue.size() > POCKET_LIMIT:
+				return {}
+	return seen
+
+
+func _solid_near(cell: Vector2i, r: int) -> bool:
+	for dy in range(-r, r + 1):
+		for dx in range(-r, r + 1):
+			var c := cell + Vector2i(dx, dy)
+			if region.has_point(c) and astar.is_point_solid(c):
+				return true
+	return false

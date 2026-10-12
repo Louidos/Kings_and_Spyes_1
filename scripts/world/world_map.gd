@@ -270,7 +270,8 @@ func _clear() -> void:
 
 func _update_hover(cam: Camera2D) -> void:
 	var cell := world.world_to_cell(get_global_mouse_position())
-	if not world.in_bounds(cell):
+	# Über Bedienelementen (Panels, Minikarte) zählt die Karte nicht als "unter der Maus"
+	if not world.in_bounds(cell) or get_viewport().gui_get_hovered_control() != null:
 		cell = Vector2i(-1, -1)
 	_cursor.visible = cell.x >= 0 and cam.zoom.x >= detail_min_zoom
 	if cell != hovered_cell:

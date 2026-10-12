@@ -87,7 +87,7 @@ func _consume_food(kingdom: Kingdom, dt: float) -> void:
 		kingdom.starving = true
 		kingdom.resources_changed.emit()
 		kingdom.notify("Hungersnot! Die Arbeit geht nur noch halb so schnell. Setze mehr Sammler oder Bauern ein.", "danger")
-	elif not hungry and kingdom.starving and kingdom.get_amount("food") >= 1.0:
+	elif kingdom.starving and kingdom.get_amount("food") >= float(DataDB.eco("starvation.recover_food", 10.0)):
 		kingdom.starving = false
 		kingdom.resources_changed.emit()
 		kingdom.notify("Die Hungersnot ist vorbei.", "good")

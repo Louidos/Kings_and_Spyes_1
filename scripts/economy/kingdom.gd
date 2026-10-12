@@ -11,6 +11,8 @@ class_name Kingdom
 extends RefCounted
 
 signal resources_changed
+## Wird von den Systemen ausgelöst (Einheit neu/entfernt, Wohnraum geändert)
+@warning_ignore("unused_signal")
 signal population_changed
 
 ## Eindeutige Nummer (> 0). Wird auch im Gebietsraster gespeichert.

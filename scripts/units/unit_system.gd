@@ -32,6 +32,7 @@ var _path_queue: Array = []
 func setup(p_game: Node) -> void:
 	game = p_game
 	world = game.world
+	game.building_system.building_placed.connect(_on_building_placed)
 
 
 func spawn_unit(kingdom: Kingdom, type_id: String, pos: Vector2) -> Unit:
@@ -140,6 +141,25 @@ func _process(_delta: float) -> void:
 	for u in arrivals:
 		if is_instance_valid(u):
 			arrived.emit(u)
+
+
+## Ein neues Gebäude blockiert Kacheln: Einheiten, deren Weg hindurchführt,
+## planen neu; Einheiten, die darauf stehen, treten zur Seite.
+func _on_building_placed(b: Building) -> void:
+	if not b.blocks_movement():
+		return
+	var fp := b.get_footprint()
+	for u in units:
+		if u.inside != null:
+			continue
+		if fp.has_point(world.world_to_cell(u.position)):
+			u.position = b.get_approach_point(u.position)
+		if not u.moving:
+			continue
+		for i in range(u.path_index, u.path.size()):
+			if fp.has_point(world.world_to_cell(u.path[i])):
+				move_to(u, u.path[u.path.size() - 1])
+				break
 
 
 func _process_path_queue() -> void:

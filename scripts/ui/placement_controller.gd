@@ -194,7 +194,7 @@ func _draw_building_preview(ts: float, font_size: int) -> void:
 	# Sammelbereich von Annahmestellen anzeigen
 	var gather := int(def.get("gather_radius", 0))
 	if gather > 0:
-		var center_cell := _top_left + size / 2
+		var center_cell := _top_left + Vector2i(size.x >> 1, size.y >> 1)
 		var area := Rect2(Vector2(center_cell - Vector2i(gather, gather)) * ts, Vector2(gather * 2 + 1, gather * 2 + 1) * ts)
 		draw_rect(area, Color(1, 1, 1, 0.06), true)
 		draw_rect(area, Color(1, 1, 1, 0.5), false, 2.0)
