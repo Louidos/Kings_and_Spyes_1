@@ -30,6 +30,7 @@ class TipBox:
 	extends HBoxContainer
 	var source := Callable()
 	var rich := false
+	var tip_max_width := 400.0
 
 	func _get_tooltip(_at_position: Vector2) -> String:
 		return str(source.call()) if source.is_valid() else tooltip_text
@@ -37,7 +38,7 @@ class TipBox:
 	func _make_custom_tooltip(for_text: String) -> Object:
 		if not rich:
 			return null
-		return ResearchTipButton.make_rich_tooltip(for_text)
+		return ResearchTipButton.make_rich_tooltip(for_text, tip_max_width)
 
 
 ## Zwei gekreuzte Schwerter (im Code gezeichnet – die Schrift hat kein ⚔)
@@ -265,10 +266,10 @@ static func mana_raise_hint(k: Kingdom) -> String:
 		for e in r.get("effects", []):
 			if str(e.get("type", "")) == "modifier" and str(e.get("key", "")) == "production.mana":
 				lore = str(r.get("name", ""))
-	var text := "Mehr Mana: Manabrunnen auf Manaquellen bauen und Manawirker zuweisen (J)"
+	var text := "Mehr Mana: Manabrunnen + Manawirker (J)"
 	if not lore.is_empty():
 		text += ", Forschung „%s“" % lore
-	return text + ".\nMehr Maximum und Burg-Mana: Kampfpunkte ausgeben – Forschung (R) → Kampfpunkte."
+	return text + "\nMehr Maximum und Burg-Mana: Kampfpunkte (Forschung, R)"
 
 
 ## Mana am (oder über dem) Maximum?

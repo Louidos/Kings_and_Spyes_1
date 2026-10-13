@@ -6,6 +6,8 @@
 ## bricht sie ab. Der Button des aktiven Bauvorhabens bleibt eingedrückt.
 ## Gebäude, die gerade nicht bezahlbar sind, werden rötlich getönt – sie
 ## bleiben anklickbar, die Vorschau nennt dann den Grund.
+## Gebäude, die erst erforscht werden müssen (def.requires), sehen gesperrt aus
+## (grau mit Schloss); ein Klick nennt nur den Grund statt die Vorschau zu starten.
 class_name BuildMenu
 extends PanelContainer
 
@@ -16,6 +18,33 @@ const BUTTON_MIN_WIDTH := 150.0
 const FONT_SIZE := 16
 const UNAFFORDABLE_TINT := Color(1.0, 0.75, 0.75)
 const DEMOLISH_ID := "_demolish"
+const LOCKED_MODULATE := Color(0.62, 0.6, 0.6)
+const COLOR_BAD := Color(1.0, 0.45, 0.38)
+const COLOR_HINT := Color(0.74, 0.71, 0.66)
+
+
+## Button des Baumenüs: farbiger Tooltip, bei gesperrten Gebäuden ein Schloss
+class BuildButton:
+	extends ResearchTipButton
+	var locked := false:
+		set(value):
+			if locked != value:
+				locked = value
+				queue_redraw()
+
+	func _draw() -> void:
+		super()
+		if not locked:
+			return
+		# Kleines Vorhängeschloss links (der gesperrte Stil lässt dort Platz)
+		var c := Vector2(14.0, size.y * 0.5 - 1.0)
+		var body := Rect2(c + Vector2(-6.0, -1.0), Vector2(12.0, 9.0))
+		var col := Color(0.86, 0.84, 0.8)
+		draw_arc(c + Vector2(0.0, -1.0), 4.0, PI, TAU, 10, Color(0.05, 0.05, 0.05, 0.8), 3.4, true)
+		draw_arc(c + Vector2(0.0, -1.0), 4.0, PI, TAU, 10, col, 1.8, true)
+		draw_rect(body.grow(1.0), Color(0.05, 0.05, 0.05, 0.8))
+		draw_rect(body, col)
+		draw_rect(Rect2(c + Vector2(-1.0, 2.0), Vector2(2.0, 3.0)), Color(0.15, 0.13, 0.12))
 
 var game: Node
 
@@ -24,6 +53,8 @@ var _grid: GridContainer
 var _buttons: Dictionary = {}
 ## Gebäude-ID -> Grundtext des Tooltips (ohne "Es fehlen")
 var _base_tooltips: Dictionary = {}
+## Gebäude-ID -> Def (für Tooltip und Klick)
+var _defs_by_id: Dictionary = {}
 ## Baubare Gebäude in Datenreihenfolge
 var _defs: Array = []
 var _timer := 0.0
@@ -44,6 +75,7 @@ func setup(p_game: Node) -> void:
 	_buttons.clear()
 	_base_tooltips.clear()
 	_defs.clear()
+	_defs_by_id.clear()
 	for d in DataDB.buildings:
 		var def: Dictionary = d
 		if not bool(def.get("player_buildable", false)):
@@ -54,9 +86,11 @@ func setup(p_game: Node) -> void:
 		if tex != null:
 			b.icon = tex
 		b.pressed.connect(_on_build_pressed.bind(def))
+		b.tip_source = _build_tip.bind(id)
 		_buttons[id] = b
 		_base_tooltips[id] = build_tooltip(def)
 		_defs.append(def)
+		_defs_by_id[id] = def
 	var demolish := _make_button("Abreissen (X)")
 	demolish.tooltip_text = "Abreissen: Strassen anklicken oder mit gedrückter Maustaste überziehen.\nGebäude anklicken, um sie auszuwählen – abreissen dann im Auswahlfenster.\nRechtsklick oder Esc: beenden"
 	demolish.pressed.connect(_on_demolish_pressed)
@@ -66,6 +100,7 @@ func setup(p_game: Node) -> void:
 	_grid.columns = clampi(ceili(count / 2.0), 1, MAX_COLUMNS)
 	game.placement.placement_started.connect(_on_placement_started)
 	game.placement.placement_ended.connect(_sync_pressed)
+	game.research_system.research_completed.connect(_on_research_completed)
 	_refresh()
 	_sync_pressed()
 
@@ -79,7 +114,7 @@ func _process(delta: float) -> void:
 		_refresh()
 
 
-## Bezahlbarkeit und Tooltips aktualisieren
+## Sperre und Bezahlbarkeit aktualisieren (der Tooltip entsteht erst beim Zeigen)
 func _refresh() -> void:
 	var k: Kingdom = game.player
 	if k == null:
@@ -87,23 +122,74 @@ func _refresh() -> void:
 	for d in _defs:
 		var def: Dictionary = d
 		var id := str(def.get("id", ""))
-		var b: Button = _buttons.get(id)
+		var b: BuildButton = _buttons.get(id)
 		if b == null:
 			continue
-		var cost: Dictionary = def.get("cost", {})
-		var affordable := k.can_afford(cost)
-		var tint := Color.WHITE if affordable else UNAFFORDABLE_TINT
+		var locked := not lock_reason(def, k).is_empty()
+		var tint := Color.WHITE
+		if locked:
+			tint = LOCKED_MODULATE
+		elif not k.can_afford(def.get("cost", {})):
+			tint = UNAFFORDABLE_TINT
 		if b.modulate != tint:
 			b.modulate = tint
-		var tip := str(_base_tooltips.get(id, ""))
-		if not affordable:
-			tip += "\n" + k.missing_text(cost)
-		if b.tooltip_text != tip:
-			b.tooltip_text = tip
+		if b.locked != locked:
+			b.locked = locked
+			_set_locked_style(b, locked)
 
 
-func _make_button(text: String) -> Button:
-	var b := Button.new()
+func _on_research_completed(k: Kingdom, _id: String) -> void:
+	if k == game.player:
+		_refresh()
+
+
+## "Benötigt Forschung: Heilkunde" (wie BuildingSystem.can_place), "" = freigeschaltet
+static func lock_reason(def: Dictionary, k: Kingdom) -> String:
+	var requires: Array = def.get("requires", [])
+	if requires.is_empty() or k.has_all_unlocks(requires):
+		return ""
+	return "Benötigt Forschung: %s" % DataDB.describe_requirement(requires, k.faction_id)
+
+
+## Gesperrt: sieht aus wie ein abgeschalteter Button (mit Platz für das
+## Schloss links), bleibt aber anklickbar
+func _set_locked_style(b: Button, locked: bool) -> void:
+	if locked:
+		var st := b.get_theme_stylebox("disabled").duplicate() as StyleBox
+		st.content_margin_left = 26.0
+		st.content_margin_right = 8.0
+		b.add_theme_stylebox_override("normal", st)
+		b.add_theme_stylebox_override("hover", st)
+		b.add_theme_stylebox_override("pressed", st)
+		var c: Color = b.get_theme_color("font_disabled_color")
+		b.add_theme_color_override("font_color", c)
+		b.add_theme_color_override("font_hover_color", c)
+	else:
+		for style_name in ["normal", "hover", "pressed"]:
+			b.remove_theme_stylebox_override(style_name)
+		b.remove_theme_color_override("font_color")
+		b.remove_theme_color_override("font_hover_color")
+
+
+## Tooltip (BBCode): gesperrt/fehlende Rohstoffe rot, dann die Gebäudedaten
+func _build_tip(id: String) -> String:
+	var k: Kingdom = game.player
+	var def: Dictionary = _defs_by_id.get(id, {})
+	var lines: PackedStringArray = []
+	var reason := lock_reason(def, k)
+	if not reason.is_empty():
+		lines.append(ResearchTipButton.colored(reason, COLOR_BAD))
+		lines.append(ResearchTipButton.colored("Forschungsfenster: R", COLOR_HINT))
+	lines.append(ResearchTipButton.esc(str(_base_tooltips.get(id, ""))))
+	var missing := k.missing_text(def.get("cost", {}))
+	if not missing.is_empty():
+		lines.append(ResearchTipButton.colored(missing, COLOR_BAD))
+	return "\n".join(lines)
+
+
+func _make_button(text: String) -> BuildButton:
+	var b := BuildButton.new()
+	b.tip_max_width = 420.0
 	b.text = text
 	b.toggle_mode = true
 	# Kein Tastaturfokus, sonst würde die Leertaste (Pause) den Button auslösen
@@ -116,6 +202,12 @@ func _make_button(text: String) -> Button:
 
 
 func _on_build_pressed(def: Dictionary) -> void:
+	# Noch nicht erforscht: nur den Grund nennen, keine Vorschau
+	var reason := lock_reason(def, game.player)
+	if not reason.is_empty():
+		Notify.warning("%s: %s (Forschungsfenster: R)" % [DataDB.get_building_name(def, game.player.faction_id), reason])
+		_sync_pressed()
+		return
 	var placement: PlacementController = game.placement
 	if placement.mode != PlacementController.MODE_DEMOLISH and placement.is_active() \
 			and str(placement.def.get("id", "")) == str(def.get("id", "")):

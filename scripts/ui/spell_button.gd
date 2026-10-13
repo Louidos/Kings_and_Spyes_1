@@ -18,7 +18,7 @@ const COLOR_LOCKED := Color(0.42, 0.4, 0.44)
 const COLOR_BAD := Color(1.0, 0.36, 0.3)
 const COOLDOWN_SHADE := Color(0.0, 0.0, 0.0, 0.64)
 ## Breite, ab der Tooltip-Text umbricht (Pixel)
-const TIP_WIDTH := 320.0
+const TIP_WIDTH := 360.0
 const TIP_FONT_SIZE := 16
 ## So lange (Sekunden) blitzt der Knopf auf, wenn die Abklingzeit vorbei ist
 const FLASH_SECONDS := 0.6
@@ -125,10 +125,11 @@ func _draw() -> void:
 	# Zu wenig Mana: roter Schimmer
 	if _known and _no_mana and _cd_ratio <= 0.0:
 		draw_rect(inner, Color(0.8, 0.1, 0.08, 0.32))
-	# Noch nicht erforscht: abgedunkelt mit Schloss
+	# Noch nicht erforscht: abgedunkelt, kleines Schloss unten rechts (das
+	# Zeichen bleibt erkennbar, damit man sieht, was es zu erforschen gibt)
 	if not _known:
-		draw_rect(inner, Color(0.03, 0.03, 0.05, 0.55))
-		_draw_lock(rect.get_center() + Vector2(0, 3))
+		draw_rect(inner, Color(0.03, 0.03, 0.05, 0.4))
+		_draw_lock(rect.end - Vector2(13, 13))
 	if _known and _cd_ratio > 0.0:
 		_draw_centered_text(str(_cd_seconds), rect.get_center(), 21, Color.WHITE)
 	if _flash > 0.0:
@@ -164,12 +165,13 @@ func _draw() -> void:
 func _draw_placeholder(r: Rect2, bright: Color) -> void:
 	var c := r.get_center()
 	var s := minf(r.size.x, r.size.y)
-	var col := _color if _known else COLOR_LOCKED
+	# Gesperrt: Zauberfarbe stark ins Grau gezogen (noch unterscheidbar)
+	var col := _color if _known else _color.lerp(COLOR_LOCKED, 0.7)
 	draw_circle(c, s * 0.46, Color(col, 0.13))
 	draw_circle(c, s * 0.34, Color(col, 0.16))
 	draw_circle(c, s * 0.22, Color(col, 0.2))
-	_draw_school_glyph(c, s, Color(bright if _known else COLOR_LOCKED, 0.5))
-	var letter_color := bright.lightened(0.25) if _known else Color(0.62, 0.6, 0.62)
+	_draw_school_glyph(c, s, Color(bright if _known else col, 0.5))
+	var letter_color := bright.lightened(0.25) if _known else col.lightened(0.25)
 	_draw_centered_text(_letter, c + Vector2(0, -1), int(s * 0.46), letter_color)
 
 
@@ -230,16 +232,17 @@ func _draw_cooldown(r: Rect2, ratio: float) -> void:
 		draw_colored_polygon(pts, COOLDOWN_SHADE)
 
 
+## Kleines Schloss (Mitte c, etwa 14×16 Pixel)
 func _draw_lock(c: Vector2) -> void:
-	var body := Rect2(c + Vector2(-8, -2), Vector2(16, 12))
-	var col := Color(0.86, 0.84, 0.8)
-	draw_arc(c + Vector2(0, -3), 5.0, PI, TAU, 12, Color(0, 0, 0, 0.7), 4.5, true)
-	draw_arc(c + Vector2(0, -3), 5.0, PI, TAU, 12, col, 2.5, true)
-	draw_line(c + Vector2(-5, -3), c + Vector2(-5, -1), col, 2.5)
-	draw_line(c + Vector2(5, -3), c + Vector2(5, -1), col, 2.5)
-	draw_rect(body.grow(1.0), Color(0, 0, 0, 0.7))
+	var body := Rect2(c + Vector2(-7, -2), Vector2(14, 10))
+	var col := Color(0.88, 0.86, 0.82)
+	draw_arc(c + Vector2(0, -3), 4.5, PI, TAU, 12, Color(0, 0, 0, 0.75), 4.5, true)
+	draw_arc(c + Vector2(0, -3), 4.5, PI, TAU, 12, col, 2.2, true)
+	draw_line(c + Vector2(-4.5, -3), c + Vector2(-4.5, -1), col, 2.2)
+	draw_line(c + Vector2(4.5, -3), c + Vector2(4.5, -1), col, 2.2)
+	draw_rect(body.grow(1.5), Color(0, 0, 0, 0.75))
 	draw_rect(body, col)
-	draw_rect(Rect2(c + Vector2(-1, 2), Vector2(2, 4)), Color(0.2, 0.2, 0.22))
+	draw_rect(Rect2(c + Vector2(-1, 1), Vector2(2, 4)), Color(0.2, 0.2, 0.22))
 
 
 func _draw_centered_text(text: String, center: Vector2, font_size: int, col: Color) -> void:

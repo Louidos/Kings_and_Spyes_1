@@ -33,7 +33,7 @@ const COLOR_BAD := Color(1.0, 0.3, 0.24)
 const COLOR_BAD_TEXT := Color(1.0, 0.56, 0.48)
 const COLOR_HINT := Color(0.84, 0.82, 0.78)
 const COLOR_COUNT := Color(0.97, 0.96, 0.9)
-const FONT_SIZE := 17
+const FONT_SIZE := 18
 ## Abstand des Textes vom Mauszeiger (Bildschirmpixel)
 const LABEL_OFFSET := Vector2(24, 28)
 ## Ebene der Zauberleiste (wie das HUD)
@@ -460,9 +460,9 @@ func _draw() -> void:
 		lines.append(_reason)
 		colors.append(COLOR_BAD_TEXT)
 	else:
-		var count := _count_text()
-		if not count.is_empty():
-			lines.append(count)
+		var info := _count_text() if not _side.is_empty() else _area_info()
+		if not info.is_empty():
+			lines.append(info)
 			colors.append(COLOR_COUNT)
 		lines.append("Linksklick: zaubern  ·  Rechtsklick: abbrechen")
 		colors.append(COLOR_HINT)
@@ -484,6 +484,17 @@ func _count_text() -> String:
 	return "1 eigene Einheit" if n == 1 else "%d eigene Einheiten" % n
 
 
+## Gebiet und Beschwörung: was an dieser Stelle entsteht
+func _area_info() -> String:
+	var summon: Dictionary = _def.get("summon", {})
+	if not summon.is_empty():
+		var unit_name := str(DataDB.get_unit_type(str(summon.get("unit", ""))).get("name", "?"))
+		return "%d× %s erscheinen hier" % [int(summon.get("count", 1)), unit_name]
+	if _def.has("zone"):
+		return "Wirkt auf alles im Kreis"
+	return ""
+
+
 ## Zeilen rechts unter dem Mauszeiger; am Bildschirmrand auf die andere Seite
 func _draw_lines(lines: PackedStringArray, colors: Array[Color]) -> void:
 	var font := ThemeDB.fallback_font
@@ -491,7 +502,7 @@ func _draw_lines(lines: PackedStringArray, colors: Array[Color]) -> void:
 	var width := 0.0
 	var height := 0.0
 	for i in lines.size():
-		var fs := FONT_SIZE + (1 if i == 0 else -2)
+		var fs := FONT_SIZE + (2 if i == 0 else -1)
 		sizes.append(fs)
 		width = maxf(width, font.get_string_size(lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x)
 		height += float(fs) * 1.25

@@ -16,6 +16,8 @@ const TIP_TEXT_COLOR := Color(0.95, 0.92, 0.85)
 
 ## Liefert den Tooltip als BBCode (leer = kein Tooltip)
 var tip_source := Callable()
+## Breiteste Tooltipzeile für diesen Button
+var tip_max_width := TIP_MAX_WIDTH
 ## Punkt oben rechts (Aufmerksamkeit)
 var badge_visible := false:
 	set(value):
@@ -42,7 +44,7 @@ func _get_tooltip(_at_position: Vector2) -> String:
 
 
 func _make_custom_tooltip(for_text: String) -> Object:
-	return make_rich_tooltip(for_text)
+	return make_rich_tooltip(for_text, tip_max_width)
 
 
 func _draw() -> void:
@@ -57,8 +59,8 @@ func _draw() -> void:
 
 
 ## RichTextLabel für einen Tooltip aus BBCode. Ohne Zeilenumbruch misst es
-## seine Breite selbst; ist eine Zeile zu lang, wird auf TIP_MAX_WIDTH umgebrochen.
-static func make_rich_tooltip(bbcode: String) -> RichTextLabel:
+## seine Breite selbst; ist eine Zeile zu lang, wird auf max_width umgebrochen.
+static func make_rich_tooltip(bbcode: String, max_width: float = TIP_MAX_WIDTH) -> RichTextLabel:
 	var rtl := RichTextLabel.new()
 	rtl.bbcode_enabled = true
 	rtl.fit_content = true
@@ -69,9 +71,9 @@ static func make_rich_tooltip(bbcode: String) -> RichTextLabel:
 	rtl.add_theme_font_size_override("bold_font_size", TIP_FONT_SIZE)
 	rtl.add_theme_color_override("default_color", TIP_TEXT_COLOR)
 	rtl.text = bbcode
-	if _widest_line(rtl.get_parsed_text()) > TIP_MAX_WIDTH:
+	if _widest_line(rtl.get_parsed_text()) > max_width:
 		rtl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		rtl.custom_minimum_size.x = TIP_MAX_WIDTH
+		rtl.custom_minimum_size.x = max_width
 	return rtl
 
 
@@ -85,13 +87,13 @@ static func _widest_line(plain: String) -> float:
 
 
 ## Text für BBCode entschärfen (eckige Klammern in Namen)
-static func esc(text: String) -> String:
-	return text.replace("[", "[lb]")
+static func esc(plain: String) -> String:
+	return plain.replace("[", "[lb]")
 
 
 ## "[color=#rrggbb]text[/color]"
-static func colored(text: String, color: Color) -> String:
-	return "[color=#%s]%s[/color]" % [color.to_html(false), esc(text)]
+static func colored(plain: String, color: Color) -> String:
+	return "[color=#%s]%s[/color]" % [color.to_html(false), esc(plain)]
 
 
 ## Zahl mit einer Nachkommastelle und Komma (deutsch): 11.4 -> "11,4"

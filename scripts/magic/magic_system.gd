@@ -273,6 +273,12 @@ func get_production_factor(k: Kingdom, pos: Vector2, res_id: String = "") -> flo
 	return get_zone_factor(k, pos, res_id)
 
 
+## Einheiten mit Wirkungen (uid -> Unit) – nur lesen (Darstellung der Auren).
+## Kann bereits gelöschte Einheiten enthalten: vor dem Zugriff is_instance_valid.
+func get_affected_units() -> Dictionary:
+	return _affected
+
+
 ## Laufende Manakosten des Reichs pro Sekunde (aktive Tarnungen usw.)
 func get_upkeep_per_sec(k: Kingdom) -> float:
 	return k.get_upkeep("mana")

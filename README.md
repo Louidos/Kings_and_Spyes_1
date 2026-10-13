@@ -185,7 +185,7 @@ Alle Dateien in `data/` enthalten `_hinweis`-Felder mit Erklärungen. Beispiele:
    zweimal **1** springt mit der Kamera hin.
 6. Armee auswählen, **Rechtsklick auf eine Monsterhöhle** oder ein Monster → Angriff. Bogenschützen
    schiessen Pfeile, Treffer blitzen auf, Gefallene verblassen. Eine zerstörte Höhle gibt Beute und
-   **Kampfpunkte** (Tooltip bei „Truppen“ oben). Bewohner sammeln nicht in der Nähe von Höhlen.
+   **Kampfpunkte** (gekreuzte Schwerter oben neben Mana). Bewohner sammeln nicht in der Nähe von Höhlen.
 7. Verletzte erholen sich nach 5 Sekunden ohne Kampf; **Krankenstation** (heilt in der Nähe) und
    **Heiler** heilen schneller. Die Krankenstation gibt es ab Phase 4 erst nach der Forschung
    *Heilkunde* (Bibliothek bauen, R drücken, Magie Stufe 1).
@@ -207,14 +207,16 @@ ihrer Höhle; man kann sie also auch an die Grenze locken.
 2. **Heilkunde** (Magie, Stufe 1) anklicken: die Kosten werden bezahlt, oben laufen Fortschritt und
    Restzeit, der Button zeigt „Forschung (R) · 45 %“. Bis zu 3 Forschungen einreihen; Klick auf eine
    laufende oder eingereihte bricht sie ab (zweiter Klick bestätigt, volle Erstattung). Ist die
-   Bibliothek untätig, zeigt der Button „Forschung ruht“. Eine zweite Bibliothek forscht 25 % schneller.
+   Bibliothek untätig, zeigt der Button gelb „Forschung ruht“. Eine zweite Bibliothek forscht 25 % schneller.
 3. Nach *Heilkunde*: die **Krankenstation** ist baubar (vorher grau, Tooltip „Benötigt Forschung:
    Heilkunde“) und der Zauber *Heilendes Licht* ist in der Zauberleiste frei. Nach *Ritterorden*
    (Militär 2): Ritter in der Kaserne. Wirkungen wie „+10 % Angriff“ zeigt der Tooltip der Werte im
    Auswahlfenster („Angriff 12 → 13,2 (Waffenschmiede +10 %)“).
-4. **Mana**: Maximum 100 („M 80/100“ oben; voll = gelb, Überschuss geht verloren). **Kampfpunkte**
-   (KP oben) gibt es für besiegte Monster und zerstörte Höhlen. Im Forschungsfenster, Reiter
-   „Kampfpunkte“: *Manakristall* (+40 Maximum je Stufe) und *Manaherz* (die Burg erzeugt Mana).
+4. **Mana**: Maximum 100 („80/100“ oben; voll = gelb, Überschuss geht verloren). **Kampfpunkte**
+   (gekreuzte Schwerter oben, ein Klick öffnet sie) gibt es für besiegte Monster und zerstörte Höhlen.
+   Im Forschungsfenster, Reiter „Kampfpunkte“: *Manakristall* (+40 Maximum je Stufe) und *Manaherz*
+   (die Burg erzeugt Mana). Ist eine Verbesserung bezahlbar, kommt einmal eine Meldung und der
+   Forschungs-Button bekommt einen Punkt.
 5. **Zaubern** (nur der König; stirbt er, ist das Spiel verloren): Zauber in der Leiste anklicken –
    gesperrte zeigen, welche Forschung fehlt. Der Kreis folgt der Maus; erlaubt ist das eigene Gebiet
    und 16 Felder darum (leicht eingefärbt). Neben der Maus steht, wie viele Einheiten getroffen werden.

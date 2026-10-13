@@ -70,9 +70,9 @@ func setup(def: Dictionary, effect_text: String, card_size: Vector2, styles: Dic
 	_effect_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_effect_label.max_lines_visible = 2
 	_effect_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	_effect_label.add_theme_constant_override("line_spacing", -3)
-	_effect_label.position = Vector2(PAD, PAD + 20.0)
-	_effect_label.size = Vector2(card_size.x - PAD * 2.0, 36.0)
+	_effect_label.add_theme_constant_override("line_spacing", -2)
+	_effect_label.position = Vector2(PAD, PAD + 19.0)
+	_effect_label.size = Vector2(card_size.x - PAD * 2.0, 42.0)
 	_effect_label.text = effect_text
 
 	_cost_box = HBoxContainer.new()
@@ -93,9 +93,9 @@ func setup(def: Dictionary, effect_text: String, card_size: Vector2, styles: Dic
 			gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			_cost_box.add_child(gap)
 		first = false
-		var icon := ResourceIcon.new()
-		icon.setup(res_id, ICON_SIZE)
-		_cost_box.add_child(icon)
+		var res_icon := ResourceIcon.new()
+		res_icon.setup(res_id, ICON_SIZE)
+		_cost_box.add_child(res_icon)
 		var label := _make_label(SMALL_FONT_SIZE, COLOR_TEXT, false)
 		label.text = str(ceili(amount))
 		_cost_box.add_child(label)

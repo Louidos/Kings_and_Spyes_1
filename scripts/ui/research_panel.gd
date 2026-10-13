@@ -28,8 +28,8 @@ const MARGIN_Y := 12.0
 const REFRESH_INTERVAL := 0.25
 ## Zweiter Klick innerhalb dieser Zeit bricht ab
 const CONFIRM_MS := 2000
-const CARD_HEIGHT := 98.0
-const ROW_GAP := 24.0
+const CARD_HEIGHT := 102.0
+const ROW_GAP := 22.0
 const COL_GAP := 16.0
 const SLOT_GAP := 8.0
 const HEADER_HEIGHT := 30.0
@@ -154,6 +154,8 @@ var _queue_title: Label
 var _chips: HBoxContainer
 var _progress: ProgressBar
 var _hint: Label
+var _hint_row: HBoxContainer
+var _build_button: Button
 var _tree_page: Control
 var _points_page: VBoxContainer
 var _canvas: TreeCanvas
@@ -347,9 +349,9 @@ func _build() -> void:
 	_chips.add_theme_constant_override("separation", 5)
 	status_row.add_child(_chips)
 
-	# Fortschritt bzw. Hinweis ohne Forschungsstätte (gleicher Platz)
+	# Fortschritt bzw. Hinweis ohne Forschungsstätte (gleicher Platz, gleiche Höhe)
 	var bar_row := MarginContainer.new()
-	bar_row.custom_minimum_size = Vector2(0, 22)
+	bar_row.custom_minimum_size = Vector2(0, 32)
 	bar_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(bar_row)
 	_progress = ProgressBar.new()
@@ -362,9 +364,20 @@ func _build() -> void:
 	_progress.add_theme_stylebox_override("background", _flat(Color(0.04, 0.05, 0.08, 0.9), Color(1, 1, 1, 0.14), 1, 3))
 	_progress.add_theme_stylebox_override("fill", _flat(ResearchCard.COLOR_ACTIVE, ResearchCard.COLOR_ACTIVE.lightened(0.3), 0, 3))
 	bar_row.add_child(_progress)
+	_hint_row = HBoxContainer.new()
+	_hint_row.add_theme_constant_override("separation", 14)
+	_hint_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_hint_row.visible = false
+	bar_row.add_child(_hint_row)
 	_hint = _label(18, COLOR_WARN)
-	_hint.visible = false
-	bar_row.add_child(_hint)
+	_hint_row.add_child(_hint)
+	_build_button = Button.new()
+	_build_button.focus_mode = Control.FOCUS_NONE
+	_build_button.add_theme_font_size_override("font_size", 16)
+	_build_button.custom_minimum_size = Vector2(0, 30)
+	_build_button.tooltip_text = "Bauvorschau starten (Fenster schliesst sich)"
+	_build_button.pressed.connect(_on_build_research_building)
+	_hint_row.add_child(_build_button)
 
 	# Seiten
 	var pages := MarginContainer.new()
@@ -663,7 +676,7 @@ func _show_tab(tab: String) -> void:
 	_tree_page.visible = not points
 	_points_page.visible = points
 	_footer.text = ("Verbesserungen wirken sofort und dauerhaft  ·  R / Esc: schliessen" if points else
-			"Klick: erforschen (Kosten sofort)  ·  Klick auf laufende/eingereihte: abbrechen, alles zurück  ·  R / Esc: schliessen")
+			"Klick: erforschen bzw. abbrechen (Kosten zurück)  ·  R / Esc: schliessen")
 	_confirm_id = ""
 	if visible:
 		_refresh()
@@ -723,10 +736,13 @@ func _refresh_header(k: Kingdom) -> void:
 		color = COLOR_DIM
 	_set_text(_status, text, color)
 	var no_building := buildings == 0
-	_hint.visible = no_building
+	_hint_row.visible = no_building
 	_progress.visible = not no_building
 	if no_building:
 		_set_text(_hint, "Baue %s %s (Baumenü), um zu forschen." % [_article(bname), bname], COLOR_WARN)
+		var label := "%s bauen" % bname
+		if _build_button.text != label:
+			_build_button.text = label
 	_progress.value = ratio if not active.is_empty() else 0.0
 	_set_text(_speed, "%d × %s  ·  Tempo %d %%" % [buildings, bname, roundi(rs.get_speed(k) * 100.0)]
 			if buildings > 0 else "Keine Forschungsstätte – %s im Baumenü" % bname, COLOR_DIM)
@@ -939,6 +955,16 @@ func _ask_cancel(rid: String) -> void:
 	_refresh()
 
 
+## "Bibliothek bauen": Bauvorschau der Forschungsstätte starten, Fenster schliessen
+func _on_build_research_building() -> void:
+	for d in DataDB.buildings:
+		var def: Dictionary = d
+		if bool(def.get("research", false)) and bool(def.get("player_buildable", false)):
+			close()
+			game.placement.start(def)
+			return
+
+
 func _on_upgrade_pressed(uid: String) -> void:
 	var k: Kingdom = game.player
 	var rs: ResearchSystem = game.research_system
@@ -962,7 +988,7 @@ func _on_upgrade_pressed(uid: String) -> void:
 func _card_effect_text(k: Kingdom, def: Dictionary) -> String:
 	var parts: PackedStringArray = []
 	var unlocks: PackedStringArray = []
-	for line in game.research_system.describe_effects(k, str(def.get("id", ""))):
+	for line in effect_lines(k, str(def.get("id", ""))):
 		var s := str(line)
 		if s.begins_with("Schaltet frei: "):
 			unlocks.append(s.trim_prefix("Schaltet frei: "))
@@ -971,6 +997,34 @@ func _card_effect_text(k: Kingdom, def: Dictionary) -> String:
 	if not unlocks.is_empty():
 		parts.insert(0, "Neu: " + ", ".join(unlocks))
 	return ", ".join(parts)
+
+
+## Wirkungen einer Forschung (describe_effects). Rollen-Modifikatoren wie
+## "armor@combat" beschreibt DataDB.describe_modifier noch nicht lesbar
+## ("+30 % armor@combat") – diese Zeilen hier selbst bilden: "Rüstung ×1,3 (alle Truppen)".
+func effect_lines(k: Kingdom, rid: String) -> PackedStringArray:
+	var lines: PackedStringArray = game.research_system.describe_effects(k, rid)
+	var effects: Array = DataDB.get_research(rid).get("effects", [])
+	if lines.size() != effects.size():
+		return lines
+	for i in effects.size():
+		var e: Dictionary = effects[i]
+		var key := str(e.get("key", ""))
+		if str(e.get("type", "")) == "modifier" and key.contains("@") and lines[i].contains("@"):
+			lines[i] = describe_role_modifier(key, float(e.get("factor", 1.0)))
+	return lines
+
+
+const _ROLE_NAMES := {"combat": "alle Truppen", "worker": "Bewohner", "support": "Heiler",
+	"king": "König", "monster": "Monster"}
+
+
+## "armor@combat" ×1.3 -> "Rüstung ×1,3 (alle Truppen)"
+static func describe_role_modifier(key: String, factor: float) -> String:
+	var parts := key.split("@", true, 1)
+	var role := str(_ROLE_NAMES.get(parts[1], parts[1])) if parts.size() > 1 else ""
+	var text := DataDB.describe_modifier(parts[0], factor)
+	return text + (" (%s)" % role if not role.is_empty() else "")
 
 
 ## Tooltip einer Forschung (BBCode): Beschreibung, alle Wirkungen, Kosten,
@@ -990,7 +1044,7 @@ func _card_tip(rid: String) -> String:
 	var desc := str(def.get("description", ""))
 	if not desc.is_empty():
 		lines.append(tip.esc(desc))
-	for e in rs.describe_effects(k, rid):
+	for e in effect_lines(k, rid):
 		lines.append("• " + tip.colored(str(e), Color(0.72, 0.9, 1.0)))
 	var cost: Dictionary = def.get("cost", {})
 	lines.append("Kosten: " + tip.esc(DataDB.cost_to_text(cost)))

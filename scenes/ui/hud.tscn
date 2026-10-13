@@ -30,7 +30,7 @@ grow_horizontal = 2
 
 [node name="HBox" type="HBoxContainer" parent="Root/TopBar"]
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 12
 
 [node name="KingdomLabel" type="Label" parent="Root/TopBar/HBox"]
 unique_name_in_owner = true
@@ -42,13 +42,13 @@ vertical_alignment = 1
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 22
+theme_override_constants/separation = 12
 alignment = 1
 script = ExtResource("3_resbar")
 
 [node name="DateLabel" type="Label" parent="Root/TopBar/HBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(170, 0)
+custom_minimum_size = Vector2(132, 0)
 layout_mode = 2
 text = "Tag 1  ·  08:00"
 horizontal_alignment = 1
