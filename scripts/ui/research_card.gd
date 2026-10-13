@@ -33,6 +33,8 @@ var state := ""
 var queue_pos := 0
 var progress := 0.0
 var confirming := false
+## Text beim Bestätigen des Abbrechens (das Fenster nennt mit abgebrochene Folgeforschungen)
+var confirm_text := "Nochmal klicken: abbrechen (Kosten zurück)"
 
 var _name_label: Label
 var _corner_label: Label
@@ -144,7 +146,7 @@ func apply(p_state: String, p_queue_pos: int, p_progress: float, p_confirming: b
 		_layout_top_row()
 	_set_color(_corner_label, COLOR_ACTIVE.lightened(0.3) if state == "active" else (COLOR_LOCKED if locked else COLOR_DIM))
 	# Wirkungszeile: beim Bestätigen der Hinweis zum Abbrechen
-	var effect := "Nochmal klicken: abbrechen (Kosten zurück)" if confirming else _effect_text
+	var effect := confirm_text if confirming else _effect_text
 	if _effect_label.text != effect:
 		_effect_label.text = effect
 	_set_color(_effect_label, COLOR_CONFIRM if confirming else (COLOR_LOCKED if locked else COLOR_DIM))

@@ -220,7 +220,8 @@ func _on_research_state_changed(k: Kingdom) -> void:
 		_refresh_research_button()
 
 
-## Button oben: "Forschung (R) · 45 %" (mit Strich), gelb "Forschung ruht (R)",
+## Button oben: "Forschung (R) · 45 %" (mit Strich), gelb "Forschung ruht (R)"
+## bzw. "Forschung angehalten (R)" (keine fertige Forschungsstätte),
 ## Punkt, wenn eine Kampfpunkt-Verbesserung bezahlbar ist
 func _refresh_research_button() -> void:
 	var k: Kingdom = game.player
@@ -229,8 +230,13 @@ func _refresh_research_button() -> void:
 	var text := "Forschung (R)"
 	var idle := false
 	if not active.is_empty():
-		text = "Forschung (R) · %d %%" % floori(rs.get_progress_ratio(k) * 100.0)
 		_research_button.underline_ratio = rs.get_progress_ratio(k)
+		if rs.get_speed(k) <= 0.0:
+			# Keine fertige Forschungsstätte mehr: Forschung steht still
+			text = "Forschung angehalten (R) · %d %%" % floori(rs.get_progress_ratio(k) * 100.0)
+			idle = true
+		else:
+			text = "Forschung (R) · %d %%" % floori(rs.get_progress_ratio(k) * 100.0)
 	else:
 		_research_button.underline_ratio = -1.0
 		idle = rs.count_research_buildings(k) > 0
@@ -268,6 +274,10 @@ func _research_button_tip() -> String:
 			lines.append("Danach: " + tip.esc(", ".join(names)))
 	elif rs.count_research_buildings(k) > 0:
 		lines.append(tip.colored("Forschung ruht – wähle eine Forschung im Fenster.", COLOR_RESEARCH_IDLE))
+	elif rs.get_research_site(k) != null:
+		var site := rs.get_research_site(k)
+		lines.append(tip.colored("%s wird gebaut – %d %%. Danach kannst du forschen." % [site.get_display_name(),
+				floori(site.get_progress_ratio() * 100.0)], COLOR_RESEARCH_IDLE))
 	else:
 		var bname := rs.get_research_building_name(k)
 		lines.append(tip.colored("Zum Forschen brauchst du: %s (Baumenü)" % bname, COLOR_RESEARCH_IDLE))

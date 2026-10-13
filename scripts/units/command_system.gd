@@ -46,6 +46,11 @@ const GROUP_RADIUS_TILES := 12.0
 const MARCH_MIN_TILES := 10.0
 ## Folgende Einheiten passen ihr Ziel alle so viele Takte an
 const FOLLOW_TICKS := 5
+## Gruppenmarsch: ab so vielen Kacheln Rückstand wartet der Anführer (geht
+## langsamer), bis alle wieder so nah sind; Tempo des Anführers dabei
+const CATCH_UP_START := 8.0
+const CATCH_UP_END := 4.0
+const CATCH_UP_SPEED := 0.5
 
 var game: Node
 var world: WorldData
@@ -337,7 +342,8 @@ func _start_march(list: Array, slots: Array, dest: Vector2) -> void:
 			unit_system.move_to(list[i], slots[i])
 		return
 	var leader: Unit = list[leader_i]
-	var march := {"leader": leader, "members": [], "command": leader.command, "order": leader.order_id}
+	var march := {"leader": leader, "members": [], "command": leader.command, "order": leader.order_id,
+			"slowest": slowest, "slow": false}
 	leader.speed_cap = slowest
 	unit_system.move_to(leader, slots[leader_i])
 	for i in list.size():
@@ -384,6 +390,8 @@ func _on_sim_tick(_dt: float) -> void:
 			leader.speed_cap = 0.0
 			_marches.erase(id)
 			continue
+		if _tick_count % FOLLOW_TICKS == 0:
+			_pace_leader(march, leader, members)
 		# Folgende passen ihr Ziel an (verteilt über mehrere Takte)
 		var ahead: Vector2 = _leader_heading(leader) * leader.speed * world.tile_size * 0.5
 		for m in members:
@@ -406,9 +414,29 @@ func _promote_leader(march: Dictionary) -> Variant:
 		m.follow_leader = new_leader
 		m.follow_offset = m.command_pos - new_leader.command_pos
 	march["leader"] = new_leader
-	new_leader.speed_cap = members[0].speed_cap if not members.is_empty() else 0.0
+	new_leader.speed_cap = float(march.get("slowest", 0.0)) if not members.is_empty() else 0.0
 	unit_system.move_to(new_leader, new_leader.command_pos)
 	return new_leader
+
+
+## Aufholen: Folgende haben dasselbe Höchsttempo wie der Anführer und holen
+## einen Rückstand (z. B. durch Wald, Hügel oder einen Kampf unterwegs) sonst nie
+## auf. Fällt jemand mehr als CATCH_UP_START Kacheln zurück, geht der Anführer
+## halb so schnell, bis alle wieder höchstens CATCH_UP_END Kacheln entfernt sind.
+func _pace_leader(march: Dictionary, leader: Unit, members: Array) -> void:
+	var ts := float(world.tile_size)
+	var max_gap := 0.0
+	for m in members:
+		if m.target == null:
+			max_gap = maxf(max_gap, m.position.distance_to(leader.position + m.follow_offset))
+	var slow := bool(march.get("slow", false))
+	if not slow and max_gap > CATCH_UP_START * ts:
+		slow = true
+	elif slow and max_gap < CATCH_UP_END * ts:
+		slow = false
+	march["slow"] = slow
+	var slowest := float(march.get("slowest", leader.speed_cap))
+	leader.speed_cap = slowest * (CATCH_UP_SPEED if slow else 1.0)
 
 
 func _leader_heading(leader: Unit) -> Vector2:

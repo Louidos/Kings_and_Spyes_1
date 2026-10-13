@@ -912,7 +912,7 @@ func _fill_stats(u: Unit) -> void:
 		pairs.append(["Heilung", "%s/s" % ResourceBar.format_number(u.heal), _trend(u, "heal", u.heal)])
 	else:
 		pairs.append(["Angriff", ResourceBar.format_number(u.attack), _trend(u, "attack", u.attack)])
-	pairs.append(["Rüstung", "%d %%" % roundi(u.armor * 100.0), _trend(u, "armor", u.armor)])
+	pairs.append(["Rüstung", _stat_value(u.armor, true, ""), _trend(u, "armor", u.armor)])
 	if u.can_heal():
 		pairs.append(["Reichweite", _range_text(u.heal_range), _trend(u, "heal_range", u.heal_range)])
 	else:
@@ -931,7 +931,11 @@ func _fill_stats(u: Unit) -> void:
 	if u.can_heal():
 		tip.append("Heilung: %s Leben pro Sekunde im Umkreis von %s Feldern" % [_num(u.heal),
 				_num(u.heal_range)])
-	tip.append("Rüstung: %d %% weniger Schaden" % roundi(u.armor * 100.0))
+	# Ein Fluch kann die Rüstung unter 0 drücken: dann nimmt die Einheit mehr Schaden
+	if u.armor < -0.005:
+		tip.append("Rüstung: %d %% mehr Schaden" % roundi(-u.armor * 100.0))
+	else:
+		tip.append("Rüstung: %d %% weniger Schaden" % roundi(u.armor * 100.0))
 	tip.append("Reichweite: %s Felder" % _num(u.attack_range))
 	tip.append("Tempo: %s Felder pro Sekunde" % _num(u.speed))
 	if u.aggro_range > 0.0:
@@ -1003,7 +1007,8 @@ func _stat_source_line(u: Unit, key: String, label: String, value: float, as_per
 
 static func _stat_value(v: float, as_percent: bool, unit_suffix: String) -> String:
 	if as_percent:
-		return "%d %%" % roundi(v * 100.0)
+		# Typografisches Minus wie in den übrigen Texten
+		return ("%d %%" % roundi(v * 100.0)).replace("-", "−")
 	return _num(v) + unit_suffix
 
 

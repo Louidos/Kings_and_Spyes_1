@@ -72,6 +72,10 @@ func can_start(k: Kingdom, id: String) -> String:
 	if k.research_queue.size() >= QUEUE_LIMIT:
 		return "Warteschlange voll (%d)" % QUEUE_LIMIT
 	if count_research_buildings(k) == 0:
+		var site := get_research_site(k)
+		if site != null:
+			return "%s wird noch gebaut (%d %%) – danach kannst du forschen" % [
+					site.get_display_name(), floori(site.get_progress_ratio() * 100.0)]
 		return "Baue zuerst eine Forschungsstätte (%s)" % get_research_building_name(k)
 	return k.missing_text(def.get("cost", {}))
 
@@ -91,6 +95,14 @@ func get_research_building_name(k: Kingdom) -> String:
 		if bool(def.get("research", false)):
 			return DataDB.get_building_name(def, k.faction_id)
 	return "Forschungsstätte"
+
+
+## Eine noch nicht fertige Forschungsstätte (Baustelle) des Reichs, sonst null
+func get_research_site(k: Kingdom) -> Building:
+	for b in k.buildings:
+		if not b.constructed and bool(b.def.get("research", false)):
+			return b
+	return null
 
 
 func get_active(k: Kingdom) -> String:
@@ -161,14 +173,13 @@ func start(k: Kingdom, id: String) -> bool:
 	return true
 
 
-## Bricht eine eingereihte oder laufende Forschung ab (volle Erstattung).
-## Forschungen in der Warteschlange, die darauf aufbauen, werden mit abgebrochen.
-func cancel(k: Kingdom, id: String) -> void:
-	var i := k.research_queue.find(id)
-	if i < 0:
-		return
+## Forschungen, die cancel(k, id) zusammen abbrechen würde: id selbst und alle
+## eingereihten, die (auch über Zwischenschritte) darauf aufbauen. Leer, wenn
+## id nicht in der Warteschlange ist. Auch für die Anzeige vor dem Abbrechen.
+func get_cancel_set(k: Kingdom, id: String) -> Array:
+	if not k.research_queue.has(id):
+		return []
 	var to_cancel: Array = [id]
-	# Abhängige (später eingereihte) mitnehmen
 	var changed := true
 	while changed:
 		changed = false
@@ -180,8 +191,17 @@ func cancel(k: Kingdom, id: String) -> void:
 					to_cancel.append(qid)
 					changed = true
 					break
+	return to_cancel
+
+
+## Bricht eine eingereihte oder laufende Forschung ab (volle Erstattung).
+## Forschungen in der Warteschlange, die darauf aufbauen, werden mit abgebrochen.
+func cancel(k: Kingdom, id: String) -> void:
+	var i := k.research_queue.find(id)
+	if i < 0:
+		return
 	var was_active := i == 0
-	for cid in to_cancel:
+	for cid in get_cancel_set(k, id):
 		k.refund(DataDB.get_research(str(cid)).get("cost", {}))
 		k.research_queue.erase(cid)
 	if was_active:

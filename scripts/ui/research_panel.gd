@@ -734,18 +734,29 @@ func _refresh_header(k: Kingdom) -> void:
 	else:
 		text = "Keine Forschungsstätte"
 		color = COLOR_DIM
+	# Eine Forschungsstätte im Bau: nicht zum Bau einer zweiten auffordern
+	var site: Building = rs.get_research_site(k) if buildings == 0 else null
+	if site != null and active.is_empty():
+		text = "%s wird gebaut – %d %%" % [site.get_display_name(), floori(site.get_progress_ratio() * 100.0)]
+		color = COLOR_WARN
 	_set_text(_status, text, color)
 	var no_building := buildings == 0
 	_hint_row.visible = no_building
 	_progress.visible = not no_building
 	if no_building:
-		_set_text(_hint, "Baue %s %s (Baumenü), um zu forschen." % [_article(bname), bname], COLOR_WARN)
+		if site != null:
+			_set_text(_hint, "Sobald %s fertig ist, kannst du forschen." % site.get_display_name(), COLOR_WARN)
+		else:
+			_set_text(_hint, "Baue %s %s (Baumenü), um zu forschen." % [_article(bname), bname], COLOR_WARN)
+		_build_button.visible = site == null
 		var label := "%s bauen" % bname
 		if _build_button.text != label:
 			_build_button.text = label
 	_progress.value = ratio if not active.is_empty() else 0.0
-	_set_text(_speed, "%d × %s  ·  Tempo %d %%" % [buildings, bname, roundi(rs.get_speed(k) * 100.0)]
-			if buildings > 0 else "Keine Forschungsstätte – %s im Baumenü" % bname, COLOR_DIM)
+	var speed_text := "%d × %s  ·  Tempo %d %%" % [buildings, bname, roundi(rs.get_speed(k) * 100.0)]
+	if buildings == 0:
+		speed_text = "%s im Bau" % bname if site != null else "Keine Forschungsstätte – %s im Baumenü" % bname
+	_set_text(_speed, speed_text, COLOR_DIM)
 	_refresh_chips(k)
 
 
@@ -806,7 +817,12 @@ func _refresh_tree(k: Kingdom) -> void:
 		if st != card.state:
 			links_changed = true
 		var pos := k.research_queue.find(rid) + 1
-		card.apply(st, pos, ratio if st == "active" else 0.0, str(rid) == _confirm_id, k)
+		var confirming := str(rid) == _confirm_id
+		if confirming:
+			var also := _dependant_names(k, str(rid))
+			card.confirm_text = "Nochmal klicken: abbrechen (Kosten zurück)" if also.is_empty() \
+					else "Nochmal klicken: abbrechen, auch %s" % also
+		card.apply(st, pos, ratio if st == "active" else 0.0, confirming, k)
 	for bid in _branch_labels:
 		var ids: Array = _branch_ids.get(bid, [])
 		var done := 0
@@ -947,8 +963,12 @@ func _ask_cancel(rid: String) -> void:
 	if _confirm_id == rid and now - _confirm_ms <= CONFIRM_MS:
 		_confirm_id = ""
 		if k.research_queue.has(rid):
+			# Alle nennen, die mit abgebrochen werden (Folgeforschungen in der Warteschlange)
+			var names: PackedStringArray = []
+			for cid in game.research_system.get_cancel_set(k, rid):
+				names.append(str(DataDB.get_research(str(cid)).get("name", cid)))
 			game.research_system.cancel(k, rid)
-			Notify.info("Forschung abgebrochen: %s – Kosten erstattet" % str(DataDB.get_research(rid).get("name", rid)))
+			Notify.info("Forschung abgebrochen: %s – Kosten erstattet" % ", ".join(names))
 	else:
 		_confirm_id = rid
 		_confirm_ms = now
@@ -1078,9 +1098,13 @@ func _card_tip(rid: String) -> String:
 			var rest := "angehalten – keine Forschungsstätte" if remaining == INF else "noch %d s" % ceili(remaining)
 			lines.append(tip.colored("Wird erforscht: %d %% – %s" % [floori(rs.get_progress_ratio(k) * 100.0), rest], ResearchCard.COLOR_ACTIVE))
 			lines.append(tip.colored("Klick: abbrechen – Kosten werden erstattet", COLOR_DIM))
+			if not _dependant_names(k, rid).is_empty():
+				lines.append(tip.colored("Bricht auch ab: " + _dependant_names(k, rid), COLOR_WARN))
 		"queued":
 			lines.append(tip.colored("In der Warteschlange (Platz %d)" % (k.research_queue.find(rid) + 1), ResearchCard.COLOR_QUEUED))
 			lines.append(tip.colored("Klick: abbrechen – Kosten werden erstattet", COLOR_DIM))
+			if not _dependant_names(k, rid).is_empty():
+				lines.append(tip.colored("Bricht auch ab: " + _dependant_names(k, rid), COLOR_WARN))
 		_:
 			var reason := rs.can_start(k, rid)
 			if reason.is_empty():
@@ -1093,8 +1117,20 @@ func _card_tip(rid: String) -> String:
 
 func _chip_tip(rid: String) -> String:
 	var rname := str(DataDB.get_research(rid).get("name", rid))
-	return "[b]%s[/b]\nAbbrechen – Kosten werden erstattet\n%s" % [ResearchTipButton.esc(rname),
-			ResearchTipButton.colored("Zum Bestätigen zweimal klicken", COLOR_DIM)]
+	var text := "[b]%s[/b]\nAbbrechen – Kosten werden erstattet" % ResearchTipButton.esc(rname)
+	var also := _dependant_names(game.player, rid)
+	if not also.is_empty():
+		text += "\n" + ResearchTipButton.colored("Bricht auch ab: " + also, COLOR_WARN)
+	return text + "\n" + ResearchTipButton.colored("Zum Bestätigen zweimal klicken", COLOR_DIM)
+
+
+## Namen der eingereihten Forschungen, die beim Abbrechen von rid mit abgebrochen würden
+func _dependant_names(k: Kingdom, rid: String) -> String:
+	var names: PackedStringArray = []
+	for cid in game.research_system.get_cancel_set(k, rid):
+		if str(cid) != rid:
+			names.append(str(DataDB.get_research(str(cid)).get("name", cid)))
+	return ", ".join(names)
 
 
 func _upgrade_tip(uid: String) -> String:

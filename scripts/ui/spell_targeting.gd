@@ -8,9 +8,10 @@
 ## - Der erlaubte Bereich (eigenes Gebiet + Zauberreichweite davor) ist schwach
 ##   in der Zauberfarbe eingefärbt. Er wird nur bei Gebiets- oder
 ##   Reichweitenänderung neu berechnet, nie pro Bild.
-## - Linksklick zaubert und beendet den Modus (Umschalt: bleibt aktiv, solange
-##   der Zauber gleich wieder bereit ist); geht es nicht, erscheint der Grund
-##   als Meldung und der Modus bleibt.
+## - Linksklick zaubert und beendet den Modus (jeder Zauber hat danach eine
+##   Abklingzeit); geht es nicht, erscheint der Grund als Meldung und der Modus
+##   bleibt. Der zweite Klick eines Doppelklicks auf das Ziel wird ebenfalls
+##   verbraucht, damit er die Auswahl nicht ändert.
 ## - Rechtsklick oder Esc (über Game) bricht ab, Bauen beendet den Modus.
 ## Der Knoten ist das letzte Kind von Game: sein _unhandled_input kommt vor
 ## Auswahl und Bauvorschau dran, die Mausklicks werden hier verbraucht – die
@@ -46,6 +47,8 @@ const AREA_LINE_ALPHA := 0.7
 const AREA_LINE_PX := 2.0
 ## Ring um getroffene Einheiten (Weltpixel)
 const TARGET_RING := 17.0
+## So lange nach dem Zaubern wird der zweite Klick eines Doppelklicks verbraucht (ms)
+const DOUBLE_CLICK_GUARD_MSEC := 500
 
 var game: Node
 var spell_id := ""
@@ -58,6 +61,8 @@ var _color := Color.WHITE
 var _side := ""
 ## Grund von can_cast an der Mausposition ("" = möglich)
 var _reason := ""
+## Zeitpunkt des letzten erfolgreichen Zauberns (Time.get_ticks_msec)
+var _cast_end_msec := -100000
 ## Wirkungskreis in Kacheln (nach Forschung, aus get_cast_params)
 var _radius_tiles := 1.0
 ## Einheiten, die der Zauber an der Mausposition träfe (nur zum Zeichnen,
@@ -202,9 +207,14 @@ func _input(event: InputEvent) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not is_active():
-		return
 	var mb := event as InputEventMouseButton
+	if not is_active():
+		# Zweiter Klick eines Doppelklicks direkt nach dem Zaubern: verbrauchen,
+		# sonst wählt die Auswahl alle Einheiten dieses Typs (oder hebt sie auf)
+		if mb != null and mb.pressed and mb.double_click and mb.button_index == MOUSE_BUTTON_LEFT \
+				and Time.get_ticks_msec() - _cast_end_msec < DOUBLE_CLICK_GUARD_MSEC:
+			get_viewport().set_input_as_handled()
+		return
 	if mb == null:
 		return
 	if mb.button_index == MOUSE_BUTTON_LEFT:
@@ -213,14 +223,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		if mb.pressed:
 			_mouse_screen = mb.position
 			_mouse_seen = true
-			_try_cast(_screen_to_world(mb.position), mb.shift_pressed)
+			_try_cast(_screen_to_world(mb.position))
 	elif mb.button_index == MOUSE_BUTTON_RIGHT:
 		get_viewport().set_input_as_handled()
 		if mb.pressed:
 			cancel()
 
 
-func _try_cast(pos: Vector2, keep: bool) -> void:
+func _try_cast(pos: Vector2) -> void:
 	var k: Kingdom = game.player
 	var ms: MagicSystem = game.magic_system
 	var reason := ms.can_cast(k, spell_id, pos)
@@ -232,12 +242,8 @@ func _try_cast(pos: Vector2, keep: bool) -> void:
 	if not ms.cast(k, spell_id, pos):
 		Notify.warning("Der Zauber ist misslungen.")
 		return
-	# Umschalt: weiter zielen – aber nur, wenn der Zauber gleich wieder geht
-	# (sonst stünde nur ein roter Kreis mit der Abklingzeit da)
-	if keep and ms.can_cast_now(k, spell_id).is_empty():
-		_check(true)
-	else:
-		cancel()
+	_cast_end_msec = Time.get_ticks_msec()
+	cancel()
 
 
 func _update_mouse() -> void:
