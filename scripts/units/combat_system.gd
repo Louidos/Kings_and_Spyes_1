@@ -243,6 +243,12 @@ func _on_sim_tick(dt: float) -> void:
 					_regroup(u)
 			if u.target == null:
 				continue
+		# Getarnte kämpfen nur auf Angriffsbefehl oder im Angriffsmarsch weiter
+		# (sonst würde der erste Schlag die eben gewirkte Tarnung wieder aufheben)
+		if u.stealthed and u.command != "attack" and u.command != "attack_move":
+			u.target = null
+			u.regroup_pending = true
+			continue
 		u.regroup_pending = false
 		_engage(u)
 	if _tick_count % 2 == 0:
@@ -383,7 +389,13 @@ func _chase_point(u: Unit, t: Object) -> Vector2:
 	if dir.length() < 1.0:
 		dir = Vector2.RIGHT.rotated(_rng.randf() * TAU)
 	var reach := u.attack_range * _ts
-	return t.position + dir.normalized() * minf(reach * 0.7 + t.get_radius(), dir.length())
+	var p: Vector2 = t.position + dir.normalized() * minf(reach * 0.7 + t.get_radius(), dir.length())
+	# Steht das Ziel direkt hinter einem Hindernis, liegt der Punkt davor im
+	# Hindernis – dann direkt zum Ziel laufen (sonst bleibt der Angreifer stehen)
+	var pc := world.world_to_cell(p)
+	if not world.in_bounds(pc) or game.nav.is_solid(pc):
+		return t.position
+	return p
 
 
 ## Ein Angriff: Schaden sofort, Fernkampf zeigt zusätzlich ein Geschoss.

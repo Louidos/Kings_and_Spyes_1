@@ -51,6 +51,12 @@ var _ts := 64.0
 var _zone_timer := 0.0
 ## Einheiten mit Wirkungen (uid -> Unit), nur diese werden geprüft
 var _affected: Dictionary = {}
+## Früheste Ablaufzeit je Einheit (uid -> Spielzeit; kann zu früh sein, dann wird neu gerechnet)
+var _due: Dictionary = {}
+## Früheste Ablaufzeit überhaupt: davor muss _tick_effects nichts ablaufen lassen
+var _next_due := INF
+## Einheiten mit Lebenspunkten pro Sekunde (uid -> Unit)
+var _hp_units: Dictionary = {}
 ## Beschworene Einheiten mit Ablaufzeit (uid -> Unit)
 var _temporary: Dictionary = {}
 
@@ -320,10 +326,21 @@ func add_unit_effect(u: Unit, effect: Dictionary, refresh: bool = true) -> bool:
 		existing["ref"] = effect.get("ref", existing.get("ref", 0))
 		return false
 	u.effects.append(effect)
-	_affected[u.uid] = u
+	_track(u, effect)
 	if refresh:
 		u.refresh_stats()
 	return true
+
+
+## Merkt sich Ablaufzeit und Lebenspunkt-Wirkung einer neuen Wirkung
+func _track(u: Unit, effect: Dictionary) -> void:
+	_affected[u.uid] = u
+	var until := float(effect.get("until", -1.0))
+	if until >= 0.0:
+		_due[u.uid] = minf(float(_due.get(u.uid, INF)), until)
+		_next_due = minf(_next_due, until)
+	if str(effect.get("key", "")) == "hp_per_sec":
+		_hp_units[u.uid] = u
 
 
 ## Entfernt Wirkungen einer Quelle ("spell:<id>"); mit ref nur die eines Gebiets/einer Tarnung.
@@ -341,11 +358,14 @@ func remove_unit_effects(u: Unit, source: String, ref: int = -1) -> void:
 ## Nach dem Laden (Phase 10): Zwischenspeicher aus dem gespeicherten Zustand neu aufbauen
 func rebuild_runtime() -> void:
 	_affected.clear()
+	_due.clear()
+	_hp_units.clear()
+	_next_due = INF
 	_temporary.clear()
 	for u in game.unit_system.units:
 		u.refresh_stats()
-		if not u.effects.is_empty():
-			_affected[u.uid] = u
+		for e in u.effects:
+			_track(u, e)
 		if u.expires_at >= 0.0:
 			_temporary[u.uid] = u
 	for v in veils:
@@ -402,38 +422,68 @@ func _on_sim_tick(dt: float) -> void:
 		_tick_veils(now)
 
 
-## Abgelaufene Wirkungen entfernen, Lebenspunkte pro Sekunde anwenden
-## (hp_per_sec: positiv = Heilung, negativ = Schaden)
+## Lebenspunkte pro Sekunde anwenden (hp_per_sec: positiv = Heilung, negativ =
+## Schaden) und abgelaufene Wirkungen entfernen. Geprüft werden nur Einheiten mit
+## hp_per_sec und – erst ab der frühesten Ablaufzeit – die mit fälligen Wirkungen.
 func _tick_effects(dt: float, now: float) -> void:
-	for uid in _affected.keys():
-		var u: Variant = _affected[uid]
+	for uid in _hp_units.keys():
+		var u: Variant = _hp_units[uid]
 		if not is_instance_valid(u) or not u.is_alive():
-			_affected.erase(uid)
+			_hp_units.erase(uid)
 			continue
-		var expired := false
 		var hp_rate := 0.0
+		var found := false
 		var damage_kingdom: Kingdom = null
 		for e in u.effects:
-			var until := float(e.get("until", -1.0))
-			if until >= 0.0 and until <= now:
-				expired = true
-			elif str(e.get("key", "")) == "hp_per_sec":
+			if str(e.get("key", "")) == "hp_per_sec":
+				found = true
 				var add := float(e.get("add", 0.0))
 				hp_rate += add
 				if add < 0.0:
 					damage_kingdom = game.get_kingdom(int(e.get("kingdom_id", -1)))
-		if hp_rate > 0.0 and u.hp < u.max_hp:
+		if not found:
+			_hp_units.erase(uid)
+		elif hp_rate > 0.0 and u.hp < u.max_hp:
 			game.combat_system.heal_unit(u, hp_rate * dt)
 		elif hp_rate < 0.0:
 			game.combat_system.apply_damage(u, -hp_rate * dt, null, damage_kingdom, "spell")
-		if expired:
-			for i in range(u.effects.size() - 1, -1, -1):
-				var until := float(u.effects[i].get("until", -1.0))
-				if until >= 0.0 and until <= now:
-					u.effects.remove_at(i)
+	if now < _next_due:
+		return
+	_next_due = INF
+	for uid in _affected.keys():
+		var u: Variant = _affected[uid]
+		if not is_instance_valid(u) or not u.is_alive():
+			_forget(uid)
+			continue
+		var due := float(_due.get(uid, INF))
+		if due > now:
+			_next_due = minf(_next_due, due)
+			continue
+		# Fällig: Abgelaufenes entfernen, nächste Ablaufzeit neu bestimmen
+		var stats_changed := false
+		var next := INF
+		for i in range(u.effects.size() - 1, -1, -1):
+			var until := float(u.effects[i].get("until", -1.0))
+			if until >= 0.0 and until <= now:
+				# hp_per_sec ändert keine Werte – dann muss nicht neu gerechnet werden
+				if str(u.effects[i].get("key", "")) != "hp_per_sec":
+					stats_changed = true
+				u.effects.remove_at(i)
+			elif until >= 0.0:
+				next = minf(next, until)
+		if stats_changed:
 			u.refresh_stats()
 		if u.effects.is_empty():
-			_affected.erase(uid)
+			_forget(uid)
+			continue
+		_due[uid] = next
+		_next_due = minf(_next_due, next)
+
+
+func _forget(uid: int) -> void:
+	_affected.erase(uid)
+	_due.erase(uid)
+	_hp_units.erase(uid)
 
 
 ## Beschworene Einheiten verschwinden nach Ablauf
@@ -467,7 +517,7 @@ func _tick_zones(now: float) -> void:
 		var effects: Array = z["effects"]
 		if not effects.is_empty():
 			_apply_effects(k, "spell:" + str(z["spell_id"]), effects, z["pos"], float(z["radius"]),
-					now + ZONE_EFFECT_SECONDS, float(z["power"]), int(z["id"]))
+					now + ZONE_EFFECT_SECONDS, float(z["power"]), int(z["id"]), true)
 		var drop := float(z["drop_targets_beyond"]) * _ts
 		if drop > 0.0:
 			_drop_far_targets(k, z["pos"], float(z["radius"]), drop)
@@ -476,15 +526,18 @@ func _tick_zones(now: float) -> void:
 ## Feinde im Nebel verlieren Ziele, die weiter als drop Pixel entfernt sind
 ## (ausser bei ausdrücklichem Angriffsbefehl)
 func _drop_far_targets(k: Kingdom, pos: Vector2, radius: float, drop: float) -> void:
-	for u in _units_in(pos, radius):
+	for u in _units_in(pos, radius, true):
 		if not game.are_hostile(k, u.kingdom) or u.command == "attack":
 			continue
 		var t: Variant = u.target
 		if is_same(t, null) or not is_instance_valid(t):
 			continue
-		if u.position.distance_to(t.position) > drop:
+		var dist: float = u.position.distance_to(t.position) - t.get_radius()
+		if dist > drop:
 			u.target = null
 			u.regroup_pending = true
+			# Nicht im nächsten Takt dasselbe Ziel wieder aufnehmen
+			u.think_timer = ZONE_INTERVAL + 0.5
 
 
 ## Tarnungen: Ende bei Ablauf oder wenn niemand mehr getarnt ist.
@@ -519,24 +572,33 @@ func _on_upkeep_unpaid(k: Kingdom, source: String) -> void:
 
 ## Wirkungen auf Einheiten im Kreis. side own = verbündet, enemy = feindlich.
 ## power verstärkt die Wirkung (mult 1.25 mit power 1.2 -> 1.30, add × power).
-## Eine bestehende gleiche Wirkung wird nur verlängert (kein Neuberechnen).
+## Eine bestehende gleiche Wirkung wird nur verlängert (kein Neuberechnen) –
+## Wettergebiete erneuern ihre Wirkungen jede Sekunde, das muss billig sein.
 func _apply_effects(k: Kingdom, source: String, effects: Array, pos: Vector2, radius: float, until: float,
-		power: float, ref: int) -> void:
-	for u in _units_in(pos, radius):
+		power: float, ref: int, use_index: bool = false) -> void:
+	var prepared: Array = []
+	for e in effects:
+		var key := str(e.get("key", ""))
+		prepared.append({"side": str(e.get("side", "own")), "id": "%s:%s" % [source, key], "key": key,
+				"mult": 1.0 + (float(e.get("mult", 1.0)) - 1.0) * power, "add": float(e.get("add", 0.0)) * power})
+	for u in _units_in(pos, radius, use_index):
+		var allied: bool = game.are_allied(k, u.kingdom)
+		var hostile: bool = not allied and game.are_hostile(k, u.kingdom)
 		var changed := false
-		for e in effects:
-			var side := str(e.get("side", "own"))
-			if side == "own" and not game.are_allied(k, u.kingdom):
+		for pe in prepared:
+			if (pe["side"] == "own" and not allied) or (pe["side"] == "enemy" and not hostile):
 				continue
-			if side == "enemy" and not game.are_hostile(k, u.kingdom):
+			var existing := _find_effect(u, pe["id"])
+			if not existing.is_empty():
+				var old := float(existing.get("until", -1.0))
+				existing["until"] = -1.0 if until < 0.0 or old < 0.0 else maxf(old, until)
+				existing["ref"] = ref
 				continue
-			var key := str(e.get("key", ""))
-			var effect := {"id": "%s:%s" % [source, key], "key": key,
-					"mult": 1.0 + (float(e.get("mult", 1.0)) - 1.0) * power,
-					"add": float(e.get("add", 0.0)) * power, "until": until,
+			var effect := {"id": pe["id"], "key": pe["key"], "mult": pe["mult"], "add": pe["add"], "until": until,
 					"source": source, "kingdom_id": k.id, "ref": ref}
-			if add_unit_effect(u, effect, false):
-				changed = true
+			u.effects.append(effect)
+			_track(u, effect)
+			changed = true
 		if changed:
 			u.refresh_stats()
 
@@ -620,15 +682,25 @@ func _has_ref(u: Unit, ref: int) -> bool:
 	return false
 
 
-## Einheiten im Kreis (ausserhalb von Gebäuden)
-func _units_in(pos: Vector2, radius: float) -> Array:
+## Einheiten im Kreis (ausserhalb von Gebäuden).
+## use_index: über die Umgebungssuche des CombatSystems (nur im Simulationstakt –
+## das CombatSystem baut sie dort vorher neu auf; ausserhalb davon, z. B. beim
+## Zaubern per Mausklick, kann sie schon gelöschte Einheiten enthalten).
+func _units_in(pos: Vector2, radius: float, use_index: bool = false) -> Array:
 	var list: Array = []
+	var r2 := radius * radius
+	if use_index:
+		# Etwas Rand: die Umgebungssuche ist bis zu zwei Takte alt
+		for u in game.combat_system.index.query(pos, radius + _ts):
+			if is_instance_valid(u) and u.inside == null and u.hp > 0.0 and u.position.distance_squared_to(pos) <= r2:
+				list.append(u)
+		return list
 	for u in game.unit_system.units:
-		if u.inside == null and u.hp > 0.0 and u.position.distance_squared_to(pos) <= radius * radius:
+		if u.inside == null and u.hp > 0.0 and u.position.distance_squared_to(pos) <= r2:
 			list.append(u)
 	return list
 
 
 func _on_unit_removed(u: Unit) -> void:
-	_affected.erase(u.uid)
+	_forget(u.uid)
 	_temporary.erase(u.uid)

@@ -70,7 +70,7 @@
 		  "color": "#6c3483", "icon": "res://assets/ui/icons/spell_dark_fog.png",
 		  "mana_cost": 35, "cooldown": 90, "radius": 6, "duration": 90, "requires": ["spell:dark_fog"],
 		  "zone": { "kind": "fog", "drop_targets_beyond": 2,
-		            "effects": [ { "side": "enemy", "key": "speed", "mult": 0.6 }, { "side": "enemy", "key": "aggro_range", "mult": 0.5 } ] } },
+		            "effects": [ { "side": "enemy", "key": "speed", "mult": 0.6 }, { "side": "enemy", "key": "aggro_range", "mult": 0.4 } ] } },
 		{ "id": "shadow_brood", "faction": "evil", "school": "summon", "name": "Schattenbrut", "letter": "B",
 		  "description": "Drei Schattendiener kriechen hervor und kämpfen eine Minute lang.",
 		  "color": "#7d3c98", "icon": "res://assets/ui/icons/spell_shadow_brood.png",

@@ -317,7 +317,7 @@ const _ROLE_NAMES := {"combat": "alle Truppen", "worker": "Bewohner", "support":
 func describe_modifier(key: String, factor: float) -> String:
 	var stat := key
 	var qualifier := ""
-	var role_parts := key.split("	", true, 1)
+	var role_parts := key.split("@", true, 1)
 	if role_parts.size() > 1:
 		stat = role_parts[0]
 		qualifier = str(_ROLE_NAMES.get(role_parts[1], role_parts[1]))
