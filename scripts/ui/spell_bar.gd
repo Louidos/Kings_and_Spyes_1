@@ -193,8 +193,8 @@ func _refresh() -> void:
 		var cd := ms.cooldown_left(k, id)
 		var total := maxf(float(params["cooldown"]), 0.01)
 		var no_mana := mana + 0.0001 < cost
-		var ready := ms.can_cast_now(k, id).is_empty()
-		button.set_state(known, cd / total, ceili(cd), no_mana, active_id == id, ready)
+		var castable := ms.can_cast_now(k, id).is_empty()
+		button.set_state(known, cd / total, ceili(cd), no_mana, active_id == id, castable)
 		var cost_color := COLOR_DIM
 		if known:
 			cost_color = COLOR_BAD if no_mana else COLOR_MANA

@@ -68,22 +68,22 @@ func setup(def: Dictionary) -> void:
 	queue_redraw()
 
 
-## Zustand setzen (ready = can_cast_now ohne Grund); zeichnet nur bei einer
+## Zustand setzen (castable = can_cast_now ohne Grund); zeichnet nur bei einer
 ## sichtbaren Änderung neu
-func set_state(known: bool, cd_ratio: float, cd_seconds: int, no_mana: bool, targeting: bool, ready: bool) -> void:
+func set_state(known: bool, cd_ratio: float, cd_seconds: int, no_mana: bool, targeting: bool, castable: bool) -> void:
 	var ratio := snappedf(clampf(cd_ratio, 0.0, 1.0), 0.004)
 	if known == _known and is_equal_approx(ratio, _cd_ratio) and cd_seconds == _cd_seconds \
-			and no_mana == _no_mana and targeting == _targeting and ready == _is_ready:
+			and no_mana == _no_mana and targeting == _targeting and castable == _is_ready:
 		return
 	# Gerade wieder bereit (Abklingzeit vorbei oder genug Mana): kurz aufblitzen
-	if _known and known and not _is_ready and ready:
+	if _known and known and not _is_ready and castable:
 		_flash = 1.0
 	_known = known
 	_cd_ratio = ratio
 	_cd_seconds = cd_seconds
 	_no_mana = no_mana
 	_targeting = targeting
-	_is_ready = ready
+	_is_ready = castable
 	set_process(_flash > 0.0 or _targeting)
 	queue_redraw()
 

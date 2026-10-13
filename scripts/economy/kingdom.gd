@@ -174,8 +174,8 @@ func revoke_unlocks(source: String) -> void:
 		return
 	unlocks.clear()
 	for src in unlock_sources:
-		for id in unlock_sources[src]:
-			unlocks[id] = true
+		for unlock_id in unlock_sources[src]:
+			unlocks[unlock_id] = true
 
 
 func has_unlock(unlock_id: String) -> bool:
@@ -184,8 +184,8 @@ func has_unlock(unlock_id: String) -> bool:
 
 ## Sind alle Freischaltungen der Liste vorhanden?
 func has_all_unlocks(ids: Array) -> bool:
-	for id in ids:
-		if not unlocks.has(id):
+	for unlock_id in ids:
+		if not unlocks.has(unlock_id):
 			return false
 	return true
 

@@ -308,7 +308,10 @@ func _complete(k: Kingdom, id: String) -> void:
 	var effects := describe_effects(k, id)
 	if not effects.is_empty():
 		text += " – " + ", ".join(effects)
-	k.notify(text, "good", k.castle.get_center() if is_instance_valid(k.castle) else null)
+	var at: Variant = null
+	if is_instance_valid(k.castle):
+		at = k.castle.get_center()
+	k.notify(text, "good", at)
 	research_completed.emit(k, id)
 	if not k.research_queue.is_empty():
 		research_started.emit(k, str(k.research_queue[0]))

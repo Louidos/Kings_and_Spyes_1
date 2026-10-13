@@ -389,13 +389,13 @@ func _chase_point(u: Unit, t: Object) -> Vector2:
 	if dir.length() < 1.0:
 		dir = Vector2.RIGHT.rotated(_rng.randf() * TAU)
 	var reach := u.attack_range * _ts
-	var p: Vector2 = t.position + dir.normalized() * minf(reach * 0.7 + t.get_radius(), dir.length())
+	var spot: Vector2 = t.position + dir.normalized() * minf(reach * 0.7 + t.get_radius(), dir.length())
 	# Steht das Ziel direkt hinter einem Hindernis, liegt der Punkt davor im
 	# Hindernis – dann direkt zum Ziel laufen (sonst bleibt der Angreifer stehen)
-	var pc := world.world_to_cell(p)
-	if not world.in_bounds(pc) or game.nav.is_solid(pc):
+	var spot_cell := world.world_to_cell(spot)
+	if not world.in_bounds(spot_cell) or game.nav.is_solid(spot_cell):
 		return t.position
-	return p
+	return spot
 
 
 ## Ein Angriff: Schaden sofort, Fernkampf zeigt zusätzlich ein Geschoss.
