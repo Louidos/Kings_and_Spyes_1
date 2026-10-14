@@ -10,7 +10,10 @@
 		"blocks_movement (Standard: true): Einheiten laufen um das Gebäude herum. placement = \"line\": wird mit der Maus als Linie gezogen (Strassen, ab Phase 9 Mauern).",
 		"hp: Lebenspunkte (Standard 300). summons: Einheitenstufen, die hier beschworen werden (units.json -> tier). heal_aura: heilt eigene Einheiten im Umkreis (Kacheln, Lebenspunkte pro Sekunde).",
 		"loot / kill_points: Beute und Punkte für den, der das Gebäude zerstört. respawn_seconds / max_monsters: Monsterhöhlen bringen neue Monster hervor.",
-		"sprites: Grafik je Fraktion (128x128, Burg 256x256); sprite: eine Grafik für alle. Fehlt die Datei, wird ein Platzhalter in 'color' mit 'label' gezeichnet."
+		"sprites: Grafik je Fraktion (128x128, Burg 256x256); sprite: eine Grafik für alle. Fehlt die Datei, wird ein Platzhalter in 'color' mit 'label' gezeichnet.",
+		"capturable: true = wird bei 0 Leben erobert statt zerstört (Dorfzentrum).",
+		"people_sprites: Grafik je Volk (Dorfgebäude), sprite_fallback: Grafik, wenn weder Volks- noch Fraktionsgrafik angegeben ist.",
+		"people_color: Platzhalter in der Volksfarbe."
 	],
 
 	"buildings": [
@@ -144,6 +147,43 @@
 			"respawn_seconds": 90, "max_monsters": 5,
 			"color": "#5a2020",
 			"sprite": "res://assets/sprites/buildings/monster_lair.png"
+		},
+		{
+			"id": "village_hall", "name": "Dorfzentrum", "names": { "good": "Aussenposten", "evil": "Aussenposten" }, "label": "Dorf",
+			"labels": { "good": "Posten", "evil": "Posten" },
+			"description": "Mittelpunkt eines neutralen Dorfs. Wird es erobert oder das Dorf aufgenommen, wird es zum Aussenposten mit Lager und Gebiet.",
+			"size": [3, 3], "cost": {}, "build_time": 0, "player_buildable": false,
+			"housing": 4, "territory_radius": 8, "hp": 1500, "armor": 0.25, "sight": 8,
+			"dropoff": ["wood", "stone", "ore", "food"], "gather_radius": 10,
+			"capturable": true, "people_color": true, "color": "#c9b458",
+			"people_sprites": {
+				"dwarves": "res://assets/sprites/buildings/village_dwarves.png",
+				"halflings": "res://assets/sprites/buildings/village_halflings.png",
+				"wood_elves": "res://assets/sprites/buildings/village_wood_elves.png",
+				"lizardfolk": "res://assets/sprites/buildings/village_lizardfolk.png",
+				"nomads": "res://assets/sprites/buildings/village_nomads.png",
+				"giants": "res://assets/sprites/buildings/village_giants.png",
+				"water_spirits": "res://assets/sprites/buildings/village_water_spirits.png",
+				"kobold_traders": "res://assets/sprites/buildings/village_kobold_traders.png"
+			},
+			"sprite_fallback": "res://assets/sprites/buildings/village_hall.png"
+		},
+		{
+			"id": "village_hut", "name": "Hütte", "label": "Hütte",
+			"description": "Wohnhütte eines Dorfs (nach der Aufnahme Wohnraum für 2).",
+			"size": [2, 2], "cost": {}, "build_time": 0, "player_buildable": false,
+			"housing": 2, "territory_radius": 4, "hp": 400,
+			"people_color": true, "color": "#a68a5b",
+			"people_sprites": {
+				"dwarves": "res://assets/sprites/buildings/village_hut_dwarves.png",
+				"halflings": "res://assets/sprites/buildings/village_hut_halflings.png",
+				"wood_elves": "res://assets/sprites/buildings/village_hut_wood_elves.png",
+				"lizardfolk": "res://assets/sprites/buildings/village_hut_lizardfolk.png",
+				"nomads": "res://assets/sprites/buildings/village_hut_nomads.png",
+				"giants": "res://assets/sprites/buildings/village_hut_giants.png",
+				"water_spirits": "res://assets/sprites/buildings/village_hut_water_spirits.png",
+				"kobold_traders": "res://assets/sprites/buildings/village_hut_kobold_traders.png"
+			}
 		},
 		{
 			"id": "road", "name": "Strasse", "label": "",

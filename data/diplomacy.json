@@ -1,0 +1,79 @@
+{
+	"_hinweis": [
+		"Diplomatie mit neutralen Dörfern. Zeiten in Spielsekunden (1 Tag = 600 s, 1 Stunde = 25 s). Ruf je Dorf und Reich von −100 bis +100.",
+		"reputation: Stufen (Untergrenze min), Zufallsstreuung des Startwerts, Verfall Richtung Grundwert alle decay_interval Sekunden.",
+		"events: Ruf-Änderungen in Punkten. rumour_*: gilt für alle anderen Dörfer im Umkreis rumour_radius (Kacheln), je Dorf und Reich höchstens alle rumour_interval Sekunden.",
+		"gifts: Wert = Menge × resource_value × Vorliebe des Volks. Ruf = Wert / value_per_point (höchstens max_per_gift), abnehmend: ÷ (1 + kürzliche Geschenke / saturation); kürzliche Geschenke halbieren sich alle half_life Sekunden. Im Krieg wirkt ein Geschenk nur zu war_factor.",
+		"treaties: Annahme-Chance = chance_base + (Ruf − min_reputation) / chance_span (0…1). Unter min_reputation unmöglich. keep_min: fällt der Ruf darunter, kündigt das Dorf. rep_per_hour: Ruf-Gewinn pro Spielstunde, solange der Vertrag läuft.",
+		"trade: Kurs = Wert(gegeben) × buys / (Wert(erhalten) × sells) × (1 − Marge). Marge = base_margin − Ruf/100 × rep_bonus_per_100 − Vertragsbonus − Volksbonus (begrenzt auf min_margin…max_margin). daily_value_limit: Höchstwert pro Dorf und Reich je Spieltag.",
+		"annex: Aufnahme ins Reich. Ergeben (devoted) = sofort; ab min_reputation mit grossem Geschenk (annex_gift des Volks × Dorfgrösse × gift_size_scale) oder Einschüchterung (eigene Stärke in der Nähe ≥ intimidation_ratio × Dorfstärke).",
+		"village: Dorfwirtschaft und Milizen. messenger: Boten, die angegriffene Dörfer losschicken."
+	],
+
+	"reputation": {
+		"min": -100, "max": 100,
+		"tiers": [
+			{ "id": "hostile",    "name": "Feindselig",   "min": -100, "color": "#e0503c" },
+			{ "id": "suspicious", "name": "Misstrauisch", "min": -50,  "color": "#e8a03c" },
+			{ "id": "neutral",    "name": "Neutral",      "min": -10,  "color": "#d8d0b8" },
+			{ "id": "friendly",   "name": "Freundlich",   "min": 30,   "color": "#7cc86a" },
+			{ "id": "devoted",    "name": "Ergeben",      "min": 70,   "color": "#f3d36b" }
+		],
+		"start_jitter": 5, "decay_interval": 25, "decay_per_interval": 0.4, "history_size": 8
+	},
+
+	"events": {
+		"attack": -5, "kill_militia": -3, "destroy_building": -10, "declare_war": -30, "treaty_break": -40,
+		"threat_success": -10, "threat_fail": -15, "treaty_refused": -2,
+		"protection_kill_per_point": 2.0, "protection_cap_per_hour": 15,
+		"protection_help_success": 5, "protection_help_failed": -15,
+		"messenger_killed": -4, "messenger_report": -10, "messenger_arrival_bonus": 5,
+		"conquest_all": -15, "conquest_rumour": -10, "annex_same_people": 5, "intimidation_rumour": -8,
+		"rumour_radius": 80, "rumour_attack": -2, "rumour_war": -10, "rumour_threat": -3, "rumour_interval": 30,
+		"intrusion_check": 5, "intrusion_seconds": 30, "intrusion_min_units": 3, "intrusion_penalty": -2, "intrusion_radius_extra": 2,
+		"peace_bonus": 5, "trade_per_100_value": 1.0, "alliance_call": -20, "treaty_break_rumour": -5
+	},
+
+	"gifts": {
+		"resource_value": { "wood": 1.0, "stone": 1.0, "ore": 2.0, "food": 1.0, "mana": 3.0 },
+		"value_per_point": 10, "max_per_gift": 15, "min_value": 10, "saturation": 300, "half_life": 600, "war_factor": 0.5
+	},
+
+	"treaties": {
+		"chance_base": 0.5, "chance_span": 40, "refuse_cooldown": 120,
+		"protection": { "name": "Schutzvertrag", "min_reputation": -10, "keep_min": -50, "rep_per_hour": 0.3, "cancel_penalty": -10,
+			"help_seconds": 60, "help_radius_extra": 6, "help_min_units": 3, "max_strikes": 3, "strength_bonus": 0.2 },
+		"trade": { "name": "Handelsvertrag", "min_reputation": -10, "keep_min": -30, "rep_per_hour": 0.5, "cancel_penalty": -5,
+			"rate_bonus": 0.15, "limit_factor": 1.5, "delivery_interval": 150 },
+		"alliance": { "name": "Verteidigungsbündnis", "min_reputation": 30, "keep_min": -10, "rep_per_hour": 0.6, "cancel_penalty": -20,
+			"help_radius": 25, "help_seconds": 90, "help_share": 0.5 }
+	},
+
+	"trade": { "base_margin": 0.3, "rep_bonus_per_100": 0.15, "min_margin": 0.05, "max_margin": 0.6,
+		"daily_value_limit": 300, "min_reputation": -10 },
+
+	"annex": { "min_reputation": 30, "intimidation_ratio": 2.5, "intimidation_radius": 15, "intimidation_desert_share": 0.5,
+		"gift_size_scale": 0.333, "production_factor": 1.0, "conquest_production_factor": 0.5,
+		"conquest_population_loss": 0.5, "capture_hp_ratio": 0.25 },
+
+	"threat": { "min_ratio": 1.5, "radius": 15, "tribute_fraction": 0.5, "tribute_max": 150, "cooldown": 600 },
+
+	"peace": { "min_reputation": -40, "quiet_seconds": 60 },
+
+	"side_switch": { "threshold": -50 },
+
+	"strength": { "weak": 40, "medium": 90 },
+
+	"village": {
+		"hall": "village_hall", "hut": "village_hut",
+		"start_stock": { "wood": 60, "stone": 40, "ore": 20, "food": 80, "mana": 10 }, "stock_cap": 400,
+		"tick_seconds": 1.0, "militia_base": 2, "militia_per_size": 1, "militia_max": 7, "refill_seconds": 120,
+		"guard_radius": [3.5, 5.0], "alarm_radius_extra": 4, "alarm_calm_seconds": 10, "population_per_size": 4
+	},
+
+	"messenger": {
+		"unit": "messenger", "cooldown": 90, "max_village_distance": 120, "arrival_radius": 3, "flee_radius": 5,
+		"sprint_mult": 1.6, "sprint_seconds": 3, "sprint_cooldown": 8, "max_travel_seconds": 900, "retry_limit": 3,
+		"tick_seconds": 0.5, "alarm_seconds": 120
+	}
+}

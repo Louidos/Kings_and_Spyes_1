@@ -18,7 +18,10 @@ var biome_index_by_id: Dictionary = {}
 ## Index des Standard-Bioms (wenn keine Regel zutrifft)
 var default_biome_index: int = 0
 var factions: Array = []
+## Völker aller Fraktionen (peoples.json) in Datei-Reihenfolge
 var peoples: Array = []
+## Volk-ID ("dwarves") -> Volk
+var people_by_id: Dictionary = {}
 var difficulties: Array = []
 var default_difficulty: String = "normal"
 
@@ -58,6 +61,8 @@ var hero_types: Array = []
 var hero_type_by_id: Dictionary = {}
 var abilities: Array = []
 var ability_by_id: Dictionary = {}
+## Diplomatie mit neutralen Dörfern (diplomacy.json): Ruf, Verträge, Handel, Dörfer, Boten
+var diplomacy: Dictionary = {}
 
 
 func _ready() -> void:
@@ -71,9 +76,9 @@ func reload() -> void:
 	_load_biomes()
 	var faction_data := _load_json("factions.json")
 	factions = faction_data.get("factions", [])
-	peoples = faction_data.get("peoples", [])
 	for f in factions:
 		f["color"] = _parse_color(f.get("color", "#ffffff"))
+	_load_peoples(faction_data)
 	var diff_data := _load_json("difficulties.json")
 	difficulties = diff_data.get("difficulties", [])
 	default_difficulty = diff_data.get("default", "normal")
@@ -82,10 +87,13 @@ func reload() -> void:
 	_load_jobs()
 	economy = _load_json("economy.json")
 	_load_units()
+	diplomacy = _load_json("diplomacy.json")
+	_prepare_diplomacy()
 	combat = _load_json("combat.json")
 	_load_research()
 	_load_spells()
 	_load_heroes()
+	_validate_peoples()
 
 
 ## Liest einen Wert aus game_config.json über einen Punkt-Pfad, z. B. "camera.zoom_max".
@@ -117,6 +125,41 @@ func get_map_size(id: String) -> Dictionary:
 
 func get_peoples_of_faction(faction_id: String) -> Array:
 	return peoples.filter(func(p): return p.get("faction") == faction_id)
+
+
+## Volk nach ID ({} wenn unbekannt)
+func get_people(id: String) -> Dictionary:
+	return people_by_id.get(id, {})
+
+
+## Name eines Volks ("Zwerge"), sonst die ID
+func get_people_name(id: String) -> String:
+	return str(get_people(id).get("name", id))
+
+
+## Völker, die Dörfer bilden (faction neutral und militia_unit gesetzt), in Datei-Reihenfolge
+func get_village_peoples() -> Array:
+	var list: Array = []
+	for p in peoples:
+		if str(p.get("faction", "")) == "neutral" and not str(p.get("militia_unit", "")).is_empty():
+			list.append(p)
+	return list
+
+
+## Liest einen Wert aus diplomacy.json über einen Punkt-Pfad, z. B. "treaties.alliance.min_reputation".
+func diplo(path: String, default_value: Variant = null) -> Variant:
+	var node: Variant = diplomacy
+	for key in path.split("."):
+		if node is Dictionary and node.has(key):
+			node = node[key]
+		else:
+			return default_value
+	return node
+
+
+## Ruf-Stufen aus diplomacy.json (sortiert nach min aufsteigend, color als Color)
+func get_reputation_tiers() -> Array:
+	return diplo("reputation.tiers", [])
 
 
 ## Liest einen Wert aus economy.json über einen Punkt-Pfad, z. B. "villager.speed".
@@ -250,6 +293,10 @@ func describe_unlock(unlock_id: String, faction_id: String) -> String:
 			return get_building_name(get_building(parts[1]), faction_id)
 		"spell":
 			return "Zauber „%s“" % str(get_spell(parts[1]).get("name", parts[1]))
+		"summon":
+			# "summon:<gebäude>:<einheit>" (Bündnis oder Aufnahme eines Dorfs)
+			var unit_id := parts[1].get_slice(":", 1)
+			return str(get_unit_type(unit_id).get("name", unit_id))
 	return unlock_id
 
 
@@ -268,8 +315,15 @@ func describe_requirement(unlock_ids: Array, faction_id: String) -> String:
 
 
 ## Name einer Wirkungsquelle: "spell:<id>" -> Zaubername, "research:<id>" -> Forschung,
-## "upgrade:<id>" -> Kampfpunkt-Verbesserung (für Tooltips und das Auswahlfenster)
+## "upgrade:<id>" -> Kampfpunkt-Verbesserung (für Tooltips und das Auswahlfenster);
+## ab Phase 6 auch "alliance:<dorf>", "annex:<dorf>", "treaty:<dorf>", "people:<volk>",
+## "daynight", "difficulty" und "event:<id>"
 func describe_effect_source(source: String) -> String:
+	match source:
+		"daynight":
+			return "Tageszeit"
+		"difficulty":
+			return "Schwierigkeit"
 	var parts := source.split(":", true, 1)
 	if parts.size() < 2:
 		return source
@@ -291,6 +345,20 @@ func describe_effect_source(source: String) -> String:
 			return str(get_ability(aid).get("name", aid))
 		"hero":
 			return "Heldenstufe"
+		"alliance":
+			return "Bündnis"
+		"annex":
+			return "Aufgenommenes Dorf"
+		"treaty":
+			return "Vertrag"
+		"people":
+			return get_people_name(parts[1])
+		"daynight":
+			return "Tageszeit"
+		"difficulty":
+			return "Schwierigkeit"
+		"event":
+			return "Ereignis"
 	return parts[1]
 
 
@@ -303,6 +371,10 @@ func get_effect_source_color(source: String) -> Color:
 		if aid.begins_with("leadership"):
 			return Color(1.0, 0.85, 0.35)
 		return get_ability(aid).get("color", Color.WHITE)
+	if source.begins_with("alliance:") or source.begins_with("annex:") or source.begins_with("treaty:"):
+		return Color(0.95, 0.82, 0.4)
+	if source.begins_with("people:"):
+		return get_people(source.substr(7)).get("color", Color.WHITE)
 	return Color.WHITE
 
 
@@ -335,9 +407,10 @@ const _MOD_NAMES := {"attack": "Angriff", "armor": "Rüstung", "hp": "Leben", "s
 	"hero_xp": "Erfahrung der Helden", "ability_power": "Stärke der Heldenfähigkeiten", "lifesteal": "Lebensraub",
 	"damage_taken": "erlittener Schaden"}
 const _TIER_NAMES := {"fighter": "Kämpfer", "archer": "Schützen", "elite": "Elite", "scout": "Späher",
-	"medic": "Heiler", "king": "König", "villager": "Bewohner", "summon": "Beschworene", "hero": "Helden"}
+	"medic": "Heiler", "king": "König", "villager": "Bewohner", "summon": "Beschworene", "hero": "Helden",
+	"militia": "Miliz", "special": "Volkskrieger", "messenger": "Boten"}
 const _ROLE_NAMES := {"combat": "alle Truppen ohne Helden", "worker": "Bewohner", "support": "Heiler",
-	"king": "König", "monster": "Monster", "hero": "Helden"}
+	"king": "König", "monster": "Monster", "hero": "Helden", "messenger": "Boten"}
 
 
 ## Lesbare Wirkung eines Modifikators, z. B. "+10 % Angriff (Kämpfer)".

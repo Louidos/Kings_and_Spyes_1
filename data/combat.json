@@ -6,7 +6,7 @@
 		"regen_delay: so lange ohne Schaden, bevor Einheiten sich erholen. retarget_seconds: wie oft untätige Kämpfer nach Feinden suchen.",
 		"leash_radius: Monster kehren um, wenn sie sich weiter von ihrer Höhle entfernen. camp_radius: Monster stehen in diesem Umkreis um die Höhle.",
 		"formation.spacing: Abstand in Formationen. worker_flee: angegriffene Arbeiter fliehen zur Burg.",
-		"camps: Monsterlager. per_1000_tiles = Häufigkeit (mindestens min_count), min_distance_from_start = Abstand zum Startplatz, size = Anzahl Monster, by_biome = Monsterarten je Biom."
+		"camps: Monsterlager. per_1000_tiles = Häufigkeit (mindestens min_count), min_distance_from_start = Abstand zum Startplatz, size = Anzahl Monster, by_biome = Monsterarten je Biom. near_start: Übungslager nahe am Start; min_site_distance = Abstand zu Dörfern und Königreichsplätzen (Kacheln)."
 	],
 
 	"territory_bonus": 0.15,
@@ -35,7 +35,7 @@
 		"respawn_quiet_seconds": 30,
 		"danger_radius": 10,
 		"loot_reference_points": 5,
-		"near_start": { "count": 2, "min": 30, "max": 45, "monsters": ["wolf", "wolf", "spider"], "size": 3,
+		"near_start": { "count": 2, "min": 30, "max": 45, "monsters": ["wolf", "wolf", "spider"], "size": 3, "min_site_distance": 20,
 			"biomes": ["plains", "forest", "swamp", "desert"] },
 		"by_biome": {
 			"plains": ["wolf", "wolf", "spider"],

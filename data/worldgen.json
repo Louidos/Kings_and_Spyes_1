@@ -53,5 +53,19 @@
 		"check_radius": 6,
 		"min_buildable_ratio": 0.85,
 		"attempts": 400
+	},
+
+	"kingdom_sites": {
+		"_hinweis": "Plätze für gegnerische Königreiche (ab Phase 7 genutzt, schon jetzt erzeugt, damit sich die Welt eines Seeds später nicht ändert). Abstand zum Spieler als Anteil der Kartenbreite (min_dist…max_dist, mindestens min_dist_tiles), untereinander min_between × Breite. Rohstoffe wie beim Spielerstart gesichert.",
+		"count": 2, "min_dist": 0.35, "max_dist": 0.6, "min_dist_tiles": 70, "min_between": 0.25,
+		"center_biomes": ["plains"], "check_radius": 6, "min_buildable_ratio": 0.8, "attempts": 800, "edge_margin": 0.08, "relax_steps": 3
+	},
+
+	"villages": {
+		"_hinweis": "Neutrale Dörfer. count_by_size: Anzahl je Kartengrösse (Kacheln). Abstand zum Start min_dist_start…max_dist_ratio × Breite, untereinander mindestens max(min_between, min_between_ratio × Breite), zu Königreichsplätzen min_dist_kingdom. Bebaubarkeit im Umkreis check_radius; bevorzugtes Biom des Volks im Umkreis preferred_radius zählt für die Platzwahl. size = Anzahl Hütten (2–4). keep_clear_radius: Umkreis ohne verstreute Vorkommen (Platz für die Hütten).",
+		"count_by_size": [[256, 6], [512, 10], [1024, 16]],
+		"min_dist_start": 50, "max_dist_ratio": 0.75, "min_between": 30, "min_between_ratio": 0.05, "min_dist_kingdom": 40,
+		"check_radius": 4, "min_buildable_ratio": 0.75, "preferred_radius": 10, "attempts_per_village": 150,
+		"edge_margin": 0.06, "size": [2, 4], "keep_clear_radius": 4
 	}
 }
