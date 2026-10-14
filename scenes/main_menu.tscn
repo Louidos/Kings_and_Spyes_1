@@ -80,12 +80,12 @@ theme_override_font_sizes/font_size = 22
 text = "Neues Spiel"
 
 [node name="LoadButton" type="Button" parent="Center/Panel/VBox/MainButtons"]
+unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 46)
 layout_mode = 2
-tooltip_text = "Speichern und Laden kommt in Phase 10"
+tooltip_text = "Gespeicherte Partien"
 theme_override_font_sizes/font_size = 22
-disabled = true
-text = "Laden (Phase 10)"
+text = "Laden"
 
 [node name="SettingsButton" type="Button" parent="Center/Panel/VBox/MainButtons"]
 unique_name_in_owner = true
@@ -198,45 +198,6 @@ unique_name_in_owner = true
 visible = false
 layout_mode = 2
 theme_override_constants/separation = 12
-
-[node name="Title" type="Label" parent="Center/Panel/VBox/SettingsPanel"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 26
-text = "Einstellungen"
-
-[node name="EdgeScrollCheck" type="CheckBox" parent="Center/Panel/VBox/SettingsPanel"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Kamera am Bildschirmrand verschieben"
-
-[node name="SpeedRow" type="HBoxContainer" parent="Center/Panel/VBox/SettingsPanel"]
-layout_mode = 2
-theme_override_constants/separation = 16
-
-[node name="Label" type="Label" parent="Center/Panel/VBox/SettingsPanel/SpeedRow"]
-layout_mode = 2
-text = "Kamera-Tempo"
-
-[node name="CameraSpeedSlider" type="HSlider" parent="Center/Panel/VBox/SettingsPanel/SpeedRow"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 4
-min_value = 0.5
-max_value = 2.0
-step = 0.1
-value = 1.0
-
-[node name="FullscreenCheck" type="CheckBox" parent="Center/Panel/VBox/SettingsPanel"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Vollbild"
-
-[node name="SettingsBackButton" type="Button" parent="Center/Panel/VBox/SettingsPanel"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 44)
-layout_mode = 2
-text = "Speichern und zurück"
 
 [node name="VersionLabel" type="Label" parent="Center/Panel/VBox"]
 unique_name_in_owner = true

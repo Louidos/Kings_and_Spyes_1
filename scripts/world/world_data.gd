@@ -78,6 +78,14 @@ var sites: Array = []
 ## abdeckt (0 = sicher). Bewohner sammeln dort nicht.
 var danger := PackedByteArray()
 
+## Änderungsverfolgung für Spielstände: ab dem Spielstart (Generator schreibt vorher)
+## merkt sich WorldData jede Kachel, deren Biom oder Vorkommen sich ändert.
+var track_changes := false
+## Kachel-Index -> true (nur gemerkt, solange track_changes gilt)
+var changed_cells: Dictionary = {}
+## Fingerabdruck der frisch erzeugten Welt (vor allen Änderungen; im Spielstand gespeichert)
+var gen_fingerprint: Dictionary = {}
+
 var _road_speed_mult := 1.6
 
 
@@ -153,6 +161,7 @@ func set_biome(cell: Vector2i, biome_index: int) -> void:
 	if not in_bounds(cell):
 		return
 	biomes[cell_index(cell)] = biome_index
+	_mark(cell_index(cell))
 	_update_overview_pixel(cell)
 	cell_changed.emit(cell)
 
@@ -214,6 +223,7 @@ func set_deposit(cell: Vector2i, deposit_index: int, amount: int) -> void:
 	var i := cell_index(cell)
 	deposit_type[i] = deposit_index + 1 if deposit_index >= 0 else 0
 	deposit_amount[i] = amount if deposit_index >= 0 else 0
+	_mark(i)
 	regrowing.erase(cell)
 	deposit_version += 1
 	cell_changed.emit(cell)
@@ -235,6 +245,7 @@ func harvest(cell: Vector2i, amount: int) -> int:
 	var taken := mini(amount, left)
 	left -= taken
 	deposit_amount[i] = left
+	_mark(i)
 	if left == 0 and taken > 0:
 		deposit_version += 1
 		var def := DataDB.get_deposit(t - 1)
@@ -261,6 +272,7 @@ func regrow(hours: int) -> void:
 			continue
 		var full: int = def["amount"][1]
 		deposit_amount[i] = mini(deposit_amount[i] + int(def.get("regrow_per_hour", 0)) * hours, full)
+		_mark(i)
 		if deposit_amount[i] >= full:
 			regrowing.erase(cell)
 			deposit_version += 1
@@ -341,3 +353,112 @@ func get_move_cost(cell: Vector2i) -> float:
 	if roads.get(cell, ROAD_NONE) == ROAD_BUILT:
 		cost /= _road_speed_mult
 	return cost
+
+
+# ---------------------------------------------------------------------------
+# Spielstand (Phase 10): nur Änderungen gegenüber der frisch erzeugten Welt
+# ---------------------------------------------------------------------------
+
+## Kachel-Index -> Kachel
+func index_to_cell(i: int) -> Vector2i:
+	@warning_ignore("integer_division")
+	return Vector2i(i % width, i / width)
+
+
+func _mark(i: int) -> void:
+	if track_changes:
+		changed_cells[i] = true
+
+
+## Fingerabdruck der Welt (md5 der Kachelarrays): gleicher Seed + gleiche Daten + gleicher
+## Generator ergeben denselben Wert. Läuft im Lade-Thread direkt nach der Erzeugung.
+func compute_fingerprint() -> Dictionary:
+	return {"size": width, "biomes": _md5(biomes), "deposit_type": _md5(deposit_type),
+			"deposit_amount": _md5(deposit_amount.to_byte_array()), "start_cell": start_cell, "sites": sites.size()}
+
+
+static func _md5(bytes: PackedByteArray) -> String:
+	var ctx := HashingContext.new()
+	ctx.start(HashingContext.HASH_MD5)
+	ctx.update(bytes)
+	return ctx.finish().hex_encode()
+
+
+## Änderungen für den Spielstand: aktuelle Werte aller geänderten Kacheln, nachwachsende
+## Vorkommen und alle Strassen (Kopien)
+func diff_to_dict() -> Dictionary:
+	var idx: Array = changed_cells.keys()
+	idx.sort()
+	var cells_idx := PackedInt32Array(idx)
+	var biome := PackedByteArray()
+	var dtype := PackedByteArray()
+	var damount := PackedInt32Array()
+	biome.resize(cells_idx.size())
+	dtype.resize(cells_idx.size())
+	damount.resize(cells_idx.size())
+	for n in cells_idx.size():
+		var i := cells_idx[n]
+		biome[n] = biomes[i]
+		dtype[n] = deposit_type[i]
+		damount[n] = deposit_amount[i]
+	var regrow_idx := PackedInt32Array()
+	for c in regrowing:
+		regrow_idx.append(cell_index(c))
+	regrow_idx.sort()
+	var road_cells: Array = roads.keys()
+	road_cells.sort()
+	var r_idx := PackedInt32Array()
+	var r_state := PackedByteArray()
+	var r_owner := PackedByteArray()
+	var r_progress := PackedFloat32Array()
+	for c in road_cells:
+		r_idx.append(cell_index(c))
+		r_state.append(int(roads[c]))
+		r_owner.append(int(road_owner.get(c, 0)))
+		r_progress.append(float(road_progress.get(c, -1.0)))
+	return {"fingerprint": gen_fingerprint.duplicate(),
+			"cells": {"idx": cells_idx, "biome": biome, "dtype": dtype, "damount": damount},
+			"regrowing": regrow_idx,
+			"roads": {"idx": r_idx, "state": r_state, "owner": r_owner, "progress": r_progress}}
+
+
+## Änderungen aus einem Spielstand übernehmen (im Lade-Thread: direkte Schreibzugriffe,
+## keine Signale). Danach baut NavGrid.build die Wege auf.
+func apply_diff(d: Dictionary) -> void:
+	var cells: Dictionary = d.get("cells", {})
+	var idx: PackedInt32Array = cells.get("idx", PackedInt32Array())
+	var biome: PackedByteArray = cells.get("biome", PackedByteArray())
+	var dtype: PackedByteArray = cells.get("dtype", PackedByteArray())
+	var damount: PackedInt32Array = cells.get("damount", PackedInt32Array())
+	var n := mini(idx.size(), mini(biome.size(), mini(dtype.size(), damount.size())))
+	for k in n:
+		var i := idx[k]
+		if i < 0 or i >= biomes.size():
+			continue
+		var changed_biome := biomes[i] != biome[k]
+		biomes[i] = biome[k]
+		deposit_type[i] = dtype[k]
+		deposit_amount[i] = damount[k]
+		changed_cells[i] = true
+		if changed_biome and overview_image != null:
+			var c := index_to_cell(i)
+			overview_image.set_pixelv(c, overview_color(c))
+	regrowing.clear()
+	for i in (d.get("regrowing", PackedInt32Array()) as PackedInt32Array):
+		regrowing[index_to_cell(i)] = true
+	roads.clear()
+	road_owner.clear()
+	road_progress.clear()
+	var rd: Dictionary = d.get("roads", {})
+	var r_idx: PackedInt32Array = rd.get("idx", PackedInt32Array())
+	var r_state: PackedByteArray = rd.get("state", PackedByteArray())
+	var r_owner: PackedByteArray = rd.get("owner", PackedByteArray())
+	var r_progress: PackedFloat32Array = rd.get("progress", PackedFloat32Array())
+	for k in mini(r_idx.size(), mini(r_state.size(), mini(r_owner.size(), r_progress.size()))):
+		var c := index_to_cell(r_idx[k])
+		roads[c] = int(r_state[k])
+		if r_owner[k] > 0:
+			road_owner[c] = int(r_owner[k])
+		if int(r_state[k]) == ROAD_PLANNED:
+			road_progress[c] = maxf(r_progress[k], 0.0)
+	overview_dirty = true

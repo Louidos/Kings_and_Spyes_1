@@ -176,3 +176,19 @@ func _on_building_removed(b: Building) -> void:
 	for entry in b.summon_queue:
 		b.kingdom.refund(entry.get("cost", {}))
 	b.summon_queue.clear()
+
+
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10): die Warteschlangen stehen in den Gebäuden
+# ---------------------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {}
+
+
+func from_dict(_d: Dictionary) -> void:
+	pass
+
+
+func rebuild_runtime() -> void:
+	pass

@@ -158,14 +158,9 @@ func found_ai_kingdom(site: Dictionary, people_id: String) -> Kingdom:
 
 ## Schwierigkeit als Quelle "difficulty": Ertrag (gather, production), Stärke (hp,
 ## attack, building_hp), Tempo (build, summon, research) und Wachsamkeit (Bonus)
+## (Werte und Wirkung stehen in Difficulty)
 func apply_difficulty(k: Kingdom) -> void:
-	var d := get_difficulty()
-	var inc := float(d.get("enemy_income_mult", 1.0))
-	var strength := float(d.get("enemy_strength_mult", 1.0))
-	k.set_modifiers("difficulty", {"gather": inc, "production": inc, "hp": strength, "attack": strength,
-			"building_hp": strength, "build": float(d.get("build_mult", 1.0)), "summon": float(d.get("summon_mult", 1.0)),
-			"research": float(d.get("research_mult", 1.0))})
-	k.set_bonus("difficulty", "vigilance", float(d.get("vigilance_bonus", 0.0)))
+	Difficulty.apply_ai(k)
 
 
 ## Schwierigkeit der Partie für die KI (difficulties.json + ai.json, zwischengespeichert)
@@ -476,7 +471,8 @@ func _distinct_color(base: Color) -> Color:
 func to_dict() -> Dictionary:
 	rng_state = _rng.state
 	return {"order": order.duplicate(), "rivalry": rivalry.duplicate(true), "rng_state": rng_state,
-			"debug_fast": debug_fast, "stats": stats.duplicate()}
+			"debug_fast": debug_fast, "stats": stats.duplicate(true), "pending": _pending.duplicate(true),
+			"fast_acc": _fast_acc}
 
 
 func from_dict(d: Dictionary) -> void:
@@ -484,16 +480,17 @@ func from_dict(d: Dictionary) -> void:
 	rivalry = (d.get("rivalry", {}) as Dictionary).duplicate(true)
 	rng_state = int(d.get("rng_state", 0))
 	debug_fast = bool(d.get("debug_fast", false))
-	stats = (d.get("stats", stats) as Dictionary).duplicate()
-	rebuild_runtime()
+	stats = (d.get("stats", stats) as Dictionary).duplicate(true)
+	_pending = (d.get("pending", []) as Array).duplicate(true)
+	_fast_acc = float(d.get("fast_acc", 0.0))
 
 
-## Gehirne aus den Reichen neu aufbauen (nach dem Laden)
+## Gehirne aus den Reichen neu aufbauen (nach dem Laden; die Schwierigkeit setzt
+## Difficulty.reapply_all davor, die Warteliste _pending ist gespeichert)
 func rebuild_runtime() -> void:
 	_rng.state = rng_state
 	_rivalry = AIRivalry.new(self)
 	_difficulty = {}
-	_pending.clear()
 	_brains.clear()
 	for kid in order:
 		var k: Kingdom = game.get_kingdom(int(kid))

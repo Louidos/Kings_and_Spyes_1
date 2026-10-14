@@ -6,18 +6,21 @@
 ## Fähigkeit im Zielmodus, "selbst auslösen", Ausbildung, Heldenleiste, Tod und
 ## Wiederbelebung über die Burg im Auswahlfenster, Lage der Leisten.
 ##
-## Phase 6 und 7 prüfen eigene Dateien (smoke_phase6.gd, smoke_phase7.gd).
+## Phase 6, 7 und 10 prüfen eigene Dateien (smoke_phase6.gd, smoke_phase7.gd, smoke_phase10.gd).
+## Phase 10: nach dem Hauptlauf wird ein Zwischenstand in eine frische Spielszene geladen,
+## verglichen und weitergespielt (p10=off schaltet das ab, p10_after=<s> Dauer danach).
 ## passive=1: der Spieler tut nichts (kein Helden- und Phase-6-Test) – für lange Läufe,
 ## in denen nur die KI spielt.
 ##
 ## Aufruf (im Projektordner):
 ##   godot --headless res://tests/smoke_test.tscn -- faction=good seconds=120 size=small seed=12345
-##   weitere Argumente: ai=<Anzahl KI-Reiche>, p7=natural, passive=1, difficulty=<id>
+##   weitere Argumente: ai=<Anzahl KI-Reiche>, p7=natural, passive=1, difficulty=<id>, p10=off, p10_after=300
 extends Node
 
 ## Prüfungen der Phase 6 (Dörfer, Diplomatie, Boten) in eigener Datei
 const SmokePhase6 := preload("res://tests/smoke_phase6.gd")
 const SmokePhase7 := preload("res://tests/smoke_phase7.gd")
+const SmokePhase10 := preload("res://tests/smoke_phase10.gd")
 
 var _args := {}
 var _game: Node = null
@@ -32,6 +35,7 @@ var _hero_errors := 0
 var _test_wolf: Unit = null
 var _p6: RefCounted = null
 var _p7: RefCounted = null
+var _p10: RefCounted = null
 var _passive := false
 
 
@@ -49,10 +53,33 @@ func _ready() -> void:
 	_started_ms = Time.get_ticks_msec()
 	var scene: PackedScene = load("res://scenes/game.tscn")
 	_game = scene.instantiate()
+	_game.set("reload_handler", swap_game)
+	get_tree().root.add_child.call_deferred(_game)
+
+
+## Spielszene ersetzen (Laden eines Spielstands im Rauchtest): alte Szene entfernen,
+## neue erzeugen – sie liest GameSession.pending_load_path
+func swap_game() -> void:
+	var old := _game
+	_game = null
+	if old != null and is_instance_valid(old):
+		if old.get_parent() != null:
+			old.get_parent().remove_child(old)
+		old.queue_free()
+	var scene: PackedScene = load("res://scenes/game.tscn")
+	_game = scene.instantiate()
+	_game.set("reload_handler", swap_game)
 	get_tree().root.add_child.call_deferred(_game)
 
 
 func _process(_delta: float) -> void:
+	if _phase == 3:
+		_p10.tick_roundtrip()
+		if _p10.get("finished") == true:
+			_phase = 4
+			_p10.report()
+			get_tree().quit(0)
+		return
 	if _game == null or not is_instance_valid(_game):
 		return
 	if _phase == 0:
@@ -69,6 +96,7 @@ func _process(_delta: float) -> void:
 			else:
 				_p6 = SmokePhase6.new(_game)
 			_p7 = SmokePhase7.new(_game, _args)
+			_p10 = SmokePhase10.new(self, _game, _args)
 		elif Time.get_ticks_msec() - _started_ms > 120000:
 			push_error("[smoke] Weltgenerierung dauert zu lange")
 			get_tree().quit(2)
@@ -80,10 +108,16 @@ func _process(_delta: float) -> void:
 			_p6.tick(GameClock.game_time)
 		if _p7 != null:
 			_p7.tick(GameClock.game_time)
+		if _p10 != null:
+			_p10.tick(GameClock.game_time, _hero_step < 0)
 		if GameClock.game_time >= _sim_seconds:
 			_phase = 2
 			_report()
-			get_tree().quit(0)
+			if _p10 != null and _p10.get("enabled") == true:
+				_phase = 3
+				_p10.start_roundtrip()
+			else:
+				get_tree().quit(0)
 
 
 func _report() -> void:

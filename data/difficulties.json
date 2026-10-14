@@ -1,12 +1,24 @@
 {
-	"_hinweis": "Schwierigkeitsgrade der Gegner-KI (ab Phase 7 genutzt): enemy_income_mult → Sammeln/Produktion, enemy_strength_mult → Leben/Angriff/Gebäudeleben der KI-Reiche (Quelle difficulty), ai_think_interval → Denkpause der KI in Spielsekunden; weitere Stellschrauben in ai.json → difficulty. Ausbalanciert wird in Phase 10.",
+	"_hinweis": "Schwierigkeitsgrade (gehören zur Partie, nach dem Start nicht änderbar; Wirkung über scripts/kingdoms/difficulty.gd, Quelle difficulty). enemy_income_mult → Sammeln/Produktion der KI-Reiche, enemy_strength_mult → Leben/Angriff/Gebäudeleben der KI-Reiche, ai_think_interval → Denkpause der KI in Spielsekunden, ai_aggression_mult → Angriffslust der KI (Faktor auf die Persönlichkeit: teilt die nötige Überlegenheit einer Welle und gewichtet Ziele beim Spieler), monster_strength_mult → Leben/Angriff/Höhlenleben der wilden Monster, monster_growth_mult → Nachwuchs der Monsterlager (teilt die Wartezeit; ab Phase 8 auch neue Lager), monster_raid_mult → Monster-Streifzüge (ab Phase 8: Chance × Faktor, Abstand ÷ Faktor), player_start_resources_mult → Startressourcen des Spielers (nur neue Partie), description → Text für Menü und Hilfe. Weitere Stellschrauben der KI in ai.json → difficulty, Ereignisse in events.json → settings.difficulty (ab Phase 8). Startwerte für das Balancing (Phase 10).",
 
 	"default": "normal",
 
 	"difficulties": [
-		{ "id": "easy",   "name": "Leicht", "enemy_income_mult": 0.7, "enemy_strength_mult": 0.8, "ai_think_interval": 8.0 },
-		{ "id": "normal", "name": "Normal", "enemy_income_mult": 1.0, "enemy_strength_mult": 1.0, "ai_think_interval": 5.0 },
-		{ "id": "hard",   "name": "Schwer", "enemy_income_mult": 1.3, "enemy_strength_mult": 1.15, "ai_think_interval": 3.0 },
-		{ "id": "epic",   "name": "Episch", "enemy_income_mult": 1.7, "enemy_strength_mult": 1.3, "ai_think_interval": 2.0 }
+		{ "id": "easy",   "name": "Leicht", "enemy_income_mult": 0.7, "enemy_strength_mult": 0.8, "ai_think_interval": 8.0,
+		  "ai_aggression_mult": 0.7, "monster_strength_mult": 0.8, "monster_growth_mult": 0.6, "monster_raid_mult": 0.5,
+		  "player_start_resources_mult": 1.25,
+		  "description": "Gemütlich: schwächere und langsamere Gegner, sanfte Monster, mehr Startvorräte." },
+		{ "id": "normal", "name": "Normal", "enemy_income_mult": 1.0, "enemy_strength_mult": 1.0, "ai_think_interval": 5.0,
+		  "ai_aggression_mult": 1.0, "monster_strength_mult": 1.0, "monster_growth_mult": 1.0, "monster_raid_mult": 1.0,
+		  "player_start_resources_mult": 1.0,
+		  "description": "Ausgewogen: Gegner wachsen wie du, erste Angriffe nach einer Dreiviertelstunde." },
+		{ "id": "hard",   "name": "Schwer", "enemy_income_mult": 1.3, "enemy_strength_mult": 1.15, "ai_think_interval": 3.0,
+		  "ai_aggression_mult": 1.2, "monster_strength_mult": 1.15, "monster_growth_mult": 1.25, "monster_raid_mult": 1.3,
+		  "player_start_resources_mult": 1.0,
+		  "description": "Fordernd: die Gegner wirtschaften besser, greifen früher und öfter an." },
+		{ "id": "epic",   "name": "Episch", "enemy_income_mult": 1.7, "enemy_strength_mult": 1.3, "ai_think_interval": 2.0,
+		  "ai_aggression_mult": 1.4, "monster_strength_mult": 1.3, "monster_growth_mult": 1.5, "monster_raid_mult": 1.6,
+		  "player_start_resources_mult": 1.0,
+		  "description": "Für Kenner: starke, schnelle und angriffslustige Gegner, gefährliche Monster." }
 	]
 }

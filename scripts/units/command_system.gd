@@ -567,3 +567,32 @@ func _on_unit_removed(u: Unit) -> void:
 				k.armies.erase(n)
 	if changed:
 		armies_changed.emit(k)
+
+
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10)
+# ---------------------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {"next_march_id": _next_march_id, "tick_count": _tick_count}
+
+
+func from_dict(d: Dictionary) -> void:
+	_next_march_id = int(d.get("next_march_id", 1))
+	_tick_count = int(d.get("tick_count", 0))
+
+
+## Gruppenmärsche sind Laufzeit: Einheiten mit Marschbefehl, die nicht (mehr) laufen und
+## noch nicht am Ziel sind, gehen einzeln weiter (Ziele bleiben erhalten)
+func rebuild_runtime() -> void:
+	_marches.clear()
+	var ts := float(world.tile_size)
+	for u in unit_system.units:
+		u.follow_leader = null
+		u.speed_cap = 0.0
+		if u.command != "move" and u.command != "attack_move":
+			continue
+		if u.moving or u.path_pending or u.inside != null:
+			continue
+		if u.position.distance_to(u.command_pos) > ts:
+			unit_system.move_to(u, u.command_pos)

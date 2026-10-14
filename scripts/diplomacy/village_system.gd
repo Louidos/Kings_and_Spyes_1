@@ -764,18 +764,20 @@ func _on_unit_removed(u: Unit) -> void:
 # ---------------------------------------------------------------------------
 
 func to_dict() -> Dictionary:
-	return {"villages": villages.duplicate(true), "order": order.duplicate()}
+	return {"villages": villages.duplicate(true), "order": order.duplicate(), "pending": _pending.duplicate(true),
+			"tick_acc": _tick_acc}
 
 
 func from_dict(d: Dictionary) -> void:
 	villages = (d.get("villages", {}) as Dictionary).duplicate(true)
 	order = (d.get("order", []) as Array).duplicate()
+	_pending = (d.get("pending", []) as Array).duplicate(true)
+	_tick_acc = float(d.get("tick_acc", 0.0))
 
 
-## Nach dem Laden: Laufzeit leeren, Verweise auf nicht mehr vorhandene Milizen entfernen
+## Nach dem Laden: Verweise auf nicht mehr vorhandene Milizen entfernen (die Warteliste
+## _pending ist gespeichert und bleibt)
 func rebuild_runtime() -> void:
-	_pending.clear()
-	_tick_acc = 0.0
 	for vid in villages:
 		var rec: Dictionary = villages[vid]
 		var slots: Dictionary = rec["slots"]

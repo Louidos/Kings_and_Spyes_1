@@ -2,7 +2,8 @@
 ##
 ## Hält die Parameter der aktuellen Partie (Fraktion, Schwierigkeit, Kartengrösse,
 ## Seed). Das Hauptmenü füllt diese Werte, die Spielszene liest sie.
-## Ab Phase 10 wird hier auch der Spielstand gespeichert/geladen.
+## Ab Phase 10 merkt sich die Sitzung auch, welcher Spielstand geladen werden soll
+## (pending_load_path), die echte Spielzeit und Fehler für das Hauptmenü.
 extends Node
 
 ## "good" oder "evil"
@@ -15,6 +16,19 @@ var seed_text: String = ""
 var world_seed: int = 0
 ## Rauchtest/Debug: feste Anzahl KI-Reiche (−1 = aus Daten)
 var ai_count_override := -1
+## Volk des Spielers (ab Phase 8; leer = keins)
+var people_id: String = ""
+## Echte Spielzeit der Partie in Sekunden (ohne Pause; wird gespeichert)
+var play_seconds: float = 0.0
+## Diesen Spielstand lädt die Spielszene beim Start ("" = neue Partie)
+var pending_load_path: String = ""
+var pending_load_name: String = ""
+## Zuletzt benutzter Speichername (Vorschlag im Speichern-Fenster)
+var last_save_name: String = ""
+## Fehler beim Laden (zeigt das Hauptmenü einmal an)
+var last_error: String = ""
+## Rauchtest: nach dem Laden den Zustand erneut einsammeln (Idempotenz-Vergleich)
+var debug_verify_load := false
 
 
 func _ready() -> void:
@@ -31,6 +45,30 @@ func setup_new_game(p_faction: String, p_difficulty: String, p_map_size: String,
 	if seed_text.is_empty():
 		seed_text = random_seed_text()
 	world_seed = seed_from_text(seed_text)
+	pending_load_path = ""
+	pending_load_name = ""
+	last_save_name = ""
+	play_seconds = 0.0
+
+
+## Gespeicherte Werte der Partie (Spielstand)
+func to_dict() -> Dictionary:
+	return {"faction_id": faction_id, "difficulty_id": difficulty_id, "map_size_id": map_size_id,
+			"seed_text": seed_text, "world_seed": world_seed, "people_id": people_id,
+			"ai_count_override": ai_count_override, "play_seconds": play_seconds}
+
+
+## Partie aus einem Spielstand (Kopf oder session-Teil) übernehmen
+func apply_session(d: Dictionary) -> void:
+	faction_id = str(d.get("faction_id", faction_id))
+	difficulty_id = str(d.get("difficulty_id", difficulty_id))
+	map_size_id = str(d.get("map_size_id", map_size_id))
+	seed_text = str(d.get("seed_text", seed_text))
+	world_seed = int(d.get("world_seed", seed_from_text(seed_text)))
+	people_id = str(d.get("people_id", ""))
+	if d.has("ai_count_override"):
+		ai_count_override = int(d["ai_count_override"])
+	play_seconds = float(d.get("play_seconds", 0.0))
 
 
 ## Kartenbreite/-höhe in Kacheln

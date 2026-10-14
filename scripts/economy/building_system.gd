@@ -119,6 +119,43 @@ func place_settlement_center(def: Dictionary, kingdom: Kingdom, center_cell: Vec
 	return place_building(def, top_left, kingdom, true)
 
 
+## Spielstand laden (Phase 10): Gebäude aus Building.to_dict wiederherstellen. Ohne
+## Kosten, ohne Roden (steht schon im Welt-Diff) und ohne Signale (building_placed,
+## building_completed, finished). null bei unbekanntem Typ oder Reich.
+func restore_building(d: Dictionary) -> Building:
+	var def := DataDB.get_building(str(d.get("def_id", "")))
+	var kingdom: Kingdom = game.get_kingdom(int(d.get("kingdom_id", 0)))
+	if def.is_empty() or kingdom == null:
+		return null
+	var b := Building.new()
+	b.extra = (d.get("extra", {}) as Dictionary).duplicate(true)
+	b.setup(def, kingdom, d.get("cell", Vector2i.ZERO), world, int(d.get("uid", 0)))
+	b.constructed = bool(d.get("constructed", false))
+	b.progress = float(d.get("progress", 0.0))
+	b.max_hp = maxf(float(d.get("max_hp", b.max_hp)), 1.0)
+	b.hp = float(d.get("hp", b.max_hp))
+	b.last_damaged_at = float(d.get("last_damaged_at", -1000.0))
+	b.summon_queue = (d.get("summon_queue", []) as Array).duplicate(true)
+	b.rally_point = d.get("rally_point", Vector2.ZERO)
+	b.has_rally = bool(d.get("has_rally", false))
+	b.summon_count = int(d.get("summon_count", 0))
+	b.loot_factor = float(d.get("loot_factor", 1.0))
+	b.biome_efficiency = float(d.get("biome_efficiency", 1.0))
+	b.refresh_look()
+	var fp := b.get_footprint()
+	for y in range(fp.position.y, fp.end.y):
+		for x in range(fp.position.x, fp.end.x):
+			var c := Vector2i(x, y)
+			world.occupancy[c] = b
+			if b.blocks_movement():
+				game.nav.set_solid(c, true)
+	kingdom.buildings.append(b)
+	game.entities.add_child(b)
+	game.register_entity(b)
+	b.finished.connect(_on_building_finished)
+	return b
+
+
 ## Besitzerwechsel eines Gebäudes (Aufnahme, Eroberung; ab Phase 8 Verrat). Arbeiter
 ## werden frei, Beschwörungen erstattet (an den alten Besitzer), Leben behält seinen
 ## Anteil, Gebiet und Wohnraum gehen mit.
@@ -397,3 +434,19 @@ func _on_sim_tick(dt: float) -> void:
 					var weather: float = game.magic_system.get_production_factor(kingdom, b.position, res_id)
 					var mult: float = kingdom.mod("production") * kingdom.mod("production." + res_id) * weather
 					kingdom.add_resource(res_id, gains[res_id] * b.biome_efficiency * mult * dt)
+
+
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10): Gebäude und Strassen speichert SaveGame selbst
+# ---------------------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {}
+
+
+func from_dict(_d: Dictionary) -> void:
+	pass
+
+
+func rebuild_runtime() -> void:
+	pass

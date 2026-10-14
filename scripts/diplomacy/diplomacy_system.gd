@@ -1178,7 +1178,8 @@ func to_dict() -> Dictionary:
 			"gift_recent": gift_recent.duplicate(true), "protection_credit": protection_credit.duplicate(true),
 			"cooldowns": cooldowns.duplicate(), "last_attack": last_attack.duplicate(),
 			"intrusion": intrusion.duplicate(), "history": history.duplicate(true), "notified": notified.duplicate(),
-			"rng_state": rng_state, "use_caravans": use_caravans}
+			"rng_state": rng_state, "use_caravans": use_caravans, "pending": _pending.duplicate(true),
+			"tick_acc": _tick_acc, "decay_acc": _decay_acc, "intrusion_acc": _intrusion_acc}
 
 
 func from_dict(d: Dictionary) -> void:
@@ -1195,12 +1196,14 @@ func from_dict(d: Dictionary) -> void:
 	notified = (d.get("notified", {}) as Dictionary).duplicate()
 	rng_state = int(d.get("rng_state", rng_state))
 	use_caravans = bool(d.get("use_caravans", false))
+	_pending = (d.get("pending", []) as Array).duplicate(true)
+	_tick_acc = float(d.get("tick_acc", 0.0))
+	_decay_acc = float(d.get("decay_acc", 0.0))
+	_intrusion_acc = float(d.get("intrusion_acc", 0.0))
 
 
 ## Nach dem Laden: Bündnisse wieder wirksam machen (Beziehung, Freischaltung; idempotent)
 func rebuild_runtime() -> void:
-	_pending.clear()
-	_tick_acc = 0.0
 	_rng.state = rng_state
 	for vid in treaties:
 		var t: Dictionary = treaties[vid]

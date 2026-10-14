@@ -16,6 +16,10 @@
 class_name WorldGenerator
 extends RefCounted
 
+## Version des Generators: erhöhen, sobald gleicher Seed + gleiche Daten eine andere Welt
+## ergeben würden (alte Spielstände sind dann nicht mehr ladbar, siehe README "Speichern und Laden")
+const VERSION := 1
+
 ## Reihenfolge der Rauschebenen; entspricht den Bedingungs-Präfixen in biomes.json
 const LAYERS := ["height", "moisture", "heat", "volcanic"]
 

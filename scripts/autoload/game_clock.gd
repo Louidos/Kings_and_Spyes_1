@@ -36,6 +36,9 @@ var sim_tick_interval: float = 0.1
 ## Schutz gegen Ruckel-Spiralen: höchstens so viele Ticks pro Frame
 var max_ticks_per_frame: int = 12
 
+## Verworfene Simulationsschritte (Rückstand bei zu langsamen Frames; Balancing-Messung)
+var dropped_ticks: int = 0
+
 var _tick_accumulator: float = 0.0
 var _last_total_hours: int = 0
 
@@ -53,6 +56,7 @@ func _ready() -> void:
 ## Setzt die Uhr für eine neue Partie zurück und startet sie.
 func start_new_game() -> void:
 	game_time = 0.0
+	dropped_ticks = 0
 	_tick_accumulator = 0.0
 	_last_total_hours = _total_hours()
 	speed_index = clampi(int(DataDB.cfg("time.default_speed_index", 1)), 0, speed_steps.size() - 1)
@@ -82,6 +86,7 @@ func _process(delta: float) -> void:
 		ticks += 1
 		sim_tick.emit(sim_tick_interval)
 	if ticks >= max_ticks_per_frame:
+		dropped_ticks += int(_tick_accumulator / sim_tick_interval)
 		_tick_accumulator = 0.0  # Rückstand verwerfen statt hinterherzulaufen
 
 	# Stunden- und Tageswechsel melden
@@ -158,17 +163,33 @@ func _total_hours() -> int:
 
 
 # ---------------------------------------------------------------------------
-# Speichern / Laden (wird in Phase 10 vom Speichersystem genutzt)
+# Speichern / Laden (Phase 10)
 # ---------------------------------------------------------------------------
 
 func to_dict() -> Dictionary:
-	return {"game_time": game_time, "speed_index": speed_index, "paused": paused}
+	return {"game_time": game_time, "speed_index": speed_index, "paused": paused,
+			"tick_accumulator": _tick_accumulator}
 
 
 func from_dict(d: Dictionary) -> void:
 	game_time = float(d.get("game_time", 0.0))
 	speed_index = clampi(int(d.get("speed_index", 1)), 0, speed_steps.size() - 1)
 	paused = bool(d.get("paused", false))
-	_tick_accumulator = 0.0
+	_tick_accumulator = clampf(float(d.get("tick_accumulator", 0.0)), 0.0, sim_tick_interval)
+	# Die laufende Stunde gilt als schon gemeldet (keine doppelte Stunde nach dem Laden)
 	_last_total_hours = _total_hours()
+	speed_changed.emit(paused, get_speed())
+
+
+## Spielstand laden: Zeit übernehmen, die Uhr bleibt aber stehen (start_loaded_game)
+func load_state(d: Dictionary) -> void:
+	running = false
+	frame_delta = 0.0
+	from_dict(d)
+
+
+## Nach dem Laden: Uhr starten (Pause und Tempo aus dem Spielstand)
+func start_loaded_game() -> void:
+	dropped_ticks = 0
+	running = true
 	speed_changed.emit(paused, get_speed())

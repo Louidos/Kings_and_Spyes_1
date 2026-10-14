@@ -33,5 +33,13 @@
 		"sim_ticks_per_second": 10,
 		"speed_steps": [0.5, 1.0, 2.0, 3.0],
 		"default_speed_index": 1
+	},
+
+	"save": {
+		"_hinweis": "Spielstände (Phase 10). autosave_slots = so viele Autospeicherplätze werden reihum überschrieben. autosave_min_gap_seconds = frühestens so viele echte Sekunden nach Start oder Laden automatisch speichern (Abstand stellt der Spieler in den Einstellungen ein). max_message_log = so viele Meldungen behält das Protokoll (Taste M, wird gespeichert). unsaved_warning_seconds = ab so vielen Spielsekunden ohne Speichern fragt das Spielmenü vor dem Beenden oder Laden nach.",
+		"autosave_slots": 3,
+		"autosave_min_gap_seconds": 60,
+		"max_message_log": 300,
+		"unsaved_warning_seconds": 60
 	}
 }

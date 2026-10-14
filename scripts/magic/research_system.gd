@@ -250,6 +250,10 @@ func recompute_mana(k: Kingdom) -> void:
 		var up_id := str(up.get("id", ""))
 		var level := int(k.mana_upgrades.get(up_id, 0))
 		var per: Dictionary = up.get("per_level", {})
+		if level <= 0:
+			# Stufe 0: keine Quelle (gleicher Zustand wie vor der ersten Verbesserung)
+			k.clear_bonuses("upgrade:" + up_id)
+			continue
 		for key in per:
 			k.set_bonus("upgrade:" + up_id, str(UPGRADE_KEYS.get(key, key)), float(per[key]) * level)
 
@@ -345,3 +349,21 @@ func _missing_requirements(k: Kingdom, def: Dictionary) -> PackedStringArray:
 		if not k.researched.has(req) and not k.research_queue.has(req):
 			missing.append(str(DataDB.get_research(str(req)).get("name", req)))
 	return missing
+
+
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10): Forschungsstand steht in den Reichen
+# ---------------------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {}
+
+
+func from_dict(_d: Dictionary) -> void:
+	pass
+
+
+## Wirkungen aller Reiche neu aufbauen (idempotent)
+func rebuild_runtime() -> void:
+	for k in game.kingdoms:
+		restore(k)

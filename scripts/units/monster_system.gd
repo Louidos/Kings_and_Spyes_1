@@ -35,6 +35,8 @@ var _quiet := 30.0
 var _leash := 12.0
 var _ts := 64.0
 var _dormant_timer := 0.0
+## Schwierigkeit: Nachwuchs der Lager (teilt die Wartezeit, difficulties.json monster_growth_mult)
+var _growth_mult := 1.0
 
 
 func setup(p_game: Node, p_wild: Kingdom) -> void:
@@ -47,6 +49,7 @@ func setup(p_game: Node, p_wild: Kingdom) -> void:
 	_danger_radius = int(DataDB.cmb("camps.danger_radius", 10))
 	_quiet = float(DataDB.cmb("camps.respawn_quiet_seconds", 30.0))
 	_leash = float(DataDB.cmb("leash_radius", 12.0))
+	_growth_mult = maxf(Difficulty.value("monster_growth_mult", 1.0), 0.05)
 	_rng.seed = hash(world.world_seed + 1337)
 	GameClock.sim_tick.connect(_on_sim_tick)
 	unit_system.unit_removed.connect(_on_unit_removed)
@@ -126,7 +129,7 @@ func get_lair_info(lair: Building) -> Dictionary:
 		strength += u.max_hp * u.attack / maxf(u.attack_interval, 0.1)
 	var next := -1.0
 	if monsters.size() < int(data["size"]):
-		next = maxf(float(lair.def.get("respawn_seconds", 90.0)) - float(data["respawn"]), 0.0)
+		next = maxf(_respawn_seconds(lair) - float(data["respawn"]), 0.0)
 	# Grobe Empfehlung: Kämpfer mit vergleichbarer Stärke (Lebenspunkte × Schaden pro Sekunde)
 	var faction: String = game.player.faction_id if game.player != null else "good"
 	var fighter := DataDB.get_unit_for_tier(faction, "fighter")
@@ -152,7 +155,7 @@ func _on_sim_tick(dt: float) -> void:
 		# Verluste ersetzen, aber nur in ruhigen Zeiten
 		if monsters.size() < int(data["size"]) and now - float(data["last_fight"]) >= _quiet:
 			data["respawn"] = float(data["respawn"]) + dt
-			if float(data["respawn"]) >= float(lair.def.get("respawn_seconds", 90.0)):
+			if float(data["respawn"]) >= _respawn_seconds(lair):
 				data["respawn"] = 0.0
 				var kinds: Array = data["kinds"]
 				spawn_monster(lair, str(kinds[_rng.randi_range(0, kinds.size() - 1)]))
@@ -238,6 +241,11 @@ func _update_dormant(lair: Building, monsters: Array) -> void:
 				unit_system.stop(u)
 
 
+## Wartezeit bis zum Nachwuchs (Schwierigkeit teilt sie)
+func _respawn_seconds(lair: Building) -> float:
+	return float(lair.def.get("respawn_seconds", 90.0)) / _growth_mult
+
+
 func _lair_center_cell(lair: Building) -> Vector2i:
 	return lair.cell + Vector2i(lair.size.x >> 1, lair.size.y >> 1)
 
@@ -257,3 +265,39 @@ func _on_unit_removed(u: Unit) -> void:
 	var lair: Variant = game.find_by_uid(u.home_uid)
 	if lair != null and lairs.has(lair):
 		(lairs[lair] as Array).erase(u)
+
+
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10): Höhlen und Monster stehen in Gebäuden (extra) und Einheiten (home_uid)
+# ---------------------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {"rng": _rng.state, "dormant_timer": _dormant_timer}
+
+
+func from_dict(d: Dictionary) -> void:
+	_rng.state = int(d.get("rng", _rng.state))
+	_dormant_timer = float(d.get("dormant_timer", 0.0))
+
+
+## Zwischenspeicher lairs und Gefahrenzonen aus Gebäuden und Einheiten neu aufbauen (idempotent)
+func rebuild_runtime() -> void:
+	lairs.clear()
+	if wild == null:
+		return
+	world.danger = PackedByteArray()
+	for b in wild.buildings:
+		if str(b.def.get("id", "")) != "monster_lair":
+			continue
+		var defaults := {"kinds": ["wolf"], "size": 0, "respawn": 0.0, "last_fight": -1000.0}
+		for key in defaults:
+			if not b.extra.has(key):
+				b.extra[key] = defaults[key]
+		lairs[b] = []
+		world.mark_danger(_lair_center_cell(b), _danger_radius, 1)
+	for u in wild.units:
+		if u.home_uid <= 0:
+			continue
+		var lair: Variant = game.find_by_uid(u.home_uid)
+		if lair != null and lairs.has(lair):
+			(lairs[lair] as Array).append(u)

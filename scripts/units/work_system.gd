@@ -823,3 +823,24 @@ func _pick_unit(kingdom: Kingdom, job_id: String, pos: Vector2, prefer_empty_han
 
 func _carry_capacity(u: Unit) -> float:
 	return maxf(float(u.type_def.get("carry", 10)), 1.0)
+
+
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10)
+# ---------------------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {"rng": _rng.state, "tick_count": _tick_count}
+
+
+func from_dict(d: Dictionary) -> void:
+	_rng.state = int(d.get("rng", _rng.state))
+	_tick_count = int(d.get("tick_count", 0))
+
+
+## Zwischenspeicher leeren: Arbeiter suchen ihren Arbeitsschritt neu (Reservierungen entstehen dabei)
+func rebuild_runtime() -> void:
+	_reservations.clear()
+	_site_workers.clear()
+	_unreachable.clear()
+	_local_version += 1
