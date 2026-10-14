@@ -80,6 +80,10 @@ var heal := 0.0
 var heal_range := 0.0
 ## Faktor gegen Gebäude
 var building_damage := 1.0
+## Anteil des ausgeteilten Schadens, der die Einheit heilt (Helden, Wirkungen)
+var lifesteal := 0.0
+## Faktor auf erlittenen Schaden (ausserhalb der Rüstungsgrenze, z. B. Schutzschild)
+var damage_taken := 1.0
 # Verhalten (units.json, sonst aus der Rolle abgeleitet)
 var flee_on_hit := false
 var joins_fights := false
@@ -117,9 +121,18 @@ var stealthed := false
 var expires_at := -1.0
 ## Held: id des Heldeneintrags im Reich (Kingdom.heroes), 0 = kein Held
 var hero_id := 0
-## Held: Faktoren je Wert aus Stufe und passiven Fähigkeiten (z. B. "hp" -> 1.4),
-## vom HeroSystem gesetzt; danach refresh_stats
+## Held: Zuschläge je Wert aus Stufe, Talenten und passiven Fähigkeiten:
+## Schlüssel -> {"add": Zuschlag, "mult": Faktor, "parts": [[Text, add, mult], …]}.
+## Vom HeroSystem gesetzt (abgeleitet, nicht speichern); danach refresh_stats.
 var hero_mods: Dictionary = {}
+## Zusätzliche Kampfpunkte für den Sieger (Helden: je nach Stufe)
+var kill_points_bonus := 0
+## Eigener Name (Helden), sonst der Typname
+var custom_name := ""
+## Befehl "cast" (Held läuft zum Ziel und wirkt dann): Fähigkeit, Ziel (uid) bzw. Punkt
+var cast_ability := ""
+var cast_target_uid := 0
+var cast_pos := Vector2.ZERO
 
 # --- Arbeit (WorkSystem) ---
 var job_id: String = "idle":
@@ -202,6 +215,8 @@ func refresh_stats() -> void:
 	heal = _stat("heal")
 	heal_range = _stat("heal_range")
 	building_damage = _stat("building_damage")
+	lifesteal = maxf(_stat("lifesteal"), 0.0)
+	damage_taken = maxf(_stat_from(1.0, "damage_taken"), 0.05)
 	hp = clampf(ratio, 0.0, 1.0) * max_hp
 	var now_stealthed := bool(type_def.get("stealth", false)) or _has_effect_key("stealth")
 	if now_stealthed != stealthed:
@@ -211,7 +226,11 @@ func refresh_stats() -> void:
 
 
 func _stat(key: String) -> float:
-	var value := float(type_def.get(key, 0.0))
+	return _stat_from(float(type_def.get(key, 0.0)), key)
+
+
+## Wert mit Grundwert value: (value + Zuschläge) × Faktoren aus Wirkungen, Reich und Held
+func _stat_from(value: float, key: String) -> float:
 	var add := 0.0
 	var mult := 1.0
 	for e in effects:
@@ -221,8 +240,10 @@ func _stat(key: String) -> float:
 	if kingdom != null:
 		# Schlüssel, Schlüssel je Stufe ("attack.archer") und je Rolle ("hp@combat" = alle Truppen)
 		mult *= kingdom.mod(key) * kingdom.mod(key + "." + tier) * kingdom.mod(key + "@" + role)
-	if not hero_mods.is_empty():
-		mult *= float(hero_mods.get(key, 1.0))
+	if not hero_mods.is_empty() and hero_mods.has(key):
+		var m: Dictionary = hero_mods[key]
+		add += float(m.get("add", 0.0))
+		mult *= float(m.get("mult", 1.0))
 	return (value + add) * mult
 
 
@@ -293,6 +314,8 @@ func get_command_text() -> String:
 
 
 func get_display_name() -> String:
+	if not custom_name.is_empty():
+		return custom_name
 	return str(type_def.get("name", "Einheit"))
 
 

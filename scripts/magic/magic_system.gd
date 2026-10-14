@@ -577,11 +577,15 @@ func _on_upkeep_unpaid(k: Kingdom, source: String) -> void:
 # ---------------------------------------------------------------------------
 
 ## Öffentlich (Heldenauren, Fähigkeiten, später Ereignisse): Wirkungen auf alle
-## Einheiten im Kreis wie bei Zaubern. source z. B. "hero:<fähigkeit>", until -1 =
+## Einheiten im Kreis wie bei Zaubern. source z. B. "ability:<fähigkeit>", until -1 =
 ## bis zum Entfernen. Im Simulationstakt use_index = true (schneller).
+## replace_values: bestehende gleiche Wirkungen übernehmen neue Werte (Aura stieg
+## eine Stufe); filter "fighters": nur kämpfende Einheiten (keine Bewohner);
+## exclude_uid: diese Einheit auslassen (z. B. der Held selbst).
 func apply_area_effects(k: Kingdom, source: String, effects: Array, pos: Vector2, radius_px: float, until: float,
-		power: float = 1.0, ref: int = 0, use_index: bool = false) -> void:
-	_apply_effects(k, source, effects, pos, radius_px, until, power, ref, use_index)
+		power: float = 1.0, ref: int = 0, use_index: bool = false, replace_values: bool = false,
+		filter: String = "", exclude_uid: int = 0) -> void:
+	_apply_effects(k, source, effects, pos, radius_px, until, power, ref, use_index, replace_values, filter, exclude_uid)
 
 
 ## Einheiten im Kreis (öffentlich, z. B. Flächenschaden der Helden). use_index nur im Simulationstakt.
@@ -589,29 +593,43 @@ func units_in(pos: Vector2, radius_px: float, use_index: bool = false) -> Array:
 	return _units_in(pos, radius_px, use_index)
 
 
-## Wirkungen auf Einheiten im Kreis. side own = verbündet, enemy = feindlich.
+## Wirkungen auf Einheiten im Kreis. side own = verbündet, own_kingdom = nur das
+## eigene Reich, enemy = feindlich.
 ## power verstärkt die Wirkung (mult 1.25 mit power 1.2 -> 1.30, add × power).
 ## Eine bestehende gleiche Wirkung wird nur verlängert (kein Neuberechnen) –
 ## Wettergebiete erneuern ihre Wirkungen jede Sekunde, das muss billig sein.
 func _apply_effects(k: Kingdom, source: String, effects: Array, pos: Vector2, radius: float, until: float,
-		power: float, ref: int, use_index: bool = false) -> void:
+		power: float, ref: int, use_index: bool = false, replace_values: bool = false,
+		filter: String = "", exclude_uid: int = 0) -> void:
 	var prepared: Array = []
 	for e in effects:
 		var key := str(e.get("key", ""))
 		prepared.append({"side": str(e.get("side", "own")), "id": "%s:%s" % [source, key], "key": key,
 				"mult": 1.0 + (float(e.get("mult", 1.0)) - 1.0) * power, "add": float(e.get("add", 0.0)) * power})
 	for u in _units_in(pos, radius, use_index):
+		if exclude_uid != 0 and u.uid == exclude_uid:
+			continue
+		if filter == "fighters" and not u.joins_fights and not u.can_heal():
+			continue
 		var allied: bool = game.are_allied(k, u.kingdom)
 		var hostile: bool = not allied and game.are_hostile(k, u.kingdom)
 		var changed := false
 		for pe in prepared:
-			if (pe["side"] == "own" and not allied) or (pe["side"] == "enemy" and not hostile):
+			var side: String = pe["side"]
+			if (side == "own" and not allied) or (side == "enemy" and not hostile) \
+					or (side == "own_kingdom" and u.kingdom != k):
 				continue
 			var existing := _find_effect(u, pe["id"])
 			if not existing.is_empty():
 				var old := float(existing.get("until", -1.0))
 				existing["until"] = -1.0 if until < 0.0 or old < 0.0 else maxf(old, until)
 				existing["ref"] = ref
+				if replace_values and (not is_equal_approx(float(existing.get("mult", 1.0)), float(pe["mult"])) \
+						or not is_equal_approx(float(existing.get("add", 0.0)), float(pe["add"]))):
+					existing["mult"] = pe["mult"]
+					existing["add"] = pe["add"]
+					_track(u, existing)
+					changed = true
 				continue
 			var effect := {"id": pe["id"], "key": pe["key"], "mult": pe["mult"], "add": pe["add"], "until": until,
 					"source": source, "kingdom_id": k.id, "ref": ref}

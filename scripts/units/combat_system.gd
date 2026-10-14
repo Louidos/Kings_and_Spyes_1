@@ -43,6 +43,9 @@ const DEATH_REPORT_DELAY := 3.0
 ## Höchstens so viele Einheiten pro Takt auseinanderschieben (reihum)
 const SEPARATE_PER_TICK := 80
 
+## Heldenfähigkeiten: so viel der Rüstung wirkt
+const ABILITY_ARMOR_FACTOR := 0.5
+
 var game: Node
 var world: WorldData
 var unit_system: UnitSystem
@@ -180,6 +183,9 @@ func apply_damage(victim: Object, amount: float, source: Object = null, source_k
 		_kind: String = "melee") -> float:
 	if not is_instance_valid(victim) or not victim.is_alive() or amount <= 0.0:
 		return 0.0
+	# Lebensraub (Helden, Wirkungen): nur der tatsächlich verursachte Schaden zählt
+	if is_instance_valid(source) and source is Unit and source.lifesteal > 0.0 and victim is Unit:
+		heal_unit(source, minf(amount, victim.hp) * source.lifesteal)
 	attacked.emit(source, victim, amount)
 	if source_kingdom != null:
 		_note_attack(victim.kingdom, source_kingdom, victim.position)
@@ -419,19 +425,42 @@ func _damage_value(u: Unit, victim: Object, spread: float) -> float:
 	var dmg := u.attack * spread
 	if world.get_owner(world.world_to_cell(u.position)) == u.kingdom.id:
 		dmg *= 1.0 + _territory_bonus
+	if not (victim is Unit):
+		dmg *= u.building_damage
+	return maxf(mitigate(victim, dmg), _min_damage)
+
+
+## Verteidigung des Opfers auf rohen Schaden anwenden: Rüstung (mal armor_factor)
+## plus Geländebonus, Heimvorteil, Faktor "defense" des Reichs und damage_taken
+## (z. B. Schutzschild – wirkt ausserhalb der Rüstungsgrenze).
+func mitigate(victim: Object, raw: float, armor_factor: float = 1.0) -> float:
+	var dmg := raw
 	var defense := 0.0
 	var victim_kingdom: Kingdom = victim.kingdom
 	if victim is Unit:
 		var cell := world.world_to_cell(victim.position)
-		defense = victim.armor + float(world.get_biome(cell).get("defense_bonus", 0.0))
+		defense = victim.armor * armor_factor + float(world.get_biome(cell).get("defense_bonus", 0.0))
 		if world.get_owner(cell) == victim_kingdom.id:
 			dmg *= 1.0 - _territory_bonus
+		dmg *= victim.damage_taken
 	else:
-		defense = float(victim.def.get("armor", 0.0))
-		dmg *= u.building_damage
+		defense = float(victim.def.get("armor", 0.0)) * armor_factor
 	defense = clampf(defense, -0.5, _armor_cap)
-	dmg *= (1.0 - defense) / maxf(victim_kingdom.mod("defense"), 0.1)
-	return maxf(dmg, _min_damage)
+	return dmg * (1.0 - defense) / maxf(victim_kingdom.mod("defense"), 0.1)
+
+
+## Schaden einer Heldenfähigkeit: Rüstung wirkt nur zur Hälfte (Fähigkeiten sind
+## gegen Gepanzerte stark, ignorieren Rüstung aber nicht). Gibt den Schaden zurück.
+func ability_damage(victim: Object, raw: float, hero: Unit) -> float:
+	if not is_instance_valid(victim) or not victim.is_alive() or not is_instance_valid(hero):
+		return 0.0
+	var dmg := mitigate(victim, raw * hero.kingdom.mod("ability_power"), ABILITY_ARMOR_FACTOR)
+	return apply_damage(victim, maxf(dmg, _min_damage), hero, hero.kingdom, "ability")
+
+
+## Die Umgebungssuche im nächsten Takt neu aufbauen (z. B. nach einem Sprung)
+func mark_index_dirty() -> void:
+	_index_dirty = true
 
 
 func _damage_unit(v: Unit, dmg: float, source: Object, source_kingdom: Kingdom) -> void:
@@ -727,7 +756,7 @@ func _kill_unit(u: Variant, killer: Kingdom) -> void:
 	if not is_instance_valid(u) or not unit_system.units.has(u):
 		return
 	var k: Kingdom = u.kingdom
-	var points := int(u.type_def.get("kill_points", 0))
+	var points: int = int(u.type_def.get("kill_points", 0)) + u.kill_points_bonus
 	if killer != null and killer != k:
 		killer.kill_points += points
 		killer.kill_points_total += points
@@ -738,7 +767,8 @@ func _kill_unit(u: Variant, killer: Kingdom) -> void:
 	# Beschworene Zaubereinheiten zählen nicht als Verluste
 	if u.expires_at < 0.0:
 		k.add_stat("losses")
-		if k.is_player and not was_king:
+		# Gefallene Helden meldet das HeroSystem (mit Name und Wiederbelebung)
+		if k.is_player and not was_king and u.hero_id == 0:
 			_log_death(u)
 	unit_died.emit(u, killer)
 	if was_king and k.king == u:

@@ -41,14 +41,20 @@ func setup(p_game: Node) -> void:
 	game.building_system.building_removed.connect(_on_building_removed)
 
 
-func spawn_unit(kingdom: Kingdom, type_id: String, pos: Vector2) -> Unit:
+## uid > 0: diese Nummer wiederverwenden (wiederbelebte Helden bleiben so in
+## ihren Armeen). init(u) läuft vor dem Einfügen und vor unit_spawned (z. B.
+## Heldenwerte setzen), damit alle Empfänger die fertige Einheit sehen.
+func spawn_unit(kingdom: Kingdom, type_id: String, pos: Vector2, uid: int = 0,
+		init: Callable = Callable()) -> Unit:
 	var def := DataDB.get_unit_type(type_id)
 	if def.is_empty():
 		push_error("Unbekannter Einheitentyp: %s" % type_id)
 		return null
 	var u := Unit.new()
-	u.setup(def, kingdom, game.next_uid())
+	u.setup(def, kingdom, uid if uid > 0 else game.next_uid())
 	u.position = pos
+	if init.is_valid():
+		init.call(u)
 	game.unit_layer.add_child(u)
 	units.append(u)
 	game.register_entity(u)

@@ -84,6 +84,8 @@ var mana_regen: float:
 		return bonus("mana_regen") * mod("mana_regen")
 ## Stufe der Mana-Verbesserungen (ID -> Stufe)
 var mana_upgrades: Dictionary = {}
+## Helden des Reichs (Phase 5): einfache Einträge, siehe HeroSystem
+var heroes: Array = []
 ## Hat dieses Reich eine Wirtschaft (Nahrung, Wachstum)? Monster nicht.
 var has_economy: bool = true
 ## Herrscht Hungersnot?

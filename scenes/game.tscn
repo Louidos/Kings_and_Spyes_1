@@ -1,4 +1,4 @@
-[gd_scene load_steps=24 format=3]
+[gd_scene load_steps=25 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/world/world_map.gd" id="2_worldmap"]
@@ -22,6 +22,7 @@
 [ext_resource type="Script" path="res://scripts/magic/magic_system.gd" id="20_magic"]
 [ext_resource type="Script" path="res://scripts/view/magic_effects.gd" id="21_magicfx"]
 [ext_resource type="Script" path="res://scripts/ui/spell_targeting.gd" id="22_targeting"]
+[ext_resource type="Script" path="res://scripts/heroes/hero_system.gd" id="23_heroes"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
@@ -86,6 +87,9 @@ script = ExtResource("19_research")
 
 [node name="MagicSystem" type="Node" parent="Systems"]
 script = ExtResource("20_magic")
+
+[node name="HeroSystem" type="Node" parent="Systems"]
+script = ExtResource("23_heroes")
 
 [node name="Selection" type="Node" parent="."]
 script = ExtResource("12_selection")

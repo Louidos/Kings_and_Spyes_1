@@ -51,6 +51,13 @@ var research_by_id: Dictionary = {}
 var spells: Array = []
 var spell_by_id: Dictionary = {}
 var magic: Dictionary = {}
+## Helden (heroes.json): Einstellungen, Heldentypen (auch als Einheitentyp in
+## unit_by_id, Rolle "hero"), Fähigkeiten
+var hero_data: Dictionary = {}
+var hero_types: Array = []
+var hero_type_by_id: Dictionary = {}
+var abilities: Array = []
+var ability_by_id: Dictionary = {}
 
 
 func _ready() -> void:
@@ -78,6 +85,7 @@ func reload() -> void:
 	combat = _load_json("combat.json")
 	_load_research()
 	_load_spells()
+	_load_heroes()
 
 
 ## Liest einen Wert aus game_config.json über einen Punkt-Pfad, z. B. "camera.zoom_max".
@@ -274,6 +282,15 @@ func describe_effect_source(source: String) -> String:
 			for up in mag("upgrades", []):
 				if str(up.get("id", "")) == parts[1]:
 					return str(up.get("name", parts[1]))
+		"ability":
+			# "ability:<id>" bzw. "ability:<id>#<held>"; Führung: "ability:leadership[_<heldentyp>]"
+			var aid := parts[1].get_slice("#", 0)
+			if aid.begins_with("leadership"):
+				var htype := aid.trim_prefix("leadership").trim_prefix("_")
+				return "Führung" if htype.is_empty() else "Führung (%s)" % str(get_hero_type(htype).get("name", htype))
+			return str(get_ability(aid).get("name", aid))
+		"hero":
+			return "Heldenstufe"
 	return parts[1]
 
 
@@ -281,6 +298,11 @@ func describe_effect_source(source: String) -> String:
 func get_effect_source_color(source: String) -> Color:
 	if source.begins_with("spell:"):
 		return get_spell(source.substr(6)).get("color", Color.WHITE)
+	if source.begins_with("ability:"):
+		var aid := source.substr(8).get_slice("#", 0)
+		if aid.begins_with("leadership"):
+			return Color(1.0, 0.85, 0.35)
+		return get_ability(aid).get("color", Color.WHITE)
 	return Color.WHITE
 
 
@@ -294,6 +316,10 @@ func describe_bonus(key: String, add: float) -> String:
 			return "%+.1f Mana pro Minute (Burg)" % (add * 60.0)
 		"spell_range":
 			return "%+d Felder Zauberreichweite ausserhalb des Gebiets" % roundi(add)
+		"hero_train_cap":
+			return "Ausbildung der Helden bis Stufe %d (%+d)" % [int(hero_cfg("training.max_level", 5)) + roundi(add), roundi(add)]
+		"hero_slots":
+			return "%+d Heldenplatz" % roundi(add)
 	if key.begins_with("cap."):
 		return "%+d Lager (%s)" % [roundi(add), str(get_resource(key.substr(4)).get("name", key.substr(4)))]
 	return "%+g %s" % [add, key]
@@ -305,11 +331,13 @@ const _MOD_NAMES := {"attack": "Angriff", "armor": "Rüstung", "hp": "Leben", "s
 	"summon": "Beschwörungstempo", "growth": "Wachstum", "food_use": "Nahrungsverbrauch",
 	"aggro_range": "Sichtweite im Kampf", "sight": "Sichtweite", "mana_regen": "Mana der Burg",
 	"spell_cost": "Zauberkosten", "spell_cooldown": "Abklingzeit der Zauber",
-	"spell_radius": "Zauberradius", "spell_duration": "Zauberdauer", "spell_power": "Zauberstärke"}
+	"spell_radius": "Zauberradius", "spell_duration": "Zauberdauer", "spell_power": "Zauberstärke",
+	"hero_xp": "Erfahrung der Helden", "ability_power": "Stärke der Heldenfähigkeiten", "lifesteal": "Lebensraub",
+	"damage_taken": "erlittener Schaden"}
 const _TIER_NAMES := {"fighter": "Kämpfer", "archer": "Schützen", "elite": "Elite", "scout": "Späher",
-	"medic": "Heiler", "king": "König", "villager": "Bewohner", "summon": "Beschworene"}
-const _ROLE_NAMES := {"combat": "alle Truppen", "worker": "Bewohner", "support": "Heiler",
-	"king": "König", "monster": "Monster"}
+	"medic": "Heiler", "king": "König", "villager": "Bewohner", "summon": "Beschworene", "hero": "Helden"}
+const _ROLE_NAMES := {"combat": "alle Truppen ohne Helden", "worker": "Bewohner", "support": "Heiler",
+	"king": "König", "monster": "Monster", "hero": "Helden"}
 
 
 ## Lesbare Wirkung eines Modifikators, z. B. "+10 % Angriff (Kämpfer)".
@@ -531,6 +559,88 @@ func _normalize_unit(u: Dictionary) -> void:
 		cost[k] = float(u["cost"][k])
 	u["cost"] = cost
 	u["projectile"] = str(u.get("projectile", ""))
+
+
+func _load_heroes() -> void:
+	hero_data = _load_json("heroes.json")
+	hero_types = hero_data.get("heroes", [])
+	hero_type_by_id.clear()
+	for h in hero_types:
+		var id := str(h.get("id", ""))
+		h["faction"] = str(h.get("faction", "any"))
+		h["color"] = _parse_color(h.get("color", "#ffffff"))
+		var cost := {}
+		for res in h.get("cost", {}):
+			cost[res] = float(h["cost"][res])
+		h["cost"] = cost
+		var talents: Array = h.get("talents", [])
+		h["talents"] = talents
+		var leadership: Array = h.get("leadership", [])
+		h["leadership"] = leadership
+		hero_type_by_id[id] = h
+		# Als Einheitentyp eintragen (nur in unit_by_id, nicht in units: sonst
+		# fänden Stufen-Abfragen wie get_unit_for_tier auch Helden)
+		var u: Dictionary = (h.get("stats", {}) as Dictionary).duplicate(true)
+		u["id"] = id
+		u["name"] = str(h.get("name", id))
+		u["description"] = str(h.get("description", ""))
+		u["faction"] = h["faction"]
+		u["tier"] = "hero"
+		u["role"] = "hero"
+		u["letter"] = str(h.get("letter", "H"))
+		u["color"] = h.get("color", Color.WHITE)
+		u["sprite"] = str(h.get("sprite", ""))
+		u["cost"] = cost
+		u["summon_time"] = float(h.get("recruit_time", 30.0))
+		u["kill_points"] = 0.0
+		u["can_work"] = false
+		u["needs_housing"] = false
+		u["joins_fights"] = true
+		u["flee_on_hit"] = false
+		if unit_by_id.has(id):
+			push_error("Helden-ID doppelt (schon in units.json): %s" % id)
+		_normalize_unit(u)
+		unit_by_id[id] = u
+	abilities = hero_data.get("abilities", [])
+	ability_by_id.clear()
+	for a in abilities:
+		a["kind"] = str(a.get("kind", "active"))
+		a["target"] = str(a.get("target", "none"))
+		a["color"] = _parse_color(a.get("color", "#ffffff"))
+		for key in ["range", "radius", "cooldown"]:
+			a[key] = float(a.get(key, 0.0))
+		a["autocast"] = bool(a.get("autocast", false))
+		var ranks: Array = a.get("ranks", [])
+		a["ranks"] = ranks
+		ability_by_id[a["id"]] = a
+
+
+## Wert aus heroes.json → settings über einen Punkt-Pfad
+func hero_cfg(path: String, default_value: Variant = null) -> Variant:
+	var node: Variant = hero_data.get("settings", {})
+	for key in path.split("."):
+		if node is Dictionary and node.has(key):
+			node = node[key]
+		else:
+			return default_value
+	return node
+
+
+func get_hero_type(id: String) -> Dictionary:
+	return hero_type_by_id.get(id, {})
+
+
+## Heldentypen einer Fraktion (dazu alle mit faction "any"), in Datei-Reihenfolge
+func get_hero_types_for_faction(faction_id: String) -> Array:
+	var list: Array = []
+	for h in hero_types:
+		if h["faction"] == faction_id or h["faction"] == "any":
+			list.append(h)
+	return list
+
+
+func get_ability(id: String) -> Dictionary:
+	return ability_by_id.get(id, {})
 
 
 func _load_research() -> void:

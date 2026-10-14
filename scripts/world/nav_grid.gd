@@ -155,6 +155,18 @@ func find_path(world: WorldData, from_pos: Vector2, to_pos: Vector2) -> PackedVe
 	return result
 
 
+## Sind beide Kacheln begehbar und (soweit erkennbar) gegenseitig erreichbar?
+## Erkennt kleine eingeschlossene Flächen (z. B. für Sprünge von Helden).
+func same_area(a: Vector2i, b: Vector2i) -> bool:
+	if not region.has_point(a) or not region.has_point(b) or astar.is_point_solid(a) or astar.is_point_solid(b):
+		return false
+	var pa := _pocket(a)
+	if not pa.is_empty() and not pa.has(b):
+		return false
+	var pb := _pocket(b)
+	return pb.is_empty() or pb.has(a)
+
+
 ## Liegt cell in einer kleinen, von Gebäuden eingeschlossenen Fläche? Gibt die
 ## Kacheln dieser Fläche zurück (leer = offene Fläche). Begrenzte Breitensuche;
 ## nur nötig, wenn überhaupt ein Gebäude in der Nähe ist.

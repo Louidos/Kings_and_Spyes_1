@@ -5,7 +5,7 @@
 		"Kosten je Stufe: 1 = 20 Holz, 50 Stein (45 s); 2 = 40 Holz, 80 Stein, 30 Erz (75 s, Magie +10 Mana); 3 = 120 Holz, 100 Stein, 50 Erz, 15 Mana (120 s); 4 = 200 Holz, 150 Stein, 80 Erz, 30 Mana (180 s).",
 		"requires: Forschungen (IDs), die vorher fertig oder früher eingereiht sein müssen.",
 		"effects: unlock (schaltet frei: unit:<id>, building:<id>, spell:<id>), modifier (Faktor für einen Modifikator-Schlüssel), bonus (additiver Zuschlag: spell_range = Felder Zauberreichweite, cap.<res> = Lager), mana_cap / mana_regen (Zuschläge wie bei den Kampfpunkten).",
-		"Modifikator-Schlüssel: hp, attack, attack_interval (kleiner = schneller), armor, range, speed, regen, heal, aggro_range – jeweils auch mit .<stufe> (fighter, archer, elite, scout, medic, king, summon) oder @<rolle> (@combat = alle Truppen ohne Bewohner und König); gather, build, production, production.<res>, food_use, growth, summon (Beschwörungstempo), research (Forschungstempo), spell_cost, spell_cooldown, spell_radius, spell_duration, spell_power (Zauber)."
+		"Modifikator-Schlüssel (@combat = alle Truppen ohne Helden; Helden wachsen mit ihrer Stufe): hp, attack, attack_interval (kleiner = schneller), armor, range, speed, regen, heal, aggro_range – jeweils auch mit .<stufe> (fighter, archer, elite, scout, medic, king, summon) oder @<rolle> (@combat = alle Truppen ohne Bewohner und König); gather, build, production, production.<res>, food_use, growth, summon (Beschwörungstempo), research (Forschungstempo), spell_cost, spell_cooldown, spell_radius, spell_duration, spell_power (Zauber), hero_xp (Erfahrung der Helden), ability_power (Heldenfähigkeiten)."
 	],
 
 	"branches": [
@@ -16,6 +16,9 @@
 	],
 
 	"research": [
+		{ "id": "hero_lore", "faction": "any", "branch": "military", "tier": 2, "name": "Heldenlehre",
+		  "description": "Helden lernen schneller (+20 % Erfahrung) und können in der Heldenhalle bis Stufe 7 ausgebildet werden.", "cost": {"wood": 40, "stone": 80, "ore": 30}, "time": 75,
+		  "effects": [{"type": "modifier", "key": "hero_xp", "factor": 1.2}, {"type": "bonus", "key": "hero_train_cap", "add": 2}] },
 		{ "id": "good_weapons", "faction": "good", "branch": "military", "tier": 1, "name": "Waffenschmiede",
 		  "description": "Bessere Klingen und Bögen: Schwertkämpfer und Bogenschützen +10 % Angriff.", "cost": {"wood": 20, "stone": 50}, "time": 45,
 		  "effects": [{"type": "modifier", "key": "attack.fighter", "factor": 1.1}, {"type": "modifier", "key": "attack.archer", "factor": 1.1}] },

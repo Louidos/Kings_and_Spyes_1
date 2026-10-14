@@ -134,6 +134,15 @@
 		},
 
 		{
+			"id": "skeleton", "name": "Skelett", "faction": "evil", "tier": "summon", "role": "combat", "letter": "K", "color": "#d5d8dc",
+			"description": "Erweckt vom Nekromanten (Totenerweckung). Zerfällt nach einer halben Minute.",
+			"speed": 2.2, "radius": 15, "sight": 6, "food_per_day": 0, "temporary": true, "can_work": false, "needs_housing": false,
+			"hp": 90, "attack": 12, "attack_interval": 1.2, "range": 0.8, "armor": 0.1, "aggro_range": 5, "regen": 0,
+			"kill_points": 0,
+			"sprite": "res://assets/sprites/units/skeleton.png"
+		},
+
+		{
 			"id": "wolf", "name": "Wolf", "faction": "wild", "tier": "monster", "role": "monster", "letter": "W", "color": "#8a6a52",
 			"speed": 3.0, "radius": 15, "sight": 5, "food_per_day": 0,
 			"hp": 60, "attack": 8, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 5, "regen": 1.0,

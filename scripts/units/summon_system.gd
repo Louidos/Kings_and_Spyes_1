@@ -29,6 +29,9 @@ func setup(p_game: Node) -> void:
 ## der eigenen Fraktion) oder Einheiten-IDs; dazu kommen Freischaltungen des
 ## Reichs (Kingdom.grant_unlock mit "summon:<gebäude>:<einheit>", ab Phase 6).
 func get_options(b: Building) -> Array:
+	# Heldenhalle: die Helden, die das Reich anwerben kann (HeroSystem)
+	if bool(b.def.get("hero_hall", false)):
+		return game.hero_system.get_offers(b.kingdom)
 	var list: Array = []
 	var entries: Array = b.def.get("summons", []).duplicate()
 	var prefix := "summon:%s:" % str(b.def.get("id", ""))
@@ -44,6 +47,14 @@ func get_options(b: Building) -> Array:
 	return list
 
 
+## Kosten einer Beschwörung für dieses Reich (Helden werden mit jedem weiteren teurer)
+func get_cost(k: Kingdom, type_id: String) -> Dictionary:
+	var def := DataDB.get_unit_type(type_id)
+	if str(def.get("role", "")) == "hero":
+		return game.hero_system.recruit_cost(k, type_id)
+	return def.get("cost", {})
+
+
 ## "" = kann beschworen werden, sonst der Grund
 func can_summon(b: Building, type_id: String) -> String:
 	if not is_instance_valid(b):
@@ -56,9 +67,13 @@ func can_summon(b: Building, type_id: String) -> String:
 	var requires: Array = def.get("requires", [])
 	if not b.kingdom.has_all_unlocks(requires):
 		return "Benötigt Forschung: %s" % DataDB.describe_requirement(requires, b.kingdom.faction_id)
+	if str(def.get("role", "")) == "hero":
+		var hero_reason: String = game.hero_system.can_recruit(b.kingdom, type_id)
+		if not hero_reason.is_empty():
+			return hero_reason
 	if b.summon_queue.size() >= _queue_limit:
 		return "Warteschlange voll (%d)" % _queue_limit
-	var cost: Dictionary = def.get("cost", {})
+	var cost := get_cost(b.kingdom, type_id)
 	var reason := b.kingdom.missing_text(cost)
 	if not reason.is_empty() and b.kingdom.get_amount("mana") + 0.0001 < float(cost.get("mana", 0.0)):
 		reason += "\nMana: Manabrunnen auf einer Manaquelle bauen und Manawirker zuweisen (J)"
@@ -70,7 +85,7 @@ func summon(b: Building, type_id: String) -> bool:
 	if not can_summon(b, type_id).is_empty():
 		return false
 	var def := DataDB.get_unit_type(type_id)
-	var cost: Dictionary = def.get("cost", {})
+	var cost := get_cost(b.kingdom, type_id)
 	if not b.kingdom.spend(cost):
 		return false
 	b.summon_queue.append({"type_id": type_id, "progress": 0.0,
@@ -137,7 +152,9 @@ func spawn_summoned(b: Building, type_id: String) -> Unit:
 		var slot := _spawn_slot(b, pos, b.summon_count - 1)
 		u.command_pos = slot
 		unit_system.move_direct(u, slot)
-	b.kingdom.notify("%s beschworen" % u.get_display_name(), "good", pos)
+	# Angeworbene Helden meldet das HeroSystem (mit Namen)
+	if u.role != "hero":
+		b.kingdom.notify("%s beschworen" % u.get_display_name(), "good", pos)
 	unit_summoned.emit(u, b)
 	return u
 

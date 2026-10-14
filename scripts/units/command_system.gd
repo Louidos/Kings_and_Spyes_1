@@ -38,6 +38,8 @@ const COMMANDS := {
 	"defend": {"engage": true, "retaliate": true, "buildings": false, "leash": "guard", "on_arrive": "", "text": "wehrt sich"},
 	"flee": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "resume_work", "text": "flieht zur Burg"},
 	"return": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "kehrt heim"},
+	# Held läuft in Reichweite einer Fähigkeit (HeroSystem wirkt sie dort, siehe Unit.cast_*)
+	"cast": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "hold", "text": "wirkt eine Fähigkeit"},
 }
 
 ## Einheiten weiter als so viele Kacheln vom Gruppenmittelpunkt marschieren einzeln
@@ -140,6 +142,31 @@ func order_attack(units: Array, target: Object) -> void:
 
 
 ## Halt: stehen bleiben und den Platz verteidigen.
+## Held läuft zu approach_pos, um eine Fähigkeit zu wirken. Was gewirkt wird,
+## steht in u.cast_ability / cast_target_uid / cast_pos (setzt das HeroSystem);
+## es wirkt sie, sobald der Held in Reichweite ist.
+func order_cast(u: Unit, approach_pos: Vector2) -> void:
+	_prepare(u)
+	u.command = "cast"
+	u.command_pos = approach_pos
+	u.target = null
+	unit_system.move_to(u, approach_pos)
+
+
+## Eine Einheit aus allen Armeen nehmen (z. B. entlassener Held)
+func remove_from_armies(k: Kingdom, uid: int) -> void:
+	var changed := false
+	for n in k.armies.keys():
+		var uids: Array = k.armies[n]
+		if uids.has(uid):
+			uids.erase(uid)
+			changed = true
+			if uids.is_empty():
+				k.armies.erase(n)
+	if changed:
+		armies_changed.emit(k)
+
+
 func order_stop(units: Array) -> void:
 	for u in _commandable(units):
 		_prepare(u)
@@ -326,6 +353,7 @@ func _start_march(list: Array, slots: Array, dest: Vector2) -> void:
 	var best := INF
 	var members: Array = []
 	var slowest := INF
+	var hero_i := -1
 	for i in list.size():
 		var u: Unit = list[i]
 		var d := u.position.distance_to(centroid)
@@ -333,10 +361,15 @@ func _start_march(list: Array, slots: Array, dest: Vector2) -> void:
 			continue
 		members.append(i)
 		slowest = minf(slowest, u.speed)
+		# Ein Held führt seine Armee an (er ist ihr General)
+		if u.hero_id != 0 and hero_i < 0:
+			hero_i = i
 		# Heiler führen nicht (sie bleiben zum Heilen stehen)
 		if d < best and not u.can_heal():
 			best = d
 			leader_i = i
+	if hero_i >= 0:
+		leader_i = hero_i
 	if members.size() < 3 or leader_i < 0 or centroid.distance_to(dest) < MARCH_MIN_TILES * ts:
 		for i in list.size():
 			unit_system.move_to(list[i], slots[i])
@@ -502,6 +535,9 @@ func _max_radius(units: Array) -> float:
 
 
 func _on_unit_removed(u: Unit) -> void:
+	# Gefallene Helden bleiben in ihren Armeen: wiederbelebt behalten sie ihre Nummer
+	if u.hero_id != 0 and u.hp <= 0.0:
+		return
 	var k := u.kingdom
 	var changed := false
 	for n in k.armies.keys():

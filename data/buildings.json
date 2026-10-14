@@ -126,6 +126,16 @@
 			"sprites": { "good": "res://assets/sprites/buildings/library_good.png", "evil": "res://assets/sprites/buildings/library_evil.png" }
 		},
 		{
+			"id": "hero_hall", "name": "Heldenhalle", "names": { "good": "Heldenhalle", "evil": "Halle der Schatten" },
+			"label": "Helden", "labels": { "good": "Helden", "evil": "Schatten" },
+			"description": "Hier werden Helden angeworben (Heldenfenster mit G) und ausgebildet. Nur eine pro Reich, braucht eine Kaserne.",
+			"requires_buildings": ["barracks"], "max_per_kingdom": 1,
+			"size": [3, 3], "cost": { "wood": 120, "stone": 150, "ore": 40, "mana": 40 }, "build_time": 70,
+			"territory_radius": 4, "hp": 900, "hero_hall": true,
+			"color": "#b8860b",
+			"sprites": { "good": "res://assets/sprites/buildings/hero_hall_good.png", "evil": "res://assets/sprites/buildings/hero_hall_evil.png" }
+		},
+		{
 			"id": "monster_lair", "name": "Monsterhöhle", "label": "Höhle",
 			"description": "Ein Unterschlupf wilder Monster. Zerstöre ihn, um die Gegend zu sichern und Beute zu machen.",
 			"size": [2, 2], "cost": {}, "build_time": 0, "player_buildable": false,

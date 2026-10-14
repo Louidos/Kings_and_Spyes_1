@@ -35,10 +35,9 @@ func can_place(def: Dictionary, cell: Vector2i, kingdom: Kingdom) -> String:
 		if reason.is_empty():
 			reason = kingdom.missing_text(def.get("cost", {}))
 		return reason
-	# Muss erst erforscht werden?
-	var requires: Array = def.get("requires", [])
-	if not kingdom.has_all_unlocks(requires):
-		return "Benötigt Forschung: %s" % DataDB.describe_requirement(requires, kingdom.faction_id)
+	var type_reason := can_build_type(def, kingdom)
+	if not type_reason.is_empty():
+		return type_reason
 	var size: Vector2i = def.get("size", Vector2i(2, 2))
 	var required_id := str(def.get("requires_deposit", ""))
 	var required_found := required_id.is_empty()
@@ -115,6 +114,32 @@ func place_start_castle(kingdom: Kingdom, center_cell: Vector2i) -> Building:
 # ---------------------------------------------------------------------------
 # Strassen (Zustand liegt in WorldData: roads, road_owner, road_progress)
 # ---------------------------------------------------------------------------
+
+## Darf das Reich diesen Gebäudetyp überhaupt bauen (unabhängig vom Ort)?
+## Forschung (requires), andere fertige Gebäude (requires_buildings) und die
+## Höchstzahl (max_per_kingdom, Baustellen zählen mit). "" = ja, sonst der Grund.
+func can_build_type(def: Dictionary, kingdom: Kingdom) -> String:
+	var requires: Array = def.get("requires", [])
+	if not kingdom.has_all_unlocks(requires):
+		return "Benötigt Forschung: %s" % DataDB.describe_requirement(requires, kingdom.faction_id)
+	for bid in def.get("requires_buildings", []):
+		if count_buildings(kingdom, str(bid), true) == 0:
+			return "Benötigt: %s" % DataDB.get_building_name(DataDB.get_building(str(bid)), kingdom.faction_id)
+	var max_count := int(def.get("max_per_kingdom", 0))
+	if max_count > 0 and count_buildings(kingdom, str(def.get("id", "")), false) >= max_count:
+		return "Nur %s %s pro Reich" % ["eine" if max_count == 1 else str(max_count),
+				DataDB.get_building_name(def, kingdom.faction_id)]
+	return ""
+
+
+## Anzahl Gebäude dieses Typs (nur fertige oder auch Baustellen)
+func count_buildings(kingdom: Kingdom, def_id: String, constructed_only: bool) -> int:
+	var n := 0
+	for b in kingdom.buildings:
+		if str(b.def.get("id", "")) == def_id and (b.constructed or not constructed_only):
+			n += 1
+	return n
+
 
 func can_place_road(cell: Vector2i, kingdom: Kingdom) -> String:
 	if not world.in_bounds(cell):

@@ -35,6 +35,7 @@ signal formation_changed(formation: String)
 @onready var monster_system: MonsterSystem = $Systems/MonsterSystem
 @onready var research_system: ResearchSystem = $Systems/ResearchSystem
 @onready var magic_system: MagicSystem = $Systems/MagicSystem
+@onready var hero_system: HeroSystem = $Systems/HeroSystem
 @onready var selection: SelectionController = $Selection
 @onready var hud: CanvasLayer = $HUD
 @onready var pause_menu: CanvasLayer = $PauseMenu
@@ -115,6 +116,8 @@ func _start_game() -> void:
 	summon_system.setup(self)
 	research_system.setup(self)
 	magic_system.setup(self)
+	# Nach Kampf und Magie: der Heldentakt läuft nach dem Neuaufbau der Umgebungssuche
+	hero_system.setup(self)
 	placement.setup(self)
 	selection.setup(self)
 	unit_overlay.setup(self)
@@ -314,7 +317,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			combat_system.apply_damage(player.king, 150.0, null, null, "event")
 			Notify.warning("Debug: König −150 Leben", player.king.position)
 	elif event.is_action_pressed("debug_spawn_wolves") and hud.is_debug_visible():
-		_debug_spawn_wolves()
+		var key := event as InputEventKey
+		if key != null and key.shift_pressed:
+			_debug_spawn_golem()
+		else:
+			_debug_spawn_wolves()
+	elif event.is_action_pressed("debug_hero_level") and hud.is_debug_visible():
+		_debug_hero_level()
 	elif event.is_action_pressed("game_pause"):
 		GameClock.toggle_pause()
 	elif event.is_action_pressed("game_speed_up") or _is_char(event, "+"):
@@ -344,6 +353,32 @@ func _debug_spawn_wolves() -> void:
 		if unit_system.spawn_unit(wild, "wolf", world.cell_to_world(c)) != null:
 			spawned += 1
 	Notify.warning("Debug: %d Wölfe erscheinen" % spawned, pos)
+
+
+## Debug (Umschalt+F11): ein Übungsgolem ohne Höhle an der Maus (viel Leben, Rüstung)
+func _debug_spawn_golem() -> void:
+	var pos := world_map.get_global_mouse_position()
+	var c: Vector2i = nav.nearest_free(world.world_to_cell(pos), 4)
+	if c.x >= 0 and unit_system.spawn_unit(wild, "golem", world.cell_to_world(c)) != null:
+		Notify.warning("Debug: Übungsgolem erscheint", pos)
+
+
+## Debug (F12): ausgewählter Held (sonst der erste lebende) steigt eine Stufe auf
+func _debug_hero_level() -> void:
+	var hero_id := 0
+	for u in selection.selected:
+		if is_instance_valid(u) and u is Unit and u.hero_id != 0:
+			hero_id = u.hero_id
+			break
+	if hero_id == 0:
+		for rec in player.heroes:
+			if not bool(rec["dead"]):
+				hero_id = int(rec["id"])
+				break
+	if hero_id == 0:
+		Notify.warning("Debug: kein lebender Held")
+		return
+	hero_system.debug_level_up(player, hero_id)
 
 
 ## Formation des Spielers wechseln (Block <-> Linie); gilt für die nächsten Marschbefehle
