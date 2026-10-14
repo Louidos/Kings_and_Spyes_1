@@ -6,6 +6,9 @@
 ## Rahmen um das Gebiet jedes Reichs, Einheiten als Punkte, Monsterlager als
 ## orange Rauten (immer sichtbar – der Spieler soll wissen, wo Lager sind) und
 ## rot pulsierende Kreise, wo das eigene Reich angegriffen wird.
+## Neutrale Dörfer: Haussymbol in der Dorffarbe (nach der Aufnahme in der
+## Farbe des neuen Besitzers) mit Ring – rot bei Krieg, gold bei Bündnis.
+## Boten: blinkende Quadrate mit weissem Rand in der Farbe ihres Dorfs.
 ##
 ## Leistung: Karte, Gebäude und Einheitenpunkte werden höchstens alle 0.25 s
 ## gezeichnet; die Punkte stehen dann schon fertig umgerechnet in Listen
@@ -23,6 +26,9 @@ const PING_MERGE_TILES := 12.0
 const PING_COLOR := Color(1.0, 0.18, 0.12)
 const OUTLINE_COLOR := Color(0, 0, 0, 0.85)
 const LAIR_COLOR := Color(1.0, 0.55, 0.12)
+const VILLAGE_WAR_COLOR := Color(1.0, 0.25, 0.2)
+const VILLAGE_ALLY_COLOR := Color(1.0, 0.84, 0.3)
+const MESSENGER_OUTLINE := Color(1, 1, 1, 0.95)
 
 var texture: Texture2D
 var world_size := Vector2.ONE
@@ -60,6 +66,10 @@ var _monster_fill := PackedVector2Array()
 var _monster_color := Color(0.88, 0.48, 0.13)
 ## Monsterlager als Mittelpunkte in Pixeln
 var _lair_points := PackedVector2Array()
+## Boten: [{color: Color, points: PackedVector2Array}] (Mittelpunkte in Pixeln)
+var _messenger_groups: Array = []
+## Boten blinken: jede zweite Neuberechnung werden sie nicht gezeichnet
+var _messenger_blink := false
 ## Angriffsmeldungen: [{pos: Vector2 (Welt), age: float}]
 var _pings: Array = []
 ## Obere Ebene für Kamerarahmen und Meldungen
@@ -194,6 +204,33 @@ func _draw_markers(r: Rect2) -> void:
 			var fill := kingdom.color if building.constructed else Color(kingdom.color, 0.55)
 			draw_rect(rect.grow(1.0), outline, true)
 			draw_rect(rect, fill, true)
+	_draw_villages(r, tile_px)
+
+
+## Haussymbole der Dörfer (Quadrat mit Dach, schwarzer Rand), Ring bei Krieg/Bündnis
+func _draw_villages(r: Rect2, tile_px: Vector2) -> void:
+	if _game == null:
+		return
+	var vs: VillageSystem = _game.village_system
+	var player: Kingdom = _game.player
+	for v in vs.get_villages(true):
+		var hall := vs.get_hall(v)
+		if hall == null:
+			continue
+		var c := (r.position + hall.get_center() / float(_world.tile_size) * tile_px).floor() + Vector2(0.5, 0.5)
+		var owner_k := hall.kingdom
+		var body := Rect2(c + Vector2(-2.5, -1.0), Vector2(5.0, 4.0))
+		var roof := PackedVector2Array([c + Vector2(-3.5, -1.0), c + Vector2(0.0, -4.5), c + Vector2(3.5, -1.0)])
+		var roof_outline := PackedVector2Array([c + Vector2(-5.0, -0.5), c + Vector2(0.0, -6.0), c + Vector2(5.0, -0.5)])
+		draw_colored_polygon(roof_outline, OUTLINE_COLOR)
+		draw_rect(body.grow(1.0), OUTLINE_COLOR, true)
+		draw_colored_polygon(roof, owner_k.color)
+		draw_rect(body, owner_k.color, true)
+		if owner_k != player:
+			if _game.are_hostile(player, owner_k):
+				draw_arc(c + Vector2(0, -1), 7.5, 0.0, TAU, 20, VILLAGE_WAR_COLOR, 1.5, true)
+			elif _game.are_allied(player, owner_k):
+				draw_arc(c + Vector2(0, -1), 7.5, 0.0, TAU, 20, VILLAGE_ALLY_COLOR, 1.5, true)
 
 
 ## Einheitenpunkte und Lager aus den vorbereiteten Listen. Reihenfolge:
@@ -214,6 +251,14 @@ func _draw_units() -> void:
 	for g in _dot_groups:
 		var group: Dictionary = g
 		draw_multiline(group["points"], group["color"], 2.0)
+	if not _messenger_blink:
+		for g in _messenger_groups:
+			var group: Dictionary = g
+			for p in group["points"]:
+				var c: Vector2 = p
+				draw_rect(Rect2(c - Vector2(3, 3), Vector2(6, 6)), OUTLINE_COLOR, true)
+				draw_rect(Rect2(c - Vector2(2, 2), Vector2(4, 4)), MESSENGER_OUTLINE, true)
+				draw_rect(Rect2(c - Vector2(1, 1), Vector2(2, 2)), group["color"], true)
 
 
 ## Einheiten in Pixel umrechnen (ein Durchlauf über alle Einheiten).
@@ -224,6 +269,8 @@ func _rebuild_cache() -> void:
 	_monster_outline = PackedVector2Array()
 	_monster_fill = PackedVector2Array()
 	_lair_points = PackedVector2Array()
+	_messenger_groups.clear()
+	_messenger_blink = not _messenger_blink
 	if _game == null or _world == null or texture == null:
 		return
 	var r := _map_rect()
@@ -249,12 +296,20 @@ func _rebuild_cache() -> void:
 				_monster_fill.append(Vector2(p.x + 1.0, p.y))
 			continue
 		var points := PackedVector2Array()
+		var messengers := PackedVector2Array()
 		for u in kingdom.units:
 			if u.inside != null or (not visible_all and u.stealthed):
 				continue
 			var p: Vector2 = (origin + u.position * s).floor()
+			# Boten eigenes Symbol (blinkt), nur wenn der Spieler sie sieht
+			if u.role == "messenger":
+				if _game.can_see(player, u):
+					messengers.append(p + Vector2(0.5, 0.5))
+				continue
 			points.append(Vector2(p.x - 1.0, p.y))
 			points.append(Vector2(p.x + 1.0, p.y))
+		if not messengers.is_empty():
+			_messenger_groups.append({"color": kingdom.color, "points": messengers})
 		if points.is_empty():
 			continue
 		var group := {"color": kingdom.color, "points": points}

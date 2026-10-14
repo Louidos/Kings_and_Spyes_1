@@ -1,11 +1,11 @@
 ## HUD
 ##
 ## Spieloberfläche:
-## - oben: Reich, Ressourcen, Kampfpunkte und Bewohner (ResourceBar), Button
-##   "Forschung (R)" mit Fortschritt, Datum, Tempo
-## - Forschungsfenster (ResearchPanel, Taste R) und Heldenfenster (HeroPanel,
-##   Taste G, Button "Helden (G)") in eigenen Ebenen darüber; es ist immer nur
-##   eines der beiden offen (beide stehen in der Mitte)
+## - oben: Reich, Ressourcen, Kampfpunkte und Bewohner (ResourceBar), Buttons
+##   "Forschung (R)" mit Fortschritt, "Helden (G)" und "Diplomatie (N)", Datum, Tempo
+## - Forschungsfenster (ResearchPanel, Taste R), Heldenfenster (HeroPanel,
+##   Taste G) und Diplomatiefenster (DiplomacyPanel, Taste N) in eigenen Ebenen
+##   darüber; es ist immer nur eines davon offen (alle stehen in der Mitte)
 ## - oben links: Arbeitsverteilung (JobPanel, Taste J)
 ## - oben rechts: Meldungen (NotificationPanel)
 ## - unten links: Auswahlfenster (SelectionPanel), darunter die Armeeleiste
@@ -31,6 +31,12 @@ const RESEARCH_REFRESH_INTERVAL := 0.25
 const COLOR_RESEARCH_IDLE := Color(1.0, 0.85, 0.3)
 ## Ebene des Heldenfensters (wie das Forschungsfenster)
 const HERO_LAYER := 11
+## Ebene des Diplomatiefensters (wie das Forschungsfenster)
+const DIPLOMACY_LAYER := 11
+const COLOR_URGENT := Color(1.0, 0.36, 0.3)
+## Innenabstand links/rechts der Knöpfe in der oberen Leiste (schmaler als im
+## Theme, damit Ressourcen, drei Fenster-Knöpfe, Datum und Tempo in 1920 passen)
+const TOP_BUTTON_MARGIN := 8.0
 
 @onready var kingdom_label: Label = %KingdomLabel
 @onready var resource_bar: ResourceBar = %ResourceBar
@@ -64,6 +70,10 @@ var hero_panel: HeroPanel
 var hero_bar: HeroBar
 var _hero_layer: CanvasLayer
 var _hero_button: ResearchTipButton
+## Diplomatiefenster (Taste N) und sein Button oben
+var diplomacy_panel: DiplomacyPanel
+var _diplomacy_layer: CanvasLayer
+var _diplomacy_button: ResearchTipButton
 ## Hinweis "Kampfpunkte ausgeben" kam schon (einmal je Partie)
 var _kp_hint_shown := false
 
@@ -80,7 +90,10 @@ func _ready() -> void:
 	GameClock.speed_changed.connect(_on_speed_changed)
 	_on_speed_changed(GameClock.paused, GameClock.get_speed())
 	var faction := GameSession.get_faction()
-	kingdom_label.text = "Dein Königreich  ·  %s" % faction.get("name", "?")
+	# Nur der Fraktionsname (in Fraktionsfarbe): die obere Leiste ist voll
+	kingdom_label.text = str(faction.get("name", "?"))
+	kingdom_label.tooltip_text = "Dein Königreich (Fraktion %s)" % faction.get("name", "?")
+	kingdom_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	kingdom_label.add_theme_color_override("font_color", faction.get("color", Color.WHITE))
 	info_label.text = "Bewege die Maus über die Karte."
 	info_label.custom_minimum_size.y = (info_label.get_line_height() + info_label.get_theme_constant("line_spacing")) * INFO_LINES
@@ -119,6 +132,7 @@ func setup(p_game: Node) -> void:
 	hero_bar.setup(game)
 	_setup_research()
 	_setup_heroes()
+	_setup_diplomacy()
 
 
 ## Forschungsfenster ein-/ausblenden (Taste R, Button oben)
@@ -153,21 +167,43 @@ func is_heroes_open() -> bool:
 	return hero_panel != null and hero_panel.is_open()
 
 
-## Verweis aus einer Meldung öffnen ({"window": "heroes", "hero_id": …} oder "research")
+## Diplomatiefenster ein-/ausblenden (Taste N, Button oben)
+func toggle_diplomacy() -> void:
+	if diplomacy_panel != null:
+		diplomacy_panel.toggle()
+
+
+## Diplomatiefenster öffnen, optional bei einem Dorf (Kingdom.id)
+func open_diplomacy(village_id: int = 0) -> void:
+	if diplomacy_panel != null:
+		diplomacy_panel.open(village_id)
+
+
+func is_diplomacy_open() -> bool:
+	return diplomacy_panel != null and diplomacy_panel.is_open()
+
+
+## Verweis aus einer Meldung öffnen ({"window": "heroes", "hero_id": …},
+## "research" oder {"window": "diplomacy", "village_id": …})
 func open_link(link: Dictionary) -> void:
 	match str(link.get("window", "")):
 		"heroes":
 			open_heroes(HeroPanel.TAB_HEROES, int(link.get("hero_id", 0)))
 		"research":
 			open_research()
+		"diplomacy":
+			open_diplomacy(int(link.get("village_id", 0)))
 
 
-## Esc schliesst das Forschungs- bzw. Heldenfenster auch, wenn gerade ein
+## Esc schliesst das Diplomatie-, Helden- bzw. Forschungsfenster auch, wenn gerade ein
 ## Tooltip offen ist (Godot verbraucht Esc sonst nur zum Schliessen des Tooltips).
 func _input(event: InputEvent) -> void:
 	if not event.is_action_pressed("game_menu") or event.is_echo():
 		return
-	if is_heroes_open():
+	if is_diplomacy_open():
+		diplomacy_panel.close()
+		get_viewport().set_input_as_handled()
+	elif is_heroes_open():
 		hero_panel.close()
 		get_viewport().set_input_as_handled()
 	elif is_research_open():
@@ -180,9 +216,12 @@ func toggle_job_panel() -> void:
 	job_panel.toggle()
 
 
-## Esc: schliesst das oberste offene Fenster (Helden, Forschung, Arbeitsverteilung).
-## true = etwas wurde geschlossen (dann nichts weiter tun).
+## Esc: schliesst das oberste offene Fenster (Diplomatie, Helden, Forschung,
+## Arbeitsverteilung). true = etwas wurde geschlossen (dann nichts weiter tun).
 func close_top_panel() -> bool:
+	if is_diplomacy_open():
+		diplomacy_panel.close()
+		return true
 	if is_heroes_open():
 		hero_panel.close()
 		return true
@@ -223,6 +262,7 @@ func _process(delta: float) -> void:
 			_research_timer = 0.0
 			_refresh_research_button()
 			_refresh_hero_button()
+			_refresh_diplomacy_button()
 
 
 # ---------------------------------------------------------------------------
@@ -249,6 +289,7 @@ func _setup_research() -> void:
 	_research_button.text = "Forschung (R)"
 	_research_button.toggle_mode = true
 	_research_button.add_theme_font_size_override("font_size", 16)
+	_compact(_research_button)
 	_research_button.tip_source = _research_button_tip
 	_research_button.pressed.connect(toggle_research)
 	var hbox := date_label.get_parent()
@@ -263,9 +304,11 @@ func _setup_research() -> void:
 
 func _on_research_toggled(open: bool) -> void:
 	_research_button.set_pressed_no_signal(open)
-	# Beide Fenster stehen in der Mitte: nur eines offen
+	# Die Fenster stehen in der Mitte: nur eines offen
 	if open and is_heroes_open():
 		hero_panel.close()
+	if open and is_diplomacy_open():
+		diplomacy_panel.close()
 
 
 func _on_research_state_changed(k: Kingdom) -> void:
@@ -274,7 +317,7 @@ func _on_research_state_changed(k: Kingdom) -> void:
 
 
 ## Button oben: "Forschung (R) · 45 %" (mit Strich), gelb "Forschung ruht (R)"
-## bzw. "Forschung angehalten (R)" (keine fertige Forschungsstätte),
+## bzw. "Forschung steht (R)" (keine fertige Forschungsstätte),
 ## Punkt, wenn eine Kampfpunkt-Verbesserung bezahlbar ist
 func _refresh_research_button() -> void:
 	var k: Kingdom = game.player
@@ -286,7 +329,7 @@ func _refresh_research_button() -> void:
 		_research_button.underline_ratio = rs.get_progress_ratio(k)
 		if rs.get_speed(k) <= 0.0:
 			# Keine fertige Forschungsstätte mehr: Forschung steht still
-			text = "Forschung angehalten (R) · %d %%" % floori(rs.get_progress_ratio(k) * 100.0)
+			text = "Forschung steht (R) · %d %%" % floori(rs.get_progress_ratio(k) * 100.0)
 			idle = true
 		else:
 			text = "Forschung (R) · %d %%" % floori(rs.get_progress_ratio(k) * 100.0)
@@ -363,6 +406,7 @@ func _setup_heroes() -> void:
 	_hero_button.text = "Helden (G)"
 	_hero_button.toggle_mode = true
 	_hero_button.add_theme_font_size_override("font_size", 16)
+	_compact(_hero_button)
 	_hero_button.badge_color = HeroUI.COLOR_PENDING
 	_hero_button.underline_color = HeroUI.COLOR_XP
 	_hero_button.tip_source = _hero_button_tip
@@ -378,6 +422,8 @@ func _on_heroes_toggled(open: bool) -> void:
 	_hero_button.set_pressed_no_signal(open)
 	if open and is_research_open():
 		research_panel.close()
+	if open and is_diplomacy_open():
+		diplomacy_panel.close()
 
 
 func _on_heroes_changed(k: Kingdom) -> void:
@@ -419,6 +465,80 @@ func _hero_button_tip() -> String:
 
 
 # ---------------------------------------------------------------------------
+# Diplomatie
+# ---------------------------------------------------------------------------
+
+## Diplomatiefenster in eigener Ebene und Button "Diplomatie (N)" rechts neben "Helden (G)"
+func _setup_diplomacy() -> void:
+	_diplomacy_layer = CanvasLayer.new()
+	_diplomacy_layer.layer = DIPLOMACY_LAYER
+	_diplomacy_layer.name = "DiplomacyLayer"
+	add_child(_diplomacy_layer)
+	diplomacy_panel = DiplomacyPanel.new()
+	diplomacy_panel.name = "DiplomacyPanel"
+	_diplomacy_layer.add_child(diplomacy_panel)
+	diplomacy_panel.setup(game)
+	diplomacy_panel.toggled.connect(_on_diplomacy_toggled)
+	visibility_changed.connect(func() -> void: _diplomacy_layer.visible = visible)
+	_diplomacy_layer.visible = visible
+
+	_diplomacy_button = ResearchTipButton.new()
+	_diplomacy_button.name = "DiplomacyButton"
+	_diplomacy_button.text = "Diplomatie (N)"
+	_diplomacy_button.toggle_mode = true
+	_diplomacy_button.add_theme_font_size_override("font_size", 16)
+	_compact(_diplomacy_button)
+	_diplomacy_button.badge_color = COLOR_URGENT
+	_diplomacy_button.tip_source = _diplomacy_button_tip
+	_diplomacy_button.pressed.connect(toggle_diplomacy)
+	var hbox := date_label.get_parent()
+	hbox.add_child(_diplomacy_button)
+	hbox.move_child(_diplomacy_button, date_label.get_index())
+	_refresh_diplomacy_button()
+
+
+func _on_diplomacy_toggled(open: bool) -> void:
+	_diplomacy_button.set_pressed_no_signal(open)
+	if open and is_research_open():
+		research_panel.close()
+	if open and is_heroes_open():
+		hero_panel.close()
+
+
+## Punkt (rot), solange ein Schutzbefohlener Hilfe braucht
+func _refresh_diplomacy_button() -> void:
+	if _diplomacy_button == null:
+		return
+	_diplomacy_button.badge_visible = not game.diplomacy_system.get_urgent(game.player).is_empty()
+
+
+func _diplomacy_button_tip() -> String:
+	var k: Kingdom = game.player
+	var ds: DiplomacySystem = game.diplomacy_system
+	var vs: VillageSystem = game.village_system
+	var tip := ResearchTipButton
+	var lines: PackedStringArray = ["[b]Diplomatie[/b] (Taste N)"]
+	var villages := vs.get_villages()
+	lines.append("Selbstständige Dörfer: %d" % villages.size())
+	var hostile := 0
+	for v in villages:
+		if game.are_hostile(k, v):
+			hostile += 1
+	if hostile > 0:
+		lines.append(tip.colored("Im Krieg mit %d %s" % [hostile, "Dorf" if hostile == 1 else "Dörfern"], COLOR_URGENT))
+	var treaties := ds.get_treaties_of(k)
+	if treaties.is_empty():
+		lines.append("Noch keine Verträge – Geschenke verbessern den Ruf")
+	for t in treaties:
+		lines.append(tip.esc("%s mit %s" % [DiplomacySystem.treaty_name(str(t["type"])), (t["village"] as Kingdom).display_name]))
+	for u in ds.get_urgent(k):
+		var v: Kingdom = u["village"]
+		lines.append(tip.colored("Hilfe nötig: %s – noch %d s" % [v.display_name if v != null else "?",
+				maxi(ceili(float(u["deadline"]) - GameClock.game_time), 0)], COLOR_URGENT))
+	return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Tempo
 # ---------------------------------------------------------------------------
 
@@ -443,9 +563,22 @@ func _make_speed_button(text: String, group: ButtonGroup, tooltip: String) -> Bu
 	b.tooltip_text = tooltip
 	# Kein Tastaturfokus, sonst würde die Leertaste den Button auslösen
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(48, 0)
+	b.custom_minimum_size = Vector2(42, 0)
+	_compact(b)
 	speed_bar.add_child(b)
 	return b
+
+
+## Knopf der oberen Leiste mit schmalerem Innenabstand (Theme-Stile kopiert)
+func _compact(b: Button) -> void:
+	for style_name in ["normal", "hover", "pressed", "hover_pressed", "disabled"]:
+		var base := b.get_theme_stylebox(style_name)
+		if base == null:
+			continue
+		var style := base.duplicate() as StyleBox
+		style.content_margin_left = TOP_BUTTON_MARGIN
+		style.content_margin_right = TOP_BUTTON_MARGIN
+		b.add_theme_stylebox_override(style_name, style)
 
 
 func _speed_text(step: float) -> String:
@@ -539,6 +672,7 @@ func _deposit_text(cell: Vector2i) -> String:
 	return "%s: %d %s" % [dep_name, amount, res_name]
 
 
+## "Eigenes Gebiet", "Niemandsland" oder "Gebiet: Zwergendorf Eisenhall (Freundlich)"
 func _territory_text(cell: Vector2i) -> String:
 	var owner_id := world.get_owner(cell)
 	if owner_id == 0:
@@ -546,7 +680,16 @@ func _territory_text(cell: Vector2i) -> String:
 	var player: Kingdom = game.player if game != null else null
 	if player != null and owner_id == player.id:
 		return "Eigenes Gebiet"
-	return "Fremdes Gebiet"
+	var owner_k: Kingdom = game.get_kingdom(owner_id) if game != null else null
+	if owner_k == null:
+		return "Fremdes Gebiet"
+	var text := "Gebiet: %s" % owner_k.display_name
+	if player != null and game.village_system.is_village(owner_k):
+		if game.are_hostile(player, owner_k):
+			text += " (Krieg)"
+		else:
+			text += " (%s)" % DiplomacySystem.tier_name(game.diplomacy_system.get_tier(owner_k, player))
+	return text
 
 
 func _set_info(text: String) -> void:

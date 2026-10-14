@@ -62,6 +62,7 @@ func _process(_delta: float) -> void:
 		if _hero_step >= 0 and GameClock.game_time >= _hero_wait_until:
 			_hero_test()
 		if _p6 != null:
+			_p6.set("ui_ready", _hero_step < 0)
 			_p6.tick(GameClock.game_time)
 		if GameClock.game_time >= _sim_seconds:
 			_phase = 2

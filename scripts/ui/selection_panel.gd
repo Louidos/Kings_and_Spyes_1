@@ -16,6 +16,9 @@
 ## - Magie: bei einer Einheit laufende Zauberwirkungen (Restzeit, in der
 ##   Zauberfarbe), "Getarnt" und bei beschworenen Wächtern die Restzeit;
 ##   bei der Forschungsstätte die laufende Forschung und "Forschung öffnen (R)".
+## - Neutrale Dörfer (Dorfgebäude, Milizen, Boten): Volk, Ruf zum Spieler mit
+##   Stufe, Vertrag, Produktion, Miliz und der Knopf "Diplomatie (N)"; Boten:
+##   von wem zu wem. Eigene aufgenommene Dorfzentren: Ertrag des Dorfs.
 ## Aktualisiert wird bei Auswahlwechsel, bei Signalen (Warteschlange,
 ## Ressourcen, Formation) und alle 0.25 s, solange das Fenster sichtbar ist.
 ## Bedienelemente stehen unten und behalten ihre Höhe, damit sie nicht unter
@@ -112,6 +115,11 @@ var _formation_button: Button
 
 ## Helden-Abschnitt (Stufe, Fähigkeiten; Burg: Wiederbeleben; Halle: Ausbildung)
 var _hero_box: HeroSelectionBox
+## Dorf-Zeile: Knopf "Diplomatie (N)" für Dorfgebäude, Milizen und Boten
+var _village_row: HBoxContainer
+var _diplo_button: Button
+## Dorf des angezeigten Objekts (für den Knopf; 0 = keins)
+var _village_id := 0
 
 var _demolish_button: Button
 ## Restzeit der Abriss-Bestätigung (Echtzeit, 0 = keine Bestätigung offen)
@@ -201,6 +209,19 @@ func _ready() -> void:
 
 	_hero_box = HeroSelectionBox.new()
 	vbox.add_child(_hero_box)
+
+	_village_row = HBoxContainer.new()
+	_village_row.add_theme_constant_override("separation", 6)
+	_village_row.visible = false
+	vbox.add_child(_village_row)
+	_diplo_button = Button.new()
+	_diplo_button.text = "Diplomatie (N)"
+	_diplo_button.focus_mode = Control.FOCUS_NONE
+	_diplo_button.add_theme_font_size_override("font_size", FONT_SIZE)
+	_diplo_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_diplo_button.tooltip_text = "Diplomatiefenster bei diesem Dorf öffnen: Geschenke, Handel, Verträge, Aufnahme"
+	_diplo_button.pressed.connect(_on_diplo_pressed)
+	_village_row.add_child(_diplo_button)
 
 	_build_actions(vbox)
 
@@ -344,6 +365,8 @@ func _refresh() -> void:
 		_mode = ""
 		visible = false
 		_hero_box.hide_box()
+	if _mode != "unit" and _mode != "building":
+		_show_village_row(null)
 
 
 # ---------------------------------------------------------------------------
@@ -380,10 +403,18 @@ func _show_building(b: Building) -> void:
 	_set_text(_status, status)
 	_set_text(_warn, warn)
 
+	var vs: VillageSystem = game.village_system
 	if game.monster_system.lairs.has(b):
 		_set_text(_facts, _lair_text(b))
+	elif vs.is_village(b.kingdom):
+		_set_text(_facts, vs.get_summary_text(b.kingdom, k))
 	else:
-		_set_text(_facts, _building_facts(b))
+		var facts := _building_facts(b)
+		var annexed := vs.get_annexed_text(b) if own else ""
+		if not annexed.is_empty():
+			facts = annexed if facts.is_empty() else facts + "\n" + annexed
+		_set_text(_facts, facts)
+	_show_village_row(b.kingdom if vs.is_village(b.kingdom) else null)
 	_magic_box.visible = false
 	_show_research(b, own)
 	_hero_box.show_building(b if own else null)
@@ -822,7 +853,8 @@ func _show_unit(u: Unit) -> void:
 	_hp_bar.set_value(u.hp, u.max_hp)
 	_fill_stats(u)
 	_set_text(_warn, "")
-	_set_text(_facts, "")
+	_set_text(_facts, _village_unit_text(u))
+	_show_village_row(u.kingdom if game.village_system.is_village(u.kingdom) else null)
 	_summon_box.visible = false
 	_worker_row.visible = false
 	_demolish_button.visible = false
@@ -1332,16 +1364,59 @@ func _army_of(units: Array) -> int:
 	return n
 
 
-## Reich des Objekts (nur bei fremden): Name in Reichsfarbe, ggf. "feindlich"
+## Reich des Objekts (nur bei fremden): Name in Reichsfarbe, ggf. "feindlich".
+## Dörfer: "Zwergendorf Eisenhall · Freundlich (+42)" in der Stufenfarbe, dazu Krieg/Bündnis.
 func _show_owner(k: Kingdom) -> void:
 	if k == null or k == game.player:
 		_owner.visible = false
 		return
 	var text := k.display_name
-	if game.are_hostile(game.player, k):
+	var color := k.color.lightened(0.25)
+	if game.village_system.is_village(k):
+		var rep: float = game.diplomacy_system.get_reputation(k, game.player)
+		var tier := DiplomacySystem.tier_for(rep)
+		text += "  ·  %s (%s)" % [DiplomacySystem.tier_name(tier), ResourceBar.format_signed(roundf(rep))]
+		color = DiplomacySystem.tier_color(tier).lightened(0.15)
+		if game.are_hostile(game.player, k):
+			text += "  ·  Krieg"
+		elif game.are_allied(game.player, k):
+			text += "  ·  Bündnis"
+	elif game.are_hostile(game.player, k):
 		text += "  ·  feindlich"
 	_set_text(_owner, text)
-	_set_color(_owner, k.color.lightened(0.25))
+	_set_color(_owner, color)
+
+
+## Dorf-Zeile zeigen (Dorf-Reich) oder verstecken (null)
+func _show_village_row(v: Kingdom) -> void:
+	_village_id = v.id if v != null else 0
+	if _village_row.visible != (v != null):
+		_village_row.visible = v != null
+
+
+## Zeile für Einheiten eines Dorfs: Bote "Bote von … nach …", Miliz "Dorfwache"
+func _village_unit_text(u: Unit) -> String:
+	var vs: VillageSystem = game.village_system
+	if u.role == "messenger":
+		var rec: Dictionary = game.messenger_system.get_record(u)
+		if rec.is_empty():
+			return ""
+		var sender: Kingdom = game.get_kingdom(int(rec["sender_id"]))
+		var receiver: Kingdom = game.get_kingdom(int(rec["receiver_id"]))
+		var text := "Bote von %s nach %s" % [sender.display_name if sender != null else "?",
+				"dir" if receiver == game.player else (receiver.display_name if receiver != null else "?")]
+		var about: Kingdom = game.get_kingdom(int(rec["about_id"]))
+		if about == game.player:
+			text += "\nMeldet deinen Angriff – fange ihn ab!"
+		return text
+	if vs.is_village(u.kingdom):
+		return "Dorfwache von %s (%s)" % [u.kingdom.display_name, str(vs.get_people(u.kingdom).get("name", "?"))]
+	return ""
+
+
+func _on_diplo_pressed() -> void:
+	if _village_id != 0 and game.hud != null and game.hud.has_method("open_diplomacy"):
+		game.hud.call("open_diplomacy", _village_id)
 
 
 ## "3× Schwertkämpfer, 2× Bogenschütze" (häufigste zuerst)

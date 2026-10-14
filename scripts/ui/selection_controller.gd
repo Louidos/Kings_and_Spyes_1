@@ -10,7 +10,10 @@
 ##   man beim Auswählen einer Armee keine Bewohner mit.
 ## - Rechtsklick: eigene Einheiten bewegen bzw. einen Feind angreifen (mit
 ##   Strg oder "Angriff-Vorrücken": kampfbereit marschieren); bei einem
-##   eigenen Beschwörungsgebäude den Sammelpunkt setzen.
+##   eigenen Beschwörungsgebäude den Sammelpunkt setzen. Rechtsklick auf
+##   eine Einheit oder ein Gebäude eines friedlichen Dorfs: erst Hinweis (die
+##   Truppen gehen nur hin), ein zweiter Rechtsklick auf dasselbe Dorf
+##   innerhalb von 3 s erklärt den Krieg und greift an.
 ## - 1–9: Armee wählen (zweimal schnell: Kamera hin), Strg+Zahl: speichern,
 ##   Umschalt+Zahl: hinzufügen.
 ## - Helden: der "aktive Held" der Auswahl (erster Held, Tab wechselt) bekommt
@@ -40,6 +43,8 @@ const DRAG_THRESHOLD := 6.0
 const ARMY_DOUBLE_TAP_MSEC := 350
 ## Ebene des Auswahlrahmens: über der Welt, unter dem HUD (Ebene 10)
 const BOX_LAYER := 5
+## Zweiter Rechtsklick auf ein friedliches Dorf innerhalb dieser Zeit: Krieg
+const WAR_CONFIRM_MSEC := 3000
 
 var game: Node
 var selected: Array = []
@@ -60,6 +65,9 @@ var _box: SelectionBox
 var _focus_hero_uid := 0
 var _last_army := 0
 var _last_army_msec := -100000
+## Kriegsbestätigung: Dorf (Kingdom.id) und Zeitpunkt des ersten Rechtsklicks
+var _war_confirm_id := 0
+var _war_confirm_msec := 0
 ## Entfernte Objekte: Signal einmal pro Frame statt einmal pro Einheit
 ## (in grossen Schlachten sterben viele ausgewählte Einheiten auf einmal)
 var _removal_pending := false
@@ -534,6 +542,21 @@ func _issue_order(units: Array, world: Vector2, attack_move: bool) -> void:
 		if b != null and b.is_alive() and game.are_hostile(game.player, b.kingdom):
 			target = b
 	var before := _order_ids(units)
+	if target == null:
+		# Friedliches Dorf unter der Maus: zweiter Rechtsklick erklärt den Krieg
+		var peaceful := _pick_village_target(world)
+		if peaceful != null:
+			var v: Kingdom = peaceful.get("kingdom")
+			var now := Time.get_ticks_msec()
+			if v.id == _war_confirm_id and now - _war_confirm_msec <= WAR_CONFIRM_MSEC:
+				_war_confirm_id = 0
+				game.diplomacy_system.declare_war(game.player, v)
+				target = peaceful
+			else:
+				_war_confirm_id = v.id
+				_war_confirm_msec = now
+				Notify.warning("%s ist friedlich. Nochmals Rechtsklick: Krieg erklären (Ruf sinkt stark, Verträge enden)." %
+						v.display_name, peaceful.position)
 	if target != null:
 		game.command_system.order_attack(units, target)
 		if _any_order_taken(units, before):
@@ -543,6 +566,19 @@ func _issue_order(units: Array, world: Vector2, attack_move: bool) -> void:
 		if _any_order_taken(units, before):
 			command_issued.emit(world, "attack_move" if attack_move else "move")
 	cancel_arm()
+
+
+## Einheit oder Gebäude eines selbstständigen, nicht verfeindeten Dorfs an der
+## Stelle (null, wenn keins)
+func _pick_village_target(world: Vector2) -> Node2D:
+	var vs: VillageSystem = game.village_system
+	var u := _pick_unit(world, false)
+	if u != null and vs.is_village(u.kingdom) and not game.are_hostile(game.player, u.kingdom):
+		return u
+	var b := _pick_building(world)
+	if b != null and b.is_alive() and vs.is_village(b.kingdom) and not game.are_hostile(game.player, b.kingdom):
+		return b
+	return null
 
 
 ## order_id je Einheit vor einem Befehl (CommandSystem zählt ihn bei jedem

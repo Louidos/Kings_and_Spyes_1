@@ -43,6 +43,8 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Heldenfenster | G oder Button „Helden (G)“ oben: eigene Helden (Stufenwahl, Ausbildung, Wiederbelebung) und Anwerben |
 | Helden auswählen | Heldenleiste unten links über dem Infobereich (Klick wählt, Doppelklick springt hin, Rechtsklick öffnet das Heldenfenster; gefallener Held: Klick belebt wieder, sobald es geht) – Helden sind auch Teil von Armeen |
 | Heldenfähigkeiten | C / V / B (oder die Knöpfe im Auswahlfenster) – auch wenn die ganze Armee ausgewählt ist; Tab wechselt den Helden; Rechtsklick auf einen Knopf schaltet „selbst auslösen“ um (goldener Rahmen). Fähigkeiten mit Ziel: Feind bzw. Stelle anklicken, Rechtsklick/Esc bricht ab |
+| Diplomatie | N oder Button „Diplomatie (N)“ oben: alle neutralen Dörfer mit Ruf, Vertrag, Entfernung und Stärke; Geschenke, Verträge, Handel, Aufnahme, Drohung, Krieg/Frieden (Esc oder N schliesst). Ein Dorfgebäude, eine Miliz oder ein Bote auswählen → Knopf „Diplomatie (N)“ im Auswahlfenster |
+| Krieg gegen ein Dorf | mit eigenen Truppen zweimal Rechtsklick (innerhalb von 3 s) auf eine Einheit oder ein Gebäude des Dorfs – der erste Klick warnt nur – oder „Krieg erklären“ im Diplomatiefenster |
 | Meldungen | Klick springt zur Stelle; Meldungen zur Stufenwahl oder Wiederbelebung öffnen das Heldenfenster |
 | Arbeitsverteilung ein/aus | J |
 | Spielmenü | Esc (wenn kein Fenster offen ist und nichts gebaut/ausgewählt wird) |
@@ -59,12 +61,15 @@ data/                    Spieldaten (JSON) – ohne Code änderbar
   game_config.json         Kartengrössen, Kamera, Zeit/Tempo
   worldgen.json            Weltgenerierung (Rauschen, Grenzgebirge, Startplatz)
   biomes.json              Biome: Farben, Regeln, Bewegung, Verteidigung, Grafiken
-  factions.json            Fraktionen und Völker
+  factions.json            Fraktionen
+  peoples.json             Völker (alle 22): Stärken/Schwächen, Gelände- und Tag/Nacht-Boni, Dorfdaten
+  diplomacy.json           Ruf, Geschenke, Verträge, Handel, Aufnahme, Drohung, Dörfer, Boten
   difficulties.json        Schwierigkeitsgrade
   resources.json           Ressourcen und Rohstoffvorkommen (Bäume, Steine, Erz, Beeren, Manaquellen)
   buildings.json           Gebäude: Kosten, Bauzeit, Wohnraum, Gebiet, Annahme, Produktion
   jobs.json                Berufe der Bewohner (Holzfäller, Bauer, Bauarbeiter ...)
-  units.json               Einheitentypen: Bewohner, König, Späher, Kämpfer, Schützen, Elite, Heiler, Monster
+  units.json               Einheitentypen: Bewohner, König, Späher, Kämpfer, Schützen, Elite, Heiler, Monster,
+                           Dorfmilizen, Volkskrieger, Bote
   combat.json              Kampfregeln (Gebietsbonus, Streuung, Erholung, Leine), Formationen, Monsterlager
   economy.json             Startausstattung, Wachstum, Hunger, Strassen, Rückerstattung
 scenes/                  Szenen (.tscn)
@@ -77,6 +82,7 @@ scripts/
   economy/                 Reich (Kingdom), Gebäude, BuildingSystem, EconomySystem
   units/                   Einheiten, UnitSystem (Bewegung), WorkSystem (Berufe), CombatSystem (Kampf),
                            CommandSystem (Befehle, Formationen, Armeen), SummonSystem, MonsterSystem
+  diplomacy/               VillageSystem (Dörfer), DiplomacySystem (Ruf, Verträge, Handel), MessengerSystem (Boten)
   camera/                  Strategie-Kamera
   view/                    Darstellung über der Welt: Lebensbalken/Auswahlringe, Kampfeffekte
   ui/                      HUD-Panels, Bauvorschau, Auswahl und Befehle, Spielende
@@ -123,8 +129,30 @@ assets/
   einfacher Eintrag in `Kingdom.heroes`, alles Abgeleitete (Werte, Auren, Mana-Zuschläge) baut
   `HeroSystem.rebuild_runtime()` neu auf. Ein wiederbelebter Held bekommt dieselbe Einheitennummer und bleibt
   so in seinen Armeen. Fähigkeitsschaden geht über `CombatSystem.ability_damage` (Rüstung zur Hälfte).
+- **Neutrale Dörfer** (`scripts/diplomacy/`): Jedes Dorf ist ein eigenes `Kingdom` (`controller = "neutral"`,
+  Feld `people_id`). Die Weltgenerierung legt Plätze vom Typ `"village"` (Volk, Grösse) und – für Phase 7 –
+  `"kingdom"` an (`WorldData.get_sites`). Drei Systeme:
+  - `VillageSystem`: gründet die Dörfer (Dorfzentrum, Hütten, Milizen auf Wachposten), vereinfachte
+    Dorfwirtschaft (Produktion ins Dorflager, Tribut, Milizen nachfüllen), Alarm, Bündnishilfe,
+    Eroberung (`try_capture`: Dorfzentren werden bei 0 Leben erobert statt zerstört) und
+    `transfer_settlement` (Aufnahme/Eroberung: Gebäude über `BuildingSystem.transfer_building`,
+    Milizen über `UnitSystem.transfer_unit`, Gebiet wechselt mit).
+  - `DiplomacySystem`: Ruf je Dorf und Reich (−100 … +100, Stufen, Verfall zum Grundwert, Verlauf),
+    Geschenke, Verträge (Schutz, Handel, Bündnis) mit Pflichten und Lieferungen, Tauschhandel mit
+    Tageslimit, Aufnahme, Drohung, Krieg/Frieden, Seitenwechsel, Gebietsverletzung. Alle Aktionen haben
+    `Kingdom`-Parameter (Spieler-Oberfläche und ab Phase 7 die KI rufen dieselben Funktionen auf);
+    Prüfungen geben `""` oder einen deutschen Grund zurück.
+  - `MessengerSystem`: angegriffene Dörfer schicken sichtbare Boten (Befehl `"travel"`, kämpfen nie,
+    sprinten vor Feinden) zum nächsten Gegnerreich bzw. Nachbardorf; abgefangene Boten melden nichts.
+  Kampfsignale (`kingdom_attacked`, `unit_died`, `building_destroyed`) feuern mitten in den Schleifen des
+  CombatSystems – Folgen (Alarm, Boten, Vertragsende) landen deshalb in einer Warteschlange und laufen
+  im eigenen Takt. Zustand je System in einfachen Feldern (`to_dict`/`from_dict`/`rebuild_runtime`).
+- **Diplomatie-Oberfläche** (`scripts/ui/`): `DiplomacyPanel` (Fenster N, Reiter „Dörfer“, Phase 7 ergänzt
+  „Reiche“), Dorf-Abschnitt im `SelectionPanel`, Kriegsbestätigung im `SelectionController` (zweiter
+  Rechtsklick), Dorf- und Botensymbole in der `Minimap`, Gebietsname im Infobereich des HUD.
 - **Quellen**: Was ein Reich verändert, wird mit seiner Quelle gespeichert (`"research:<id>"`,
-  `"upgrade:<id>"`, `"spell:<id>"`, ab Phase 6 z. B. Bündnisse): Freischaltungen (`grant_unlock`),
+  `"upgrade:<id>"`, `"spell:<id>"`, Bündnisse `"alliance:<dorf-id>"`, aufgenommene Dörfer
+  `"annex:<dorf-id>"` – beide schalten den Volkskrieger in der Kaserne frei): Freischaltungen (`grant_unlock`),
   Faktoren (`set_modifiers`), Zuschläge (`set_bonus`, z. B. Mana-Maximum) und laufende Kosten
   (`set_upkeep`, zieht das `EconomySystem` ab). Eine Quelle kann so alles wieder entziehen, ohne
   andere zu stören; beim Laden baut `ResearchSystem.restore` alles aus dem Forschungsstand neu auf.
@@ -144,7 +172,7 @@ assets/
 - **Wegfindung** (`NavGrid`, A* über die ganze Karte): Gelände kostet unterschiedlich viel, Strassen
   sind schneller, Gebäude blockieren.
 - **Gebiet**: Jedes fertige Gebäude beansprucht einen Kreis; bei Überschneidung gewinnt das ältere.
-  Gebaut werden darf nur im eigenen Gebiet.
+  Gebaut werden darf nur im eigenen Gebiet; Sammler holen nichts aus fremdem Gebiet (z. B. eines Dorfs).
 
 ## Daten anpassen
 
@@ -167,6 +195,25 @@ Alle Dateien in `data/` enthalten `_hinweis`-Felder mit Erklärungen. Beispiele:
 - Mehr Mana-Maximum: `resources.json` → *mana* → `cap`; Kampfpunkt-Verbesserungen: `spells.json` → `upgrades`.
 - Helden: `heroes.json` → `heroes` (Werte unter `stats`, Kosten, Fähigkeiten, Talente), `abilities` (Werte je Rang),
   `settings` (Erfahrung je Stufe `levels`, Teilung `xp_share`, Ausbildung, Wiederbelebung, höchstens `max_heroes`).
+- Mehr oder weniger Dörfer: `worldgen.json` → `villages.count_by_size` (z. B. `[256, 6]` → `[256, 8]`),
+  Abstand zum Start `min_dist_start`, Hütten je Dorf `size`.
+- Ruf: `diplomacy.json` → `reputation.tiers` (Stufen und Farben), `events` (z. B. Angriff `attack: -5`,
+  Kriegserklärung `declare_war: -30`, Gerüchte `rumour_*`), Verfall `reputation.decay_per_interval`.
+- Geschenke: `diplomacy.json` → `gifts` (`value_per_point`, `max_per_gift`, Ermüdung `saturation`/`half_life`);
+  Lieblingswaren je Volk: `peoples.json` → `gift_preferences` (z. B. Zwerge `"food": 1.5`).
+- Verträge: `diplomacy.json` → `treaties.<protection|trade|alliance>` (`min_reputation`, `keep_min`,
+  `rep_per_hour`, `cancel_penalty`, Schutzfrist `help_seconds`); Tribut und Lieferungen je Volk:
+  `peoples.json` → `tribute`, `delivery`; Annahme-Chance `treaties.chance_base` / `chance_span`.
+- Handel: `diplomacy.json` → `trade` (`base_margin`, `daily_value_limit`); Kurse je Volk `trade_rates`
+  (`sells` < 1 = billiger, `buys` > 1 = zahlt mehr) und `trade_bonus` (Koboldhändler 0.25).
+- Aufnahme und Drohung: `diplomacy.json` → `annex` (`min_reputation`, `intimidation_ratio`, `gift_size_scale`),
+  `threat` (`min_ratio`, `tribute_max`, `cooldown`); grosses Geschenk je Volk `peoples.json` → `annex_gift`.
+- Dörfer und Milizen: `diplomacy.json` → `village` (`militia_base`, `militia_per_size`, `refill_seconds`,
+  `start_stock`); Werte der Milizen und Volkskrieger in `units.json` (`militia_*`, z. B. `dwarf_ironguard`).
+- Boten: `diplomacy.json` → `messenger` (`cooldown`, `max_village_distance`, `sprint_mult`).
+- Neues Volk: in `peoples.json` einen Eintrag mit `"faction": "neutral"`, `village_title`, `village_names`,
+  `produces`, `militia_unit` und `special_unit` (beide in `units.json` anlegen) – Dörfer dieses Volks
+  entstehen dann automatisch bei der Weltgenerierung.
 
 ## Phase 2 testen
 
@@ -282,6 +329,42 @@ F3-Modus zusätzlich Knöpfe „+1 Stufe“, „Abklingzeiten“, „Sofort wied
    BÖSE – *Seelenblitz*, *Totenerweckung*, *Fluchaura* (Nekromant); *Wirbelwind*, *Kriegsschrei*, *Blutzoll*
    (Kriegsherr); *Schattenschritt*, *Giftklinge*, *Ausweichen* (Klingentänzerin).
 
+## Phase 6 testen
+
+Tipp: F3 (Debug) einschalten – F9 gibt Ressourcen. Im Diplomatiefenster erscheinen im F3-Modus die Knöpfe
+„Ruf +20“, „Ruf −20“ und „Bote senden (Test)“.
+
+1. Rund um dein Reich liegen **neutrale Dörfer** (kleine Karte 6, mittlere 10, grosse 16) mit einer Grenze in
+   der Volksfarbe; auf der Minikarte steht je Dorf ein Haussymbol. Fährt die Maus über ein Dorfgebiet, zeigt
+   der Infobereich unten links „Gebiet: Zwergendorf Eisenhall (Neutral)“. Deine Sammler holen dort nichts.
+2. Ein **Dorfzentrum** (oder eine Miliz) anklicken: im Auswahlfenster Volk, Ruf mit Stufe (farbig), Vertrag,
+   Produktion und Miliz, darunter der Knopf **„Diplomatie (N)“**.
+3. **N** (oder „Diplomatie (N)“ oben) öffnet das Diplomatiefenster: links alle Dörfer mit Ruf-Balken,
+   Vertrag bzw. Krieg, Entfernung und grober Stärke; rechts das gewählte Dorf mit Beschreibung, Stärken und
+   Schwächen des Volks, Produktion, Vorrat, Ruf-Verlauf und Beziehungen. Forschungs-, Helden- und
+   Diplomatiefenster schliessen sich gegenseitig; Esc schliesst.
+4. **Geschenk**: Ware und Menge wählen – die Zeile darunter zeigt den Rufgewinn („Ruf +6,3“, Lieblingswaren
+   zählen mehr, viele Geschenke kurz nacheinander wirken weniger) – dann „Schenken“.
+5. **Handel**: Menge und Ware wählen, die du gibst, und die Ware, die du bekommst; die Zeile zeigt Menge, Kurs
+   und das restliche Tageslimit. Koboldhändler und Nomaden haben die besten Kurse, ein Handelsvertrag senkt die
+   Marge und erhöht das Limit.
+6. **Verträge**: Die Annahme-Chance steht auf dem Knopf („Schutz (75 %)“), Bedingungen und Gegenleistung im
+   Tooltip, gesperrte Verträge nennen den Grund. *Schutzvertrag*: das Dorf zahlt Tribut – wird es angegriffen,
+   schicke binnen 60 s Truppen hin (sonst sinkt der Ruf; der Knopf oben bekommt einen roten Punkt).
+   *Handelsvertrag*: regelmässige Lieferungen und bessere Kurse. *Bündnis* (ab Freundlich): Milizen helfen dir
+   in der Nähe, der **Volkskrieger** erscheint in der Kaserne. „Vertrag kündigen“ braucht einen zweiten Klick.
+7. **Aufnahme**: ab *Ergeben* (oder ab *Freundlich* mit grossem Geschenk bzw. starker Armee in der Nähe) –
+   „Aufnehmen“ zweimal klicken. Das Dorfzentrum wird dein Aussenposten mit Gebiet, die Milizen werden deine
+   Truppen, die Produktion fliesst in dein Lager (Auswahlfenster zeigt den Ertrag).
+8. **Drohen**: mit genug Truppen in der Nähe zahlt das Dorf Tribut, sonst lacht es dich aus – der Ruf sinkt so
+   oder so, andere Dörfer hören davon.
+9. **Krieg**: mit Truppen zweimal Rechtsklick auf eine Miliz oder ein Gebäude des Dorfs (der erste Klick warnt
+   nur) oder „Krieg erklären“ im Fenster. Das Dorf schickt einen **Boten** (Meldung mit Klick, blinkendes
+   weisses Quadrat auf der Minikarte) zum nächsten Dorf – fange ihn ab, sonst sinkt dein Ruf auch dort.
+   Dorfzentrum auf 0 Leben → **erobert** (gemindert produktiv, andere Dörfer misstrauen dir). Frieden geht
+   nach 60 s ohne Angriff, wenn der Ruf nicht zu tief ist.
+10. Sinkt der Ruf unter −50, wird ein Dorf feindlich (ab Phase 7 schliesst es sich dann dem Gegner an).
+
 ## Grafiken austauschen
 
 Alle Grafiken sind zunächst automatisch erzeugte Platzhalter. Legt man eine PNG-Datei
@@ -295,7 +378,7 @@ beim nächsten Start automatisch verwendet – ohne Code-Änderung.
 - [x] Phase 3 – Einheiten: Beschwören, Auswahl, Bewegung, Kampf, Armeen
 - [x] Phase 4 – Forschung, Mana und Magie
 - [x] Phase 5 – Helden
-- [ ] Phase 6 – Neutrale Dörfer, Diplomatie, Handel, Ruf, Boten
+- [x] Phase 6 – Neutrale Dörfer, Diplomatie, Handel, Ruf, Boten
 - [ ] Phase 7 – Gegnerische Königreiche mit KI, Entdeckung, Spionage
 - [ ] Phase 8 – Zufriedenheit, Verrat, Flüchtlinge, Ereignisse, Monster, Tag/Nacht
 - [ ] Phase 9 – Belagerungen und Handelswege

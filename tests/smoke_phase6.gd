@@ -1,9 +1,21 @@
 ## Rauchtest Phase 6 (gestartet von tests/smoke_test.gd): prüft über die
 ## öffentlichen Schnittstellen der Systeme Geschenk, Handel, Bündnis samt
 ## Freischaltung, Kündigung, Krieg mit Angriff und Bote, Abfangen, Aufnahme und
-## Eroberung. Fehler erscheinen als "ERROR: [smoke] Phase 6 FEHLER: …" (push_error),
-## damit run_smoke.sh fehlschlägt.
+## Eroberung. Dazu ein Test der Oberfläche (ab t = 150 s, nach dem Heldentest):
+## Diplomatiefenster öffnen (Forschung schliesst sich), Dorf wählen, Geschenk,
+## Bündnis und Tausch über die Knöpfe des Fensters, Debug-Bote, Auswahlfenster
+## mit Dorfzeile und Knopf "Diplomatie (N)", Gebietsname im Infobereich,
+## Kriegsbestätigung per zweitem Rechtsklick und Botensymbol auf der Minikarte.
+## Fehler erscheinen als "ERROR: [smoke] Phase 6 FEHLER: …" (push_error),
+## damit run_smoke.sh fehlschlägt. Bildschirmfotos mit shots=<ordner> (nur mit
+## echtem Fenster, z. B. unter xvfb-run): <fraktion>_p6_*.png.
 extends RefCounted
+
+## Ab dieser Spielzeit läuft der Oberflächentest (wenn ui_ready gesetzt ist)
+const UI_TEST_TIME := 150.0
+
+## Vom Rauchtest gesetzt: der Heldentest ist fertig (die Fenster sind frei)
+var ui_ready := false
 
 var _game: Node
 var _stage := 0
@@ -21,6 +33,12 @@ var _e: Kingdom = null
 ## Ruf bei A zu Beginn des Handelsvertrags und in Stufe 5 (danach nur noch Vertragsgewinn)
 var _trade_rep := 0.0
 var _trade_rep_s5 := 0.0
+## Oberflächentest: Schritt (-1 = fertig), nächster Schritt ab Spielzeit, Testdorf
+var _ui_step := 0
+var _ui_wait_until := 0.0
+var _ui_village: Kingdom = null
+var _ui_debug_was_visible := false
+var _ui_units: Array = []
 
 
 func _init(game: Node) -> void:
@@ -29,6 +47,8 @@ func _init(game: Node) -> void:
 
 ## Jeden Frame aufrufen (Spielzeit t)
 func tick(t: float) -> void:
+	if _stage >= 5 and _stage != 99 and _ui_step >= 0 and ui_ready and t >= UI_TEST_TIME and t >= _ui_wait_until:
+		_ui_test()
 	match _stage:
 		0:
 			_stage = 1 if _s0() else 99
@@ -128,7 +148,31 @@ func _s0() -> bool:
 			_c.display_name, _d.display_name, _uninvolved.display_name])
 	for r in DataDB.resources:
 		player.add_resource(str(r["id"]), 2000.0)
+	_check_gather_territory()
 	return true
+
+
+## Sammler des Spielers suchen keine Vorkommen im Gebiet eines Dorfs (WorkSystem)
+func _check_gather_territory() -> void:
+	var g := _game
+	var ws: WorkSystem = g.work_system
+	var player: Kingdom = g.player
+	var center: Vector2i = g.world.world_to_cell(g.village_system.get_center(_a))
+	var inside := 0
+	var foreign := 0
+	for j in DataDB.jobs:
+		var mask: PackedByteArray = (j as Dictionary).get("deposit_mask", PackedByteArray())
+		if mask.is_empty():
+			continue
+		var free_cell := ws._spiral_find(center, 8, mask)
+		if free_cell.x >= 0 and g.world.get_owner(free_cell) == _a.id:
+			inside += 1
+		ws._search_kingdom_id = player.id
+		var cell := ws._spiral_find(center, 8, mask)
+		ws._search_kingdom_id = 0
+		if cell.x >= 0 and g.world.get_owner(cell) != 0 and g.world.get_owner(cell) != player.id:
+			foreign += 1
+	_check(foreign == 0, "Sammler meiden das Gebiet von %s (%d Berufe fänden dort sonst etwas)" % [_a.display_name, inside])
 
 
 ## S1: Geschenk, Handel, Bündnis, Kündigung, Aufnahme, Krieg mit Angriff
@@ -367,8 +411,175 @@ func report() -> void:
 			_check(str(treaty.get("type", "")) == "trade" and deliveries >= 1 and rep_now > _trade_rep_s5,
 					"Handelsvertrag mit %s: %d Lieferungen, Ruf %+.1f (Beginn) → %+.1f (t=400) → %+.1f" % [
 					_a.display_name, deliveries, _trade_rep, _trade_rep_s5, rep_now])
+	if _stage != 99 and _ui_step >= 0 and GameClock.game_time > UI_TEST_TIME + 60.0:
+		_check(false, "Oberflächentest nicht fertig geworden (Schritt %d, Heldentest fertig: %s)" % [_ui_step, str(ui_ready)])
 	if _stage == 99:
 		print("[smoke] Phase 6: übersprungen (zu wenige Dörfer)")
 	elif _stage < 5 or (_stage < 7 and GameClock.game_time > 410.0):
 		_check(false, "Phase-6-Test nicht fertig geworden (Stufe %d)" % _stage)
 	print("[smoke] Phase 6: %s" % ("OK" if _errors == 0 else "%d Fehler" % _errors))
+
+
+# ---------------------------------------------------------------------------
+# Oberfläche (Diplomatiefenster, Auswahlfenster, Kriegsbestätigung, Minikarte)
+# ---------------------------------------------------------------------------
+
+func _ui_test() -> void:
+	var g := _game
+	var hud: Node = g.hud
+	var ds: DiplomacySystem = g.diplomacy_system
+	var vs: VillageSystem = g.village_system
+	var ms: MessengerSystem = g.messenger_system
+	var panel: DiplomacyPanel = hud.diplomacy_panel
+	var player: Kingdom = g.player
+	_ui_wait_until = GameClock.game_time + 0.5
+	match _ui_step:
+		0:
+			# Testdorf: das unbeteiligte Dorf (Bündnis, Krieg); sonst A (nur Geschenk)
+			_ui_village = _uninvolved if vs.is_village(_uninvolved) and _uninvolved != _a else _a
+			if not vs.is_village(_ui_village):
+				print("[smoke] Phase 6: Oberflächentest übersprungen (kein selbstständiges Dorf)")
+				_ui_step = -1
+				return
+			_ui_debug_was_visible = hud.is_debug_visible()
+			if not _ui_debug_was_visible:
+				hud.toggle_debug()
+			hud.toggle_research()
+			hud.toggle_diplomacy()
+			_check(hud.is_diplomacy_open() and not hud.is_research_open() and not hud.is_heroes_open(),
+					"Diplomatiefenster mit N geöffnet, Forschung schliesst sich")
+			var bar: Control = hud.date_label.get_parent()
+			var vp_w: float = hud.get_viewport().get_visible_rect().size.x
+			var parts: PackedStringArray = []
+			for c in bar.get_children():
+				parts.append("%s %d" % [(c as Control).name, roundi((c as Control).get_combined_minimum_size().x)])
+			_check(bar.get_combined_minimum_size().x <= vp_w, "Obere Leiste passt (%d von %d Pixeln: %s)" % [
+					roundi(bar.get_combined_minimum_size().x), roundi(vp_w), ", ".join(parts)])
+			panel.select_village(_ui_village.id)
+			_check(panel.get_village_id() == _ui_village.id and panel.sorted_villages().size() == vs.get_villages(true).size(),
+					"Fenster zeigt %s (Liste mit %d Dörfern)" % [_ui_village.display_name, panel.sorted_villages().size()])
+			var before := ds.get_reputation(_ui_village, player)
+			panel.set_gift_choice("food", 100)
+			_check(int(panel.get_gift().get("food", 0)) == 100, "Geschenkwahl im Fenster: 100 Nahrung")
+			panel._on_gift_pressed()
+			_check(ds.get_reputation(_ui_village, player) > before, "Geschenk über das Fenster: Ruf %+.1f → %+.1f" % [
+					before, ds.get_reputation(_ui_village, player)])
+			_ui_step = 1
+		1:
+			_shot("p6_1_diplomatie")
+			var r: Rect2 = panel.get_global_rect()
+			var vp: Rect2 = panel.get_viewport_rect()
+			_check(vp.encloses(Rect2(r.position, r.size * panel.scale)) and r.size.x <= DiplomacyPanel.DESIGN_WIDTH + 0.5,
+					"Diplomatiefenster liegt im Bild und ist nicht breiter als geplant (%s)" % str(r))
+			if _ui_village == _a:
+				_ui_step = 3
+				return
+			# Bündnis über den Vertragsknopf (Ruf per F3-Knopf hoch: Chance 100 %)
+			for i in 6:
+				if ds.get_reputation(_ui_village, player) >= 55.0:
+					break
+				panel.debug_action("rep_up")
+			var offer := ds.get_treaty_offer(player, _ui_village, "alliance")
+			panel._on_treaty_pressed("alliance")
+			_check(ds.get_treaty_with(_ui_village, player) == "alliance" and g.are_allied(player, _ui_village),
+					"Bündnis über das Fenster mit %s (Chance %d %%)" % [_ui_village.display_name, roundi(float(offer["chance"]) * 100.0)])
+			# Tausch über das Fenster: Ware, die das Dorf vorrätig hat
+			var get_res := ""
+			for res in DataDB.resources:
+				var res_id := str(res["id"])
+				if res_id != "wood" and _ui_village.get_amount(res_id) >= 20.0:
+					get_res = res_id
+					break
+			if not get_res.is_empty():
+				panel.set_trade_choice("wood", 10, get_res)
+				var q := panel.get_trade_quote()
+				var had := player.get_amount(get_res)
+				panel._on_trade_pressed()
+				_check(not bool(q["ok"]) or player.get_amount(get_res) > had, "Tausch über das Fenster: 10 Holz → %d %s %s" % [
+						roundi(float(q["get_amount"])), get_res, str(q["reason"])])
+			# Debug-Bote (F3-Knopf) für die Minikarte
+			var sent := int(ms.stats["sent"])
+			panel.debug_action("messenger")
+			_check(int(ms.stats["sent"]) == sent + 1 or ms.pick_receiver(_ui_village, player) == null,
+					"Debug-Bote aus %s losgeschickt" % _ui_village.display_name)
+			_ui_step = 2
+		2:
+			_shot("p6_2_vertrag")
+			_ui_step = 3
+		3:
+			hud.close_top_panel()
+			_check(not hud.is_diplomacy_open(), "Esc schliesst das Diplomatiefenster")
+			var hall := vs.get_hall(_ui_village)
+			g.selection.select([hall])
+			hud.selection_panel._refresh()
+			var sp: SelectionPanel = hud.selection_panel
+			_check(sp._village_row.visible and sp._owner.text.contains("(") and sp._facts.text.contains("Volk:"),
+					"Auswahlfenster: %s | %s" % [sp._owner.text, sp._facts.text.get_slice("\n", 0)])
+			var territory: String = hud._territory_text(hall.cell)
+			_check(territory.begins_with("Gebiet: "), "Infobereich: %s" % territory)
+			hud.minimap._rebuild_cache()
+			var messengers: Array = hud.minimap._messenger_groups
+			_check(ms.get_messengers().is_empty() or not messengers.is_empty(), "Boten auf der Minikarte (%d Gruppen)" % messengers.size())
+			_ui_step = 4
+		4:
+			_shot("p6_3_auswahl")
+			var sp: SelectionPanel = hud.selection_panel
+			sp._on_diplo_pressed()
+			_check(hud.is_diplomacy_open() and panel.get_village_id() == _ui_village.id, "Knopf „Diplomatie (N)“ öffnet das Fenster beim Dorf")
+			hud.toggle_heroes()
+			_check(hud.is_heroes_open() and not hud.is_diplomacy_open(), "Heldenfenster schliesst das Diplomatiefenster")
+			hud.close_top_panel()
+			if _ui_village == _a:
+				_ui_step = 6
+				return
+			# Kriegsbestätigung: zwei Rechtsklicks mit eigenen Truppen auf eine Dorfwache
+			var fighter := str(DataDB.get_unit_for_tier(player.faction_id, "fighter").get("id", ""))
+			_ui_units.clear()
+			for i in 2:
+				var u: Unit = g.unit_system.spawn_unit(player, fighter, player.castle.get_center() + Vector2(80.0 + 40.0 * i, 120.0))
+				if u != null:
+					_ui_units.append(u)
+			var militia := vs.get_militia(_ui_village)
+			if militia.is_empty() or _ui_units.is_empty():
+				print("[smoke] Phase 6: Kriegsbestätigung übersprungen (keine Miliz/Truppen)")
+				_ui_step = 6
+				return
+			var target: Unit = militia[0]
+			g.camera.focus_on(target.position)
+			g.selection.select(_ui_units)
+			g.selection._issue_order(_ui_units, target.position, false)
+			_check(not g.are_hostile(player, _ui_village), "Erster Rechtsklick auf %s: nur Hinweis, kein Krieg" % _ui_village.display_name)
+			g.selection._issue_order(_ui_units, target.position, false)
+			_check(g.are_hostile(player, _ui_village) and ds.get_treaty_with(_ui_village, player).is_empty(),
+					"Zweiter Rechtsklick: Krieg mit %s, Bündnis gebrochen (Ruf %+.0f)" % [_ui_village.display_name,
+					ds.get_reputation(_ui_village, player)])
+			_ui_step = 5
+		5:
+			_shot("p6_4_krieg")
+			# Truppen zurück (der Test soll das Dorf nicht erobern)
+			var alive: Array = []
+			for u in _ui_units:
+				if is_instance_valid(u) and (u as Unit).is_alive():
+					alive.append(u)
+			if not alive.is_empty():
+				g.command_system.order_move(alive, player.castle.get_center() + Vector2(0.0, 160.0), false)
+			g.selection.clear()
+			_ui_step = 6
+		6:
+			if hud.is_debug_visible() != _ui_debug_was_visible:
+				hud.toggle_debug()
+			print("[smoke] Phase 6: Oberflächentest fertig")
+			_ui_step = -1
+
+
+## Bildschirmfoto (nur mit shots=<ordner> und echtem Fenster, z. B. unter xvfb-run)
+func _shot(shot_name: String) -> void:
+	var dir := ""
+	for a in OS.get_cmdline_user_args():
+		if str(a).begins_with("shots="):
+			dir = str(a).substr(6)
+	if dir.is_empty() or DisplayServer.get_name() == "headless":
+		return
+	var img := _game.get_viewport().get_texture().get_image()
+	if img != null:
+		img.save_png("%s/%s_%s.png" % [dir, GameSession.faction_id, shot_name])

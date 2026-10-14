@@ -234,12 +234,76 @@ und Statuen, Gold) / `hero_hall_evil.png` (Halle der Schatten: dunkle Halle mit 
 
 Heldenmarkierung, Fähigkeitseffekte, Stufenaufstieg und EP-Anzeigen zeichnet das Spiel selbst.
 
-## 🕓 Phase 6 – Neutrale Völker
+## ✅ Phase 6 – Neutrale Völker
 
-Dorfzentren (128 × 128): `village_dwarves.png`, `village_halflings.png`, `village_wood_elves.png`,
-`village_lizardfolk.png`, `village_nomads.png`, `village_giants.png`, `village_water_spirits.png`,
-`village_kobold_traders.png`
-Einheiten: `messenger.png` (Bote), `trader.png` (Händler/Karawane)
+Acht neutrale Völker leben in Dörfern. Jedes Dorf zeigt sein Volk über die Grafiken; fehlt eine Datei,
+zeichnet das Spiel ein Feld in der **Volksfarbe** (siehe `data/peoples.json` → `color`) mit Beschriftung.
+Wird ein Dorf aufgenommen oder erobert, behält es seine Grafik (das Dorfzentrum heisst dann *Aussenposten*).
+
+**Dorfzentren** (`assets/sprites/buildings/`, 128 × 128, transparent, 3 × 3 Kacheln):
+
+| Datei | Volk | Motiv |
+|---|---|---|
+| `village_dwarves.png` | Zwerge | steinerne Halle am Fels, Schmiedeesse mit Glut, Ambosse, Erzkarren |
+| `village_halflings.png` | Halblinge | runde Hügelhöhle mit grüner Tür, Gemüsegarten, Pfeifenrauch |
+| `village_wood_elves.png` | Waldelfen | Baumhalle aus lebenden Ästen, Laternen mit Mondlicht, Lianen |
+| `village_lizardfolk.png` | Echsenvolk | Pfahlbau aus Schilf im Sumpf, Totems mit Schuppenmustern |
+| `village_nomads.png` | Nomaden | grosses buntes Zelt, Teppiche, Kamelsattel, Handelskisten |
+| `village_giants.png` | Riesen | grobe Steinhalle aus Felsblöcken, riesige Keule an der Wand |
+| `village_water_spirits.png` | Wassergeister | Quelltempel mit Wasserbecken, leuchtende blaue Perlen, Nebel |
+| `village_kobold_traders.png` | Koboldhändler | schiefer Markthügel mit Ständen, Münzhaufen, violette Laternen |
+| `village_hall.png` | Rückfall | einfaches Dorfzentrum (Holzhalle mit Glocke), wenn ein Volk keine Grafik hat |
+
+**Hütten** (`assets/sprites/buildings/`, 128 × 128, transparent, 2 × 2 Kacheln) – kleine Wohnhütte im Stil
+des Volks (wie das Dorfzentrum, aber schlichter):
+`village_hut_dwarves.png`, `village_hut_halflings.png`, `village_hut_wood_elves.png`,
+`village_hut_lizardfolk.png`, `village_hut_nomads.png`, `village_hut_giants.png`,
+`village_hut_water_spirits.png`, `village_hut_kobold_traders.png`
+
+**Dorfmilizen** (`assets/sprites/units/`, 64 × 64, transparent):
+
+| Datei | Einheit | Aussehen |
+|---|---|---|
+| `militia_dwarves.png` | Zwergenwache | gedrungener Zwerg mit Helm, Axt und Rundschild |
+| `militia_halflings.png` | Halblingschleuderer | kleiner Halbling mit Schleuder, Lederweste |
+| `militia_wood_elves.png` | Waldelfenwache | schlanke Elfe in Grün mit Kurzbogen |
+| `militia_lizardfolk.png` | Echsenkrieger | Echsenmensch mit Speer und Schilfschild |
+| `militia_nomads.png` | Nomadenwache | Wüstenkrieger mit Turban und Krummsäbel |
+| `militia_giants.png` | Riesenwächter | Hügelriese mit Baumstamm-Keule (wirkt grösser als andere) |
+| `militia_water_spirits.png` | Quellwächter | halb durchsichtige Wassergestalt mit Wasserkugel |
+| `militia_kobold_traders.png` | Koboldwache | Kobold mit Laterne und Funkenstab |
+
+**Volkskrieger** (`assets/sprites/units/`, 64 × 64, transparent – in der Kaserne bei Bündnis oder Aufnahme):
+
+| Datei | Einheit | Aussehen |
+|---|---|---|
+| `dwarf_ironguard.png` | Eisenwache | schwer gepanzerter Zwerg, Turmschild, Kriegshammer |
+| `halfling_slinger.png` | Schleudermeister | Halbling mit verzierter Schleuder und Steinbeutel |
+| `wood_elf_ranger.png` | Blattschütze | Elfe mit Langbogen, Blätterumhang |
+| `lizard_skirmisher.png` | Sumpfjäger | flinker Echsenmensch mit zwei Wurfspeeren |
+| `nomad_rider.png` | Steppenreiter | Reiter auf Wüstenpferd mit Lanze |
+| `giant_brute.png` | Hügelriese | riesiger Riese mit Felsbrocken auf der Schulter |
+| `water_spirit_healer.png` | Quellgeist | leuchtender Wassergeist mit heilenden Tropfen |
+| `kobold_bombardier.png` | Koboldsprenger | Kobold mit rauchender Bombe und Schutzbrille |
+
+**Bote** (`assets/sprites/units/`, 64 × 64): `messenger.png` – leichtfüssiger Läufer mit Schriftrolle und
+Umhängetasche (kämpft nie). Auf der Minikarte blinkt er als weiss umrandetes Quadrat.
+
+**UI-Symbole** (`assets/ui/icons/`, 32 × 32, transparent) – vorgesehen für Diplomatiefenster und Meldungen;
+das Fenster kommt zurzeit ohne sie aus (Text, Volksfarbe, Ruf-Balken):
+
+| Datei | Motiv |
+|---|---|
+| `icon_diplomacy.png` | zwei Hände beim Handschlag |
+| `icon_gift.png` | Geschenktruhe mit Schleife |
+| `icon_trade.png` | Waage mit zwei Säcken |
+| `icon_treaty_protection.png` | Schild über einem kleinen Haus |
+| `icon_treaty_trade.png` | Schriftrolle mit Münze |
+| `icon_treaty_alliance.png` | zwei gekreuzte Banner |
+| `icon_reputation.png` | Herz mit Stern |
+
+Haussymbol der Dörfer und Ringe (rot = Krieg, gold = Bündnis) auf der Minikarte, Gebietsgrenzen in der
+Volksfarbe und Ruf-Balken zeichnet das Spiel selbst. `trader.png` (Händler/Karawane) folgt in Phase 9.
 
 ## 🕓 Phase 7 – Gegner und Spionage
 
@@ -255,3 +319,4 @@ Weitere: `refugee.png` (Flüchtling), Ereignis-Icons `event_drought.png`, `event
 
 `wall.png`, `tower_good.png` / `tower_evil.png`, `gate_good.png` / `gate_evil.png`,
 `siege_ram.png`, `siege_catapult.png`
+Handelswege: `trader.png` (Händler/Karawane)

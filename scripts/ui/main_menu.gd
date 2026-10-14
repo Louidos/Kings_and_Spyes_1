@@ -42,7 +42,7 @@ func _ready() -> void:
 	%StartButton.pressed.connect(_start_game)
 
 	var v := Engine.get_version_info()
-	version_label.text = "Phase 2  ·  Godot %d.%d.%d" % [v.major, v.minor, v.patch]
+	version_label.text = "Phase 6  ·  Godot %d.%d.%d" % [v.major, v.minor, v.patch]
 	_show(main_buttons)
 
 
