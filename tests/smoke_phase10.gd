@@ -322,6 +322,19 @@ func _s4() -> void:
 			"data.units[*].state", "data.units[*].timer", "data.systems.*.tick_acc", "data.game.camera*",
 			"data.game.last_save_name"])
 	SaveCodec.deep_diff(a, b, "data", diff, 20, 0.0001, ignore)
+	# Betroffene Einheiten benennen (Typ, Reich, Befehl), damit der Verursacher erkennbar ist
+	var named := {}
+	var units_a: Array = a.get("units", [])
+	for line in diff.duplicate():
+		if not line.begins_with("data.units["):
+			continue
+		var idx := int(line.get_slice("[", 1).get_slice("]", 0))
+		if named.has(idx) or idx < 0 or idx >= units_a.size():
+			continue
+		named[idx] = true
+		var ud: Dictionary = units_a[idx]
+		diff.append("  units[%d] = %s#%s Reich %s, Befehl „%s“" % [idx, str(ud.get("type_id", "?")), str(ud.get("uid", "?")),
+				str(ud.get("kingdom_id", "?")), str(ud.get("command", ""))])
 	_check(diff.is_empty(), "Idempotenz: geladen = sofort wieder eingesammelt" + ("" if diff.is_empty() else "\n  " + "\n  ".join(diff)))
 
 
@@ -388,8 +401,16 @@ func _check_hanging() -> void:
 			continue
 		if u.moving or u.path_pending or u.inside != null or u.target != null:
 			continue
+		# Mitglieder eines Gruppenmarschs folgen ihrem Anführer (stehen kurz, wenn sie an ihrem
+		# Platz neben ihm sind) – geprüft wird der Anführer
+		if is_instance_valid(u.follow_leader) and (u.follow_leader as Unit).is_alive():
+			continue
 		if u.position.distance_to(u.command_pos) > ts:
-			hanging.append("%s#%d %s" % [u.type_id, u.uid, u.command])
+			hanging.append("%s#%d %s (%.0f Kacheln vom Ziel, Weg %s, Gebiet %d, Reich %d, folgt %s, Takt %s)" % [u.type_id, u.uid, u.command,
+					u.position.distance_to(u.command_pos) / ts, u.path_fail if u.path_fail != "" else "-",
+					game.world.get_owner(game.world.world_to_cell(u.command_pos)), u.kingdom.id,
+					str(u.follow_leader.uid) if is_instance_valid(u.follow_leader) else "-",
+					str((u.kingdom.ai_state.get("wave", {}) as Dictionary).get("state", "-"))])
 	_check(hanging.is_empty(), "10 s nach dem Laden keine hängenden Einheiten" + ("" if hanging.is_empty() else ": " + str(hanging.slice(0, 10))))
 
 

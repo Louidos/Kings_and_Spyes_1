@@ -478,7 +478,9 @@ func _tick_phase8(now: float) -> void:
 	elif now >= next_adopt:
 		next_adopt = now + adopt_interval
 		for u in wild.units.duplicate():
-			if u.is_alive() and not u.has_home and u.target == null and _raid_of(u.uid) == 0 and not leaving.has(u.uid):
+			# Nur untätige Heimatlose: Monster mit Marschbefehl (z. B. der Debug-Rammbock) bleiben dabei
+			if u.is_alive() and not u.has_home and u.target == null and _raid_of(u.uid) == 0 and not leaving.has(u.uid) \
+					and (u.command == "" or u.command == "hold"):
 				_adopt(u)
 
 

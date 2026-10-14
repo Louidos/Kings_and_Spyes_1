@@ -55,6 +55,13 @@ var _cloak_test := false
 var _spotted: Array = [0, 0]
 ## Spielzeit für die zweite Prüfung des Aufhetzens (-1 = keine)
 var _incite_due := -1.0
+## Aufwiegelungen von _incite_village gegen _ai0 (Signal reputation_changed): Anzahl und Summe.
+## Der Verlauf eines Dorfs hält nur die letzten Einträge (reputation.history_size) – KI-Geschenke
+## und Gerüchte verdrängen die Aufwiegelung dort schnell.
+var _incite_count := 0
+var _incite_sum := 0.0
+## Auftrag von Spion B gescheitert (entdeckt, kein Weg, Ziel ungültig)
+var _spy_b_failed := ""
 ## Oberflächentest (Spionagefenster, Reiter "Reiche"): Schritt (-1 = aus) und Wartezeit
 var _ui_step := -1
 ## Bild, in dem der Siegbildschirm zuerst zu sehen war (-1 = noch nicht)
@@ -69,6 +76,19 @@ func _init(game: Node, args: Dictionary) -> void:
 	_passive = str(args.get("passive", "0")) == "1"
 	_seconds = float(args.get("seconds", "600"))
 	_shots_dir = str(args.get("shots", ""))
+	(game.diplomacy_system as DiplomacySystem).reputation_changed.connect(_on_reputation_changed)
+	(game.spy_system as SpySystem).spy_mission_done.connect(func(u: Unit, mission: String, success: bool) -> void:
+		if u != null and u.uid == _spy_b and mission == "incite_village" and not success:
+			_spy_b_failed = "Auftrag gescheitert")
+	(game.spy_system as SpySystem).spy_detected.connect(func(spy: Unit, _employer: Kingdom, obs: Kingdom) -> void:
+		if spy != null and spy.uid == _spy_b:
+			_spy_b_failed = "entdeckt von %s" % (obs.display_name if obs != null else "?"))
+
+
+func _on_reputation_changed(village: Kingdom, other: Kingdom, _value: float, delta: float, reason: String) -> void:
+	if village != null and village == _incite_village and other == _ai0 and reason == "Aufwiegelung" and delta < 0.0:
+		_incite_count += 1
+		_incite_sum += delta
 
 
 ## Jeden Frame aufrufen (Spielzeit t)
@@ -339,10 +359,7 @@ func _incite_check(final: bool) -> void:
 	var g := _game
 	var ds: DiplomacySystem = g.diplomacy_system
 	var spies: SpySystem = g.spy_system
-	var found := false
-	for e in ds.get_history(_incite_village, _ai0):
-		if str(e.get("reason", "")) == "Aufwiegelung" and float(e.get("delta", 0.0)) < 0.0:
-			found = true
+	var found := _incite_count > 0
 	var b: Variant = g.find_by_uid(_spy_b)
 	var rec: Dictionary = spies.get_record(b) if b is Unit else {}
 	var state := str(rec.get("state", "tot"))
@@ -353,9 +370,13 @@ func _incite_check(final: bool) -> void:
 		print("[smoke] Hinweis: Spion B %s, Aufhetzen wird später geprüft" % state)
 		return
 	_incite_due = -1.0
-	if found or state == "active" or state == "idle":
-		_check(found, "Aufwiegelung senkt den Ruf von %s bei %s (%+.0f, Spion B %s, Stufe %d)" % [_ai0.display_name,
-				_incite_village.display_name, ds.get_reputation(_incite_village, _ai0), state, int(rec.get("level", 0))])
+	if not found and not _spy_b_failed.is_empty():
+		# Vor der ersten Aufwiegelung gescheitert (z. B. entdeckt): kein Fehler des Spiels
+		print("[smoke] Hinweis: Spion B hat nicht aufgehetzt (%s, Zustand %s)" % [_spy_b_failed, state])
+	elif found or state == "active" or state == "idle":
+		_check(found, "Aufwiegelung senkt den Ruf von %s bei %s (%d× zusammen %+.0f, jetzt %+.0f, Spion B %s, Stufe %d)" % [
+				_ai0.display_name, _incite_village.display_name, _incite_count, _incite_sum,
+				ds.get_reputation(_incite_village, _ai0), state, int(rec.get("level", 0))])
 	else:
 		print("[smoke] Hinweis: Spion B %s, kein Aufhetzen geprüft" % state)
 

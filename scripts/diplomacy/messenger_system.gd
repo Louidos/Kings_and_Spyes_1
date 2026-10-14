@@ -405,11 +405,19 @@ func from_dict(d: Dictionary) -> void:
 	_tick_acc = float(d.get("tick_acc", 0.0))
 
 
-## Nach dem Laden: Boten wieder auf den Weg schicken (Wege werden nicht gespeichert)
+## Nach dem Laden: Boten ohne Weg wieder auf den Weg schicken. Wer unterwegs ist (SaveGame stellt
+## den Weg wieder her) oder gerade angekommen ist (Ankunft in _pending), bleibt unverändert.
 func rebuild_runtime() -> void:
+	var arriving := {}
+	for entry in _pending:
+		if str(entry[0]) != "send":
+			arriving[int(entry[1])] = true
 	for uid in messengers.keys():
 		var found: Variant = game.find_by_uid(int(uid))
 		if not (found is Unit):
 			messengers.erase(uid)
 			continue
-		_travel(found as Unit, messengers[uid]["dest"])
+		var u: Unit = found
+		if arriving.has(u.uid) or (u.command == "travel" and (u.moving or u.path_pending)):
+			continue
+		_travel(u, messengers[uid]["dest"])

@@ -1344,6 +1344,9 @@ func rebuild_runtime() -> void:
 		if str(offer["state"]) == "waiting":
 			continue
 		for u in _alive_units(offer):
+			# Mit gespeichertem Weg (SaveGame) nicht neu losschicken (Idempotenz)
+			if u.command == cmd and (u.moving or u.path_pending):
+				continue
 			game.command_system.order_travel(u, offer["dest"], cmd)
 
 

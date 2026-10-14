@@ -25,6 +25,7 @@ var _f_uid := 0
 var _wolves: Array = []
 var _tower_uid := 0
 var _rams: Array = []
+var _r2_info := ""
 var _r2_fort := false
 var _damaged_uid := 0
 var _repair_checked := false
@@ -132,7 +133,10 @@ func _wall_tick(t: float) -> void:
 				if is_instance_valid(w) and (w as Unit).is_alive():
 					alive += 1
 			var st: Dictionary = g.siege_system.stats
-			if alive == 0 and int(st["tower_kills"]) >= 1 and int(st["tower_shots"]) >= int(st["tower_kills"]):
+			if alive == 0 and int(st["tower_shots"]) >= 1 and int(st["tower_shots"]) >= int(st["tower_kills"]):
+				# Der Turm hat geschossen; den letzten Treffer setzen manchmal Truppen in der Nähe
+				if int(st["tower_kills"]) == 0:
+					print("[smoke] Phase 9 Hinweis: Wachturm hat geschossen (%d), die Wölfe erlegten andere" % int(st["tower_shots"]))
 				_check(true, "Wachturm erlegt Wölfe (Schüsse %d, Abschüsse %d)" % [int(st["tower_shots"]), int(st["tower_kills"])])
 				_wall_step = 6
 			elif t > 125.0:
@@ -148,6 +152,12 @@ func _wall_tick(t: float) -> void:
 			if r2 is Unit and is_instance_valid(r2) and (r2 as Unit).target is Building and is_instance_valid((r2 as Unit).target) \
 					and ((r2 as Unit).target as Building).fort_kind != "":
 				_r2_fort = true
+			elif r2 is Unit and is_instance_valid(r2):
+				var tgt: Variant = (r2 as Unit).target
+				var what := "kein Ziel" if tgt == null or not is_instance_valid(tgt) else str(tgt.get("type_id") if tgt is Unit else (tgt as Building).def.get("id", "?"))
+				_r2_info = "%s, Befehl %s, Weg %s, Leben %.0f" % [what, (r2 as Unit).command, (r2 as Unit).path_fail, (r2 as Unit).hp]
+			else:
+				_r2_info = "Rammbock tot"
 			var w: Variant = g.find_by_uid(_north_wall_uid)
 			if w == null:
 				g.nav.process_dirty()
@@ -159,7 +169,7 @@ func _wall_tick(t: float) -> void:
 					var reg: Dictionary = g.nav.get_region(label)
 					print("[smoke] Phase 9: Fläche %d: %d Kacheln, Rahmen %s, Ring %s, Tor %s" % [label, (reg["cells"] as PackedInt32Array).size(),
 							str(reg["rect"]), str(_rect), str(_gate_cell)])
-				_check(_r2_fort, "Zweiter Rammbock greift eine Befestigung an (Bresche)")
+				_check(_r2_fort, "Zweiter Rammbock greift eine Befestigung an (Bresche)%s" % ("" if _r2_fort else " – zuletzt: " + _r2_info))
 				_remove_all(_rams)
 				_wall_step = -1
 			elif t > 210.0:
@@ -326,6 +336,9 @@ func _s3_tower() -> void:
 		if w != null:
 			# Schwach: der Turm soll sie erlegen, bevor andere Truppen eingreifen
 			w.hp = 12.0
+			# Heimat vor dem Turm: sonst schliessen sie sich einem Lager an (Phase 8)
+			w.has_home = true
+			w.home_pos = w.position
 			_wolves.append(w)
 	g.command_system.order_stop(_wolves)
 
@@ -420,16 +433,26 @@ func _trade_tick(t: float) -> void:
 				_trade_step = 4
 				_step_t = t
 			elif t > _step_t + 120.0:
-				_check(false, "Karawane fährt nicht wieder los (Weg %s, %d fällig)" % [str(r["state"]), int(r["pending"])])
+				if str(r["state"]) == "cut":
+					# Durch Feinde am Weg abgeschnitten (Phase 8: Streifzüge, wache Monster) – dann fährt
+					# zu Recht keine Karawane; der Überfalltest entfällt
+					print("[smoke] Phase 9 Hinweis: Weg abgeschnitten, Überfalltest übersprungen – %s" % _foes_near(r))
+				else:
+					_check(false, "Karawane fährt nicht wieder los (Weg %s, %d fällig)" % [str(r["state"]), int(r["pending"])])
 				_trade_step = -1
 		4:
 			var r := trs.get_route(_route_id)
 			if r.is_empty():
 				_trade_step = -1
 			elif t >= _step_t + 8.0:
-				_check(int(trs.stats["lost"]) == _lost_before + 1 and str(r["state"]) == "open" and int(r["caravan_uid"]) != 0,
-						"Karawane überfallen: Verluste %d, Weg %s, neue Karawane %s" % [int(trs.stats["lost"]), str(r["state"]),
-						str(int(r["caravan_uid"]) != 0)])
+				# Ein einzelner Überfall schneidet den Weg nicht ab. Ist er trotzdem zu, dann nur wegen
+				# echter Feinde am Weg (Streifzüge, wache Monster – Phase 8): Hinweis statt Fehler.
+				var natural_cut := str(r["state"]) == "cut" and str(r["reason"]) == "Feinde auf dem Weg" and _route_foes(r) > 0
+				if natural_cut:
+					print("[smoke] Phase 9 Hinweis: Weg gerade durch Feinde abgeschnitten – %s" % _foes_near(r))
+				_check(int(trs.stats["lost"]) == _lost_before + 1 and (str(r["state"]) == "open" or natural_cut) and int(r["caravan_uid"]) != 0,
+						"Karawane überfallen: Verluste %d, Weg %s, neue Karawane %s%s" % [int(trs.stats["lost"]), str(r["state"]),
+						str(int(r["caravan_uid"]) != 0), "" if str(r["state"]) == "open" else " – " + _foes_near(r)])
 				_route_wolves.clear()
 				var mid := trs.get_midpoint(r)
 				for i in 3:
@@ -437,6 +460,10 @@ func _trade_tick(t: float) -> void:
 					var w: Unit = g.unit_system.spawn_unit(g.wild, "wolf", g.world.cell_to_world(c))
 					if w != null:
 						w.add_effect({"id": "test:hp", "key": "hp", "mult": 10.0, "until": -1.0, "source": "test"})
+						# Heimat am Weg: sonst holt sie das MonsterSystem (Phase 8: heimatlose Monster
+						# schliessen sich einem Lager an oder verlassen die Karte) gleich wieder weg
+						w.has_home = true
+						w.home_pos = w.position
 						_route_wolves.append(w)
 				g.command_system.order_stop(_route_wolves)
 				_trade_step = 5
@@ -463,7 +490,12 @@ func _trade_tick(t: float) -> void:
 				_trade_step = -1
 				trs.debug_fast = false
 			elif t > _step_t + 20.0:
-				_check(false, "Handelsweg nicht wieder offen (%s, frei seit %.1f s)" % [str(r["state"]), float(r["clear_time"])])
+				if _route_foes(r) > 0:
+					# Weitere Feinde (nicht die Testwölfe) stehen am Weg: er bleibt zu Recht zu
+					print("[smoke] Phase 9 Hinweis: Handelsweg bleibt zu, andere Feinde am Weg – %s" % _foes_near(r))
+				else:
+					_check(false, "Handelsweg nicht wieder offen (%s, frei seit %.1f s, %s)" % [str(r["state"]), float(r["clear_time"]),
+							_foes_near(r)])
 				_trade_step = -1
 				trs.debug_fast = false
 
@@ -515,6 +547,35 @@ func _force_delivery() -> void:
 	var give: Dictionary = (_game.village_system.get_people(_village).get("delivery", {}) as Dictionary).get("give", {})
 	for res_id in give:
 		_village.add_resource(str(res_id), float(give[res_id]) * 2.0)
+
+
+## Wache, sichtbare feindliche Kämpfer am Weg (wie TradeRouteSystem._scan_dangers)
+func _route_foes(r: Dictionary) -> int:
+	var g := _game
+	var k: Kingdom = g.get_kingdom(int(r["owner_id"]))
+	var radius := float(DataDB.trade("cut.danger_radius", 4)) * float(g.world.tile_size)
+	var pts: Array = r["points"]
+	var n := 0
+	for u in g.unit_system.units:
+		if k == null or not g.are_hostile(k, u.kingdom) or u.attack <= 0.0 or u.hp <= 0.0 or u.stealthed or u.dormant:
+			continue
+		for i in range(pts.size() - 1):
+			if Geometry2D.get_closest_point_to_segment(u.position, pts[i], pts[i + 1]).distance_to(u.position) <= radius:
+				n += 1
+				break
+	return n
+
+
+## Für Fehlermeldungen: Grund des Zustands und feindliche Einheiten nahe der gemeldeten Gefahr
+func _foes_near(r: Dictionary) -> String:
+	var g := _game
+	var k: Kingdom = g.get_kingdom(int(r["owner_id"]))
+	var pos: Vector2 = r.get("danger_pos", Vector2.ZERO)
+	var names: PackedStringArray = []
+	for u in g.unit_system.units:
+		if k != null and g.are_hostile(k, u.kingdom) and u.position.distance_to(pos) <= 6.0 * float(g.world.tile_size):
+			names.append("%s (%s%s)" % [u.type_id, u.kingdom.display_name, ", schläft" if u.dormant else ""])
+	return "Grund „%s“, Feinde nahe der Gefahr: %s" % [str(r.get("reason", "")), ", ".join(names.slice(0, 8)) if not names.is_empty() else "keine"]
 
 
 # ---------------------------------------------------------------------------

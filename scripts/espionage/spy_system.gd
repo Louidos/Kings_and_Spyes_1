@@ -860,6 +860,10 @@ func rebuild_runtime() -> void:
 	_acc = 0.0
 	_rng.state = rng_state
 	var cmd: CommandSystem = game.command_system
+	# Ankünfte, die beim Speichern noch nicht verarbeitet waren: nicht neu losschicken
+	var arriving := {}
+	for entry in _pending:
+		arriving[int(entry[1])] = true
 	for uid in spies.keys():
 		var u: Variant = game.find_by_uid(int(uid))
 		if not (u is Unit) or not (u as Unit).is_alive():
@@ -869,8 +873,8 @@ func rebuild_runtime() -> void:
 		var rec: Dictionary = spies[uid]
 		match str(rec["state"]):
 			"travel":
-				if not spy.moving and not spy.path_pending:
+				if not spy.moving and not spy.path_pending and not arriving.has(spy.uid):
 					cmd.order_travel(spy, rec["dest"], "infiltrate")
 			"return":
-				if not spy.moving and not spy.path_pending:
+				if not spy.moving and not spy.path_pending and not arriving.has(spy.uid):
 					cmd.order_travel(spy, rec["dest"], "return")

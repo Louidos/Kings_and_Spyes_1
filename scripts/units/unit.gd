@@ -408,8 +408,11 @@ func to_dict() -> Dictionary:
 	if follow_leader != null and is_instance_valid(follow_leader):
 		d["follows"] = true
 	if moving or path_pending:
-		d["motion"] = {"path": path.duplicate(), "i": path_index, "moving": moving, "pending": path_pending,
-				"target": path_target, "final": path_final, "has_final": has_path_final}
+		# Steht die Einheit und wartet nur auf den nächsten Abschnitt, ist der alte Weg verbraucht:
+		# leer speichern (das Laden fordert den Weg ohnehin neu an – so bleibt es idempotent)
+		d["motion"] = {"path": path.duplicate() if moving else PackedVector2Array(), "i": path_index if moving else 0,
+				"moving": moving, "pending": path_pending, "target": path_target, "final": path_final,
+				"has_final": has_path_final}
 	for prop in SAVE_OPTIONAL:
 		var value: Variant = get(prop)
 		if value != null:

@@ -14,7 +14,8 @@
 ##
 ## Zustand (gespeichert): kingdoms_state (kid -> Werte je Reich, siehe _new_state),
 ## defectors (uid -> Überläufer), hidden_spies (uid -> eingeschleuster Spion), personal
-## (uid -> persönliche Ursachen), abort_until (uid -> Zeitpunkt), late_reports, rng_state;
+## (uid -> persönliche Ursachen), abort_until (uid -> Zeitpunkt), late_reports, rng_state, _pending
+## (Ankünfte von Überläufern, noch nicht verarbeitet);
 ## dazu Unit.satisfaction. Laufzeit: work_mult der Einheiten, _idle_since, _seen_since.
 class_name SatisfactionSystem
 extends Node
@@ -63,7 +64,7 @@ var _maint_acc := 0.0
 var _idle_since: Dictionary = {}
 ## uid -> Spielzeit, seit der der Bewohner erfasst ist (Schutz für Neuankömmlinge)
 var _seen_since: Dictionary = {}
-## Ankünfte/Fehlschläge von Überläufern: [uid, ok] (im eigenen Takt verarbeitet)
+## Ankünfte/Fehlschläge von Überläufern: [uid, ok] (im eigenen Takt verarbeitet; gespeichert)
 var _pending: Array = []
 ## Häufig gelesene Werte aus satisfaction.json (Laufzeit, einmal beim Aufbau gelesen)
 var _cfg := {}
@@ -226,6 +227,14 @@ func get_defectors(k: Kingdom) -> Array:
 
 func is_defector(u: Unit) -> bool:
 	return is_instance_valid(u) and defectors.has(u.uid)
+
+
+## Läuft u gerade zu k über? Das Zielreich (Dorf oder Reich) greift ihn dann nicht an,
+## auch wenn es mit seinem Reich im Krieg ist (CombatSystem.is_valid_target).
+func defects_to(u: Unit, k: Kingdom) -> bool:
+	if k == null or not defectors.has(u.uid):
+		return false
+	return int((defectors[u.uid] as Dictionary).get("dest_id", 0)) == k.id
 
 
 ## "Läuft über zu Zwergendorf Eisenhall – Befehl geben hält ihn auf"
@@ -1115,7 +1124,8 @@ static func _time_text(seconds: float) -> String:
 func to_dict() -> Dictionary:
 	return {"kingdoms_state": kingdoms_state.duplicate(true), "defectors": defectors.duplicate(true),
 			"hidden_spies": hidden_spies.duplicate(true), "personal": personal.duplicate(true),
-			"abort_until": abort_until.duplicate(), "late_reports": late_reports.duplicate(true), "rng_state": rng_state}
+			"abort_until": abort_until.duplicate(), "late_reports": late_reports.duplicate(true), "rng_state": rng_state,
+			"pending": _pending.duplicate(true)}
 
 
 func from_dict(d: Dictionary) -> void:
@@ -1126,12 +1136,13 @@ func from_dict(d: Dictionary) -> void:
 	abort_until = (d.get("abort_until", {}) as Dictionary).duplicate()
 	late_reports = (d.get("late_reports", []) as Array).duplicate(true)
 	rng_state = int(d.get("rng_state", rng_state))
+	_pending = (d.get("pending", []) as Array).duplicate(true)
 
 
 ## Arbeitsleistung aller Bewohner neu, Überläufer erneut losschicken, Feste prüfen
 func rebuild_runtime() -> void:
 	_load_cfg()
-	_pending.clear()
+	# _pending (Ankünfte von Überläufern) ist gespeichert und bleibt
 	_idle_since.clear()
 	_seen_since.clear()
 	_acc = 0.0
@@ -1150,7 +1161,8 @@ func rebuild_runtime() -> void:
 		if not (u is Unit):
 			defectors.erase(uid)
 			continue
-		if (u as Unit).command == "defect":
+		# Mit gespeichertem Weg (SaveGame) läuft er schon weiter – nur ohne Weg neu losschicken
+		if (u as Unit).command == "defect" and not (u as Unit).moving and not (u as Unit).path_pending:
 			game.command_system.order_travel(u, (defectors[uid] as Dictionary)["dest"], "defect")
 	for kid in kingdoms_state:
 		var k: Kingdom = game.get_kingdom(int(kid))

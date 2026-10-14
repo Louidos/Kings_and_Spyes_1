@@ -14,6 +14,8 @@ var _stage := 0
 var _errors := 0
 var _ai0: Kingdom = null
 var _defector_uid := 0
+## Der Überläufer starb unterwegs (Name des Angreifers) – dann zählt er nicht als übergelaufen
+var _defector_killed_by := ""
 var _attack_seen := false
 var _phase_changes := 0
 var _wave_raid := 0
@@ -33,6 +35,9 @@ func _init(game: Node, args: Dictionary) -> void:
 		if victim == game.player and attacker == game.wild:
 			_attack_seen = true)
 	_lairs_start = game.monster_system.lairs.size()
+	game.combat_system.unit_died.connect(func(u: Unit, killer: Kingdom) -> void:
+		if u != null and _defector_uid != 0 and u.uid == _defector_uid:
+			_defector_killed_by = killer.display_name if killer != null else "?")
 
 
 func _check(cond: bool, text: String) -> void:
@@ -304,6 +309,8 @@ func _s4() -> void:
 	if u is Unit and (u as Unit).kingdom == player:
 		_note("Überläufer noch unterwegs (%s, %.0f Kacheln von der Burg)" % [(u as Unit).command,
 				(u as Unit).position.distance_to(player.castle.get_center()) / g.world.tile_size])
+	elif not _defector_killed_by.is_empty() and int(player.stats.get("defected", 0)) == 0:
+		_note("Überläufer wurde unterwegs getötet (%s)" % _defector_killed_by)
 	else:
 		_check(int(player.stats.get("defected", 0)) >= 1, "Überläufer ist gegangen (Statistik %d)" % int(player.stats.get("defected", 0)))
 	var near := false

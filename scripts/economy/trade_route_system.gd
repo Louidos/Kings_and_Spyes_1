@@ -923,6 +923,10 @@ func rebuild_runtime() -> void:
 	_tick_acc = 0.0
 	_scan_acc = 0.0
 	_repath_queue.clear()
+	# Ankünfte, die beim Speichern noch nicht verarbeitet waren (_pending, gespeichert)
+	var arriving := {}
+	for entry in _pending:
+		arriving[int(entry[1])] = true
 	for id in routes:
 		var r: Dictionary = routes[id]
 		_repath_queue.append(id)
@@ -930,15 +934,19 @@ func rebuild_runtime() -> void:
 		if u == null:
 			r["caravan_uid"] = 0
 			continue
+		# Unterwegs mit gespeichertem Weg (SaveGame stellt ihn wieder her) oder gerade angekommen
+		# (Ankunft in _pending): nicht neu losschicken, sonst ändern sich Befehl und Weg (Idempotenz)
+		var travelling := (u.command == "haul" and (u.moving or u.path_pending)) or arriving.has(u.uid)
 		match str(r["leg"]):
 			"idle":
 				var depot := _depot(r)
 				if depot != null:
 					game.unit_system.set_inside(u, depot)
 			"out":
-				game.command_system.order_travel(u, r["far_pos"], "haul")
+				if not travelling:
+					game.command_system.order_travel(u, r["far_pos"], "haul")
 			"back":
-				if float(r["load_until"]) < 0.0:
+				if float(r["load_until"]) < 0.0 and not travelling:
 					game.command_system.order_travel(u, r["home_pos"], "haul")
 		var k: Kingdom = game.get_kingdom(int(r["owner_id"]))
 		if k != null:

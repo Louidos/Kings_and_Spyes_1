@@ -121,10 +121,17 @@ func is_valid_target(k: Kingdom, t: Variant) -> bool:
 		return false
 	if t is Unit:
 		return t.hp > 0.0 and t.inside == null and _hostile(k, t.kingdom) \
-				and (not t.stealthed or game.are_allied(k, t.kingdom))
+				and (not t.stealthed or game.are_allied(k, t.kingdom)) \
+				and (t.command != "defect" or not _defects_to(t, k))
 	if t is Building:
 		return t.hp > 0.0 and _hostile(k, t.kingdom)
 	return false
+
+
+## Überläufer auf dem Weg zu k (Phase 8): k nimmt ihn auf, statt ihn anzugreifen
+func _defects_to(u: Unit, k: Kingdom) -> bool:
+	var ss: Variant = game.get("satisfaction_system")
+	return ss != null and bool(ss.defects_to(u, k))
 
 
 ## Einheiten des Reichs k und seiner Verbündeten im Umkreis

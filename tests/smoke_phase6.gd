@@ -33,6 +33,10 @@ var _e: Kingdom = null
 ## Ruf bei A zu Beginn des Handelsvertrags und in Stufe 5 (danach nur noch Vertragsgewinn)
 var _trade_rep := 0.0
 var _trade_rep_s5 := 0.0
+## Ruf-Änderungen von A gegenüber dem Spieler ab S5 (Signal reputation_changed): Grund -> Summe.
+## Der Verlauf im Dorf hält nur die letzten Einträge – darum über das Signal.
+var _trade_rep_causes: Dictionary = {}
+var _trade_rep_tracking := false
 ## Oberflächentest: Schritt (-1 = fertig), nächster Schritt ab Spielzeit, Testdorf
 var _ui_step := 0
 var _ui_wait_until := 0.0
@@ -43,6 +47,12 @@ var _ui_units: Array = []
 
 func _init(game: Node) -> void:
 	_game = game
+	(game.diplomacy_system as DiplomacySystem).reputation_changed.connect(_on_reputation_changed)
+
+
+func _on_reputation_changed(village: Kingdom, other: Kingdom, _value: float, delta: float, reason: String) -> void:
+	if _trade_rep_tracking and village == _a and other == _game.player:
+		_trade_rep_causes[reason] = float(_trade_rep_causes.get(reason, 0.0)) + delta
 
 
 ## Jeden Frame aufrufen (Spielzeit t)
@@ -336,6 +346,7 @@ func _s4() -> void:
 				_e.display_name, protection])
 	# Drohung ohne Truppen in der Nähe: wird verlacht, Ruf sinkt
 	if vs.is_village(_uninvolved) and _uninvolved != _a:
+		_detach_from_ai(_uninvolved)
 		var before := ds.get_reputation(_uninvolved, player)
 		var threat := ds.get_threat_info(player, _uninvolved)
 		var paid := ds.threaten(player, _uninvolved)
@@ -350,6 +361,7 @@ func _s5() -> void:
 	var vs: VillageSystem = g.village_system
 	var player: Kingdom = g.player
 	_trade_rep_s5 = ds.get_reputation(_a, player)
+	_trade_rep_tracking = true
 	ds.debug_set_reputation(_b, player, -20.0)
 	var reason := ds.can_make_peace(player, _b)
 	var peace := ds.make_peace(player, _b)
@@ -407,18 +419,25 @@ func report() -> void:
 		var treaty := ds.get_treaty(_a)
 		var deliveries := int(treaty.get("deliveries", 0))
 		var rep_now := ds.get_reputation(_a, player)
-		# Phase 7: KI-Spione hetzen dem Spieler freundliche Dörfer auf – dann sinkt der Ruf gewollt
-		var incited := false
-		for e in ds.get_history(_a, player):
-			if str(e.get("reason", "")) == "Aufwiegelung":
-				incited = true
-		if GameClock.game_time > 600.0 and incited:
-			print("[smoke] Hinweis: %s wurde von einem fremden Spion aufgehetzt (Ruf %+.1f, Vertrag %s, %d Lieferungen)" % [
-					_a.display_name, rep_now, str(treaty.get("type", "-")), deliveries])
-		elif GameClock.game_time > 600.0:
-			_check(str(treaty.get("type", "")) == "trade" and deliveries >= 1 and rep_now > _trade_rep_s5,
-					"Handelsvertrag mit %s: %d Lieferungen, Ruf %+.1f (Beginn) → %+.1f (t=400) → %+.1f" % [
-					_a.display_name, deliveries, _trade_rep, _trade_rep_s5, rep_now])
+		# Der Vertrag hebt den Ruf stetig ("Vertrag"); sinkt er trotzdem, muss es dafür
+		# Gründe geben (z. B. Aufwiegelung durch KI-Spione, Gerüchte, Angriffe) – nicht nur Verfall
+		var gain := float(_trade_rep_causes.get("Vertrag", 0.0))
+		var other_loss := 0.0
+		var causes: PackedStringArray = []
+		for reason in _trade_rep_causes:
+			var v := float(_trade_rep_causes[reason])
+			causes.append("%s %+.1f" % [reason, v])
+			if reason != "Vertrag" and reason != "Verfall" and v < 0.0:
+				other_loss += v
+		if GameClock.game_time > 600.0:
+			if rep_now <= _trade_rep_s5 and other_loss < 0.0:
+				print("[smoke] Hinweis: Ruf bei %s trotz Handelsvertrag gesunken – Ursachen seit t=400: %s" % [
+						_a.display_name, ", ".join(causes)])
+			var at_max := rep_now >= float(DataDB.diplo("reputation.max", 100)) - 0.01
+			_check(str(treaty.get("type", "")) == "trade" and deliveries >= 1 and (gain > 0.0 or at_max)
+					and (rep_now > _trade_rep_s5 or at_max or other_loss < 0.0),
+					"Handelsvertrag mit %s: %d Lieferungen, Ruf %+.1f (Beginn) → %+.1f (t=400) → %+.1f (Vertrag %+.1f, andere Verluste %+.1f)" % [
+					_a.display_name, deliveries, _trade_rep, _trade_rep_s5, rep_now, gain, other_loss])
 	if _stage != 99 and _ui_step >= 0 and GameClock.game_time > UI_TEST_TIME + 60.0:
 		_check(false, "Oberflächentest nicht fertig geworden (Schritt %d, Heldentest fertig: %s)" % [_ui_step, str(ui_ready)])
 	if _stage == 99:
@@ -426,6 +445,31 @@ func report() -> void:
 	elif _stage < 5 or (_stage < 7 and GameClock.game_time > 410.0):
 		_check(false, "Phase-6-Test nicht fertig geworden (Stufe %d)" % _stage)
 	print("[smoke] Phase 6: %s" % ("OK" if _errors == 0 else "%d Fehler" % _errors))
+
+
+## KI-Reiche schliessen selbst Verträge mit Dörfern (Phase 7, Handelswege ab Phase 9) und ziehen
+## verbündete Dörfer im Bündnisfall in ihre Kriege gegen den Spieler. Für die Prüfungen mit v
+## (Drohung, Bündnis und Kriegsbestätigung über das Fenster) wird das rückgängig gemacht – mit Hinweis.
+func _detach_from_ai(v: Kingdom) -> void:
+	var g := _game
+	var ds: DiplomacySystem = g.diplomacy_system
+	var player: Kingdom = g.player
+	if v == null or not g.village_system.is_village(v):
+		return
+	var t := ds.get_treaty(v)
+	if not t.is_empty() and int(t["partner_id"]) != player.id:
+		var partner: Kingdom = g.get_kingdom(int(t["partner_id"]))
+		print("[smoke] Phase 6 Hinweis: %s hat einen Vertrag (%s) mit %s – für den Test gekündigt" % [
+				v.display_name, str(t["type"]), partner.display_name if partner != null else "?"])
+		if partner != null:
+			ds.cancel_treaty(partner, v)
+	if g.are_hostile(v, player):
+		var why := ""
+		for e in ds.get_history(v, player):
+			why = str(e.get("reason", ""))
+		print("[smoke] Phase 6 Hinweis: %s ist im Krieg mit dem Spieler (zuletzt: %s) – für den Test Frieden" % [
+				v.display_name, why])
+		g.set_relation(v, player, "peace")
 
 
 # ---------------------------------------------------------------------------
@@ -445,6 +489,7 @@ func _ui_test() -> void:
 		0:
 			# Testdorf: das unbeteiligte Dorf (Bündnis, Krieg); sonst A (nur Geschenk)
 			_ui_village = _uninvolved if vs.is_village(_uninvolved) and _uninvolved != _a else _a
+			_detach_from_ai(_ui_village)
 			if not vs.is_village(_ui_village):
 				print("[smoke] Phase 6: Oberflächentest übersprungen (kein selbstständiges Dorf)")
 				_ui_step = -1
@@ -483,6 +528,7 @@ func _ui_test() -> void:
 				_ui_step = 3
 				return
 			# Bündnis über den Vertragsknopf (Ruf per F3-Knopf hoch: Chance 100 %)
+			_detach_from_ai(_ui_village)
 			for i in 6:
 				if ds.get_reputation(_ui_village, player) >= 55.0:
 					break
@@ -490,7 +536,8 @@ func _ui_test() -> void:
 			var offer := ds.get_treaty_offer(player, _ui_village, "alliance")
 			panel._on_treaty_pressed("alliance")
 			_check(ds.get_treaty_with(_ui_village, player) == "alliance" and g.are_allied(player, _ui_village),
-					"Bündnis über das Fenster mit %s (Chance %d %%)" % [_ui_village.display_name, roundi(float(offer["chance"]) * 100.0)])
+					"Bündnis über das Fenster mit %s (Chance %d %%) %s" % [_ui_village.display_name, roundi(float(offer["chance"]) * 100.0),
+					str(offer["reason"])])
 			# Tausch über das Fenster: Ware, die das Dorf vorrätig hat
 			var get_res := ""
 			for res in DataDB.resources:
