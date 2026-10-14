@@ -457,10 +457,14 @@ func dispatch_help(v: Kingdom, pos: Vector2, enemy: Kingdom) -> void:
 	rec["help_pos"] = pos
 
 
-## Milizen zurück auf ihre Posten (nach Alarm oder Bündnishilfe); only_uids: nur diese
+## Milizen zurück auf ihre Posten (nach Alarm oder Bündnishilfe); only_uids: nur diese,
+## sonst alle ausser denen, die gerade Bündnishilfe leisten
 func _return_to_posts(v: Kingdom, rec: Dictionary, only_uids: Array = []) -> void:
+	var helpers: Array = rec["helpers"]
 	for u in get_militia(v):
 		if not only_uids.is_empty() and not only_uids.has(u.uid):
+			continue
+		if only_uids.is_empty() and helpers.has(u.uid):
 			continue
 		_send_to_post(v, rec, u)
 

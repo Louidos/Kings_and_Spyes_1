@@ -16,6 +16,11 @@ var _d: Kingdom = null
 var _uninvolved: Kingdom = null
 var _uninvolved_rep := 0.0
 var _test_messenger_uid := 0
+## Weiteres Dorf für den Schutzvertrag (null, wenn es keins gibt)
+var _e: Kingdom = null
+## Ruf bei A zu Beginn des Handelsvertrags und in Stufe 5 (danach nur noch Vertragsgewinn)
+var _trade_rep := 0.0
+var _trade_rep_s5 := 0.0
 
 
 func _init(game: Node) -> void:
@@ -43,6 +48,14 @@ func tick(t: float) -> void:
 			if t >= 13.0:
 				_s4()
 				_stage = 5
+		5:
+			if t >= 400.0:
+				_s5()
+				_stage = 6
+		6:
+			if t >= 402.0:
+				_s6()
+				_stage = 7
 
 
 func _check(cond: bool, text: String) -> void:
@@ -105,8 +118,10 @@ func _s0() -> bool:
 	_c = rest[0]
 	_d = rest[1]
 	for v in rest.slice(2):
-		_uninvolved = v
-		break
+		if _uninvolved == null:
+			_uninvolved = v
+		elif _e == null:
+			_e = v
 	if _uninvolved == null:
 		_uninvolved = _a
 	print("[smoke] Phase 6: A=%s, B=%s, C=%s, D=%s, unbeteiligt=%s" % [_a.display_name, _b.display_name,
@@ -142,7 +157,8 @@ func _s1() -> void:
 			get_res = res_id
 			got = ds.trade(player, _a, "wood", 50.0, res_id)
 			break
-	_check(got > 0.0, "Handel mit %s: 50 Holz → %d %s %s" % [_a.display_name, roundi(got), get_res, last_reason])
+	_check(got > 0.0, "Handel mit %s: 50 Holz → %d %s %s" % [_a.display_name, roundi(got),
+			str(DataDB.get_resource(get_res).get("name", get_res)), last_reason])
 	var big := ds.get_trade_quote(player, _a, "wood", 5000.0, get_res if not get_res.is_empty() else "stone")
 	_check(not bool(big["ok"]), "Tausch über dem Tageslimit abgelehnt (%s)" % str(big["reason"]))
 	# 3. Bündnis samt Freischaltung der Spezialeinheit
@@ -210,6 +226,10 @@ func _s2() -> void:
 		print("[smoke] Phase 6: Bote von %s nach %s wird abgefangen" % [_b.display_name,
 				receiver.display_name if receiver != null else "?"])
 		g.combat_system.apply_damage(target, 9999.0, null, player, "event")
+	# Eine Miliz von A fällt (ohne Täter): das Dorf ersetzt sie später aus seinem Vorrat
+	var militia_a := vs.get_militia(_a)
+	if not militia_a.is_empty():
+		g.combat_system.apply_damage(militia_a[0], 9999.0, null, null, "event")
 	var hall_d := vs.get_hall(_d)
 	if hall_d != null:
 		var test := ms.send_messenger(_d, hall_d.get_approach_point(vs.get_center(_a)), _a, player)
@@ -253,6 +273,70 @@ func _s4() -> void:
 		var now := ds.get_reputation(_uninvolved, player)
 		_check(now < _uninvolved_rep - 5.0, "Ruf bei %s nach der Eroberung gesunken (%+.0f → %+.0f)" % [
 				_uninvolved.display_name, _uninvolved_rep, now])
+	# Handelsvertrag mit A (Lieferungen und Ruf-Gewinn prüft der Bericht)
+	ds.debug_set_reputation(_a, player, 40.0)
+	_trade_rep = ds.get_reputation(_a, player)
+	var answer := ds.propose_treaty(player, _a, "trade")
+	_check(answer.is_empty() and ds.get_treaty_with(_a, player) == "trade", "Handelsvertrag mit %s %s" % [_a.display_name, answer])
+	# Schutzvertrag mit E: Angriff (Monster) -> Schutzpflicht; Aufnahme mit Geschenk möglich
+	if _e != null:
+		ds.debug_set_reputation(_e, player, 40.0)
+		var info := ds.can_annex(player, _e)
+		_check(str(info["mode"]) == "gift" and not (info["gift"] as Dictionary).is_empty(),
+				"Aufnahme von %s mit Geschenk: %s" % [_e.display_name, DataDB.cost_to_text(info["gift"])])
+		var protection := ds.propose_treaty(player, _e, "protection")
+		var hall_e := vs.get_hall(_e)
+		if protection.is_empty() and hall_e != null:
+			g.combat_system.apply_damage(hall_e, 10.0, null, g.wild, "event")
+		_check(protection.is_empty() and ds.get_urgent(player).size() == 1, "Schutzvertrag mit %s, Angriff -> Schutzpflicht %s" % [
+				_e.display_name, protection])
+	# Drohung ohne Truppen in der Nähe: wird verlacht, Ruf sinkt
+	if vs.is_village(_uninvolved) and _uninvolved != _a:
+		var before := ds.get_reputation(_uninvolved, player)
+		var threat := ds.get_threat_info(player, _uninvolved)
+		var paid := ds.threaten(player, _uninvolved)
+		_check(bool(threat["possible"]) and not paid and ds.get_reputation(_uninvolved, player) < before,
+				"Drohung gegen %s verlacht (Verhältnis %.1f)" % [_uninvolved.display_name, float(threat["ratio"])])
+
+
+## S5: Frieden mit B, Seitenwechsel des unbeteiligten Dorfs auslösen
+func _s5() -> void:
+	var g := _game
+	var ds: DiplomacySystem = g.diplomacy_system
+	var vs: VillageSystem = g.village_system
+	var player: Kingdom = g.player
+	_trade_rep_s5 = ds.get_reputation(_a, player)
+	ds.debug_set_reputation(_b, player, -20.0)
+	var reason := ds.can_make_peace(player, _b)
+	var peace := ds.make_peace(player, _b)
+	_check(peace and not g.are_hostile(player, _b), "Frieden mit %s %s" % [_b.display_name, reason])
+	if _e != null:
+		_check(ds.get_urgent(player).is_empty(), "Schutzpflicht ohne Angreifer erledigt")
+	if vs.is_village(_uninvolved) and _uninvolved != _a:
+		ds.debug_set_reputation(_uninvolved, player, -60.0)
+	# Alarm von S1 vorbei: Milizen von B wieder auf ihren Posten
+	var rec_b := vs.get_record(_b)
+	var holding := 0
+	for u in vs.get_militia(_b):
+		if (u as Unit).command == "hold":
+			holding += 1
+	_check(float(rec_b["alarm_until"]) == 0.0 and holding == vs.get_militia(_b).size(),
+			"Alarm in %s beendet, %d Milizen halten ihre Posten" % [_b.display_name, holding])
+	# Gefallene Miliz von A ersetzt
+	_check(vs.get_militia(_a).size() == vs.get_militia_target(_a), "Miliz von %s nachgefüllt (%d/%d)" % [_a.display_name,
+			vs.get_militia(_a).size(), vs.get_militia_target(_a)])
+	# Bündnishilfe (direkt ausgelöst): Milizen ziehen los und kehren ohne Feinde wieder um
+	vs.dispatch_help(_a, vs.get_center(_a) + Vector2(320.0, 0.0), g.wild)
+	_check(not (vs.get_record(_a)["helpers"] as Array).is_empty(), "Bündnishilfe von %s unterwegs" % _a.display_name)
+
+
+## S6: Seitenwechsel (ohne Gegnerreiche: das Dorf wird feindlich)
+func _s6() -> void:
+	var g := _game
+	var vs: VillageSystem = g.village_system
+	if vs.is_village(_uninvolved) and _uninvolved != _a:
+		_check(g.are_hostile(g.player, _uninvolved), "%s ist nach Ruf −60 feindlich" % _uninvolved.display_name)
+	_check((vs.get_record(_a)["helpers"] as Array).is_empty(), "Bündnishilfe ohne Feinde beendet")
 
 
 ## Bericht am Ende der Partie
@@ -275,8 +359,16 @@ func report() -> void:
 			int(ms.stats["arrived"]), int(ms.stats["intercepted"]), int(ms.stats["lost"])])
 	if int(ms.stats["arrived"]) == 0:
 		print("[smoke] Hinweis: bis zum Ende kam kein Bote an")
+	if _stage >= 5 and vs.is_village(_a):
+		var treaty := ds.get_treaty(_a)
+		var deliveries := int(treaty.get("deliveries", 0))
+		var rep_now := ds.get_reputation(_a, player)
+		if GameClock.game_time > 600.0:
+			_check(str(treaty.get("type", "")) == "trade" and deliveries >= 1 and rep_now > _trade_rep_s5,
+					"Handelsvertrag mit %s: %d Lieferungen, Ruf %+.1f (Beginn) → %+.1f (t=400) → %+.1f" % [
+					_a.display_name, deliveries, _trade_rep, _trade_rep_s5, rep_now])
 	if _stage == 99:
 		print("[smoke] Phase 6: übersprungen (zu wenige Dörfer)")
-	elif _stage < 5:
+	elif _stage < 5 or (_stage < 7 and GameClock.game_time > 410.0):
 		_check(false, "Phase-6-Test nicht fertig geworden (Stufe %d)" % _stage)
 	print("[smoke] Phase 6: %s" % ("OK" if _errors == 0 else "%d Fehler" % _errors))

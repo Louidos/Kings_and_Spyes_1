@@ -45,7 +45,8 @@ var reputation: Dictionary = {}
 ## Dorf-id -> {Reich-id -> Grundwert (Ziel des Verfalls)}
 var base_reputation: Dictionary = {}
 ## Dorf-id -> {"type": "protection" | "trade" | "alliance", "partner_id", "since", "strikes",
-##   "help_deadline", "help_attacker_id", "next_delivery", "route": {} (Phase 9 Handelsweg)}
+##   "help_deadline", "help_attacker_id", "next_delivery", "deliveries" (Anzahl erfolgter Lieferungen),
+##   "route": {} (Phase 9 Handelsweg)}
 var treaties: Dictionary = {}
 ## Dorf-id -> {Reich-id -> {"day": Spieltag, "value": gehandelter Wert}}
 var trade_used: Dictionary = {}
@@ -562,7 +563,7 @@ func _treaty_chance(proposer: Kingdom, village: Kingdom, treaty_type: String) ->
 func _start_treaty(village: Kingdom, k: Kingdom, treaty_type: String) -> void:
 	var now := GameClock.game_time
 	treaties[village.id] = {"type": treaty_type, "partner_id": k.id, "since": now, "strikes": 0,
-			"help_deadline": 0.0, "help_attacker_id": 0,
+			"help_deadline": 0.0, "help_attacker_id": 0, "deliveries": 0,
 			"next_delivery": now + float(DataDB.diplo("treaties.trade.delivery_interval", 150)) if treaty_type == "trade" else 0.0,
 			"route": {}}
 	if treaty_type == "alliance":
@@ -1027,6 +1028,7 @@ func _tick_deliveries(now: float) -> void:
 			continue
 		v.spend(give)
 		k.spend(take)
+		t["deliveries"] = int(t.get("deliveries", 0)) + 1
 		for res_id in give:
 			k.add_resource(res_id, float(give[res_id]))
 		for res_id in take:
