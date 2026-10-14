@@ -197,9 +197,41 @@ verkleinert). Fehlt eine Datei, zeichnet das Spiel ein Feld in der Zauberfarbe m
 Zauberwirkungen (Lichtringe, Regen, Nebel, Auren, Beschwörungs-Licht), Forschungsfenster und
 Zauberleiste zeichnet das Spiel selbst.
 
-## 🕓 Phase 5 – Helden
+## ✅ Phase 5 – Helden
 
-Pro Held: `hero_<name>.png` (64 × 64) und `hero_<name>_portrait.png` (128 × 128)
+**Helden** (`assets/sprites/heroes/`): Figur 64 × 64 (transparent, von oben, Blick nach unten, etwas
+grösser und prächtiger als normale Einheiten) und Porträt 128 × 128 (Brustbild, für Heldenfenster und
+Heldenleiste). Fehlt eine Datei, zeichnet das Spiel einen Kreis in der Heldenfarbe mit Buchstaben.
+
+| Figur | Porträt | Held | Aussehen |
+|---|---|---|---|
+| `hero_paladin.png` | `portrait_paladin.png` | Paladin (GUT) | Ritter in goldweisser Rüstung, Schild mit Sonne, Lichtschimmer |
+| `hero_star_mage.png` | `portrait_star_mage.png` | Sternenmagierin (GUT) | Magierin in dunkelblauer Robe mit Sternen, leuchtender Stab |
+| `hero_ranger.png` | `portrait_ranger.png` | Waldläuferin (GUT) | Elfe in grünem Umhang, Langbogen, Köcher |
+| `hero_necromancer.png` | `portrait_necromancer.png` | Nekromant (BÖSE) | hagere Gestalt in violett-schwarzer Robe, Schädelstab |
+| `hero_warlord.png` | `portrait_warlord.png` | Kriegsherr (BÖSE) | grosser Orkhäuptling, Axt, Fellumhang, Kriegsbemalung |
+| `hero_blade_dancer.png` | `portrait_blade_dancer.png` | Klingentänzerin (BÖSE) | Blutelfe mit zwei gebogenen Klingen, rot-schwarz |
+
+**Gebäude** (`assets/sprites/buildings/`, 128 × 128): `hero_hall_good.png` (Heldenhalle: Halle mit Bannern
+und Statuen, Gold) / `hero_hall_evil.png` (Halle der Schatten: dunkle Halle mit violetten Fackeln).
+
+**Beschwörung** (`assets/sprites/units/`, 64 × 64): `skeleton.png` (Skelett mit rostigem Schwert).
+
+**Fähigkeiten-Symbole** (`assets/ui/icons/`, 64 × 64, in der Farbe der Fähigkeit):
+
+| Datei | Fähigkeit | Datei | Fähigkeit |
+|---|---|---|---|
+| `ability_holy_strike.png` | Lichtschlag | `ability_soul_bolt.png` | Seelenblitz |
+| `ability_holy_aura.png` | Heilige Aura | `ability_raise_dead.png` | Totenerweckung |
+| `ability_divine_shield.png` | Göttlicher Schild | `ability_curse_aura.png` | Fluchaura |
+| `ability_starfire.png` | Sternenfeuer | `ability_whirlwind.png` | Wirbelwind |
+| `ability_star_jump.png` | Sternensprung | `ability_war_cry.png` | Kriegsschrei |
+| `ability_star_well.png` | Sternenquelle | `ability_blood_toll.png` | Blutzoll |
+| `ability_arrow_rain.png` | Pfeilhagel | `ability_shadow_step.png` | Schattenschritt |
+| `ability_battle_cry.png` | Schlachtruf | `ability_venom_blade.png` | Giftklinge |
+| `ability_eagle_eye.png` | Adlerauge | `ability_evasion.png` | Ausweichen |
+
+Heldenmarkierung, Fähigkeitseffekte, Stufenaufstieg und EP-Anzeigen zeichnet das Spiel selbst.
 
 ## 🕓 Phase 6 – Neutrale Völker
 

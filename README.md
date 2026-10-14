@@ -40,9 +40,12 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Einheiten beschwören | Burg (Späher), Kaserne (Kämpfer, Schützen, Elite – nach Forschung), Krankenstation (Heiler) auswählen → Buttons |
 | Forschung | R oder Button „Forschung (R)“ oben: Forschungsbaum und Reiter „Kampfpunkte“ (Esc oder R schliesst) |
 | Zaubern | Zauber in der Zauberleiste (unten rechts) anklicken → Kreis an die Stelle führen → Linksklick; Rechtsklick/Esc bricht ab |
+| Heldenfenster | G oder Button „Helden (G)“ oben: eigene Helden (Stufenwahl, Ausbildung, Wiederbelebung) und Anwerben |
+| Helden auswählen | Heldenleiste links (Klick wählt, Doppelklick springt hin) – Helden sind auch Teil von Armeen |
+| Heldenfähigkeiten | C / V / B (oder die Knöpfe im Auswahlfenster) – auch wenn die ganze Armee ausgewählt ist; Tab wechselt den Helden; Rechtsklick auf einen Knopf schaltet „selbst auslösen“ um |
 | Arbeitsverteilung ein/aus | J |
 | Spielmenü | Esc (wenn kein Fenster offen ist und nichts gebaut/ausgewählt wird) |
-| Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu, F11 setzt 3 Wölfe an die Maus (zum Testen) |
+| Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu, F11 setzt 3 Wölfe an die Maus, Umschalt+F11 einen Übungsgolem, F12 gibt dem ausgewählten Helden eine Stufe (zum Testen) |
 
 Alle Tasten lassen sich im Editor unter *Projekt → Projekteinstellungen → Eingabe-Zuordnung* ändern.
 
@@ -106,7 +109,13 @@ assets/
   Anführer, Armeen 1–9 je Reich), `SummonSystem` (Beschwörung mit Warteschlange und Sammelpunkt),
   `MonsterSystem` (Monsterlager; Lager ohne fremde Einheiten in der Nähe ruhen und kosten nichts),
   `ResearchSystem` (Forschung mit Warteschlange je Reich, Kampfpunkt-Verbesserungen),
-  `MagicSystem` (Zauber des Königs: Wirkungen, Wettergebiete, Tarnung, Beschwörung).
+  `MagicSystem` (Zauber des Königs: Wirkungen, Wettergebiete, Tarnung, Beschwörung),
+  `HeroSystem` (Helden: Anwerben über die Beschwörungs-Warteschlange der Heldenhalle, Erfahrung, Stufen mit
+  Wahl, Fähigkeiten, Führung, Tod und Wiederbelebung).
+- **Helden** sind Einheiten mit Rolle `hero`; ihr Zustand (Stufe, Erfahrung, Ränge, Talente, Tod) liegt als
+  einfacher Eintrag in `Kingdom.heroes`, alles Abgeleitete (Werte, Auren, Mana-Zuschläge) baut
+  `HeroSystem.rebuild_runtime()` neu auf. Ein wiederbelebter Held bekommt dieselbe Einheitennummer und bleibt
+  so in seinen Armeen. Fähigkeitsschaden geht über `CombatSystem.ability_damage` (Rüstung zur Hälfte).
 - **Quellen**: Was ein Reich verändert, wird mit seiner Quelle gespeichert (`"research:<id>"`,
   `"upgrade:<id>"`, `"spell:<id>"`, ab Phase 6 z. B. Bündnisse): Freischaltungen (`grant_unlock`),
   Faktoren (`set_modifiers`), Zuschläge (`set_bonus`, z. B. Mana-Maximum) und laufende Kosten
@@ -149,6 +158,8 @@ Alle Dateien in `data/` enthalten `_hinweis`-Felder mit Erklärungen. Beispiele:
 - Schnellere Forschung: `research.json` → `time` (Sekunden), Kosten unter `cost`.
 - Billigere Zauber: `spells.json` → `mana_cost`, `cooldown`; Reichweite ausserhalb des Gebiets: `settings.cast_range_outside`.
 - Mehr Mana-Maximum: `resources.json` → *mana* → `cap`; Kampfpunkt-Verbesserungen: `spells.json` → `upgrades`.
+- Helden: `heroes.json` → `heroes` (Werte unter `stats`, Kosten, Fähigkeiten, Talente), `abilities` (Werte je Rang),
+  `settings` (Erfahrung je Stufe `levels`, Teilung `xp_share`, Ausbildung, Wiederbelebung, höchstens `max_heroes`).
 
 ## Phase 2 testen
 
@@ -234,6 +245,35 @@ ihrer Höhle; man kann sie also auch an die Grenze locken.
    Abklingzeiten um 25 %, *Weitreichende Magie* / *Lange Schatten* (Magie 2) erweitert die Reichweite
    um 8 Felder. Die Werte im Tooltip der Zauberleiste ändern sich entsprechend.
 
+## Phase 5 testen
+
+Tipp: F3 (Debug) einschalten. F9 gibt Ressourcen, F12 gibt dem ausgewählten Helden eine Stufe, F11 setzt
+Wölfe und Umschalt+F11 einen Übungsgolem (viel Leben, Rüstung) an die Maus. Im Heldenfenster erscheinen im
+F3-Modus zusätzlich Knöpfe „+1 Stufe“, „Abklingzeiten“, „Sofort wiederbeleben“ und „Held fällt“.
+
+1. Kaserne bauen, dann die **Heldenhalle** (BÖSE: *Halle der Schatten*; braucht eine Kaserne, nur eine pro
+   Reich). **G** oder „Helden (G)“ oben öffnet das Heldenfenster, Reiter „Anwerben“: drei Helden je Fraktion
+   (GUT: Paladin, Sternenmagierin, Waldläuferin – BÖSE: Nekromant, Kriegsherr, Klingentänzerin).
+2. Einen Helden anwerben (Nahrung, Erz, Mana; jeder weitere Held kostet mehr). Nach 30 Sekunden erscheint er
+   an der Halle, mit eigenem Namen. Jeden Typ gibt es einmal, höchstens drei Helden.
+3. Der Held erscheint in der **Heldenleiste** links. Auswählen → im Auswahlfenster Stufe, Erfahrung (EP) und
+   seine Fähigkeiten. **C / V / B** wirken sie (Feind oder Stelle anklicken; ist das Ziel zu weit weg, läuft
+   der Held hin). Das geht auch, wenn er mit seiner Armee zusammen ausgewählt ist (Tab wechselt den Helden).
+   Rechtsklick auf einen Fähigkeitsknopf schaltet „selbst auslösen“ (goldener Rahmen) um.
+4. Helden sind **Generäle**: eigene Truppen in ihrer Nähe schlagen härter zu (Führung), dazu hat jeder Held
+   eine eigene Führungseigenschaft. Marschiert eine Armee mit Held, führt der Held sie an.
+5. **Erfahrung**: besiegte Feinde in der Nähe (mehrere Helden teilen sich nicht alles: jeder bekommt einen
+   Anteil), zerstörte Höhlen zählen 1,5-fach, dazu **Ausbildung** in der Halle (Nahrung, Holz, Stein; bis
+   Stufe 5, mit der Forschung *Heldenlehre* bis 7). Bei jedem Stufenaufstieg wählst du eine von zwei
+   Verbesserungen: eine Fähigkeitsstufe (I–III) oder ein Talent des Helden.
+6. **Tod**: fällt ein Held, kann er nach 60 Sekunden in der Burg wiederbelebt werden (Burg anklicken, Heldenleiste
+   oder Heldenfenster) – gegen Kosten, mit gleicher Stufe, und er ist wieder in seiner Armee.
+7. Fähigkeiten zum Ausprobieren (gegen F11-Wölfe oder den Umschalt+F11-Golem):
+   GUT – *Lichtschlag*, *Heilige Aura*, *Göttlicher Schild* (Paladin); *Sternenfeuer*, *Sternensprung*,
+   *Sternenquelle* (mehr Mana, Sternenmagierin); *Pfeilhagel*, *Schlachtruf*, *Adlerauge* (Waldläuferin).
+   BÖSE – *Seelenblitz*, *Totenerweckung*, *Fluchaura* (Nekromant); *Wirbelwind*, *Kriegsschrei*, *Blutzoll*
+   (Kriegsherr); *Schattenschritt*, *Giftklinge*, *Ausweichen* (Klingentänzerin).
+
 ## Grafiken austauschen
 
 Alle Grafiken sind zunächst automatisch erzeugte Platzhalter. Legt man eine PNG-Datei
@@ -246,7 +286,7 @@ beim nächsten Start automatisch verwendet – ohne Code-Änderung.
 - [x] Phase 2 – Dorf: Gebäude, Ressourcen, Bewohner, Arbeitsverteilung
 - [x] Phase 3 – Einheiten: Beschwören, Auswahl, Bewegung, Kampf, Armeen
 - [x] Phase 4 – Forschung, Mana und Magie
-- [ ] Phase 5 – Helden
+- [x] Phase 5 – Helden
 - [ ] Phase 6 – Neutrale Dörfer, Diplomatie, Handel, Ruf, Boten
 - [ ] Phase 7 – Gegnerische Königreiche mit KI, Entdeckung, Spionage
 - [ ] Phase 8 – Zufriedenheit, Verrat, Flüchtlinge, Ereignisse, Monster, Tag/Nacht
