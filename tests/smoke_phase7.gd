@@ -9,6 +9,10 @@
 ## Aggression, sinkt mit Reichstarnung (die bei Manamangel endet), Aufmerksamkeit der KI
 ## steigt (auch durch Boten), Spieler-Spione kundschaften aus (Kundschaft >= 2) und
 ## hetzen ein Dorf auf (Ruf sinkt), ein KI-Spion kommt zum Spieler und wird entdeckt.
+## Oberfläche: Spion A bekommt seinen Auftrag über das Spionagefenster (EspionagePanel);
+## ab t = 240 werden dessen Reiter, der Reiter "Reiche" im Diplomatiefenster, der
+## gegenseitige Ausschluss der Fenster, Esc, der Meldungsverweis und das Auswahlfenster
+## an der KI-Burg geprüft (Bildschirmfotos mit shots=<ordner> unter xvfb-run).
 ##
 ## Argumente: p7=natural (keine Debug-Stufen: lange Simulation mit echter KI),
 ## ai=<n> (feste Anzahl KI-Reiche, siehe smoke_test.gd).
@@ -51,6 +55,10 @@ var _cloak_test := false
 var _spotted: Array = [0, 0]
 ## Spielzeit für die zweite Prüfung des Aufhetzens (-1 = keine)
 var _incite_due := -1.0
+## Oberflächentest (Spionagefenster, Reiter "Reiche"): Schritt (-1 = aus) und Wartezeit
+var _ui_step := -1
+var _ui_wait := 0.0
+var _shots_dir := ""
 
 
 func _init(game: Node, args: Dictionary) -> void:
@@ -58,6 +66,7 @@ func _init(game: Node, args: Dictionary) -> void:
 	_natural = str(args.get("p7", "")) == "natural"
 	_passive = str(args.get("passive", "0")) == "1"
 	_seconds = float(args.get("seconds", "600"))
+	_shots_dir = str(args.get("shots", ""))
 
 
 ## Jeden Frame aufrufen (Spielzeit t)
@@ -87,6 +96,8 @@ func tick(t: float) -> void:
 		_player_alive_1800 = is_instance_valid(player.castle) and is_instance_valid(player.king)
 	if _stage >= 3 and _stage < 7 and not _natural:
 		_esp_tick(t)
+	if _ui_step >= 0 and t >= _ui_wait:
+		_ui_tick(t)
 	match _stage:
 		0:
 			if t >= 1.0:
@@ -247,8 +258,13 @@ func _esp_setup() -> void:
 		return
 	_spy_a = a.uid
 	_spy_b = b.uid
-	var answer := spies.assign_mission(a, "scout", _ai0)
-	_check(answer.is_empty() and a.command == "infiltrate", "Spion A: Auskundschaften von %s %s" % [_ai0.display_name, answer])
+	# Spion A über das Spionagefenster (geschlossen: dieselben Funktionen wie die Knöpfe)
+	var panel: EspionagePanel = g.hud.espionage_panel
+	panel.select_spy(a.uid)
+	panel.set_mission_choice("scout", _ai0.id)
+	var answer := panel.assign_selected()
+	_check(answer.is_empty() and a.command == "infiltrate", "Spion A (Spionagefenster): Auskundschaften von %s %s" % [
+			_ai0.display_name, answer])
 	var castle_pos := _ai0.castle.get_center()
 	var best_d := INF
 	for v in villages:
@@ -306,6 +322,8 @@ func _esp_results() -> void:
 	g.espionage_system.debug_set_awareness(_ai0, player, 45.0)
 	_esp_stage = 0
 	_esp_deadline = GameClock.game_time + 200.0
+	_ui_step = 0
+	_ui_wait = 240.0
 
 
 ## Aufhetzen (Spion B): Verlauf des Dorfs zeigt "Aufwiegelung" mit sinkendem Ruf.
@@ -401,6 +419,71 @@ func _esp_tick(t: float) -> void:
 						if g.find_by_uid(_ai_spy_uid) is Unit else 0.0))
 				player.clear_bonuses("smoke")
 				_esp_stage = 3
+
+
+## Oberflächentest: Spionagefenster (Reiter), Diplomatie "Reiche", Ausschluss, Esc,
+## Meldungsverweis, Auswahlfenster an der KI-Burg
+func _ui_tick(t: float) -> void:
+	var g := _game
+	var hud: Node = g.hud
+	var panel: EspionagePanel = hud.espionage_panel
+	var player: Kingdom = g.player
+	_ui_wait = t + 0.5
+	match _ui_step:
+		0:
+			hud.close_top_panel()
+			hud.open_espionage(EspionagePanel.TAB_OVERVIEW)
+			_check(hud.is_espionage_open() and panel.get_tab() == EspionagePanel.TAB_OVERVIEW and not hud.is_research_open()
+					and not hud.is_heroes_open() and not hud.is_diplomacy_open(), "Spionagefenster offen (Übersicht)")
+			_check(not EspionagePanel.causes_text(g.espionage_system.get_discovery_parts(player)).is_empty(),
+					"Ursachen des Entdeckungswerts: %s" % EspionagePanel.causes_text(g.espionage_system.get_discovery_parts(player)).replace("\n", ", "))
+		1:
+			_shot("phase7_1_spionage")
+			hud.open_espionage(EspionagePanel.TAB_REALMS, _ai0.id)
+			_check(panel.get_tab() == EspionagePanel.TAB_REALMS, "Spionagefenster: Reiter Reiche & Dörfer")
+		2:
+			_shot("phase7_2_reiche")
+			# "Spion schicken" im Reiter Reiche: wechselt zu den Spionen mit diesem Ziel
+			panel.call("_on_realm_mission_pressed", "scout")
+			_check(panel.get_tab() == EspionagePanel.TAB_SPIES and panel.get_spy_uid() != 0, "„Spion schicken“ öffnet den Reiter Spione")
+		3:
+			_shot("phase7_3_spione")
+			hud.open_diplomacy()
+			hud.diplomacy_panel.select_realm(_ai0.id)
+			_check(hud.is_diplomacy_open() and not hud.is_espionage_open() and hud.diplomacy_panel.get_tab() == "realms",
+					"Diplomatie, Reiter Reiche (Spionagefenster geschlossen)")
+			var strength: String = hud.diplomacy_panel.realm_strength_text(player, _ai0)
+			print("[smoke] Reiche: %s Stärke %s (Kundschaft %d)" % [_ai0.display_name, strength,
+					g.espionage_system.get_intel_level(player, _ai0)])
+			_check((strength == "?") == (g.espionage_system.get_intel_level(player, _ai0) < 2), "Stärke nur mit Kundschaft (%s)" % strength)
+		4:
+			_shot("phase7_4_diplomatie_reiche")
+			hud.toggle_espionage()
+			_check(hud.is_espionage_open() and not hud.is_diplomacy_open(), "K öffnet das Spionagefenster und schliesst die Diplomatie")
+			_check(hud.close_top_panel() and not hud.is_espionage_open(), "Esc schliesst das Spionagefenster")
+			hud.open_link({"window": "espionage", "tab": "spies", "spy_uid": _spy_a})
+			_check(hud.is_espionage_open() and panel.get_tab() == EspionagePanel.TAB_SPIES and panel.get_spy_uid() == _spy_a,
+					"Meldungsverweis öffnet den Spion im Spionagefenster")
+			hud.close_top_panel()
+			g.selection.select([_ai0.castle])
+		5:
+			var facts: Label = hud.selection_panel.get("_facts")
+			_check(hud.selection_panel.visible and facts.text.contains("Kundschaft"), "Auswahl der KI-Burg zeigt die Kundschaft (%s)" %
+					facts.text.get_slice("\n", 0))
+			_shot("phase7_5_auswahl_burg")
+			g.selection.clear()
+			print("[smoke] Phase 7: Oberflächentest fertig")
+			_ui_step = -2
+	_ui_step += 1
+
+
+## Bildschirmfoto (nur mit shots=<ordner> und echtem Fenster, z. B. unter xvfb-run)
+func _shot(shot_name: String) -> void:
+	if _shots_dir.is_empty() or DisplayServer.get_name() == "headless":
+		return
+	var img := _game.get_viewport().get_texture().get_image()
+	if img != null:
+		img.save_png("%s/%s_%s.png" % [_shots_dir, GameSession.faction_id, shot_name])
 
 
 ## Gebäude sofort fertig in der Nähe der Burg (Spirale)
@@ -616,6 +699,8 @@ func report() -> void:
 		print("[smoke] Spionage %s (Entdeckung %.1f, Höchstwert %.1f): %s" % [o.display_name, esp.get_discovery(o),
 				esp.get_discovery_peak(o), " | ".join(row)])
 	print("[smoke] Spione: %s" % str(g.spy_system.stats))
+	if _ui_step >= 0:
+		_check(false, "Oberflächentest Phase 7 nicht fertig geworden (Schritt %d)" % _ui_step)
 	if _stage != 99 and _stage < 9 and GameClock.game_time >= _seconds - 1.0:
 		_check(false, "Phase-7-Test nicht fertig geworden (Stufe %d)" % _stage)
 	print("[smoke] Phase 7: %s" % ("OK" if _errors == 0 else "%d Fehler" % _errors))

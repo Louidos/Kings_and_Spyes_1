@@ -152,8 +152,9 @@ func spawn_summoned(b: Building, type_id: String) -> Unit:
 		var slot := _spawn_slot(b, pos, b.summon_count - 1)
 		u.command_pos = slot
 		unit_system.move_direct(u, slot)
-	# Angeworbene Helden meldet das HeroSystem (mit Namen)
-	if u.role != "hero":
+	# Angeworbene Helden meldet das HeroSystem (mit Namen), Spione das SpySystem
+	# ("bereit – Auftrag im Spionagefenster", mit Verweis)
+	if u.role != "hero" and u.tier != "spy":
 		b.kingdom.notify("%s beschworen" % u.get_display_name(), "good", pos)
 	unit_summoned.emit(u, b)
 	return u

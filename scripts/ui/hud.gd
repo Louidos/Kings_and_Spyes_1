@@ -2,10 +2,13 @@
 ##
 ## Spieloberfläche:
 ## - oben: Reich, Ressourcen, Kampfpunkte und Bewohner (ResourceBar), Buttons
-##   "Forschung (R)" mit Fortschritt, "Helden (G)" und "Diplomatie (N)", Datum, Tempo
+##   "Forschung" mit Fortschritt, "Helden", "Diplomatie" und "Spionage" mit
+##   Entdeckungswert (Balken, Punkt bei Gefahr), Datum, Tempo – die Tasten stehen
+##   im Tooltip und im Steuerungshinweis (sonst wird die Leiste zu breit)
 ## - Forschungsfenster (ResearchPanel, Taste R), Heldenfenster (HeroPanel,
-##   Taste G) und Diplomatiefenster (DiplomacyPanel, Taste N) in eigenen Ebenen
-##   darüber; es ist immer nur eines davon offen (alle stehen in der Mitte)
+##   Taste G), Diplomatiefenster (DiplomacyPanel, Taste N) und Spionagefenster
+##   (EspionagePanel, Taste K) in eigenen Ebenen darüber; es ist immer nur eines
+##   davon offen (alle stehen in der Mitte)
 ## - oben links: Arbeitsverteilung (JobPanel, Taste J)
 ## - oben rechts: Meldungen (NotificationPanel)
 ## - unten links: Auswahlfenster (SelectionPanel), darunter die Armeeleiste
@@ -33,9 +36,13 @@ const COLOR_RESEARCH_IDLE := Color(1.0, 0.85, 0.3)
 const HERO_LAYER := 11
 ## Ebene des Diplomatiefensters (wie das Forschungsfenster)
 const DIPLOMACY_LAYER := 11
+## Ebene des Spionagefensters (wie das Forschungsfenster)
+const ESPIONAGE_LAYER := 11
+## So lange (Spielsekunden) zeigt der Spionage-Knopf nach einer Gefahr einen roten Punkt
+const ESPIONAGE_ALERT_SECONDS := 60.0
 const COLOR_URGENT := Color(1.0, 0.36, 0.3)
 ## Innenabstand links/rechts der Knöpfe in der oberen Leiste (schmaler als im
-## Theme, damit Ressourcen, drei Fenster-Knöpfe, Datum und Tempo in 1920 passen)
+## Theme, damit Ressourcen, vier Fenster-Knöpfe, Datum und Tempo in 1920 passen)
 const TOP_BUTTON_MARGIN := 8.0
 
 @onready var kingdom_label: Label = %KingdomLabel
@@ -74,6 +81,10 @@ var _hero_button: ResearchTipButton
 var diplomacy_panel: DiplomacyPanel
 var _diplomacy_layer: CanvasLayer
 var _diplomacy_button: ResearchTipButton
+## Spionagefenster (Taste K) und sein Button oben (Balken = Entdeckungswert)
+var espionage_panel: EspionagePanel
+var _espionage_layer: CanvasLayer
+var _espionage_button: ResearchTipButton
 ## Hinweis "Kampfpunkte ausgeben" kam schon (einmal je Partie)
 var _kp_hint_shown := false
 
@@ -133,6 +144,7 @@ func setup(p_game: Node) -> void:
 	_setup_research()
 	_setup_heroes()
 	_setup_diplomacy()
+	_setup_espionage()
 
 
 ## Forschungsfenster ein-/ausblenden (Taste R, Button oben)
@@ -183,8 +195,26 @@ func is_diplomacy_open() -> bool:
 	return diplomacy_panel != null and diplomacy_panel.is_open()
 
 
+## Spionagefenster ein-/ausblenden (Taste K, Button oben)
+func toggle_espionage() -> void:
+	if espionage_panel != null:
+		espionage_panel.toggle()
+
+
+## Spionagefenster öffnen (Reiter EspionagePanel.TAB_*, optional bei einem Reich/Dorf
+## oder – Reiter Spione – mit vorgewähltem Ziel und Spion)
+func open_espionage(tab: String = "", target_id: int = 0, spy_uid: int = 0) -> void:
+	if espionage_panel != null:
+		espionage_panel.open(tab, target_id, spy_uid)
+
+
+func is_espionage_open() -> bool:
+	return espionage_panel != null and espionage_panel.is_open()
+
+
 ## Verweis aus einer Meldung öffnen ({"window": "heroes", "hero_id": …},
-## "research" oder {"window": "diplomacy", "village_id": …})
+## "research", {"window": "diplomacy", "village_id": …} oder
+## {"window": "espionage", "tab": …, "target_id": …, "spy_uid": …})
 func open_link(link: Dictionary) -> void:
 	match str(link.get("window", "")):
 		"heroes":
@@ -193,14 +223,19 @@ func open_link(link: Dictionary) -> void:
 			open_research()
 		"diplomacy":
 			open_diplomacy(int(link.get("village_id", 0)))
+		"espionage":
+			open_espionage(str(link.get("tab", "")), int(link.get("target_id", 0)), int(link.get("spy_uid", 0)))
 
 
-## Esc schliesst das Diplomatie-, Helden- bzw. Forschungsfenster auch, wenn gerade ein
-## Tooltip offen ist (Godot verbraucht Esc sonst nur zum Schliessen des Tooltips).
+## Esc schliesst das Spionage-, Diplomatie-, Helden- bzw. Forschungsfenster auch, wenn
+## gerade ein Tooltip offen ist (Godot verbraucht Esc sonst nur zum Schliessen des Tooltips).
 func _input(event: InputEvent) -> void:
 	if not event.is_action_pressed("game_menu") or event.is_echo():
 		return
-	if is_diplomacy_open():
+	if is_espionage_open():
+		espionage_panel.close()
+		get_viewport().set_input_as_handled()
+	elif is_diplomacy_open():
 		diplomacy_panel.close()
 		get_viewport().set_input_as_handled()
 	elif is_heroes_open():
@@ -216,9 +251,12 @@ func toggle_job_panel() -> void:
 	job_panel.toggle()
 
 
-## Esc: schliesst das oberste offene Fenster (Diplomatie, Helden, Forschung,
+## Esc: schliesst das oberste offene Fenster (Spionage, Diplomatie, Helden, Forschung,
 ## Arbeitsverteilung). true = etwas wurde geschlossen (dann nichts weiter tun).
 func close_top_panel() -> bool:
+	if is_espionage_open():
+		espionage_panel.close()
+		return true
 	if is_diplomacy_open():
 		diplomacy_panel.close()
 		return true
@@ -263,6 +301,7 @@ func _process(delta: float) -> void:
 			_refresh_research_button()
 			_refresh_hero_button()
 			_refresh_diplomacy_button()
+			_refresh_espionage_button()
 
 
 # ---------------------------------------------------------------------------
@@ -286,7 +325,7 @@ func _setup_research() -> void:
 
 	_research_button = ResearchTipButton.new()
 	_research_button.name = "ResearchButton"
-	_research_button.text = "Forschung (R)"
+	_research_button.text = "Forschung"
 	_research_button.toggle_mode = true
 	_research_button.add_theme_font_size_override("font_size", 16)
 	_compact(_research_button)
@@ -305,10 +344,15 @@ func _setup_research() -> void:
 func _on_research_toggled(open: bool) -> void:
 	_research_button.set_pressed_no_signal(open)
 	# Die Fenster stehen in der Mitte: nur eines offen
-	if open and is_heroes_open():
-		hero_panel.close()
-	if open and is_diplomacy_open():
-		diplomacy_panel.close()
+	if open:
+		_close_other_panels(research_panel)
+
+
+## Schliesst alle Fenster in der Mitte ausser keep (Forschung, Helden, Diplomatie, Spionage)
+func _close_other_panels(keep: Control) -> void:
+	for panel in [research_panel, hero_panel, diplomacy_panel, espionage_panel]:
+		if panel != null and panel != keep and panel.is_open():
+			panel.close()
 
 
 func _on_research_state_changed(k: Kingdom) -> void:
@@ -316,28 +360,28 @@ func _on_research_state_changed(k: Kingdom) -> void:
 		_refresh_research_button()
 
 
-## Button oben: "Forschung (R) · 45 %" (mit Strich), gelb "Forschung ruht (R)"
-## bzw. "Forschung steht (R)" (keine fertige Forschungsstätte),
+## Button oben: "Forschung · 45 %" (mit Strich), gelb "Forschung ruht"
+## bzw. "Forschung steht" (keine fertige Forschungsstätte),
 ## Punkt, wenn eine Kampfpunkt-Verbesserung bezahlbar ist
 func _refresh_research_button() -> void:
 	var k: Kingdom = game.player
 	var rs: ResearchSystem = game.research_system
 	var active := rs.get_active(k)
-	var text := "Forschung (R)"
+	var text := "Forschung"
 	var idle := false
 	if not active.is_empty():
 		_research_button.underline_ratio = rs.get_progress_ratio(k)
 		if rs.get_speed(k) <= 0.0:
 			# Keine fertige Forschungsstätte mehr: Forschung steht still
-			text = "Forschung steht (R) · %d %%" % floori(rs.get_progress_ratio(k) * 100.0)
+			text = "Forschung steht · %d %%" % floori(rs.get_progress_ratio(k) * 100.0)
 			idle = true
 		else:
-			text = "Forschung (R) · %d %%" % floori(rs.get_progress_ratio(k) * 100.0)
+			text = "Forschung · %d %%" % floori(rs.get_progress_ratio(k) * 100.0)
 	else:
 		_research_button.underline_ratio = -1.0
 		idle = rs.count_research_buildings(k) > 0
 		if idle:
-			text = "Forschung ruht (R)"
+			text = "Forschung ruht"
 	if _research_button.text != text:
 		_research_button.text = text
 	var font_color := COLOR_RESEARCH_IDLE if idle else Color(0.95, 0.91, 0.82)
@@ -387,7 +431,7 @@ func _research_button_tip() -> String:
 # Helden
 # ---------------------------------------------------------------------------
 
-## Heldenfenster in eigener Ebene und Button "Helden (G)" rechts neben "Forschung (R)"
+## Heldenfenster in eigener Ebene und Button "Helden" rechts neben "Forschung"
 func _setup_heroes() -> void:
 	_hero_layer = CanvasLayer.new()
 	_hero_layer.layer = HERO_LAYER
@@ -403,7 +447,7 @@ func _setup_heroes() -> void:
 
 	_hero_button = ResearchTipButton.new()
 	_hero_button.name = "HeroButton"
-	_hero_button.text = "Helden (G)"
+	_hero_button.text = "Helden"
 	_hero_button.toggle_mode = true
 	_hero_button.add_theme_font_size_override("font_size", 16)
 	_compact(_hero_button)
@@ -420,10 +464,8 @@ func _setup_heroes() -> void:
 
 func _on_heroes_toggled(open: bool) -> void:
 	_hero_button.set_pressed_no_signal(open)
-	if open and is_research_open():
-		research_panel.close()
-	if open and is_diplomacy_open():
-		diplomacy_panel.close()
+	if open:
+		_close_other_panels(hero_panel)
 
 
 func _on_heroes_changed(k: Kingdom) -> void:
@@ -431,14 +473,14 @@ func _on_heroes_changed(k: Kingdom) -> void:
 		_refresh_hero_button()
 
 
-## "Helden (G) · 2/3"; Punkt bei offener Stufenwahl oder wenn ein Held wiederbelebt werden kann
+## "Helden · 2/3"; Punkt bei offener Stufenwahl oder wenn ein Held wiederbelebt werden kann
 func _refresh_hero_button() -> void:
 	if _hero_button == null:
 		return
 	var k: Kingdom = game.player
 	var hs: HeroSystem = game.hero_system
 	var n := hs.count_heroes(k)
-	var text := "Helden (G)" if n == 0 else "Helden (G) · %d/%d" % [n, hs.max_heroes(k)]
+	var text := "Helden" if n == 0 else "Helden · %d/%d" % [n, hs.max_heroes(k)]
 	if _hero_button.text != text:
 		_hero_button.text = text
 	_hero_button.badge_visible = HeroPanel.needs_attention(hs, k)
@@ -468,7 +510,7 @@ func _hero_button_tip() -> String:
 # Diplomatie
 # ---------------------------------------------------------------------------
 
-## Diplomatiefenster in eigener Ebene und Button "Diplomatie (N)" rechts neben "Helden (G)"
+## Diplomatiefenster in eigener Ebene und Button "Diplomatie" rechts neben "Helden"
 func _setup_diplomacy() -> void:
 	_diplomacy_layer = CanvasLayer.new()
 	_diplomacy_layer.layer = DIPLOMACY_LAYER
@@ -484,7 +526,7 @@ func _setup_diplomacy() -> void:
 
 	_diplomacy_button = ResearchTipButton.new()
 	_diplomacy_button.name = "DiplomacyButton"
-	_diplomacy_button.text = "Diplomatie (N)"
+	_diplomacy_button.text = "Diplomatie"
 	_diplomacy_button.toggle_mode = true
 	_diplomacy_button.add_theme_font_size_override("font_size", 16)
 	_compact(_diplomacy_button)
@@ -499,10 +541,8 @@ func _setup_diplomacy() -> void:
 
 func _on_diplomacy_toggled(open: bool) -> void:
 	_diplomacy_button.set_pressed_no_signal(open)
-	if open and is_research_open():
-		research_panel.close()
-	if open and is_heroes_open():
-		hero_panel.close()
+	if open:
+		_close_other_panels(diplomacy_panel)
 
 
 ## Punkt (rot), solange ein Schutzbefohlener Hilfe braucht
@@ -535,6 +575,86 @@ func _diplomacy_button_tip() -> String:
 		var v: Kingdom = u["village"]
 		lines.append(tip.colored("Hilfe nötig: %s – noch %d s" % [v.display_name if v != null else "?",
 				maxi(ceili(float(u["deadline"]) - GameClock.game_time), 0)], COLOR_URGENT))
+	return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Spionage
+# ---------------------------------------------------------------------------
+
+## Spionagefenster in eigener Ebene und Button "Spionage · 42" rechts neben "Diplomatie"
+## (Strich = Entdeckungswert in der Farbe seiner Stufe, roter Punkt bei Gefahr)
+func _setup_espionage() -> void:
+	_espionage_layer = CanvasLayer.new()
+	_espionage_layer.layer = ESPIONAGE_LAYER
+	_espionage_layer.name = "EspionageLayer"
+	add_child(_espionage_layer)
+	espionage_panel = EspionagePanel.new()
+	espionage_panel.name = "EspionagePanel"
+	_espionage_layer.add_child(espionage_panel)
+	espionage_panel.setup(game)
+	espionage_panel.toggled.connect(_on_espionage_toggled)
+	visibility_changed.connect(func() -> void: _espionage_layer.visible = visible)
+	_espionage_layer.visible = visible
+
+	_espionage_button = ResearchTipButton.new()
+	_espionage_button.name = "EspionageButton"
+	_espionage_button.text = "Spionage"
+	_espionage_button.toggle_mode = true
+	_espionage_button.add_theme_font_size_override("font_size", 16)
+	_compact(_espionage_button)
+	_espionage_button.badge_color = COLOR_URGENT
+	_espionage_button.tip_source = _espionage_button_tip
+	_espionage_button.pressed.connect(toggle_espionage)
+	var hbox := date_label.get_parent()
+	hbox.add_child(_espionage_button)
+	hbox.move_child(_espionage_button, date_label.get_index())
+	_refresh_espionage_button()
+
+
+func _on_espionage_toggled(open: bool) -> void:
+	_espionage_button.set_pressed_no_signal(open)
+	if open:
+		_close_other_panels(espionage_panel)
+
+
+## "Spionage · 42" mit Strich (Entdeckungswert); roter Punkt, wenn kürzlich ein fremder
+## Spion entdeckt wurde oder die bekannte Aufmerksamkeit eines Reichs gestiegen ist
+func _refresh_espionage_button() -> void:
+	if _espionage_button == null:
+		return
+	var k: Kingdom = game.player
+	var esp: EspionageSystem = game.espionage_system
+	var value := esp.get_discovery(k)
+	var text := "Spionage · %d" % roundi(value)
+	if _espionage_button.text != text:
+		_espionage_button.text = text
+	_espionage_button.underline_ratio = clampf(value / maxf(float(DataDB.esp("discovery.max_display", 150)), 1.0), 0.0, 1.0)
+	_espionage_button.underline_color = EspionageSystem.discovery_tier(value)["color"]
+	_espionage_button.badge_visible = espionage_alert(k)
+
+
+## Gab es in den letzten ESPIONAGE_ALERT_SECONDS eine Spionage-Gefahr (Merker in k.flags)?
+static func espionage_alert(k: Kingdom) -> bool:
+	var at := float(k.flags.get("espionage_alert_at", -1.0e9))
+	return GameClock.game_time - at <= ESPIONAGE_ALERT_SECONDS
+
+
+func _espionage_button_tip() -> String:
+	var k: Kingdom = game.player
+	var esp: EspionageSystem = game.espionage_system
+	var spies: SpySystem = game.spy_system
+	var tip := ResearchTipButton
+	var value := esp.get_discovery(k)
+	var tier := EspionageSystem.discovery_tier(value)
+	var lines: PackedStringArray = ["[b]Spionage[/b] (Taste K)"]
+	lines.append(tip.colored("Entdeckungswert %d – %s" % [roundi(value), str(tier["name"])], tier["color"]))
+	lines.append(tip.esc(EspionagePanel.causes_text(esp.get_discovery_parts(k), esp.get_aggression(k) > 0.5).replace("\n", " · ")))
+	if esp.is_cloaked(k):
+		lines.append(tip.colored("Reichstarnung aktiv – %s Mana/min" % tip.num1(esp.cloak_upkeep(k) * 60.0), Color(0.55, 0.88, 0.5)))
+	lines.append("Spione: %d von %d" % [spies.get_spies(k).size(), spies.max_spies(k)])
+	if espionage_alert(k):
+		lines.append(tip.colored("Gefahr: fremder Spion entdeckt oder ein Reich ist aufmerksamer geworden", COLOR_URGENT))
 	return "\n".join(lines)
 
 

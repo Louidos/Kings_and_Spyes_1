@@ -8,8 +8,13 @@
 ## - mehrere eigene Einheiten: Anzahl je Typ, gesamtes Leben, Befehle, Formation.
 ## - ein eigenes Gebäude: Bauzustand, Wohnraum, Annahme, Produktion, Leben,
 ##   Arbeiter (−/+), Beschwören mit Warteschlange und Sammelpunkt, Abreissen.
-## - Fremdes (Monsterhöhle, Monster, ab Phase 7 Gegner): nur Anzeige – Reich,
-##   Leben, Kampfwerte bzw. was im Lager wartet.
+## - Fremdes (Monsterhöhle, Monster, Gegner): nur Anzeige – Reich, Leben,
+##   Kampfwerte bzw. was im Lager wartet. Feindliche Königreiche (Phase 7) je nach
+##   Kundschaft: ohne Bericht "?" statt Werten, Wirkungen erst bei genauer
+##   Kundschaft; ihre Burg zeigt die Zusammenfassung des Reichs. Enttarnte fremde
+##   Spione tragen "(enttarnt)" im Titel.
+## - Eigene Spione: Stufe, Erfahrung, Auftrag, Fortschritt, Entdeckungsgefahr und
+##   der Knopf "Auftrag (K)" (öffnet das Spionagefenster beim Spion).
 ## - Helden (auch der aktive Held einer gemischten Auswahl): Stufe, Erfahrung,
 ##   Stufenwahl und die Fähigkeitsknöpfe C / V / B (HeroSelectionBox); Burg:
 ##   gefallene Helden wiederbeleben; Heldenhalle: Ausbildung.
@@ -118,6 +123,9 @@ var _hero_box: HeroSelectionBox
 ## Dorf-Zeile: Knopf "Diplomatie (N)" für Dorfgebäude, Milizen und Boten
 var _village_row: HBoxContainer
 var _diplo_button: Button
+## Eigener Spion: Knopf "Auftrag (K)"
+var _spy_row: HBoxContainer
+var _spy_button: Button
 ## Dorf des angezeigten Objekts (für den Knopf; 0 = keins)
 var _village_id := 0
 
@@ -222,6 +230,19 @@ func _ready() -> void:
 	_diplo_button.tooltip_text = "Diplomatiefenster bei diesem Dorf öffnen: Geschenke, Handel, Verträge, Aufnahme"
 	_diplo_button.pressed.connect(_on_diplo_pressed)
 	_village_row.add_child(_diplo_button)
+
+	_spy_row = HBoxContainer.new()
+	_spy_row.add_theme_constant_override("separation", 6)
+	_spy_row.visible = false
+	vbox.add_child(_spy_row)
+	_spy_button = Button.new()
+	_spy_button.text = "Auftrag (K)"
+	_spy_button.focus_mode = Control.FOCUS_NONE
+	_spy_button.add_theme_font_size_override("font_size", FONT_SIZE)
+	_spy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_spy_button.tooltip_text = "Spionagefenster bei diesem Spion öffnen: Auskundschaften, Dorf oder Rivalen aufhetzen"
+	_spy_button.pressed.connect(_on_spy_pressed)
+	_spy_row.add_child(_spy_button)
 
 	_build_actions(vbox)
 
@@ -367,6 +388,8 @@ func _refresh() -> void:
 		_hero_box.hide_box()
 	if _mode != "unit" and _mode != "building":
 		_show_village_row(null)
+	if _mode != "unit" and _spy_row.visible:
+		_spy_row.visible = false
 
 
 # ---------------------------------------------------------------------------
@@ -408,6 +431,15 @@ func _show_building(b: Building) -> void:
 		_set_text(_facts, _lair_text(b))
 	elif vs.is_village(b.kingdom):
 		_set_text(_facts, vs.get_summary_text(b.kingdom, k))
+	elif b.kingdom.controller == "ai":
+		# Feindliches Königreich: öffentlich sind nur Name und Leben; die Burg zeigt,
+		# was die Kundschaft über das Reich weiss
+		# (ohne die erste Zeile "Kundschaft: …" – die steht schon beim Reich)
+		var summary := ""
+		if b == b.kingdom.castle:
+			summary = game.espionage_system.get_kingdom_summary(b.kingdom, k)
+			summary = summary.substr(summary.find("\n") + 1) if summary.contains("\n") else ""
+		_set_text(_facts, summary)
 	else:
 		var facts := _building_facts(b)
 		var annexed := vs.get_annexed_text(b) if own else ""
@@ -847,13 +879,31 @@ func _show_unit(u: Unit) -> void:
 		var army: int = game.command_system.get_army_number(u)
 		if army > 0:
 			title += " · Armee %d" % army
+	var esp: EspionageSystem = game.espionage_system
+	var spies: SpySystem = game.spy_system
+	if not own and spies.is_spy(u) and not u.stealthed:
+		title += " (enttarnt)"
 	_set_text(_title, title)
 	_show_owner(u.kingdom)
+	# Kundschaft über feindliche Königreiche: ohne Bericht (Stufe 2) keine Werte, Wirkungen
+	# erst genau (3); Monster, Dörfer und eigene Einheiten immer
+	var intel := 3
+	if u.kingdom.controller == "ai" and not esp.details_visible(game.player, u.kingdom, 2):
+		intel = esp.get_intel_level(game.player, u.kingdom)
 	_hp_bar.visible = true
-	_hp_bar.set_value(u.hp, u.max_hp)
+	_hp_bar.set_value(u.hp, u.max_hp, "" if intel >= 2 else "?")
 	_fill_stats(u)
 	_set_text(_warn, "")
-	_set_text(_facts, _village_unit_text(u))
+	var facts := _village_unit_text(u)
+	if intel < 2:
+		_stats_grid.visible = false
+		facts = "Werte unbekannt – schicke Späher oder Spione in die Nähe"
+	elif own and spies.is_spy(u):
+		facts = spies.get_spy_text(u)
+	_set_text(_facts, facts)
+	var spy_row := own and spies.is_spy(u)
+	if _spy_row.visible != spy_row:
+		_spy_row.visible = spy_row
 	_show_village_row(u.kingdom if game.village_system.is_village(u.kingdom) else null)
 	_summon_box.visible = false
 	_worker_row.visible = false
@@ -868,7 +918,10 @@ func _show_unit(u: Unit) -> void:
 		_set_text(_status, "")
 		_set_text(_bonus, "")
 		_set_text(_note, "")
-	_show_magic(u)
+	if intel >= 3:
+		_show_magic(u)
+	else:
+		_magic_box.visible = false
 	_hide_research()
 	if own and u.hero_id != 0:
 		_hero_box.show_hero(u, false)
@@ -883,8 +936,8 @@ func _show_unit(u: Unit) -> void:
 		return
 	_halt_button.visible = true
 	_halt_button.tooltip_text = "Stehen bleiben und den Platz verteidigen"
-	_work_button.visible = u.can_work()
-	if u.can_work():
+	_work_button.visible = u.can_work() and not spy_row
+	if _work_button.visible:
 		var no_job := u.job_id == "idle"
 		_work_button.disabled = no_job
 		_work_button.tooltip_text = NO_JOB_TIP if no_job else "Befehl aufheben – arbeitet weiter als %s" % u.get_job_name()
@@ -1381,6 +1434,9 @@ func _show_owner(k: Kingdom) -> void:
 			text += "  ·  Krieg"
 		elif game.are_allied(game.player, k):
 			text += "  ·  Bündnis"
+	elif k.controller == "ai":
+		text += "  ·  %s  ·  %s" % ["feindlich" if game.are_hostile(game.player, k) else "Frieden",
+				game.espionage_system.get_intel_text(game.player, k)]
 	elif game.are_hostile(game.player, k):
 		text += "  ·  feindlich"
 	_set_text(_owner, text)
@@ -1412,6 +1468,12 @@ func _village_unit_text(u: Unit) -> String:
 	if vs.is_village(u.kingdom):
 		return "Dorfwache von %s (%s)" % [u.kingdom.display_name, str(vs.get_people(u.kingdom).get("name", "?"))]
 	return ""
+
+
+## "Auftrag (K)": Spionagefenster beim gewählten Spion
+func _on_spy_pressed() -> void:
+	if is_instance_valid(_target) and _target is Unit and game.hud != null and game.hud.has_method("open_espionage"):
+		game.hud.call("open_espionage", EspionagePanel.TAB_SPIES, 0, (_target as Unit).uid)
 
 
 func _on_diplo_pressed() -> void:

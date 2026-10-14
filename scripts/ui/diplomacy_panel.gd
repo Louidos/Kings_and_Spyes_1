@@ -3,8 +3,7 @@
 ## Diplomatiefenster (Taste N, Button "Diplomatie (N)" oben; N, Esc oder ×
 ## schliesst). Gleiche Bauart wie Forschungs- und Heldenfenster (eigene Ebene,
 ## Mitte oben); das Spiel läuft weiter. Es ist immer nur eines der drei offen.
-## - Reiter "Dörfer" (ab Phase 7 kommt "Reiche" dazu – die Reiterlogik ist
-##   schon allgemein): links die Liste aller Dörfer (Volksfarbe, Name, Volk,
+## - Reiter "Dörfer": links die Liste aller Dörfer (Volksfarbe, Name, Volk,
 ##   Entfernung zur Burg, grobe Stärke, Ruf als Balken mit Stufe, Vertrag bzw.
 ##   Krieg; aufgenommene, eroberte und zerstörte grau), selbstständige zuerst,
 ##   nach Entfernung sortiert.
@@ -17,6 +16,13 @@
 ##   Drohung, Krieg erklären (zweiter Klick) bzw. Frieden anbieten und
 ##   Hinspringen. Gesperrte Knöpfe nennen den Grund (Tooltip und Infozeile).
 ##   Im F3-Modus: "Ruf +20", "Ruf −20", "Bote senden (Test)".
+##   Was das Dorf mit anderen Reichen verbindet, sein Vorrat und die genaue
+##   Milizzahl stehen erst mit Kundschaft (Stufe 2) bzw. einem eigenen Vertrag da.
+## - Reiter "Reiche" (Phase 7): links die feindlichen KI-Reiche (Farbe, Name, Volk,
+##   Krieg, Stärke nach Kundschaft: "?" / "etwa 20–30" / genau; gefallene grau),
+##   rechts Volk mit Stärken und Schwächen, Beziehung (immer Krieg), bekannte Kriege,
+##   Verträge mit Dörfern und Aufmerksamkeit auf dich (nur mit Kundschaft), Knöpfe
+##   "Spion schicken (K)", "Hinspringen" und im F3-Modus "Besiegen (Test)".
 ## Zeigt nur an und ruft das DiplomacySystem mit dem Spieler-Reich auf (dieselben
 ## Funktionen nutzt ab Phase 7 die KI). Aktualisiert wird alle 0.25 s, solange
 ## das Fenster offen ist, und bei Signalen; die Liste wird nur neu gebaut, wenn
@@ -28,6 +34,7 @@ extends PanelContainer
 signal toggled(open: bool)
 
 const TAB_VILLAGES := "villages"
+const TAB_REALMS := "realms"
 const DESIGN_WIDTH := 1048.0
 const TOP := 92.0
 const MARGIN_X := 16.0
@@ -124,6 +131,25 @@ var _war_button: ResearchTipButton
 var _jump_button: Button
 var _action_info: RichTextLabel
 var _debug_row: HBoxContainer
+
+# Reiter "Reiche"
+var _realm_id := 0
+var _realm_list: VBoxContainer
+var _realm_key: Array = []
+## Reich-id -> {"button", "name", "tag", "sub"}
+var _realm_entries: Dictionary = {}
+var _realm_empty: Label
+var _realm_detail: VBoxContainer
+var _realm_swatch: ColorRect
+var _realm_name: Label
+var _realm_people: Label
+var _realm_desc: Label
+var _realm_strengths: Label
+var _realm_weaknesses: Label
+var _realm_info: Label
+var _realm_spy_button: Button
+var _realm_jump_button: Button
+var _realm_defeat_button: Button
 
 
 func _ready() -> void:
@@ -269,6 +295,10 @@ func _build() -> void:
 	tab_villages.tooltip_text = "Neutrale Dörfer: Ruf, Geschenke, Handel, Verträge, Aufnahme"
 	tab_villages.pressed.connect(_show_tab.bind(TAB_VILLAGES))
 	title_row.add_child(tab_villages)
+	var tab_realms := _make_tab("Reiche", group)
+	tab_realms.tooltip_text = "Feindliche Königreiche: Volk, Kriege, geschätzte Stärke (Kundschaft nötig)"
+	tab_realms.pressed.connect(_show_tab.bind(TAB_REALMS))
+	title_row.add_child(tab_realms)
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(6, 0)
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -299,6 +329,12 @@ func _build() -> void:
 	pages.add_child(villages_page)
 	_tabs[TAB_VILLAGES] = {"button": tab_villages, "page": villages_page}
 	_build_villages_page(villages_page)
+	var realms_page := HBoxContainer.new()
+	realms_page.add_theme_constant_override("separation", 14)
+	realms_page.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pages.add_child(realms_page)
+	_tabs[TAB_REALMS] = {"button": tab_realms, "page": realms_page}
+	_build_realms_page(realms_page)
 
 	_footer = _label(15, COLOR_DIM)
 	_footer.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -337,6 +373,90 @@ func _build_villages_page(page: HBoxContainer) -> void:
 	page.add_child(_detail)
 	_build_info(_detail)
 	_build_actions(_detail)
+
+
+## Reiter "Reiche": links die KI-Reiche, rechts Volk, Beziehung und Kundschaft
+func _build_realms_page(page: HBoxContainer) -> void:
+	var left := VBoxContainer.new()
+	left.add_theme_constant_override("separation", 6)
+	left.custom_minimum_size = Vector2(LIST_WIDTH, 0)
+	left.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	page.add_child(left)
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	left.add_child(scroll)
+	_realm_list = VBoxContainer.new()
+	_realm_list.add_theme_constant_override("separation", 6)
+	_realm_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_realm_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scroll.add_child(_realm_list)
+	_realm_empty = _wrap_label(16, COLOR_DIM)
+	_realm_empty.text = "Keine feindlichen Königreiche in dieser Welt."
+	left.add_child(_realm_empty)
+
+	var sep := ColorRect.new()
+	sep.color = Color(_accent, 0.3)
+	sep.custom_minimum_size = Vector2(1, 0)
+	sep.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	page.add_child(sep)
+
+	_realm_detail = VBoxContainer.new()
+	_realm_detail.add_theme_constant_override("separation", 6)
+	_realm_detail.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_realm_detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	page.add_child(_realm_detail)
+	var head := _row(_realm_detail)
+	_realm_swatch = ColorRect.new()
+	_realm_swatch.custom_minimum_size = Vector2(20, 20)
+	_realm_swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_realm_swatch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(_realm_swatch)
+	_realm_name = _label(23, _light)
+	_realm_name.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_realm_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	head.add_child(_realm_name)
+	_realm_people = _label(16, _accent.lightened(0.2))
+	_realm_detail.add_child(_realm_people)
+	_realm_desc = _wrap_label(15, COLOR_DIM)
+	_realm_detail.add_child(_realm_desc)
+	var traits := HBoxContainer.new()
+	traits.add_theme_constant_override("separation", 12)
+	traits.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_realm_detail.add_child(traits)
+	_realm_strengths = _wrap_label(14, COLOR_GOOD)
+	_realm_strengths.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	traits.add_child(_realm_strengths)
+	_realm_weaknesses = _wrap_label(14, COLOR_BAD)
+	_realm_weaknesses.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	traits.add_child(_realm_weaknesses)
+	var line := ColorRect.new()
+	line.color = Color(_accent, 0.3)
+	line.custom_minimum_size = Vector2(0, 1)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_realm_detail.add_child(line)
+	var info_scroll := ScrollContainer.new()
+	info_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	info_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_realm_detail.add_child(info_scroll)
+	_realm_info = _wrap_label(16, COLOR_TEXT)
+	_realm_info.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	info_scroll.add_child(_realm_info)
+	var actions := _row(_realm_detail)
+	_realm_spy_button = _plain_button("Spion schicken (K)")
+	_realm_spy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_realm_spy_button.tooltip_text = "Spionagefenster öffnen: einen Spion zu diesem Reich schicken (Auskundschaften)"
+	_realm_spy_button.pressed.connect(_on_realm_spy_pressed)
+	actions.add_child(_realm_spy_button)
+	_realm_jump_button = _plain_button("Hinspringen")
+	_realm_jump_button.tooltip_text = "Kamera zur Burg des Reichs (Fenster schliesst)"
+	_realm_jump_button.pressed.connect(_on_realm_jump_pressed)
+	actions.add_child(_realm_jump_button)
+	_realm_defeat_button = _plain_button("Besiegen (Test)")
+	_realm_defeat_button.add_theme_color_override("font_color", COLOR_WARN)
+	_realm_defeat_button.tooltip_text = "Debug: dieses Reich fällt sofort (wie eine zerstörte Burg)"
+	_realm_defeat_button.pressed.connect(_on_realm_defeat_pressed)
+	actions.add_child(_realm_defeat_button)
 
 
 ## Oberer Teil der Einzelheiten (scrollt, wenn er zu lang wird – die Aktionen
@@ -549,14 +669,17 @@ func _make_tab(text: String, group: ButtonGroup) -> ResearchTipButton:
 	return b
 
 
-## Reiter zeigen (Phase 7: "Reiche" kommt über _tabs dazu)
+## Reiter zeigen ("villages" oder "realms")
 func _show_tab(tab: String) -> void:
 	_tab = tab if _tabs.has(tab) else TAB_VILLAGES
 	for id in _tabs:
 		var entry: Dictionary = _tabs[id]
 		(entry["button"] as Button).set_pressed_no_signal(id == _tab)
 		(entry["page"] as Control).visible = id == _tab
-	_footer.text = "Ruf steigt durch Geschenke, Handel, Verträge und Schutz; Angriffe, Drohungen und Vertragsbruch senken ihn  ·  N / Esc: schliessen"
+	if _tab == TAB_REALMS:
+		_footer.text = "Mit feindlichen Königreichen gibt es keinen Frieden  ·  Wissen über sie bringen Späher und Spione (K)  ·  N / Esc: schliessen"
+	else:
+		_footer.text = "Ruf steigt durch Geschenke, Handel, Verträge und Schutz; Angriffe, Drohungen und Vertragsbruch senken ihn  ·  N / Esc: schliessen"
 	_confirm_action = ""
 	if visible:
 		_refresh()
@@ -589,6 +712,9 @@ func _refresh() -> void:
 	var k: Kingdom = game.player
 	var vs: VillageSystem = game.village_system
 	var ds: DiplomacySystem = game.diplomacy_system
+	if _tab == TAB_REALMS:
+		_refresh_realms(k)
+		return
 	var villages := sorted_villages()
 	var key: Array = []
 	for v in villages:
@@ -609,6 +735,249 @@ func _refresh() -> void:
 	_detail.visible = _village_id != 0
 	if _village_id != 0:
 		_refresh_detail(k, game.get_kingdom(_village_id))
+
+
+## Kennt der Spieler Lager, Miliz und Beziehungen des Dorfs? (Kundschaft 2 oder eigener Vertrag)
+func _knows_village(k: Kingdom, v: Kingdom) -> bool:
+	if not game.diplomacy_system.get_treaty_with(v, k).is_empty():
+		return true
+	return game.espionage_system.get_intel_level(k, v) >= 2
+
+
+# --- Reiter "Reiche"
+
+## KI-Reiche: aktive zuerst (nach Entfernung), gefallene am Ende
+func sorted_realms() -> Array:
+	var list: Array = game.ai_system.get_ai_kingdoms(true)
+	var from := _home_pos()
+	list.sort_custom(func(a: Kingdom, b: Kingdom) -> bool:
+		if a.defeated != b.defeated:
+			return not a.defeated
+		return from.distance_squared_to(_realm_center(a)) < from.distance_squared_to(_realm_center(b)))
+	return list
+
+
+func _realm_center(r: Kingdom) -> Vector2:
+	if is_instance_valid(r.castle):
+		return r.castle.get_center()
+	return _home_pos()
+
+
+## Gewähltes Reich im Reiter "Reiche" (Kingdom.id, 0 = keins)
+func get_realm_id() -> int:
+	return _realm_id
+
+
+## Reich im Reiter "Reiche" wählen und den Reiter zeigen
+func select_realm(id: int) -> void:
+	_realm_id = id
+	_show_tab(TAB_REALMS)
+
+
+func _refresh_realms(k: Kingdom) -> void:
+	var realms := sorted_realms()
+	var key: Array = []
+	for r in realms:
+		key.append([(r as Kingdom).id, (r as Kingdom).defeated])
+	if key != _realm_key:
+		_rebuild_realm_list(realms, key)
+	var found := false
+	for r in realms:
+		if (r as Kingdom).id == _realm_id:
+			found = true
+	if not found:
+		_realm_id = (realms[0] as Kingdom).id if not realms.is_empty() else 0
+	_realm_empty.visible = realms.is_empty()
+	var active := 0
+	for r in realms:
+		_refresh_realm_entry(k, r)
+		if not (r as Kingdom).defeated:
+			active += 1
+	_set_text(_count_label, "%d feindliche Königreiche · %d gefallen" % [active, realms.size() - active], COLOR_DIM)
+	_realm_detail.visible = _realm_id != 0
+	if _realm_id != 0:
+		_refresh_realm_detail(k, game.get_kingdom(_realm_id))
+
+
+func _rebuild_realm_list(realms: Array, key: Array) -> void:
+	_realm_key = key
+	for child in _realm_list.get_children():
+		_realm_list.remove_child(child)
+		child.queue_free()
+	_realm_entries.clear()
+	for o in realms:
+		var r: Kingdom = o
+		var b := Button.new()
+		b.toggle_mode = true
+		b.focus_mode = Control.FOCUS_NONE
+		b.custom_minimum_size = Vector2(0, 58)
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.pressed.connect(_on_realm_pressed.bind(r.id))
+		_realm_list.add_child(b)
+		var box := VBoxContainer.new()
+		box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		box.offset_left = 8.0
+		box.offset_top = 5.0
+		box.offset_right = -8.0
+		box.offset_bottom = -6.0
+		box.add_theme_constant_override("separation", 2)
+		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		b.add_child(box)
+		var top := HBoxContainer.new()
+		top.add_theme_constant_override("separation", 8)
+		top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		box.add_child(top)
+		var swatch := ColorRect.new()
+		swatch.custom_minimum_size = Vector2(14, 14)
+		swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		swatch.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		swatch.color = r.color
+		top.add_child(swatch)
+		var name_label := _label(17, _light)
+		name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		name_label.text = r.display_name
+		top.add_child(name_label)
+		var tag := _label(14, COLOR_WAR)
+		top.add_child(tag)
+		var sub := _label(14, COLOR_DIM)
+		sub.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		box.add_child(sub)
+		_realm_entries[r.id] = {"button": b, "name": name_label, "tag": tag, "sub": sub}
+
+
+func _refresh_realm_entry(k: Kingdom, r: Kingdom) -> void:
+	var e: Dictionary = _realm_entries.get(r.id, {})
+	if e.is_empty():
+		return
+	var people := str(DataDB.get_people(r.people_id).get("name", "?"))
+	if r.defeated:
+		_set_text(e["name"], r.display_name, COLOR_GREY)
+		_set_text(e["tag"], "gefallen", COLOR_GREY)
+		_set_text(e["sub"], "%s · Ruinen" % people, COLOR_GREY)
+	else:
+		_set_text(e["name"], r.display_name, _light)
+		_set_text(e["tag"], "Krieg" if game.are_hostile(k, r) else "Frieden", COLOR_WAR if game.are_hostile(k, r) else COLOR_DIM)
+		_set_text(e["sub"], "%s · %d Kacheln · Heer %s" % [people, _realm_distance(r), realm_strength_text(k, r, true)], COLOR_DIM)
+	var b: Button = e["button"]
+	if b.button_pressed != (r.id == _realm_id):
+		b.set_pressed_no_signal(r.id == _realm_id)
+	b.tooltip_text = game.espionage_system.get_intel_text(k, r)
+
+
+func _realm_distance(r: Kingdom) -> int:
+	return roundi(_home_pos().distance_to(_realm_center(r)) / float(game.world.tile_size))
+
+
+## Stärke nach Kundschaft: "?" (keine), "etwa 20–30 Einheiten" (Bericht) oder genau;
+## short: nur die Zahlen ("?", "20–30", "24") für die Liste
+func realm_strength_text(k: Kingdom, r: Kingdom, short: bool = false) -> String:
+	var est: Dictionary = game.espionage_system.estimate_strength(k, r)
+	if not bool(est.get("known", false)):
+		return "?"
+	if bool(est.get("exact", false)):
+		return str(int(est["units_low"])) if short else "%d Einheiten" % int(est["units_low"])
+	var span := "%d–%d" % [int(est["units_low"]), int(est["units_high"])]
+	return span if short else "etwa %s Einheiten" % span
+
+
+func _refresh_realm_detail(k: Kingdom, r: Kingdom) -> void:
+	if r == null:
+		return
+	var esp: EspionageSystem = game.espionage_system
+	var people := DataDB.get_people(r.people_id)
+	_realm_swatch.color = r.color
+	_set_text(_realm_name, r.display_name, COLOR_GREY if r.defeated else _light)
+	_set_text(_realm_people, "Volk: %s  ·  %d Kacheln von deiner Burg  ·  %s" % [str(people.get("name", "?")),
+			_realm_distance(r), esp.get_intel_text(k, r)], _accent.lightened(0.2))
+	_set_text(_realm_desc, str(people.get("description", "")), COLOR_DIM)
+	_set_text(_realm_strengths, _lines("+ ", people.get("strengths", [])), COLOR_GOOD)
+	_set_text(_realm_weaknesses, _lines("− ", people.get("weaknesses", [])), COLOR_BAD)
+	_set_text(_realm_info, _realm_info_text(k, r), COLOR_TEXT)
+	_realm_spy_button.disabled = r.defeated
+	_realm_jump_button.disabled = r.defeated or not is_instance_valid(r.castle)
+	var hud: Node = game.hud
+	_realm_defeat_button.visible = not r.defeated and hud != null and hud.has_method("is_debug_visible") \
+			and bool(hud.call("is_debug_visible"))
+
+
+## Beziehung, Stärke, bekannte Kriege, Verträge und Aufmerksamkeit (je nach Kundschaft)
+func _realm_info_text(k: Kingdom, r: Kingdom) -> String:
+	if r.defeated:
+		return "Dieses Reich ist gefallen. Seine Ruinen zerfallen mit der Zeit."
+	var esp: EspionageSystem = game.espionage_system
+	var level := esp.get_intel_level(k, r)
+	var lines: PackedStringArray = []
+	if game.are_hostile(k, r):
+		lines.append("Beziehung: Krieg – Friede ist mit feindlichen Königreichen nicht möglich")
+	else:
+		lines.append("Beziehung: Frieden")
+	lines.append("Heer: %s" % realm_strength_text(k, r))
+	# Kriege: mit dir immer; Kriege gegen andere Reiche und Dörfer nur mit Kundschaft
+	var wars: PackedStringArray = []
+	if game.are_hostile(k, r):
+		wars.append("dir")
+	var unknown := false
+	for o in game.ai_system.get_rivals(r):
+		var other: Kingdom = o
+		if level < 2 and esp.get_intel_level(k, other) < 2:
+			unknown = true
+			continue
+		if str(game.ai_system.get_rivalry(r, other).get("state", "")) == "war" or game.are_hostile(r, other):
+			wars.append(other.display_name)
+	if level >= 2:
+		for v in game.village_system.get_villages():
+			if game.are_hostile(r, v):
+				wars.append((v as Kingdom).display_name)
+	else:
+		unknown = true
+	var war_line := "Kriege: " + ", ".join(wars)
+	if unknown:
+		war_line += " · weitere: ? (Kundschaft nötig)"
+	lines.append(war_line)
+	if level >= 2:
+		var names: PackedStringArray = []
+		for t in game.diplomacy_system.get_treaties_of(r):
+			names.append((t["village"] as Kingdom).display_name)
+		lines.append("Verträge mit Dörfern: %s" % (", ".join(names) if not names.is_empty() else "keine"))
+		var tier := esp.get_awareness_tier(r, k)
+		if level >= 3:
+			lines.append("Aufmerksamkeit auf dich: %s (%d %%)" % [EspionageSystem.awareness_tier_name(tier),
+					roundi(esp.get_awareness(r, k))])
+		else:
+			lines.append("Aufmerksamkeit auf dich: %s" % EspionageSystem.awareness_tier_name(tier))
+	else:
+		lines.append("Verträge mit Dörfern: ?")
+		lines.append("Aufmerksamkeit auf dich: ?")
+		lines.append("Schicke Späher oder Spione (K), um mehr zu erfahren.")
+	return "\n".join(lines)
+
+
+func _on_realm_pressed(id: int) -> void:
+	_realm_id = id
+	_refresh()
+
+
+func _on_realm_spy_pressed() -> void:
+	var hud: Node = game.hud
+	if _realm_id != 0 and hud != null and hud.has_method("open_espionage"):
+		hud.call("open_espionage", EspionagePanel.TAB_SPIES, _realm_id, 0)
+
+
+func _on_realm_jump_pressed() -> void:
+	var r: Kingdom = game.get_kingdom(_realm_id) if _realm_id != 0 else null
+	if r == null or not is_instance_valid(r.castle):
+		return
+	game.selection.select([r.castle])
+	game.camera.focus_on(r.castle.get_center())
+	close()
+
+
+func _on_realm_defeat_pressed() -> void:
+	var r: Kingdom = game.get_kingdom(_realm_id) if _realm_id != 0 else null
+	if r != null and not r.defeated:
+		game.victory_system.debug_defeat(r, "castle")
+	_refresh()
 
 
 ## Alle Dörfer (auch frühere): selbstständige zuerst, dann nach Entfernung zur Burg
@@ -701,8 +1070,9 @@ func _refresh_entry(k: Kingdom, v: Kingdom) -> void:
 	_set_text(e["tag"], str(tag[0]), tag[1])
 	var bar: HpBar = e["bar"]
 	if active:
-		_set_text(e["sub"], "%s · %d Kacheln · Miliz %d (%s)" % [str(people.get("name", "?")), _distance_tiles(v),
-				vs.get_militia(v).size(), vs.get_strength_text(v)], COLOR_DIM)
+		var militia := str(vs.get_militia(v).size()) if _knows_village(k, v) else "?"
+		_set_text(e["sub"], "%s · %d Kacheln · Miliz %s (%s)" % [str(people.get("name", "?")), _distance_tiles(v),
+				militia, vs.get_strength_text(v)], COLOR_DIM)
 		var rep := ds.get_reputation(v, k)
 		var tier := DiplomacySystem.tier_for(rep)
 		bar.fill_color = DiplomacySystem.tier_color(tier)
@@ -760,9 +1130,12 @@ func _refresh_detail(k: Kingdom, v: Kingdom) -> void:
 	_set_text(_weaknesses_label, _lines("− ", people.get("weaknesses", [])), COLOR_BAD)
 	var prod := _amounts_text(vs.get_production(v))
 	var economy := "Produziert pro Minute: %s" % prod
-	if active:
+	if active and _knows_village(k, v):
 		economy += "  ·  Miliz %d/%d (%s)" % [vs.get_militia(v).size(), vs.get_militia_target(v), vs.get_strength_text(v)]
 		_set_text(_stock_label, "Vorrat des Dorfs: %s" % _amounts_text(v.resources), COLOR_DIM)
+	elif active:
+		economy += "  ·  Miliz ? (%s)" % vs.get_strength_text(v)
+		_set_text(_stock_label, "Vorrat des Dorfs: ? (Späher oder Spione schicken, oder ein Vertrag)", COLOR_DIM)
 	else:
 		_set_text(_stock_label, "", COLOR_DIM)
 	_set_text(_economy_label, economy, COLOR_TEXT)
@@ -963,19 +1336,25 @@ func _treaty_text(k: Kingdom, v: Kingdom) -> String:
 	return text
 
 
-## "Beziehungen: Krieg mit dir · Bündnis mit …" (Monster zählen nicht)
+## "Beziehungen: Krieg mit dir · Bündnis mit …" (Monster zählen nicht). Beziehungen zu
+## anderen Reichen nur mit Kundschaft (Stufe 2) über das Dorf.
 func _relations_text(k: Kingdom, v: Kingdom) -> String:
 	var parts: PackedStringArray = []
+	var known := _knows_village(k, v)
 	for o in game.kingdoms:
 		var other: Kingdom = o
 		if other == v or other.defeated or other.controller == "wild":
+			continue
+		if other != k and not known:
 			continue
 		var who := "dir" if other == k else other.display_name
 		if game.are_hostile(v, other):
 			parts.append("Krieg mit %s" % who)
 		elif game.are_allied(v, other):
 			parts.append("Bündnis mit %s" % who)
-	if parts.is_empty():
+	if not known:
+		parts.append("weitere Beziehungen: ? (Späher oder Spione schicken)")
+	elif parts.is_empty():
 		return "Beziehungen: Frieden mit allen Reichen"
 	return "Beziehungen: " + " · ".join(parts)
 

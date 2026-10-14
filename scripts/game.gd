@@ -397,6 +397,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		# Das Diplomatiefenster gehört zur Oberfläche (HUD); ohne Fenster nichts tun
 		if hud.has_method("toggle_diplomacy"):
 			hud.call("toggle_diplomacy")
+	elif event.is_action_pressed("toggle_espionage"):
+		if hud.has_method("toggle_espionage"):
+			hud.call("toggle_espionage")
 	elif event.is_action_pressed("hero_ability_1"):
 		use_hero_ability(0)
 	elif event.is_action_pressed("hero_ability_2"):
