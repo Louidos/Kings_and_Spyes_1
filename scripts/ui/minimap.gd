@@ -212,6 +212,7 @@ func _draw_markers(r: Rect2) -> void:
 			draw_rect(rect, fill, true)
 	_draw_villages(r, tile_px)
 	_draw_castles(r, tile_px)
+	_draw_events(r, tile_px)
 
 
 ## Burgsymbole der Königreiche (Spieler und KI) und Ruinen gefallener Burgen
@@ -427,3 +428,46 @@ func _map_rect() -> Rect2:
 		h = size.y
 		w = h * aspect
 	return Rect2((size - Vector2(w, h)) * 0.5, Vector2(w, h))
+
+
+## Phase 8: Ereignisgebiete (Kreisumriss in Ereignisfarbe), Streifzüge und Wellen
+## (blinkender oranger Ring mit Pfeil zum Ziel), wartende Flüchtlinge des Spielers
+## (heller Punkt mit Rahmen)
+func _draw_events(r: Rect2, tile_px: Vector2) -> void:
+	if _game == null:
+		return
+	var es: Variant = _game.get("event_system")
+	var scale_px := tile_px / float(_world.tile_size)
+	if es != null:
+		for ev in es.active:
+			var radius := float(ev["radius"])
+			if radius <= 0.0:
+				continue
+			var c := r.position + (ev["pos"] as Vector2) * scale_px
+			var col: Color = DataDB.get_event(str(ev["event_id"])).get("color", Color.WHITE)
+			draw_arc(c, maxf(radius * scale_px.x, 3.0), 0.0, TAU, 32, Color(col, 0.9), 1.5, true)
+		for offer in es.get_offers(_game.player):
+			for uid in offer["uids"]:
+				var u: Variant = _game.find_by_uid(int(uid))
+				if u is Unit:
+					var c := (r.position + (u as Unit).position * scale_px).floor() + Vector2(0.5, 0.5)
+					draw_rect(Rect2(c - Vector2(3, 3), Vector2(6, 6)), OUTLINE_COLOR, true)
+					draw_rect(Rect2(c - Vector2(2, 2), Vector2(4, 4)), Color(0.95, 0.92, 0.8), true)
+					break
+	var ms: Variant = _game.get("monster_system")
+	if ms == null or not (ms as Object).has_method("get_raid_markers"):
+		return
+	var blink := int(Time.get_ticks_msec() / 400.0) % 2 == 0
+	for m in ms.get_raid_markers():
+		var c := r.position + (m["pos"] as Vector2) * scale_px
+		var t := r.position + (m["target_pos"] as Vector2) * scale_px
+		var col := Color(1.0, 0.55, 0.15, 1.0 if blink else 0.55)
+		draw_arc(c, 5.0, 0.0, TAU, 16, OUTLINE_COLOR, 3.0, true)
+		draw_arc(c, 5.0, 0.0, TAU, 16, col, 1.5, true)
+		var dir := (t - c)
+		if dir.length() > 8.0:
+			var tip := c + dir.normalized() * minf(dir.length() - 2.0, 18.0)
+			draw_line(c + dir.normalized() * 6.0, tip, col, 1.5, true)
+			var side := Vector2(-dir.normalized().y, dir.normalized().x)
+			draw_colored_polygon(PackedVector2Array([tip, tip - dir.normalized() * 4.0 + side * 2.5,
+					tip - dir.normalized() * 4.0 - side * 2.5]), col)

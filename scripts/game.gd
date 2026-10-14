@@ -45,6 +45,13 @@ signal formation_changed(formation: String)
 @onready var spy_system: SpySystem = $Systems/SpySystem
 @onready var ai_system: AISystem = $Systems/AISystem
 @onready var victory_system: VictorySystem = $Systems/VictorySystem
+## Völker, Tag/Nacht, Zufriedenheit, Ereignisse (Phase 8)
+@onready var people_system: PeopleSystem = $Systems/PeopleSystem
+@onready var day_night_system: DayNightSystem = $Systems/DayNightSystem
+@onready var satisfaction_system: SatisfactionSystem = $Systems/SatisfactionSystem
+@onready var event_system: EventSystem = $Systems/EventSystem
+@onready var day_night_view: DayNightView = $DayNight
+@onready var event_effects: EventEffects = $EventEffects
 @onready var selection: SelectionController = $Selection
 @onready var hud: CanvasLayer = $HUD
 @onready var pause_menu: CanvasLayer = $PauseMenu
@@ -139,16 +146,26 @@ func _start_game() -> void:
 	# (hört auf kingdom_defeated und building_destroyed)
 	ai_system.setup(self)
 	victory_system.setup(self)
+	# Phase 8: Völker (Geländeboni), Tageszeit, Zufriedenheit (braucht Kampf, Arbeit,
+	# Wirtschaft, Befehle, Dörfer, Spionage), Ereignisse (Magie, Kampf, Befehle, Zufriedenheit)
+	people_system.setup(self)
+	day_night_system.setup(self)
+	satisfaction_system.setup(self)
+	event_system.setup(self)
 	placement.setup(self)
 	selection.setup(self)
 	unit_overlay.setup(self)
 	combat_effects.setup(self)
 	magic_effects.setup(self)
 	spell_targeting.setup(self)
+	event_effects.setup(self)
+	day_night_view.setup(self)
 	kingdom_defeated.connect(_on_kingdom_defeated)
 	victory_system.victory_reached.connect(_on_victory_reached)
 
 	player = create_kingdom({"faction_id": GameSession.faction_id, "controller": "player"})
+	# Volk vor der Burg (Volksgrafik der Burg)
+	player.people_id = GameSession.people_id
 	# Getarnte Einheiten aus Sicht des Spielers zeichnen
 	Unit.viewer_kingdom_id = player.id
 	found_settlement(player, world.start_cell)
@@ -159,7 +176,12 @@ func _start_game() -> void:
 	village_system.found_villages()
 	# Gegnerische Königreiche (ids nach den Dörfern)
 	ai_system.found_ai_kingdoms()
+	# Reich "Wanderer" für Flüchtlinge (nach allen anderen Reichen)
+	event_system.create_wanderer_kingdom()
 	monster_system.spawn_camps()
+	# Volksboni ("people:<id>", Geländeboni) und Tageszeit ("daynight") für die Startzeit
+	people_system.apply_all()
+	day_night_system.apply_all()
 
 	camera.set_map_rect(world.get_pixel_rect())
 	camera.focus_on(player.castle.get_center(), float(DataDB.cfg("camera.zoom_start", 0.8)))
@@ -173,6 +195,9 @@ func _start_game() -> void:
 			player.castle.get_center())
 	Notify.info("Burg anklicken: Späher beschwören. Monsterlager (orange auf der Minikarte) bringen Beute.",
 			player.castle.get_center())
+	if not player.people_id.is_empty():
+		Notify.info("Dein Volk: %s – Stärken und Tageszeit-Boni in der Reichsübersicht (L)." % DataDB.get_people_name(player.people_id),
+				player.castle.get_center())
 	var nearest := _nearest_village()
 	if nearest != null:
 		Notify.info("Neutrale Dörfer in der Nähe – Diplomatie mit N: Geschenke, Handel, Verträge.",
@@ -393,6 +418,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.toggle_research()
 	elif event.is_action_pressed("toggle_heroes"):
 		hud.toggle_heroes()
+	elif event.is_action_pressed("toggle_kingdom"):
+		hud.toggle_kingdom()
 	elif event.is_action_pressed("toggle_diplomacy"):
 		# Das Diplomatiefenster gehört zur Oberfläche (HUD); ohne Fenster nichts tun
 		if hud.has_method("toggle_diplomacy"):

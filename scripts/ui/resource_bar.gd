@@ -4,13 +4,17 @@
 ## (Tooltip: Ertrag pro Minute, bei Nahrung auch Verbrauch und Hungersnot,
 ## bei Mana Bestand/Maximum mit allen Anteilen), daneben die Kampfpunkte,
 ## danach Bewohner/Wohnraum mit dem Wachstumszustand im Tooltip, die Truppen
-## (beschworene Einheiten) und das Leben des Königs.
+## (beschworene Einheiten) und das Leben des Königs. Ab Phase 8 nach den Bewohnern
+## die Zufriedenheit (Gesicht mit Durchschnitt, Tooltip mit Ursachen; Klick öffnet
+## die Reichsübersicht).
 ## Zeigt nur an – wird viermal pro Sekunde aktualisiert, nicht in jedem Bild.
 class_name ResourceBar
 extends HBoxContainer
 
 ## Klick auf die Kampfpunkte: Forschungsfenster auf dem Reiter "Kampfpunkte"
 signal kill_points_clicked
+## Klick auf die Zufriedenheit: Reichsübersicht (Phase 8)
+signal satisfaction_clicked
 
 const REFRESH_INTERVAL := 0.25
 const ICON_SIZE := 24.0
@@ -80,6 +84,8 @@ var _entries: Dictionary = {}
 var _kp_label: Label
 var _kp_icon: SwordsIcon
 var _pop_label: Label
+var _mood_icon: MoodIcon
+var _mood_label: Label
 var _troops_label: Label
 var _king_label: Label
 var _timer := 0.0
@@ -114,6 +120,10 @@ func setup(p_game: Node) -> void:
 	_pop_label = _make_label(0)
 	pop_entry.add_child(_pop_label)
 	_entries["_population"] = pop_entry
+	_add_satisfaction_entry()
+	# Phase 8: engere Abstände, damit die obere Leiste mit der Zufriedenheit und allen
+	# Fenster-Knöpfen in 1920 passt
+	add_theme_constant_override("separation", 4)
 	var troops_entry := _make_entry()
 	troops_entry.source = _troops_tip
 	_troops_label = _make_label(0)
@@ -176,6 +186,7 @@ func _refresh() -> void:
 		_set_label(label, str(floori(amount)), COLOR_BAD if bad else COLOR_NORMAL)
 	_set_label(_kp_label, str(k.kill_points), COLOR_NORMAL)
 	_refresh_population(k)
+	_refresh_satisfaction(k)
 	_refresh_troops(k)
 	_refresh_king(k)
 
@@ -324,6 +335,64 @@ func _refresh_population(k: Kingdom) -> void:
 	var entry: Control = _entries.get("_population")
 	if entry != null:
 		entry.tooltip_text = "\n".join(lines)
+
+
+## Zufriedenheit: Gesicht (24 px) und Durchschnitt; Klick öffnet die Reichsübersicht
+func _add_satisfaction_entry() -> void:
+	var entry := _make_entry()
+	entry.source = _satisfaction_tip
+	entry.rich = true
+	entry.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	entry.gui_input.connect(_on_satisfaction_input)
+	_mood_icon = MoodIcon.new()
+	_mood_icon.custom_minimum_size = Vector2(ICON_SIZE, ICON_SIZE)
+	entry.add_child(_mood_icon)
+	_mood_label = _make_label(0)
+	entry.add_child(_mood_label)
+	_entries["_satisfaction"] = entry
+
+
+func _on_satisfaction_input(event: InputEvent) -> void:
+	var mb := event as InputEventMouseButton
+	if mb != null and mb.pressed and mb.button_index == MOUSE_BUTTON_LEFT:
+		satisfaction_clicked.emit()
+		accept_event()
+
+
+func _refresh_satisfaction(k: Kingdom) -> void:
+	var ss: Variant = game.get("satisfaction_system")
+	if _mood_label == null or ss == null:
+		return
+	var avg := float(ss.get_average(k))
+	_mood_icon.set_value(avg)
+	if avg < 0.0:
+		_set_label(_mood_label, "–", COLOR_DIM)
+	else:
+		_set_label(_mood_label, str(roundi(avg)), SatisfactionSystem.tier_for(avg)["color"])
+
+
+## Tooltip: Durchschnitt mit Stufe, Ursachen (grün/rot), Arbeitsleistung, Gefahr
+func _satisfaction_tip() -> String:
+	var k: Kingdom = game.player
+	var ss: SatisfactionSystem = game.satisfaction_system
+	var tip := ResearchTipButton
+	var avg := ss.get_average(k)
+	if avg < 0.0:
+		return "[b]Zufriedenheit[/b]\nKeine Bewohner"
+	var lines: PackedStringArray = ["[b]Zufriedenheit Ø %d – %s[/b]" % [roundi(avg), str(SatisfactionSystem.tier_for(avg)["name"])]]
+	var parts := ss.get_breakdown(k)
+	for i in mini(parts.size(), 8):
+		var p: Dictionary = parts[i]
+		var v := float(p["value"])
+		lines.append(tip.colored(("%+d %s" % [roundi(v), str(p["cause"])]).replace("-", "−"), COLOR_GOOD if v > 0.0 else (COLOR_BAD if v < 0.0 else COLOR_NORMAL)))
+	lines.append("Arbeitsleistung ×%s" % String.num(SatisfactionSystem.work_mult_for(avg), 2).replace(".", ","))
+	var risk := ss.get_risk(k)
+	if int(risk["defect"]) > 0:
+		lines.append(tip.colored("%d Bewohner kurz vor dem Überlaufen" % int(risk["defect"]), COLOR_BAD))
+	if int(risk["defecting"]) > 0:
+		lines.append(tip.colored("%d läuft gerade über" % int(risk["defecting"]), COLOR_BAD))
+	lines.append(tip.colored("Klick: Reichsübersicht (L)", COLOR_DIM))
+	return "\n".join(lines)
 
 
 ## Truppen = eigene Einheiten ausser Bewohnern und König

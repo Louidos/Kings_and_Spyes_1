@@ -66,7 +66,8 @@ var bonus_sources: Dictionary = {}
 ## Das EconomySystem zieht sie jeden Takt ab.
 var upkeep: Dictionary = {}
 ## Statistik für den Spielende-Bildschirm: Name -> Zahl ("summoned", "kills", "losses",
-## "spells", ab Phase 7 "buildings_built", "kingdoms_defeated", "spies_caught", "spy_missions")
+## "spells", ab Phase 7 "buildings_built", "kingdoms_defeated", "spies_caught", "spy_missions",
+## ab Phase 8 "defected", "defectors_received", "betrayals", "refugees_accepted", "feasts")
 var stats: Dictionary = {}
 ## KI-Zustand (nur controller "ai"): einfache Werte, Bedeutung siehe AIBrain (wird gespeichert)
 var ai_state: Dictionary = {}
@@ -108,6 +109,7 @@ var flags: Dictionary = {}
 ##   "sight", "speed", "regen", "heal", "heal_range" – jeweils auch
 ##   "<wert>.<stufe>" (z. B. "attack.archer"); dazu "defense" (erlittener
 ##   Schaden wird geteilt), "summon" (Beschwörungstempo), "building_hp".
+## Quellen ab Phase 8: "daynight" (Tageszeit), "people:<id>" (Volk), "event:<id>#<nr>" (Ereignis).
 var modifier_sources: Dictionary = {}
 ## Produkt je Schlüssel (aus modifier_sources berechnet)
 var modifiers: Dictionary = {}
@@ -149,6 +151,18 @@ func set_modifiers(source: String, factors: Dictionary) -> void:
 	for key in factors:
 		entry[key] = float(factors[key])
 	modifier_sources[source] = entry
+	_recompute_modifiers()
+
+
+## Ersetzt alle Faktoren einer Quelle auf einmal (leer = entfernen). Einheiten rechnen nur einmal neu;
+## unverändert = gar nicht (Tag/Nacht, Ereignisse, Volk).
+func replace_modifiers(source: String, factors: Dictionary) -> void:
+	if factors.is_empty():
+		clear_modifiers(source)
+		return
+	if modifier_sources.get(source, {}) == factors:
+		return
+	modifier_sources[source] = factors.duplicate()
 	_recompute_modifiers()
 
 

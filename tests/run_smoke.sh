@@ -11,7 +11,7 @@ fail=0
 for faction in good evil; do
 	out=$(timeout 900 "$GODOT" --headless res://tests/smoke_test.tscn -- faction=$faction seconds=$SECONDS_SIM "$@" 2>&1)
 	code=$?
-	echo "$out" | grep -E "^\[smoke\]|SCRIPT ERROR|ERROR:|at: " | head -80
+	echo "$out" | grep -E "^\[smoke\]|SCRIPT ERROR|ERROR:|at: " | head -250
 	if [ $code -ne 0 ] || echo "$out" | grep -qE "SCRIPT ERROR|^ERROR:"; then
 		echo "FEHLER im Rauchtest ($faction, Code $code)"
 		fail=1

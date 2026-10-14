@@ -67,6 +67,12 @@ var diplomacy: Dictionary = {}
 var ai_cfg: Dictionary = {}
 ## Entdeckung, Aufmerksamkeit, Kundschaft und Spione (espionage.json)
 var espionage: Dictionary = {}
+## Zufallsereignisse (events.json): Einstellungen und Ereignisse (Phase 8)
+var events_cfg: Dictionary = {}
+var event_by_id: Dictionary = {}
+## Zufriedenheit der Bewohner (satisfaction.json) und Tag/Nacht (daynight.json)
+var satisfaction_cfg: Dictionary = {}
+var daynight_cfg: Dictionary = {}
 
 
 func _ready() -> void:
@@ -99,6 +105,9 @@ func reload() -> void:
 	_load_heroes()
 	ai_cfg = _load_json("ai.json")
 	espionage = _load_json("espionage.json")
+	_load_events()
+	satisfaction_cfg = _load_json("satisfaction.json")
+	daynight_cfg = _load_json("daynight.json")
 	_validate_peoples()
 
 
@@ -170,6 +179,31 @@ func ai(path: String, default_value: Variant = null) -> Variant:
 ## Wert aus espionage.json über einen Punkt-Pfad, z. B. "awareness.rumour"
 func esp(path: String, default_value: Variant = null) -> Variant:
 	return _dig(espionage, path, default_value)
+
+
+## Wert aus events.json (Abschnitt settings) über Punkt-Pfad, z. B. "difficulty.normal.frequency"
+func evt(path: String, default_value: Variant = null) -> Variant:
+	return _dig(events_cfg.get("settings", {}), path, default_value)
+
+
+## Ereignis nach ID ({} wenn unbekannt)
+func get_event(id: String) -> Dictionary:
+	return event_by_id.get(id, {})
+
+
+## Alle Ereignisse in Datei-Reihenfolge
+func get_events() -> Array:
+	return events_cfg.get("events", [])
+
+
+## Wert aus satisfaction.json über Punkt-Pfad, z. B. "defection.below"
+func sat(path: String, default_value: Variant = null) -> Variant:
+	return _dig(satisfaction_cfg, path, default_value)
+
+
+## Wert aus daynight.json über Punkt-Pfad, z. B. "phases.night"
+func dn(path: String, default_value: Variant = null) -> Variant:
+	return _dig(daynight_cfg, path, default_value)
 
 
 ## Schwierigkeit für die KI: Eintrag aus difficulties.json, ergänzt um ai.json →
@@ -353,6 +387,8 @@ func describe_effect_source(source: String) -> String:
 			return "Tageszeit"
 		"difficulty":
 			return "Schwierigkeit"
+		"feast":
+			return "Fest"
 	var parts := source.split(":", true, 1)
 	if parts.size() < 2:
 		return source
@@ -387,7 +423,11 @@ func describe_effect_source(source: String) -> String:
 		"difficulty":
 			return "Schwierigkeit"
 		"event":
-			return "Ereignis"
+			# "event:<id>#<nr>" (Reich) bzw. "event:<id>" (Einheit)
+			var event_id := parts[1].get_slice("#", 0).get_slice(":", 0)
+			return str(get_event(event_id).get("name", "Ereignis"))
+		"feast":
+			return "Fest"
 		"espionage":
 			return "Spionage"
 	return parts[1]
@@ -408,6 +448,12 @@ func get_effect_source_color(source: String) -> Color:
 		return get_people(source.substr(7)).get("color", Color.WHITE)
 	if source.begins_with("espionage:"):
 		return Color(0.7, 0.75, 1.0)
+	if source.begins_with("event:"):
+		return get_event(source.substr(6).get_slice("#", 0).get_slice(":", 0)).get("color", Color.WHITE)
+	if source == "daynight":
+		return Color(0.62, 0.7, 1.0)
+	if source == "feast" or source.begins_with("feast:"):
+		return Color(0.95, 0.82, 0.4)
 	return Color.WHITE
 
 
@@ -431,6 +477,10 @@ func describe_bonus(key: String, add: float) -> String:
 			return "%s Wachsamkeit gegen fremde Spione" % ("%+.1f" % add).replace(".", ",")
 		"spy_slots":
 			return "%+d Spion" % roundi(add)
+		"satisfaction":
+			return "%+d Zufriedenheit aller Bewohner" % roundi(add)
+		"loyalty":
+			return "−%d %% Überlaufen und Verrat" % roundi(add * 100.0)
 	if key.begins_with("cap."):
 		return "%+d Lager (%s)" % [roundi(add), str(get_resource(key.substr(4)).get("name", key.substr(4)))]
 	return "%+g %s" % [add, key]
@@ -444,10 +494,10 @@ const _MOD_NAMES := {"attack": "Angriff", "armor": "Rüstung", "hp": "Leben", "s
 	"spell_cost": "Zauberkosten", "spell_cooldown": "Abklingzeit der Zauber",
 	"spell_radius": "Zauberradius", "spell_duration": "Zauberdauer", "spell_power": "Zauberstärke",
 	"hero_xp": "Erfahrung der Helden", "ability_power": "Stärke der Heldenfähigkeiten", "lifesteal": "Lebensraub",
-	"damage_taken": "erlittener Schaden"}
+	"damage_taken": "erlittener Schaden", "defense": "Verteidigung", "feast_cost": "Kosten für Feste"}
 const _TIER_NAMES := {"fighter": "Kämpfer", "archer": "Schützen", "elite": "Elite", "scout": "Späher",
 	"medic": "Heiler", "king": "König", "villager": "Bewohner", "summon": "Beschworene", "hero": "Helden",
-	"militia": "Miliz", "special": "Volkskrieger", "messenger": "Boten", "spy": "Spione"}
+	"militia": "Miliz", "special": "Volkskrieger", "messenger": "Boten", "spy": "Spione", "refugee": "Flüchtlinge"}
 const _ROLE_NAMES := {"combat": "alle Truppen ohne Helden", "worker": "Bewohner", "support": "Heiler",
 	"king": "König", "monster": "Monster", "hero": "Helden", "messenger": "Boten", "spy": "Spione"}
 
@@ -853,6 +903,24 @@ func _load_spells() -> void:
 
 
 ## Wert in einem verschachtelten Dictionary über einen Punkt-Pfad ("a.b.c")
+## Ereignisse aus events.json: Farbe parsen, duration/group als [min, max] (Floats)
+func _load_events() -> void:
+	events_cfg = _load_json("events.json")
+	event_by_id.clear()
+	for e in events_cfg.get("events", []):
+		var ev: Dictionary = e
+		ev["color"] = _parse_color(ev.get("color", "#ffffff"))
+		for key in ["duration", "group", "region_radius", "spawn_distance", "start_infected"]:
+			if ev.has(key):
+				var range_list: Array = ev[key]
+				ev[key] = [float(range_list[0]), float(range_list[range_list.size() - 1])]
+		ev["kind"] = str(ev.get("kind", ev.get("id", "")))
+		ev["positive"] = bool(ev.get("positive", false))
+		if not ev.has("targets"):
+			ev["targets"] = ["player", "ai"]
+		event_by_id[str(ev.get("id", ""))] = ev
+
+
 func _dig(root: Dictionary, path: String, default_value: Variant) -> Variant:
 	var node: Variant = root
 	for key in path.split("."):

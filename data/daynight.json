@@ -1,0 +1,18 @@
+{
+	"_hinweis": [
+		"Tag und Nacht. Uhrzeit aus GameClock (1 Tag = time.seconds_per_day, Start 08:00). phases: Beginn der Abschnitte in Stunden (dawn = Morgendämmerung, day, dusk = Abenddämmerung, night).",
+		"In der Dämmerung wirken Tag- und Nachtwerte je zu twilight_strength (0.5 = halb).",
+		"global: Faktoren für alle Reiche ausser Monstern (Schlüssel wie Reichs-Modifikatoren), global_bonus: additive Zuschläge (z. B. vigilance = Wachsamkeit gegen Spione). wild: Faktoren für die wilden Monster. Dazu kommen day_bonus/night_bonus des Volks (peoples.json). Quelle \"daynight\".",
+		"tint: Abdunklung der Welt je Uhrzeit (Paare [Stunde, Farbe], linear dazwischen); in den Einstellungen abschaltbar.",
+		"monsters: Streifzüge nachts × raid_chance_mult, Nachwuchs × respawn_mult schneller. notify_days: so viele Spieltage lang meldet das Spiel Tag- und Nachtbeginn."
+	],
+	"phases": {"dawn": 5.0, "day": 6.5, "dusk": 19.0, "night": 20.5},
+	"twilight_strength": 0.5,
+	"global": {"day": {}, "night": {"sight": 0.8, "aggro_range": 0.85}},
+	"global_bonus": {"day": {}, "night": {"vigilance": -0.3}},
+	"wild": {"day": {"aggro_range": 0.9}, "night": {"attack": 1.1, "speed": 1.1, "aggro_range": 1.3}},
+	"monsters": {"raid_chance_mult": 2.5, "respawn_mult": 1.5},
+	"tint": {"keys": [[0.0, "#8a94c2"], [4.5, "#8a94c2"], [5.75, "#d6b4aa"], [7.0, "#ffffff"], [18.5, "#ffffff"],
+										[19.75, "#e3a07e"], [21.0, "#8a94c2"], [24.0, "#8a94c2"]]},
+	"notify_days": 2
+}

@@ -14,7 +14,8 @@
 		"waves: Angriffswellen (Sammeln gather_seconds/gather_radius, Marsch, Kampf, Rückzug) und Zielwahl (target_weights je Art, distance_weight je Kachel). strength_ratio: Wellenstärke mindestens so viel mal die geschätzte Abwehr; unknown_defense: Abwehr ohne Kundschaft. share: Anteil des Heimbestands. max_duration: danach Rückzug. fight_building_radius: Kampfgebiet um das Ziel (Kacheln). growth_per_wave: jede weitere Welle gegen den Spieler darf so viel grösser sein.",
 		"lairs: Monsterlager räumen (ab min_minute, mit mindestens min_army Einheiten, höchstens max_distance Kacheln von der Burg).",
 		"rivalry: Spannung zwischen KI-Reichen (0–100; Krieg ab war_at, Frieden unter peace_at; Zufallsschritt drift_per_hour, Grenznähe border_tiles/border_per_hour, Zwischenfälle incident (höchstens alle incident_cooldown s), Kriegsmüdigkeit, Mindestdauer von Krieg und Frieden).",
-		"defeat: ruin_seconds = so lange bleiben Ruinen eines gefallenen Reichs sichtbar."
+		"defeat: ruin_seconds = so lange bleiben Ruinen eines gefallenen Reichs sichtbar.",
+		"satisfaction (Phase 8): unter build_below Ø-Zufriedenheit baut die KI Taverne bzw. Tempel, unter feast_below feiert sie ein Fest."
 	],
 	"kingdom_names": {"good": "Königreich der %s", "evil": "Dunkles Reich der %s"},
 	"people_personality": {
@@ -51,11 +52,11 @@
 		{"building": "house", "count": 1}, {"building": "lumberyard", "count": 1}, {"building": "hunter", "count": 1},
 		{"building": "farm", "count": 1}, {"building": "quarry", "count": 1}, {"building": "house", "count": 2},
 		{"building": "storehouse", "count": 1}, {"building": "farm", "count": 2}, {"building": "mana_well", "count": 1},
-		{"building": "mine", "count": 1}, {"building": "barracks", "count": 1}, {"building": "house", "count": 4},
+		{"building": "mine", "count": 1}, {"building": "barracks", "count": 1}, {"building": "house", "count": 4}, {"building": "tavern", "count": 1},
 		{"building": "library", "count": 1}, {"building": "farm", "count": 3}, {"building": "infirmary", "count": 1},
 		{"building": "spy_den", "count": 1}, {"building": "hero_hall", "count": 1}, {"building": "house", "count": 6},
 		{"building": "farm", "count": 5}, {"building": "mana_well", "count": 2}, {"building": "barracks", "count": 2},
-		{"building": "library", "count": 2}, {"building": "storehouse", "count": 2}
+		{"building": "library", "count": 2}, {"building": "temple", "count": 1}, {"building": "storehouse", "count": 2}
 	],
 	"build": {"wait_seconds": 90, "max_sites_base": 2, "max_sites_per_builders": 1, "max_sites": 4,
 	          "growth": {"house_per_pop": 4, "farm_per_pop": 9, "storehouse_per_pop": 25, "lumberyard_per_pop": 30, "max_buildings": 90},
@@ -70,10 +71,10 @@
 		"prefer": {
 			"good": ["good_tools", "good_weapons", "good_scouting", "good_healing", "good_manalore", "good_masonry", "good_knights",
 			         "hero_lore", "good_blessing", "good_spy_network", "good_shields", "good_manafocus", "good_farcast", "good_rotation",
-			         "good_veil", "good_spellflow", "good_rain", "good_steadfast", "good_guardians", "good_realm_veil"],
+			         "good_veil", "good_spellflow", "good_rain", "good_steadfast", "good_guardians", "good_realm_veil", "good_festivals"],
 			"evil": ["evil_hardhand", "evil_blades", "evil_informants", "evil_mending", "evil_soulmana", "evil_darkbuild", "evil_dread",
 			         "hero_lore", "evil_curse", "evil_shadow_network", "evil_thorns", "evil_soulfocus", "evil_farcast", "evil_shadowfields",
-			         "evil_cloak", "evil_darkflow", "evil_fog", "evil_frenzy", "evil_brood", "evil_realm_shroud"]},
+			         "evil_cloak", "evil_darkflow", "evil_fog", "evil_frenzy", "evil_brood", "evil_realm_shroud", "evil_iron_rule"]},
 		"tier_penalty": 0.15, "min_minute": 8},
 	"army": {"composition": {"fighter": 4.0, "archer": 3.0, "elite": 2.0, "medic": 1.0, "special": 1.5},
 	         "size_by_minute": [[0, 2], [15, 4], [30, 8], [60, 14], [120, 24], [240, 40], [480, 60]],
@@ -95,5 +96,6 @@
 	"rivalry": {"start_tension": 40, "jitter": 10, "drift_per_hour": 1.5, "border_tiles": 40, "border_per_hour": 0.4, "incident": 4,
 	            "incident_cooldown": 60, "war_at": 70, "peace_at": 25, "war_weariness_per_hour": 0.8, "min_war_seconds": 1800,
 	            "min_peace_seconds": 1200},
-	"defeat": {"ruin_seconds": 1800}
+	"defeat": {"ruin_seconds": 1800},
+	"satisfaction": {"build_below": 45, "feast_below": 35}
 }

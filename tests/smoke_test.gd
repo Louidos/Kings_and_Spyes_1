@@ -12,12 +12,13 @@
 ##
 ## Aufruf (im Projektordner):
 ##   godot --headless res://tests/smoke_test.tscn -- faction=good seconds=120 size=small seed=12345
-##   weitere Argumente: ai=<Anzahl KI-Reiche>, p7=natural, passive=1, difficulty=<id>
+##   weitere Argumente: ai=<Anzahl KI-Reiche>, p7=natural, p8=natural, passive=1, difficulty=<id>, people=<volk>
 extends Node
 
 ## Prüfungen der Phase 6 (Dörfer, Diplomatie, Boten) in eigener Datei
 const SmokePhase6 := preload("res://tests/smoke_phase6.gd")
 const SmokePhase7 := preload("res://tests/smoke_phase7.gd")
+const SmokePhase8 := preload("res://tests/smoke_phase8.gd")
 
 var _args := {}
 var _game: Node = null
@@ -32,6 +33,7 @@ var _hero_errors := 0
 var _test_wolf: Unit = null
 var _p6: RefCounted = null
 var _p7: RefCounted = null
+var _p8: RefCounted = null
 var _passive := false
 
 
@@ -44,7 +46,7 @@ func _ready() -> void:
 	_passive = str(_args.get("passive", "0")) == "1"
 	GameSession.ai_count_override = int(_args.get("ai", "-1"))
 	GameSession.setup_new_game(str(_args.get("faction", "good")), str(_args.get("difficulty", "normal")),
-			str(_args.get("size", "small")), str(_args.get("seed", "12345")))
+			str(_args.get("size", "small")), str(_args.get("seed", "12345")), str(_args.get("people", "")))
 	print("[smoke] Starte Partie: ", GameSession.faction_id, " Seed ", GameSession.seed_text)
 	_started_ms = Time.get_ticks_msec()
 	var scene: PackedScene = load("res://scenes/game.tscn")
@@ -69,6 +71,7 @@ func _process(_delta: float) -> void:
 			else:
 				_p6 = SmokePhase6.new(_game)
 			_p7 = SmokePhase7.new(_game, _args)
+			_p8 = SmokePhase8.new(_game, _args)
 		elif Time.get_ticks_msec() - _started_ms > 120000:
 			push_error("[smoke] Weltgenerierung dauert zu lange")
 			get_tree().quit(2)
@@ -80,6 +83,8 @@ func _process(_delta: float) -> void:
 			_p6.tick(GameClock.game_time)
 		if _p7 != null:
 			_p7.tick(GameClock.game_time)
+		if _p8 != null:
+			_p8.tick(GameClock.game_time)
 		if GameClock.game_time >= _sim_seconds:
 			_phase = 2
 			_report()
@@ -105,6 +110,8 @@ func _report() -> void:
 		_p6.report()
 	if _p7 != null:
 		_p7.report()
+	if _p8 != null:
+		_p8.report()
 
 
 # ---------------------------------------------------------------------------

@@ -46,6 +46,10 @@ const COMMANDS := {
 	"infiltrate": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "schleicht sich ans Ziel"},
 	# Spion am Ziel: bleibt, kämpft nie
 	"spy": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "", "text": "spioniert"},
+	# Überläufer (Phase 8): läuft zum Ziel, kämpft nie, danach Befehl gelöscht (SatisfactionSystem übernimmt)
+	"defect": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "läuft über"},
+	# Flüchtlinge/Wanderer (Phase 8): gehen an den Gebietsrand und warten dort auf Antwort (EventSystem)
+	"seek_refuge": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "bittet um Aufnahme"},
 }
 
 ## Einheiten weiter als so viele Kacheln vom Gruppenmittelpunkt marschieren einzeln
