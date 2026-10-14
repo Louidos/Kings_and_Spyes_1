@@ -8,7 +8,7 @@ extends Node2D
 
 ## Beziehung zweier Reiche geändert ("war", "peace", "alliance")
 signal relation_changed(a: Kingdom, b: Kingdom, state: String)
-## Ein Reich hat verloren (reason z. B. "king")
+## Ein Reich hat verloren (reason z. B. "king", "castle"; Dörfer "annexed", "conquered")
 signal kingdom_defeated(kingdom: Kingdom, reason: String)
 ## Die Formation des Spielers wurde gewechselt
 signal formation_changed(formation: String)
@@ -40,6 +40,9 @@ signal formation_changed(formation: String)
 @onready var village_system: VillageSystem = $Systems/VillageSystem
 @onready var diplomacy_system: DiplomacySystem = $Systems/DiplomacySystem
 @onready var messenger_system: MessengerSystem = $Systems/MessengerSystem
+## Gegnerische Königreiche (KI) sowie Niederlage und Sieg (Phase 7)
+@onready var ai_system: AISystem = $Systems/AISystem
+@onready var victory_system: VictorySystem = $Systems/VictorySystem
 @onready var selection: SelectionController = $Selection
 @onready var hud: CanvasLayer = $HUD
 @onready var pause_menu: CanvasLayer = $PauseMenu
@@ -126,6 +129,10 @@ func _start_game() -> void:
 	village_system.setup(self)
 	diplomacy_system.setup(self)
 	messenger_system.setup(self)
+	# Nach allen Systemen, die die KI-Gehirne aufrufen; das VictorySystem danach
+	# (hört auf kingdom_defeated und building_destroyed)
+	ai_system.setup(self)
+	victory_system.setup(self)
 	placement.setup(self)
 	selection.setup(self)
 	unit_overlay.setup(self)
@@ -133,6 +140,7 @@ func _start_game() -> void:
 	magic_effects.setup(self)
 	spell_targeting.setup(self)
 	kingdom_defeated.connect(_on_kingdom_defeated)
+	victory_system.victory_reached.connect(_on_victory_reached)
 
 	player = create_kingdom({"faction_id": GameSession.faction_id, "controller": "player"})
 	# Getarnte Einheiten aus Sicht des Spielers zeichnen
@@ -143,6 +151,8 @@ func _start_game() -> void:
 	monster_system.setup(self, wild)
 	# Neutrale Dörfer vor den Monsterlagern (das Monster-Reich behält id 2)
 	village_system.found_villages()
+	# Gegnerische Königreiche (ids nach den Dörfern)
+	ai_system.found_ai_kingdoms()
 	monster_system.spawn_camps()
 
 	camera.set_map_rect(world.get_pixel_rect())
@@ -253,11 +263,15 @@ func can_see(observer: Kingdom, obj: Object) -> bool:
 	return true
 
 
-## Ein Reich hat verloren. Für den Spieler: Spielende-Bildschirm.
-func defeat_kingdom(k: Kingdom, reason: String, _by: Kingdom = null) -> void:
+## Ein Reich hat verloren (by = Sieger oder null). Für den Spieler:
+## Spielende-Bildschirm; KI-Reiche zerfallen (VictorySystem).
+func defeat_kingdom(k: Kingdom, reason: String, by: Kingdom = null) -> void:
 	if k == null or k.defeated:
 		return
 	k.defeated = true
+	k.flags["defeat_reason"] = reason
+	k.flags["defeated_by"] = by.id if by != null else 0
+	k.flags["defeated_at"] = GameClock.game_time
 	kingdom_defeated.emit(k, reason)
 
 
@@ -290,20 +304,59 @@ func found_settlement(kingdom: Kingdom, center_cell: Vector2i) -> void:
 			kingdom.king = king
 
 
-## Verliert der Spieler (sein König stirbt), ist das Spiel vorbei.
+## Verliert der Spieler (sein König stirbt oder seine Burg fällt), ist das Spiel vorbei.
 func _on_kingdom_defeated(kingdom: Kingdom, reason: String) -> void:
-	if not kingdom.is_player or _game_over != null:
+	if not kingdom.is_player:
 		return
+	if _game_over != null:
+		# Siegbildschirm offen: durch den Niederlage-Bildschirm ersetzen
+		_game_over.queue_free()
+		_game_over = null
+	_pause_for_screen()
+	_game_over = GameOverScreen.new()
+	add_child(_game_over)
+	var title := "Dein Reich ist untergegangen"
+	match reason:
+		"king":
+			title = "Der König ist gefallen"
+		"castle":
+			title = "Deine Burg ist gefallen"
+	_game_over.open(title, "Das Spiel ist vorbei.\n\n" + victory_system.get_stats_text(kingdom))
+
+
+## Alle feindlichen Königreiche besiegt: Siegbildschirm (pausiert, "Weiterspielen" möglich)
+func _on_victory_reached() -> void:
+	if _game_over != null or player.defeated:
+		return
+	_pause_for_screen()
+	_game_over = GameOverScreen.new()
+	add_child(_game_over)
+	_game_over.continue_pressed.connect(continue_after_victory)
+	_game_over.open_victory("Sieg!", "Alle feindlichen Königreiche sind gefallen.\n\n" + victory_system.get_stats_text(player))
+
+
+## Siegbildschirm schliessen und weiterspielen (Knopf und Rauchtest)
+func continue_after_victory() -> void:
+	if _game_over == null or not _game_over.is_victory():
+		return
+	victory_system.continued = true
+	_game_over.queue_free()
+	_game_over = null
+	camera.input_enabled = true
+	GameClock.set_paused(false)
+
+
+## Ist gerade der Siegbildschirm zu sehen?
+func is_victory_shown() -> bool:
+	return _game_over != null and is_instance_valid(_game_over) and _game_over.is_victory()
+
+
+## Für Sieg- und Niederlagebildschirm: anhalten, Bauen/Auswahl abbrechen, Kamera aus
+func _pause_for_screen() -> void:
 	GameClock.set_paused(true)
 	placement.cancel()
 	selection.clear()
 	camera.input_enabled = false
-	_game_over = GameOverScreen.new()
-	add_child(_game_over)
-	var title := "Der König ist gefallen" if reason == "king" else "Dein Reich ist untergegangen"
-	_game_over.open(title, "Das Spiel ist vorbei.\n\nGespielt: %s\nBeschworene Einheiten: %d\nBesiegte Feinde: %d\nKampfpunkte: %d" % [
-			GameClock.get_time_string(), int(kingdom.stats.get("summoned", 0)), int(kingdom.stats.get("kills", 0)),
-			kingdom.kill_points_total])
 
 
 func _on_territory_changed(kingdom_id: int, bbox: Rect2i, dirty: Rect2i) -> void:

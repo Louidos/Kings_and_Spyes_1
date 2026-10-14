@@ -1,0 +1,315 @@
+## Rauchtest Phase 7 (gestartet von tests/smoke_test.gd): gegnerische Königreiche.
+## Prüft über die öffentlichen Schnittstellen: Gründung (Burg, König, Bewohner, Gebiet,
+## Krieg mit dem Spieler, Schwierigkeit), Wirtschaft der KI (baut, verteilt Berufe,
+## denkt gestaffelt), Debug-Verstärkung mit schnellem Denken (Truppen, Forschung,
+## Helden), eine erzwungene Angriffswelle bis zur Burg des Spielers, Rivalität (mit
+## ai=2), zum Schluss die Niederlage aller KI-Reiche (Ruinen, Gebiet weg) und den
+## Siegbildschirm mit "Weiterspielen". Dazu alle 300 s eine Zeile je KI-Reich.
+##
+## Argumente: p7=natural (keine Debug-Stufen: lange Simulation mit echter KI),
+## ai=<n> (feste Anzahl KI-Reiche, siehe smoke_test.gd).
+## Fehler erscheinen als "ERROR: [smoke] Phase 7 FEHLER: …" (push_error).
+extends RefCounted
+
+## Zeitleiste: alle so viele Spielsekunden eine Zeile je KI-Reich
+const SAMPLE_INTERVAL := 300.0
+
+var _game: Node
+var _natural := false
+var _seconds := 600.0
+var _stage := 0
+var _errors := 0
+var _ai: Array = []
+var _ai0: Kingdom = null
+## Reich-id -> Gebäude beim Start / Burgzelle
+var _start_buildings: Dictionary = {}
+var _castle_cells: Dictionary = {}
+var _attack_seen := false
+var _near_seen := false
+var _rival_test := false
+var _player_alive_1800 := true
+var _next_sample := SAMPLE_INTERVAL
+var _done := false
+
+
+func _init(game: Node, args: Dictionary) -> void:
+	_game = game
+	_natural = str(args.get("p7", "")) == "natural"
+	_seconds = float(args.get("seconds", "600"))
+
+
+## Jeden Frame aufrufen (Spielzeit t)
+func tick(t: float) -> void:
+	if _done:
+		return
+	var g := _game
+	var player: Kingdom = g.player
+	if player.defeated:
+		_check(false, "Der Spieler hat verloren (t = %.0f s, %s)" % [t, str(player.flags.get("defeat_reason", "?"))])
+		_done = true
+		report()
+		g.get_tree().quit(1)
+		return
+	if t >= _next_sample:
+		_next_sample += SAMPLE_INTERVAL
+		_sample(t)
+	if t >= 1800.0 and t < 1810.0:
+		_player_alive_1800 = is_instance_valid(player.castle) and is_instance_valid(player.king)
+	match _stage:
+		0:
+			if t >= 1.0:
+				_stage = 1 if _s0() else 99
+		1:
+			if t >= 90.0:
+				_s1()
+				_stage = 2
+		2:
+			if _natural:
+				_stage = 6
+			elif t >= 100.0:
+				_s2()
+				_stage = 3
+		3:
+			if t >= 220.0:
+				_s3()
+				_stage = 4
+		4:
+			if t >= 320.0:
+				_s4()
+				_stage = 5
+		5:
+			if t >= 520.0 or _attack_seen:
+				if _s5(t):
+					_stage = 6
+		6:
+			if t >= _seconds - 45.0:
+				_s_growth()
+				_stage = 7
+		7:
+			if t >= _seconds - 40.0:
+				_s6()
+				_stage = 8
+		8:
+			if t >= _seconds - 35.0:
+				_s7()
+				_stage = 9
+
+
+func _check(cond: bool, text: String) -> void:
+	if cond:
+		print("[smoke] Phase 7 OK: " + text)
+	else:
+		_errors += 1
+		push_error("[smoke] Phase 7 FEHLER: " + text)
+
+
+# ---------------------------------------------------------------------------
+# Stufen
+# ---------------------------------------------------------------------------
+
+## S0: KI-Reiche gegründet (Burg, König, Bewohner, Krieg, Schwierigkeit, Gebiet, Volk)
+func _s0() -> bool:
+	var g := _game
+	var ai: AISystem = g.ai_system
+	var player: Kingdom = g.player
+	_ai = ai.get_ai_kingdoms()
+	var forced := GameSession.ai_count_override
+	if forced >= 0:
+		_check(_ai.size() == mini(forced, g.world.get_sites("kingdom").size()), "%d KI-Reiche (ai=%d)" % [_ai.size(), forced])
+	else:
+		_check(_ai.size() >= 1, "%d KI-Reich(e) gegründet" % _ai.size())
+	if _ai.is_empty():
+		return false
+	_ai0 = _ai[0]
+	var enemy := AISystem.enemy_faction(player.faction_id)
+	for k in _ai:
+		var castle_ok: bool = is_instance_valid(k.castle) and is_instance_valid(k.king) and k.king.is_alive()
+		var cell: Vector2i = g.world.world_to_cell(k.castle.get_center()) if is_instance_valid(k.castle) else Vector2i(-1, -1)
+		_castle_cells[k.id] = cell
+		_check(castle_ok and k.units.size() >= 5, "%s: Burg, König, %d Einheiten" % [k.display_name, k.units.size()])
+		_check(g.are_hostile(player, k) and k.modifier_sources.has("difficulty"), "%s: Krieg mit dem Spieler, Quelle „Schwierigkeit“" % k.display_name)
+		_check(g.world.get_owner(cell) == k.id, "%s: Gebiet um die Burg" % k.display_name)
+		_check(not k.people_id.is_empty() and k.faction_id == enemy, "%s: Volk %s, Fraktion %s" % [k.display_name, k.people_id, k.faction_id])
+		print("[smoke] KI-Reich %d %s (%s, %s) bei %s" % [k.id, k.display_name, k.people_id,
+				str(k.ai_state.get("personality", "?")), str(cell)])
+		_start_buildings[k.id] = k.buildings.size()
+	_check(DataDB.ai("waves.gather_seconds") == 60.0 and DataDB.describe_effect_source("difficulty") == "Schwierigkeit",
+			"DataDB.ai und Quelle „Schwierigkeit“")
+	return true
+
+
+## S1: die KI baut, verteilt Berufe und denkt
+func _s1() -> void:
+	var g := _game
+	for k in _ai:
+		var working := 0
+		for u in k.units:
+			if u.role == "worker" and u.job_id != "idle":
+				working += 1
+		var sites: int = g.building_system.get_building_sites(k).size()
+		_check(k.buildings.size() > int(_start_buildings.get(k.id, 0)), "%s baut (%d Gebäude, davon %d Baustellen)" % [
+				k.display_name, k.buildings.size(), sites])
+		_check(working >= 3, "%s: %d Bewohner mit Beruf" % [k.display_name, working])
+		_check(int(k.ai_state.get("think_count", 0)) >= 10, "%s denkt (%d Denkvorgänge)" % [k.display_name,
+				int(k.ai_state.get("think_count", 0))])
+
+
+## S2: erstes KI-Reich verstärken, schnelles Denken (keine Zeitsperren)
+func _s2() -> void:
+	var ai: AISystem = _game.ai_system
+	ai.debug_boost(_ai0)
+	ai.debug_fast = true
+	_check(_game.hero_system.get_hall(_ai0) != null or _game.building_system.count_buildings(_ai0, "hero_hall", true) > 0,
+			"%s: Heldenhalle nach der Verstärkung" % _ai0.display_name)
+
+
+## S3: die verstärkte KI hat Truppen beschworen
+func _s3() -> void:
+	var brain: AIBrain = _game.ai_system.get_brain(_ai0)
+	var army := brain.army_units().size() if brain != null else 0
+	_check(army >= 2, "%s hat %d Kampfeinheiten (Soll %d)" % [_ai0.display_name, army,
+			AIMilitary.army_target(brain, GameClock.game_time) if brain != null else 0])
+
+
+## S4: erzwungene Welle gegen den Spieler
+func _s4() -> void:
+	var g := _game
+	var ai: AISystem = g.ai_system
+	var ok := ai.debug_force_attack(_ai0, g.player)
+	var wave: Dictionary = _ai0.ai_state.get("wave", {})
+	_check(ok and str(wave.get("state", "")) in ["gather", "march"] and (wave.get("uids", []) as Array).size() >= 3,
+			"%s: Welle gegen den Spieler (%s, %d Einheiten)" % [_ai0.display_name, str(wave.get("state", "-")),
+			(wave.get("uids", []) as Array).size()])
+	g.combat_system.kingdom_attacked.connect(func(victim: Kingdom, attacker: Kingdom, _pos: Vector2) -> void:
+		if victim == g.player and attacker == _ai0:
+			_attack_seen = true)
+
+
+## S5: die Welle hat den Spieler erreicht; danach zurückrufen (der Test soll nicht
+## am Spielende hängen) und wieder normal denken. Mit zwei KI-Reichen: Rivalen in den Krieg.
+func _s5(t: float) -> bool:
+	var g := _game
+	var ai: AISystem = g.ai_system
+	var player: Kingdom = g.player
+	var wave: Dictionary = _ai0.ai_state.get("wave", {})
+	var brain: AIBrain = ai.get_brain(_ai0)
+	if brain != null and not wave.is_empty() and is_instance_valid(player.castle):
+		for u in brain.units_of(wave.get("uids", [])):
+			if u.position.distance_to(player.castle.get_center()) <= 30.0 * float(g.world.tile_size):
+				_near_seen = true
+	if not _attack_seen and not _near_seen and t < 520.0:
+		return false
+	_check(_attack_seen or _near_seen, "Welle von %s erreicht den Spieler (Angriff gemeldet: %s, nahe der Burg: %s, Zustand %s)" % [
+			_ai0.display_name, str(_attack_seen), str(_near_seen), str(wave.get("state", "beendet"))])
+	ai.debug_recall_wave(_ai0)
+	ai.debug_fast = false
+	if _ai.size() >= 2:
+		ai.debug_set_tension(_ai[0], _ai[1], 95.0)
+		_rival_test = true
+	return true
+
+
+## Vor dem Ende: die KI ist gewachsen (Gebäude, Truppen, Forschung, Beschwörungen);
+## die verstärkte KI hat einen Helden und eine Welle geschickt
+func _s_growth() -> void:
+	var g := _game
+	var long_run := _seconds >= 1500.0
+	for k in _ai:
+		if k.defeated:
+			continue
+		var brain: AIBrain = g.ai_system.get_brain(k)
+		var army := brain.army_units().size() if brain != null else 0
+		var min_buildings := 12 if _natural and _seconds >= 3600.0 else (10 if long_run else int(_start_buildings.get(k.id, 1)) + 3)
+		var min_army := 5 if _natural and _seconds >= 3600.0 else (3 if long_run else 1)
+		var min_research := 3 if _natural and _seconds >= 3600.0 else (2 if long_run else 0)
+		_check(k.buildings.size() >= min_buildings, "%s: %d Gebäude (mindestens %d)" % [k.display_name, k.buildings.size(), min_buildings])
+		_check(army >= min_army, "%s: %d Kampfeinheiten (mindestens %d)" % [k.display_name, army, min_army])
+		_check(k.researched.size() >= min_research, "%s: %d Forschungen (mindestens %d)" % [k.display_name, k.researched.size(), min_research])
+		_check(int(k.stats.get("summoned", 0)) >= mini(min_army, 3), "%s: %d Einheiten beschworen" % [k.display_name,
+				int(k.stats.get("summoned", 0))])
+		if k == _ai0 and not _natural:
+			_check(not k.heroes.is_empty(), "%s: Held angeworben (%d)" % [k.display_name, k.heroes.size()])
+			_check(int(k.ai_state.get("waves_sent", 0)) >= 1, "%s: %d Wellen geschickt" % [k.display_name,
+					int(k.ai_state.get("waves_sent", 0))])
+		if _natural:
+			var first_player := float((k.ai_state.get("log", {}) as Dictionary).get("first_player_wave", -1.0))
+			var limit := float(g.ai_system.get_difficulty().get("first_attack_minutes", 45)) * 60.0
+			_check(first_player < 0.0 or first_player >= limit, "%s: erste Welle gegen den Spieler %s (frühestens %.0f s)" % [
+					k.display_name, "keine" if first_player < 0.0 else "%.0f s" % first_player, limit])
+	if _rival_test and _ai.size() >= 2:
+		_check(g.are_hostile(_ai[0], _ai[1]), "Rivalen %s und %s im Krieg" % [_ai[0].display_name, _ai[1].display_name])
+	if _natural and _seconds >= 1800.0:
+		_check(_player_alive_1800, "Burg und König des Spielers stehen bei t = 1800 s")
+	var stats: Dictionary = g.ai_system.stats
+	var thinks := maxi(int(stats["thinks"]), 1)
+	var avg_ms := float(stats["think_usec_total"]) / thinks / 1000.0
+	var max_ms := float(stats["think_usec_max"]) / 1000.0
+	print("[smoke] KI-Denkzeit: %d Denkvorgänge, Ø %.2f ms, max %.2f ms" % [int(stats["thinks"]), avg_ms, max_ms])
+	_check(avg_ms < 3.0, "KI-Denkzeit im Schnitt unter 3 ms (%.2f ms)" % avg_ms)
+
+
+## S6: alle KI-Reiche besiegen (Burg zerstört, wie eine echte Niederlage)
+func _s6() -> void:
+	for k in _ai:
+		_game.victory_system.debug_defeat(k, "castle")
+
+
+## S7: Zerfall (keine Gebäude/Einheiten, Gebiet weg, Ruinen), Siegbildschirm, Weiterspielen
+func _s7() -> void:
+	var g := _game
+	for k in _ai:
+		var cell: Vector2i = _castle_cells.get(k.id, Vector2i(-1, -1))
+		_check(k.defeated and k.buildings.is_empty() and k.units.is_empty() and g.world.get_owner(cell) != k.id,
+				"%s gefallen: Gebäude %d, Einheiten %d, Gebiet weg" % [k.display_name, k.buildings.size(), k.units.size()])
+	_check(not (g.victory_system.ruins as Array).is_empty(), "Ruinen: %d" % (g.victory_system.ruins as Array).size())
+	_check(g.is_victory_shown(), "Siegbildschirm zu sehen")
+	g.continue_after_victory()
+	_check(not GameClock.paused and not g.is_victory_shown(), "Weiterspielen nach dem Sieg")
+
+
+# ---------------------------------------------------------------------------
+# Bericht
+# ---------------------------------------------------------------------------
+
+## Zeitleiste: je KI-Reich Gebäude, Bewohner, Armee, Wellen, Forschung, Helden
+func _sample(t: float) -> void:
+	var g := _game
+	for k in _ai:
+		if k.defeated:
+			continue
+		var brain: AIBrain = g.ai_system.get_brain(k)
+		var workers := 0
+		for u in k.units:
+			if u.role == "worker":
+				workers += 1
+		var wave: Dictionary = k.ai_state.get("wave", {})
+		print("[smoke] P7 t=%4.0f %s: Gebäude %d, Bewohner %d, Armee %d (Soll %d), Wellen %d (%s), Forschung %d, Helden %d, %s" % [
+				t, k.display_name, k.buildings.size(), workers, brain.army_units().size() if brain != null else 0,
+				AIMilitary.army_target(brain, t) if brain != null else 0, int(k.ai_state.get("waves_sent", 0)),
+				str(wave.get("state", "-")), k.researched.size(), k.heroes.size(), DataDB.cost_to_text(k.resources)])
+	var player: Kingdom = g.player
+	print("[smoke] P7 t=%4.0f Spieler: Gebäude %d, Einheiten %d, König %s, Burg %s" % [t, player.buildings.size(),
+			player.units.size(), "lebt" if is_instance_valid(player.king) else "tot",
+			"steht" if is_instance_valid(player.castle) else "zerstört"])
+
+
+func report() -> void:
+	var g := _game
+	var ai: AISystem = g.ai_system
+	for k in ai.get_ai_kingdoms(true):
+		var log_entry: Dictionary = k.ai_state.get("log", {})
+		var parts: PackedStringArray = []
+		for key in log_entry:
+			var v := float(log_entry[key])
+			parts.append("%s %s" % [str(key).trim_prefix("first_"), "-" if v < 0.0 else "%.0f s" % v])
+		print("[smoke] KI %s (%s): %s | Wellen %d (gegen Spieler %d) | Zeitleiste: %s" % [k.display_name,
+				str(k.ai_state.get("personality", "?")), "gefallen" if k.defeated else "aktiv",
+				int(k.ai_state.get("waves_sent", 0)), int(k.ai_state.get("player_waves", 0)), ", ".join(parts)])
+	for key in ai.rivalry:
+		var pair: Dictionary = ai.rivalry[key]
+		print("[smoke] Rivalität %s: Spannung %.0f, %s" % [str(key), float(pair["tension"]), str(pair["state"])])
+	for f in g.victory_system.fallen:
+		print("[smoke] Gefallen: %s (%s) bei %.0f s" % [str(f["name"]), str(f["reason"]), float(f["at"])])
+	if _stage != 99 and _stage < 9 and GameClock.game_time >= _seconds - 1.0:
+		_check(false, "Phase-7-Test nicht fertig geworden (Stufe %d)" % _stage)
+	print("[smoke] Phase 7: %s" % ("OK" if _errors == 0 else "%d Fehler" % _errors))

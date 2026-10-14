@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3]
+[gd_scene load_steps=30 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/world/world_map.gd" id="2_worldmap"]
@@ -26,6 +26,8 @@
 [ext_resource type="Script" path="res://scripts/diplomacy/village_system.gd" id="p6_villages"]
 [ext_resource type="Script" path="res://scripts/diplomacy/diplomacy_system.gd" id="p6_diplomacy"]
 [ext_resource type="Script" path="res://scripts/diplomacy/messenger_system.gd" id="p6_messengers"]
+[ext_resource type="Script" path="res://scripts/ai/ai_system.gd" id="p7_ai"]
+[ext_resource type="Script" path="res://scripts/kingdoms/victory_system.gd" id="p7_victory"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
@@ -102,6 +104,12 @@ script = ExtResource("p6_diplomacy")
 
 [node name="MessengerSystem" type="Node" parent="Systems"]
 script = ExtResource("p6_messengers")
+
+[node name="AISystem" type="Node" parent="Systems"]
+script = ExtResource("p7_ai")
+
+[node name="VictorySystem" type="Node" parent="Systems"]
+script = ExtResource("p7_victory")
 
 [node name="Selection" type="Node" parent="."]
 script = ExtResource("12_selection")

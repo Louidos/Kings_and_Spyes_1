@@ -9,6 +9,9 @@
 ## Neutrale Dörfer: Haussymbol in der Dorffarbe (nach der Aufnahme in der
 ## Farbe des neuen Besitzers) mit Ring – rot bei Krieg, gold bei Bündnis.
 ## Boten: blinkende Quadrate mit weissem Rand in der Farbe ihres Dorfs.
+## Königreiche (Spieler und KI, ab Phase 7): Burgsymbol (Quadrat mit drei Zinnen) in
+## der Reichsfarbe mit Ring – weiss beim Spieler, rot bei Feinden. Ruinen gefallener
+## Burgen als graues X.
 ##
 ## Leistung: Karte, Gebäude und Einheitenpunkte werden höchstens alle 0.25 s
 ## gezeichnet; die Punkte stehen dann schon fertig umgerechnet in Listen
@@ -29,6 +32,9 @@ const LAIR_COLOR := Color(1.0, 0.55, 0.12)
 const VILLAGE_WAR_COLOR := Color(1.0, 0.25, 0.2)
 const VILLAGE_ALLY_COLOR := Color(1.0, 0.84, 0.3)
 const MESSENGER_OUTLINE := Color(1, 1, 1, 0.95)
+const CASTLE_PLAYER_RING := Color(1, 1, 1, 0.95)
+const CASTLE_ENEMY_RING := Color(1.0, 0.25, 0.2)
+const RUIN_COLOR := Color(0.62, 0.6, 0.56)
 
 var texture: Texture2D
 var world_size := Vector2.ONE
@@ -205,6 +211,44 @@ func _draw_markers(r: Rect2) -> void:
 			draw_rect(rect.grow(1.0), outline, true)
 			draw_rect(rect, fill, true)
 	_draw_villages(r, tile_px)
+	_draw_castles(r, tile_px)
+
+
+## Burgsymbole der Königreiche (Spieler und KI) und Ruinen gefallener Burgen
+func _draw_castles(r: Rect2, tile_px: Vector2) -> void:
+	if _game == null:
+		return
+	var player: Kingdom = _game.player
+	var victory: Variant = _game.get("victory_system")
+	if victory is Object and is_instance_valid(victory):
+		for ruin in (victory as Object).get("ruins"):
+			if not bool(ruin.get("castle", false)):
+				continue
+			var cell: Vector2i = ruin["cell"]
+			var ruin_size: Vector2i = ruin["size"]
+			var rc := (r.position + (Vector2(cell) + Vector2(ruin_size) * 0.5) * tile_px).floor() + Vector2(0.5, 0.5)
+			draw_line(rc + Vector2(-3.5, -3.5), rc + Vector2(3.5, 3.5), OUTLINE_COLOR, 3.5)
+			draw_line(rc + Vector2(-3.5, 3.5), rc + Vector2(3.5, -3.5), OUTLINE_COLOR, 3.5)
+			draw_line(rc + Vector2(-2.5, -2.5), rc + Vector2(2.5, 2.5), RUIN_COLOR, 1.5)
+			draw_line(rc + Vector2(-2.5, 2.5), rc + Vector2(2.5, -2.5), RUIN_COLOR, 1.5)
+	for k in _kingdoms:
+		var kingdom: Kingdom = k
+		if (kingdom.controller != "player" and kingdom.controller != "ai") or not is_instance_valid(kingdom.castle):
+			continue
+		var castle: Building = kingdom.castle
+		var c := (r.position + (Vector2(castle.cell) + Vector2(castle.size) * 0.5) * tile_px).floor() + Vector2(0.5, 0.5)
+		var body := Rect2(c + Vector2(-3.5, -2.5), Vector2(7.0, 6.0))
+		draw_rect(body.grow(1.0), OUTLINE_COLOR, true)
+		# Drei Zinnen (2×2) auf der Oberkante
+		for i in 3:
+			var merlon := Rect2(c + Vector2(-3.5 + i * 2.5, -4.5), Vector2(2.0, 2.0))
+			draw_rect(merlon.grow(1.0), OUTLINE_COLOR, true)
+			draw_rect(merlon, kingdom.color, true)
+		draw_rect(body, kingdom.color, true)
+		if kingdom == player:
+			draw_arc(c + Vector2(0, -0.5), 8.5, 0.0, TAU, 24, CASTLE_PLAYER_RING, 1.5, true)
+		elif _game.are_hostile(player, kingdom):
+			draw_arc(c + Vector2(0, -0.5), 8.5, 0.0, TAU, 24, CASTLE_ENEMY_RING, 1.5, true)
 
 
 ## Haussymbole der Dörfer (Quadrat mit Dach, schwarzer Rand), Ring bei Krieg/Bündnis

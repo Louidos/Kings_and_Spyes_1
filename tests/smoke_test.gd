@@ -6,12 +6,18 @@
 ## Fähigkeit im Zielmodus, "selbst auslösen", Ausbildung, Heldenleiste, Tod und
 ## Wiederbelebung über die Burg im Auswahlfenster, Lage der Leisten.
 ##
+## Phase 6 und 7 prüfen eigene Dateien (smoke_phase6.gd, smoke_phase7.gd).
+## passive=1: der Spieler tut nichts (kein Helden- und Phase-6-Test) – für lange Läufe,
+## in denen nur die KI spielt.
+##
 ## Aufruf (im Projektordner):
 ##   godot --headless res://tests/smoke_test.tscn -- faction=good seconds=120 size=small seed=12345
+##   weitere Argumente: ai=<Anzahl KI-Reiche>, p7=natural, passive=1, difficulty=<id>
 extends Node
 
 ## Prüfungen der Phase 6 (Dörfer, Diplomatie, Boten) in eigener Datei
 const SmokePhase6 := preload("res://tests/smoke_phase6.gd")
+const SmokePhase7 := preload("res://tests/smoke_phase7.gd")
 
 var _args := {}
 var _game: Node = null
@@ -25,6 +31,8 @@ var _hero_id := 0
 var _hero_errors := 0
 var _test_wolf: Unit = null
 var _p6: RefCounted = null
+var _p7: RefCounted = null
+var _passive := false
 
 
 func _ready() -> void:
@@ -33,6 +41,8 @@ func _ready() -> void:
 		if parts.size() == 2:
 			_args[parts[0]] = parts[1]
 	_sim_seconds = float(_args.get("seconds", "120"))
+	_passive = str(_args.get("passive", "0")) == "1"
+	GameSession.ai_count_override = int(_args.get("ai", "-1"))
 	GameSession.setup_new_game(str(_args.get("faction", "good")), str(_args.get("difficulty", "normal")),
 			str(_args.get("size", "small")), str(_args.get("seed", "12345")))
 	print("[smoke] Starte Partie: ", GameSession.faction_id, " Seed ", GameSession.seed_text)
@@ -54,7 +64,11 @@ func _process(_delta: float) -> void:
 			Engine.physics_ticks_per_second = 60
 			if _game.has_method("smoke_test_setup"):
 				_game.smoke_test_setup()
-			_p6 = SmokePhase6.new(_game)
+			if _passive:
+				_hero_step = -1
+			else:
+				_p6 = SmokePhase6.new(_game)
+			_p7 = SmokePhase7.new(_game, _args)
 		elif Time.get_ticks_msec() - _started_ms > 120000:
 			push_error("[smoke] Weltgenerierung dauert zu lange")
 			get_tree().quit(2)
@@ -64,6 +78,8 @@ func _process(_delta: float) -> void:
 		if _p6 != null:
 			_p6.set("ui_ready", _hero_step < 0)
 			_p6.tick(GameClock.game_time)
+		if _p7 != null:
+			_p7.tick(GameClock.game_time)
 		if GameClock.game_time >= _sim_seconds:
 			_phase = 2
 			_report()
@@ -81,11 +97,14 @@ func _report() -> void:
 				str(k.defeated), ", ".join(res)])
 	if _hero_step >= 0:
 		_hero_fail("Heldentest nicht fertig geworden (Schritt %d)" % _hero_step)
-	print("[smoke] Heldentest: %s" % ("OK" if _hero_errors == 0 else "%d Fehler" % _hero_errors))
+	if not _passive:
+		print("[smoke] Heldentest: %s" % ("OK" if _hero_errors == 0 else "%d Fehler" % _hero_errors))
 	if _game.has_method("smoke_test_report"):
 		_game.smoke_test_report()
 	if _p6 != null:
 		_p6.report()
+	if _p7 != null:
+		_p7.report()
 
 
 # ---------------------------------------------------------------------------
