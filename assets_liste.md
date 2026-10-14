@@ -303,7 +303,7 @@ das Fenster kommt zurzeit ohne sie aus (Text, Volksfarbe, Ruf-Balken):
 | `icon_reputation.png` | Herz mit Stern |
 
 Haussymbol der Dörfer und Ringe (rot = Krieg, gold = Bündnis) auf der Minikarte, Gebietsgrenzen in der
-Volksfarbe und Ruf-Balken zeichnet das Spiel selbst. `trader.png` (Händler/Karawane) folgt in Phase 9.
+Volksfarbe und Ruf-Balken zeichnet das Spiel selbst. Händler/Karawane: siehe Phase 9 (`caravan_*.png`).
 
 ## 🕓 Phase 7 – Gegner und Spionage
 
@@ -315,8 +315,20 @@ Weitere Monster: `monster_wyvern.png` (Wolf, Spinne und Golem: siehe Phase 3)
 Weitere: `refugee.png` (Flüchtling), Ereignis-Icons `event_drought.png`, `event_plague.png`,
 `event_magic_storm.png`, `event_monster_wave.png`, `event_refugees.png`
 
-## 🕓 Phase 9 – Belagerung
+## ✅ Phase 9 – Belagerung und Handel
 
-`wall.png`, `tower_good.png` / `tower_evil.png`, `gate_good.png` / `gate_evil.png`,
-`siege_ram.png`, `siege_catapult.png`
-Handelswege: `trader.png` (Händler/Karawane)
+Ordner `assets/sprites/` (Unterordner wie angegeben). Fehlt eine Datei, zeichnet das Spiel einen Platzhalter:
+Mauern als verbundene Steinpfeiler, Tore als Holztür (verriegelt mit rotem Riegel), Türme, Werkstatt und
+Einheiten als farbige Formen mit Buchstaben, Steine als graue Kreise. Handelswege (gestrichelte Linien,
+rotes ✕) und Karawanen auf der Minikarte (Goldquadrate) zeichnet das Spiel selbst.
+
+| Datei(en) | Motiv | Grösse |
+|---|---|---|
+| `buildings/wall_good.png` / `wall_evil.png` | Mauerstück von oben (hell behauener Stein / schwarzer Stein mit Dornen), waagrecht, an den Seiten nahtlos | 64 × 64 |
+| `buildings/gate_good.png` / `gate_evil.png` | Tor im Mauerstück (Holz mit Eisenbändern / dunkles Eisengitter) | 64 × 64 |
+| `buildings/tower_good.png` / `tower_evil.png` | runder Wachturm mit Zinnen und Feuerkorb / Dornenturm mit violettem Feuer | 128 × 128 |
+| `buildings/siege_workshop_good.png` / `siege_workshop_evil.png` | Werkstatt mit Kran und Holzgerüst / Kriegsschmiede mit Ketten und Glut | 128 × 128 |
+| `units/ram_good.png` / `ram_evil.png` | Rammbock unter Holzdach / Sturmbock mit Dornenschild | 64 × 64 |
+| `units/catapult_good.png` / `catapult_evil.png` | Holzkatapult / Schädelschleuder | 64 × 64 |
+| `units/caravan_good.png` / `caravan_evil.png` | Ochsenkarren mit Kisten, helle Plane / dunkle Plane | 64 × 64 |
+| `effects/stone.png` | Felsbrocken (Geschoss) | 64 × 64 (wird klein gezeichnet) |

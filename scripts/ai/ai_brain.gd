@@ -8,6 +8,7 @@
 ##   AIEconomy  – Bauen, Bauplatz, Berufe, Forschung, Kampfpunkte
 ##   AIMilitary – Beschwören, Helden, Zauber, Verteidigung, Wellen, Lager, Rückzug
 ##   AIDiplomacy – Dörfer, Späher, Spione, Reichstarnung
+##   AISiege    – Türme, Mauerring, Belagerungswaffen, Handelswege (Phase 9)
 ## Alle Aktionen laufen über dieselben öffentlichen Schnittstellen wie beim Spieler.
 ##
 ## Zustand: nur in Kingdom.ai_state (einfache Werte, wird gespeichert; Schlüssel
@@ -61,6 +62,7 @@ func _init(p_sys: AISystem, p_kingdom: Kingdom) -> void:
 ## "waves_sent", "player_waves", "last_wave_end" (-1 = noch keine), "wave_counter",
 ## "scouts" {uid: "patrol"|"explore"}, "next_patrol", "village_next", "gift_value_hour", "spy_next",
 ## "upgrade_flip", "debug_army_min", "hero_saving" (Heldentyp, auf den gespart wird, "" = keiner),
+## "siege" (Phase 9, siehe AISiege.default_state),
 ## "log" {"first_building", "first_barracks", "first_summon", "first_research", "first_spy",
 ##   "first_spy_player", "first_rumour_player", "first_discovered_player", "first_wave",
 ##   "first_player_wave", "first_lair", "first_hero", "first_cloak"} (-1 = noch nicht; Rauchtest, README)
@@ -74,6 +76,7 @@ static func default_state(personality_id: String) -> Dictionary:
 		"scouts": {}, "next_patrol": -1.0, "village_next": -1.0,
 		"gift_value_hour": {"hour": -1, "value": 0.0}, "spy_next": -1.0,
 		"upgrade_flip": false, "debug_army_min": 0, "hero_saving": "",
+		"siege": AISiege.default_state(),
 		"log": {"first_building": -1.0, "first_barracks": -1.0, "first_summon": -1.0, "first_research": -1.0,
 				"first_spy": -1.0, "first_spy_player": -1.0, "first_rumour_player": -1.0, "first_discovered_player": -1.0,
 				"first_wave": -1.0, "first_player_wave": -1.0, "first_lair": -1.0, "first_hero": -1.0, "first_cloak": -1.0},
@@ -90,6 +93,7 @@ func ensure_state() -> void:
 	for key in defaults["log"]:
 		if not log_entry.has(key):
 			log_entry[key] = -1.0
+	AISiege.ensure_state(k.ai_state)
 
 
 ## Kann das Reich noch handeln? (nicht besiegt, Burg steht)
@@ -112,6 +116,10 @@ func think(now: float) -> void:
 	var t0 := Time.get_ticks_usec()
 	AIEconomy.tick_build(self, now)
 	t0 = _measure("build", t0)
+	# Befestigen (Phase 9) jeden zweiten Denkvorgang
+	if n % 2 == 1:
+		AISiege.tick_fortify(self, now)
+		t0 = _measure("fortify", t0)
 	# Berufe jeden zweiten Denkvorgang, bei Unbeschäftigten sofort
 	if n % 2 == 0 or (game.work_system as WorkSystem).get_idle_count(k) > 0:
 		AIEconomy.tick_jobs(self)
@@ -133,6 +141,7 @@ func think(now: float) -> void:
 	if now >= float(st["village_next"]):
 		st["village_next"] = now + float(DataDB.ai("villages.interval", 60))
 		AIDiplomacy.tick_villages(self, now)
+		AISiege.tick_routes(self, now)
 	t0 = _measure("diplomacy", t0)
 	if (st["wave"] as Dictionary).is_empty() and (st["alarm"] as Dictionary).is_empty():
 		AIMilitary.plan_wave(self, now)
@@ -181,6 +190,7 @@ func on_alarm(pos: Vector2, attacker_id: int) -> void:
 	if not is_active() or not is_near_home(pos, float(DataDB.ai("defense.defense_radius", 12))):
 		return
 	var now := GameClock.game_time
+	AISiege.on_alarm(self, now)
 	var alarm: Dictionary = st["alarm"]
 	if alarm.is_empty():
 		st["alarm"] = {"pos": pos, "attacker_id": attacker_id, "until": now + float(DataDB.ai("defense.alarm_seconds", 30)),

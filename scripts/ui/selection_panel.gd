@@ -120,6 +120,9 @@ var _village_row: HBoxContainer
 var _diplo_button: Button
 ## Dorf des angezeigten Objekts (für den Knopf; 0 = keins)
 var _village_id := 0
+## Eigenes Tor: Knopf "Verriegeln"/"Öffnen" (Phase 9)
+var _gate_row: HBoxContainer
+var _gate_button: Button
 
 var _demolish_button: Button
 ## Restzeit der Abriss-Bestätigung (Echtzeit, 0 = keine Bestätigung offen)
@@ -222,6 +225,17 @@ func _ready() -> void:
 	_diplo_button.tooltip_text = "Diplomatiefenster bei diesem Dorf öffnen: Geschenke, Handel, Verträge, Aufnahme"
 	_diplo_button.pressed.connect(_on_diplo_pressed)
 	_village_row.add_child(_diplo_button)
+
+	_gate_row = HBoxContainer.new()
+	_gate_row.visible = false
+	vbox.add_child(_gate_row)
+	_gate_button = Button.new()
+	_gate_button.focus_mode = Control.FOCUS_NONE
+	_gate_button.add_theme_font_size_override("font_size", FONT_SIZE)
+	_gate_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_gate_button.tooltip_text = "Verriegelt: nur eigene und verbündete Einheiten. Feinde kommen nie hindurch."
+	_gate_button.pressed.connect(_on_gate_pressed)
+	_gate_row.add_child(_gate_button)
 
 	_build_actions(vbox)
 
@@ -346,6 +360,7 @@ func _refresh() -> void:
 	# Zuerst prüfen, ob das Objekt noch existiert – erst dann den Typ
 	if not is_instance_valid(_target) or not _target.is_alive():
 		_target = null
+	_gate_row.visible = false
 	# Mehrfachauswahl nur prüfen, wenn mehr als ein Objekt gewählt ist
 	var sel: Array = game.selection.selected
 	var own_units: Array = _own_units(sel) if sel.size() > 1 else []
@@ -388,9 +403,10 @@ func _show_building(b: Building) -> void:
 	_job_row.visible = false
 	_actions.visible = false
 
-	# Leben: fremde Gebäude, beschädigte und solche, die Einheiten beschwören
+	# Leben: fremde Gebäude, beschädigte und solche, die Einheiten beschwören (Befestigungen immer)
 	var summons: Array = b.get_summon_tiers()
-	_hp_bar.visible = b.constructed and (not own or b.hp < b.max_hp or not summons.is_empty() or b == k.castle)
+	_hp_bar.visible = b.constructed and (not own or b.hp < b.max_hp or not summons.is_empty() or b == k.castle
+			or b.fort_kind != "")
 	if _hp_bar.visible:
 		_hp_bar.set_value(b.hp, b.max_hp)
 
@@ -408,6 +424,12 @@ func _show_building(b: Building) -> void:
 		_set_text(_facts, _lair_text(b))
 	elif vs.is_village(b.kingdom):
 		_set_text(_facts, vs.get_summary_text(b.kingdom, k))
+	elif b.fort_kind != "":
+		_set_text(_facts, game.siege_system.get_building_facts(b))
+		# Eigenes Tor: verriegeln oder öffnen
+		if own and b.fort_kind == "gate":
+			_gate_row.visible = true
+			_set_button_text(_gate_button, "Öffnen" if game.siege_system.is_gate_locked(b) else "Verriegeln")
 	else:
 		var facts := _building_facts(b)
 		var annexed := vs.get_annexed_text(b) if own else ""
@@ -550,6 +572,14 @@ func _on_worker_minus() -> void:
 	if b != null:
 		game.work_system.remove_worker_from_building(b)
 	_refresh()
+
+
+## Tor verriegeln bzw. öffnen
+func _on_gate_pressed() -> void:
+	var b: Variant = _target
+	if b is Building and is_instance_valid(b) and (b as Building).kingdom == game.player:
+		game.siege_system.set_gate_locked(b, not game.siege_system.is_gate_locked(b))
+		_dirty = true
 
 
 func _on_demolish_pressed() -> void:
@@ -853,7 +883,8 @@ func _show_unit(u: Unit) -> void:
 	_hp_bar.set_value(u.hp, u.max_hp)
 	_fill_stats(u)
 	_set_text(_warn, "")
-	_set_text(_facts, _village_unit_text(u))
+	var caravan: bool = game.trade_route_system.is_caravan(u)
+	_set_text(_facts, game.trade_route_system.get_caravan_text(u) if caravan else _village_unit_text(u))
 	_show_village_row(u.kingdom if game.village_system.is_village(u.kingdom) else null)
 	_summon_box.visible = false
 	_worker_row.visible = false
@@ -878,8 +909,9 @@ func _show_unit(u: Unit) -> void:
 	if _job_row.visible:
 		_update_job_options(u)
 
-	_actions.visible = own
-	if not own:
+	_actions.visible = own and not caravan
+	if not own or caravan:
+		_job_row.visible = false
 		return
 	_halt_button.visible = true
 	_halt_button.tooltip_text = "Stehen bleiben und den Platz verteidigen"
@@ -930,7 +962,13 @@ func _show_units(units: Array) -> void:
 	_stats_grid.visible = false
 	_set_text(_status, "")
 	_set_text(_warn, "")
-	_set_text(_facts, _multi_counts)
+	var unsupplied := 0
+	for o in units:
+		for e in (o as Unit).effects:
+			if str(e.get("id", "")) == SupplySystem.EFFECT_ID:
+				unsupplied += 1
+				break
+	_set_text(_facts, _multi_counts if unsupplied == 0 else _multi_counts + "\n%d ohne Versorgung (keine Erholung)" % unsupplied)
 	_set_text(_bonus, "")
 	_set_text(_note, MULTI_HINT)
 	_magic_box.visible = false

@@ -80,6 +80,15 @@ var heal := 0.0
 var heal_range := 0.0
 ## Faktor gegen Gebäude
 var building_damage := 1.0
+## Faktor gegen Einheiten (Belagerungswaffen schwach, Phase 9)
+var unit_damage := 1.0
+## Zielwahl: "" (normal), "buildings" (nur Gebäude, Rammbock), "buildings_first" (Katapult)
+var target_mode := ""
+## Flächenschaden: Radius (Felder) und Anteil des Schadens
+var splash_radius := 0.0
+var splash_factor := 0.0
+## Mechanisch (Belagerungswaffen): wird nicht geheilt
+var mechanical := false
 ## Anteil des ausgeteilten Schadens, der die Einheit heilt (Helden, Wirkungen)
 var lifesteal := 0.0
 ## Faktor auf erlittenen Schaden (ausserhalb der Rüstungsgrenze, z. B. Schutzschild)
@@ -120,6 +129,14 @@ var regroup_pending := false
 var stealthed := false
 ## Beschworene Zaubereinheit: verschwindet zu dieser Spielzeit (-1 = nie)
 var expires_at := -1.0
+## Ursprüngliches Angriffsziel während einer Bresche (uid, 0 = keins)
+var resume_target_uid := 0
+## Laufzeit (nicht speichern): Grund des letzten gescheiterten Weges ("" | "blocked" |
+## "pocket" | "nopath" | "gate"), Ring und Kachel dazu; Zahl der Breschen-Versuche
+var path_fail := ""
+var path_fail_region := 0
+var path_fail_cell := Vector2i(-1, -1)
+var breach_tries := 0
 ## Held: id des Heldeneintrags im Reich (Kingdom.heroes), 0 = kein Held
 var hero_id := 0
 ## Held: Zuschläge je Wert aus Stufe, Talenten und passiven Fähigkeiten:
@@ -189,6 +206,10 @@ func setup(p_type_def: Dictionary, p_kingdom: Kingdom, p_uid: int) -> void:
 	joins_fights = bool(type_def.get("joins_fights", false))
 	target_priority = float(type_def.get("target_priority", 1.0))
 	formation_rank = int(type_def.get("formation_rank", 0))
+	target_mode = str(type_def.get("targets", ""))
+	splash_radius = float(type_def.get("splash_radius", 0.0))
+	splash_factor = float(type_def.get("splash_factor", 0.0))
+	mechanical = bool(type_def.get("mechanical", false))
 	refresh_look()
 	refresh_stats()
 	hp = max_hp
@@ -223,6 +244,7 @@ func refresh_stats() -> void:
 	heal = _stat("heal")
 	heal_range = _stat("heal_range")
 	building_damage = _stat("building_damage")
+	unit_damage = _stat_from(float(type_def.get("unit_damage", 1.0)), "unit_damage")
 	lifesteal = maxf(_stat("lifesteal"), 0.0)
 	damage_taken = maxf(_stat_from(1.0, "damage_taken"), 0.05)
 	hp = clampf(ratio, 0.0, 1.0) * max_hp

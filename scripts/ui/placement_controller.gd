@@ -4,11 +4,14 @@
 ## - Gebäude: Vorschau folgt der Maus (grün = möglich, rot = nicht möglich,
 ##   mit Grund). Linksklick baut; mit gedrückter Umschalttaste bleibt der
 ##   Baumodus aktiv. Für Annahmestellen wird der Sammelbereich angezeigt.
-## - Linien (Strassen, ab Phase 9 Mauern; placement = "line" in den Daten):
+## - Linien (Strassen und Mauern; placement = "line" in den Daten):
 ##   Maustaste gedrückt halten und ziehen (erst waagrecht, dann senkrecht).
-##   Der Modus bleibt aktiv, bis Rechtsklick oder Esc.
-## - Abreissen: Strassen anklicken oder überziehen entfernt sie; ein Klick auf
-##   ein Gebäude wählt es aus (Abreissen dann im Auswahlfenster).
+##   Der Modus bleibt aktiv, bis Rechtsklick oder Esc. Mauern über eigenen Strassen
+##   werden zu Toren (line_gate); höchstens segments.line_max Stücke je Zug.
+## - Türme zeigen ihre Reichweite, Tore ob sie ein Mauerstück ersetzen.
+## - Abreissen: Strassen, eigene Mauerstücke und Tore anklicken oder überziehen
+##   entfernt sie; ein Klick auf ein anderes Gebäude wählt es aus (Abreissen dann
+##   im Auswahlfenster).
 class_name PlacementController
 extends Node2D
 
@@ -17,6 +20,7 @@ signal placement_ended
 
 const MODE_NONE := ""
 const MODE_BUILD := "build"
+## Linie: Strassen und Mauern
 const MODE_ROAD := "road"
 const MODE_DEMOLISH := "demolish"
 
@@ -109,7 +113,7 @@ func _unhandled_input(event: InputEvent) -> void:
 						_dragging = true
 						_drag_start = _mouse_cell
 						var b: Object = world.get_building_at(_mouse_cell)
-						if mode == MODE_DEMOLISH and b != null:
+						if mode == MODE_DEMOLISH and b != null and not _is_own_segment(b):
 							_dragging = false
 							if b.kingdom == game.player:
 								game.selection.select([b])
@@ -134,6 +138,17 @@ func _try_place_building(keep_mode: bool) -> void:
 
 func _finish_drag() -> void:
 	var cells := _drag_path(_drag_start, _mouse_cell)
+	if mode == MODE_ROAD and not bool(def.get("is_road", false)):
+		# Mauern (Phase 9): Baustellen, über eigenen Strassen Tore
+		var res: Dictionary = game.building_system.place_line(def, cells, game.player)
+		if int(res["placed"]) == 0:
+			if not str(res["reason"]).is_empty():
+				Notify.warning(str(res["reason"]))
+		else:
+			Notify.info("%d Mauerstücke, %d Tore gesetzt" % [int(res["placed"]) - int(res["gates"]), int(res["gates"])])
+			if game.work_system.get_job_count(game.player, "builder") == 0:
+				Notify.warning("Keine Bauarbeiter – weise in der Arbeitsverteilung (J) Bauarbeiter zu.")
+		return
 	if mode == MODE_ROAD:
 		var placed: int = game.building_system.place_roads(cells, game.player)
 		if placed == 0:
@@ -147,8 +162,16 @@ func _finish_drag() -> void:
 			Notify.warning("Keine Bauarbeiter – weise in der Arbeitsverteilung (J) Bauarbeiter zu.")
 	elif mode == MODE_DEMOLISH:
 		for c in cells:
+			var b: Object = world.get_building_at(c)
+			if b != null and _is_own_segment(b):
+				game.building_system.cancel_or_demolish(b)
 			if world.roads.has(c):
 				game.building_system.remove_road(c, game.player)
+
+
+## Eigenes Mauerstück oder Tor (wird beim Abreissen per Ziehen entfernt)
+func _is_own_segment(b: Object) -> bool:
+	return b is Building and is_instance_valid(b) and (b as Building).is_segment and (b as Building).kingdom == game.player
 
 
 ## Kacheln eines Ziehvorgangs: erst waagrecht, dann senkrecht
@@ -183,7 +206,10 @@ func _draw() -> void:
 		MODE_BUILD:
 			_draw_building_preview(ts, font_size)
 		MODE_ROAD:
-			_draw_road_preview(ts, font_size)
+			if bool(def.get("is_road", false)):
+				_draw_road_preview(ts, font_size)
+			else:
+				_draw_line_preview(ts, font_size)
 		MODE_DEMOLISH:
 			_draw_demolish_preview(ts, font_size)
 
@@ -194,6 +220,12 @@ func _draw_building_preview(ts: float, font_size: int) -> void:
 	var ok := _reason.is_empty()
 	var color := Color(0.3, 1.0, 0.4) if ok else Color(1.0, 0.3, 0.25)
 	# Sammelbereich von Annahmestellen anzeigen
+	# Turm: Reichweite (mit Zuschlag tower_range)
+	var tw: Dictionary = def.get("tower", {})
+	if not tw.is_empty():
+		var range_px: float = (float(tw.get("range", 0.0)) + game.player.bonus("tower_range")) * ts
+		draw_circle(rect.get_center(), range_px, Color(1, 1, 1, 0.06))
+		draw_arc(rect.get_center(), range_px, 0.0, TAU, 64, Color(1, 1, 1, 0.9), 2.0, true)
 	var gather := int(def.get("gather_radius", 0))
 	if gather > 0:
 		var center_cell := _top_left + Vector2i(size.x >> 1, size.y >> 1)
@@ -210,6 +242,13 @@ func _draw_building_preview(ts: float, font_size: int) -> void:
 		var eff := _preview_efficiency(size)
 		if eff >= 0.0:
 			lines.append("Ertrag: %d %%" % roundi(eff * 100.0))
+		if not tw.is_empty():
+			lines.append("Reichweite %s Felder" % String.num(float(tw.get("range", 0.0)) + game.player.bonus("tower_range"), 1).replace(".", ","))
+		var occ: Object = world.get_building_at(_top_left)
+		if occ != null and (def.get("replaces", []) as Array).has(str((occ as Building).def.get("id", ""))):
+			lines.append("Ersetzt ein Mauerstück")
+		elif world.roads.has(_top_left) and bool(def.get("allow_on_road", false)):
+			lines.append("Steht auf der Strasse")
 	else:
 		lines.append(_reason)
 	_draw_text_block(lines, rect.get_center() + Vector2(0, rect.size.y * 0.5 + font_size * 0.9), font_size, color)
@@ -240,9 +279,57 @@ func _draw_road_preview(ts: float, font_size: int) -> void:
 	_draw_text_block(lines, anchor, font_size, Color.WHITE if missing.is_empty() else Color(1.0, 0.5, 0.4))
 
 
+## Mauern ziehen: je Kachel gültig (grün), ungültig (rot), Tor über eigener Strasse
+## (braun mit "Tor"), Summen inklusive Toren, höchstens line_max Kacheln (Rest rot)
+func _draw_line_preview(ts: float, font_size: int) -> void:
+	var cells := _drag_path(_drag_start, _mouse_cell) if _dragging else [_mouse_cell]
+	var bs: BuildingSystem = game.building_system
+	var line_max := int(DataDB.siege("segments.line_max", 80))
+	var walls := 0
+	var gates := 0
+	var total := {}
+	var font := ThemeDB.fallback_font
+	for i in cells.size():
+		var c: Vector2i = cells[i]
+		var rect := Rect2(Vector2(c) * ts, Vector2(ts, ts))
+		var ok: bool = i < line_max and bs.can_place_line_cell(def, c, game.player).is_empty()
+		var d: Dictionary = bs.line_def_at(def, c, game.player)
+		var is_gate := d != def
+		var color := Color(1.0, 0.3, 0.25)
+		if ok:
+			color = Color(0.72, 0.48, 0.24) if is_gate else Color(0.3, 1.0, 0.4)
+			if is_gate:
+				gates += 1
+			else:
+				walls += 1
+			var cost: Dictionary = d.get("cost", {})
+			for res_id in cost:
+				total[res_id] = float(total.get(res_id, 0.0)) + float(cost[res_id])
+		draw_rect(rect, Color(color, 0.3), true)
+		draw_rect(rect, color, false, 2.0)
+		if ok and is_gate:
+			draw_string(font, rect.position + Vector2(4, ts * 0.6), "Tor", HORIZONTAL_ALIGNMENT_LEFT, -1, clampi(int(ts * 0.3), 10, 40), Color.WHITE)
+	var lines: PackedStringArray = ["%d Mauerstücke, %d Tore – %s" % [walls, gates, DataDB.cost_to_text(total)]]
+	var missing: String = game.player.missing_text(total)
+	if not missing.is_empty():
+		lines.append(missing)
+	if cells.size() > line_max:
+		lines.append("Höchstens %d Stücke je Zug" % line_max)
+	lines.append("Über Strassen entstehen Tore")
+	if not _dragging:
+		lines.append("Maustaste halten und ziehen")
+	var anchor := world.cell_to_world(_mouse_cell) + Vector2(0, ts * 0.9)
+	_draw_text_block(lines, anchor, font_size, Color.WHITE if missing.is_empty() else Color(1.0, 0.5, 0.4))
+
+
 func _draw_demolish_preview(ts: float, font_size: int) -> void:
 	var cells := _drag_path(_drag_start, _mouse_cell) if _dragging else [_mouse_cell]
 	for c in cells:
+		var seg: Object = world.get_building_at(c)
+		if seg != null and _is_own_segment(seg):
+			var srect := Rect2(Vector2(c) * ts, Vector2(ts, ts))
+			draw_rect(srect, Color(1, 0.6, 0.2, 0.35), true)
+			draw_rect(srect, Color(1, 0.6, 0.2), false, 2.0)
 		if world.roads.has(c):
 			var rect := Rect2(Vector2(c) * ts, Vector2(ts, ts))
 			draw_rect(rect, Color(1, 0.2, 0.2, 0.35), true)
@@ -251,7 +338,7 @@ func _draw_demolish_preview(ts: float, font_size: int) -> void:
 	if b != null:
 		var fp := b.get_footprint()
 		draw_rect(Rect2(Vector2(fp.position) * ts, Vector2(fp.size) * ts), Color(1, 0.6, 0.2), false, 3.0)
-	_draw_text_block(["Abreissen: Strassen anklicken oder überziehen, Gebäude anklicken"],
+	_draw_text_block(["Abreissen: Strassen und Mauern anklicken oder überziehen, Gebäude anklicken"],
 			world.cell_to_world(_mouse_cell) + Vector2(0, ts * 0.9), font_size, Color(1, 0.75, 0.6))
 
 

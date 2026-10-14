@@ -1,4 +1,4 @@
-[gd_scene load_steps=32 format=3]
+[gd_scene load_steps=36 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/world/world_map.gd" id="2_worldmap"]
@@ -30,6 +30,10 @@
 [ext_resource type="Script" path="res://scripts/espionage/spy_system.gd" id="p7_spies"]
 [ext_resource type="Script" path="res://scripts/ai/ai_system.gd" id="p7_ai"]
 [ext_resource type="Script" path="res://scripts/kingdoms/victory_system.gd" id="p7_victory"]
+[ext_resource type="Script" path="res://scripts/units/siege_system.gd" id="p9_siege"]
+[ext_resource type="Script" path="res://scripts/economy/trade_route_system.gd" id="p9_trade"]
+[ext_resource type="Script" path="res://scripts/economy/supply_system.gd" id="p9_supply"]
+[ext_resource type="Script" path="res://scripts/view/trade_route_view.gd" id="p9_route_view"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
@@ -51,6 +55,10 @@ script = ExtResource("17_overlay")
 [node name="MagicEffects" type="Node2D" parent="."]
 z_index = 4
 script = ExtResource("21_magicfx")
+
+[node name="TradeRoutes" type="Node2D" parent="."]
+z_index = 3
+script = ExtResource("p9_route_view")
 
 [node name="CombatEffects" type="Node2D" parent="."]
 z_index = 25
@@ -118,6 +126,15 @@ script = ExtResource("p7_ai")
 
 [node name="VictorySystem" type="Node" parent="Systems"]
 script = ExtResource("p7_victory")
+
+[node name="SiegeSystem" type="Node" parent="Systems"]
+script = ExtResource("p9_siege")
+
+[node name="TradeRouteSystem" type="Node" parent="Systems"]
+script = ExtResource("p9_trade")
+
+[node name="SupplySystem" type="Node" parent="Systems"]
+script = ExtResource("p9_supply")
 
 [node name="Selection" type="Node" parent="."]
 script = ExtResource("12_selection")

@@ -179,6 +179,13 @@ func open_diplomacy(village_id: int = 0) -> void:
 		diplomacy_panel.open(village_id)
 
 
+## Handelswege (Diplomatiefenster, Reiter "Handelswege")
+func open_trade() -> void:
+	if diplomacy_panel != null:
+		diplomacy_panel.open()
+		diplomacy_panel.show_tab(DiplomacyPanel.TAB_TRADE)
+
+
 func is_diplomacy_open() -> bool:
 	return diplomacy_panel != null and diplomacy_panel.is_open()
 
@@ -193,6 +200,9 @@ func open_link(link: Dictionary) -> void:
 			open_research()
 		"diplomacy":
 			open_diplomacy(int(link.get("village_id", 0)))
+		"kingdom", "trade":
+			# Phase 9: Handelswege (bis zum Reichsfenster aus Phase 8 im Diplomatiefenster)
+			open_trade()
 
 
 ## Esc schliesst das Diplomatie-, Helden- bzw. Forschungsfenster auch, wenn gerade ein
@@ -248,7 +258,7 @@ func _process(delta: float) -> void:
 		_blink_time += delta
 		paused_label.modulate.a = 0.6 + 0.4 * cos(_blink_time * 3.0)
 	if debug_label.visible and world_map != null:
-		debug_label.text = "FPS %d  ·  Zoom %.2f  ·  Chunks %d  ·  Seed %s  ·  F9: +100 Ressourcen  ·  F10: König −150  ·  F11: 3 Wölfe an der Maus  ·  F12: Held +1 Stufe" % [
+		debug_label.text = "FPS %d  ·  Zoom %.2f  ·  Chunks %d  ·  Seed %s  ·  F9: +100 Ressourcen  ·  F10: König −150  ·  F11: 3 Wölfe an der Maus  ·  Strg+F11: feindlicher Rammbock  ·  F12: Held +1 Stufe" % [
 			Engine.get_frames_per_second(), camera.zoom.x,
 			world_map.get_loaded_chunk_count(), GameSession.seed_text]
 	if world != null:

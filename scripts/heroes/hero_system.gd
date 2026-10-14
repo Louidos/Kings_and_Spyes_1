@@ -1055,7 +1055,7 @@ func _jump_cell(u: Unit, pos: Vector2, beside: bool) -> Vector2i:
 		var dir := (u.position - pos)
 		spot = pos + (dir.normalized() if dir.length() > 1.0 else Vector2.RIGHT) * _ts * 0.9
 	var c: Vector2i = game.nav.nearest_free(world.world_to_cell(spot), 2)
-	if c.x < 0 or not game.nav.same_area(world.world_to_cell(u.position), c):
+	if c.x < 0 or not game.nav.same_area(world.world_to_cell(u.position), c, u.kingdom.id):
 		return Vector2i(-1, -1)
 	return c
 

@@ -195,8 +195,10 @@ func _ruin_kingdom(k: Kingdom) -> void:
 	k.king = null
 	var until := GameClock.game_time + float(DataDB.ai("defeat.ruin_seconds", 1800))
 	for b in k.buildings.duplicate():
-		ruins.append({"cell": b.cell, "size": b.size, "until": until, "castle": b == k.castle,
-				"kingdom_id": k.id, "color": k.color.to_html(false)})
+		# Mauerstücke werden ohne Ruine entfernt (Phase 9)
+		if not b.is_segment:
+			ruins.append({"cell": b.cell, "size": b.size, "until": until, "castle": b == k.castle,
+					"kingdom_id": k.id, "color": k.color.to_html(false)})
 		game.building_system.remove_building(b, 0.0)
 	for c in game.building_system.get_road_sites(k):
 		game.building_system.remove_road(c)

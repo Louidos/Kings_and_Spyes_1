@@ -11,6 +11,9 @@
 ## Phase 7) die KI rufen dieselben Funktionen auf. Prüfungen geben "" bzw. einen
 ## deutschen Grund zurück. Meldungen nur über kingdom.notify (sieht nur der Spieler).
 ##
+## Lieferungen ab Phase 9 per Karawane (TradeRouteSystem, use_caravans): fällige
+## Lieferungen melden sich nur über trade_delivery_due, gezählt wird bei Ankunft (note_delivery).
+##
 ## Zustand (Schlüssel sind Kingdom.ids wie in Kingdom.relations; Phase 10 wandelt um):
 ## reputation, base_reputation, treaties, trade_used, gift_recent,
 ## protection_credit, cooldowns, last_attack, intrusion, history, notified,
@@ -515,6 +518,35 @@ func cancel_treaty(by: Kingdom, village: Kingdom) -> bool:
 	by.notify("Du hast den %s mit %s gekündigt (Ruf %+d)." % [treaty_name(treaty_type), village.display_name,
 			roundi(penalty)], "warning", village_system.get_center(village))
 	return true
+
+
+## Phase 9: eine Handelslieferung ist per Karawane angekommen (Zähler deliveries)
+func note_delivery(village: Kingdom) -> void:
+	if village == null or not treaties.has(village.id):
+		return
+	var t: Dictionary = treaties[village.id]
+	t["deliveries"] = int(t.get("deliveries", 0)) + 1
+
+
+## KI-Startvertrag, Rauchtest und F3: Vertrag ohne Annahmeprüfung schliessen ("" = ok, sonst Grund)
+func start_treaty_forced(village: Kingdom, k: Kingdom, treaty_type: String) -> String:
+	if not TREATY_TYPES.has(treaty_type):
+		return "Unbekannte Vertragsart"
+	if not village_system.is_village(village):
+		return "Kein selbstständiges Dorf"
+	if not is_party(k):
+		return "Nur Reiche schliessen Verträge"
+	if game.are_hostile(village, k):
+		return "Im Krieg – erst Frieden schliessen"
+	var t := get_treaty(village)
+	if not t.is_empty():
+		if int(t["partner_id"]) != k.id:
+			return "%s hat bereits einen Vertrag" % village.display_name
+		if str(t["type"]) == treaty_type:
+			return ""
+		_end_treaty(village, "", 0.0, false)
+	_start_treaty(village, k, treaty_type)
+	return ""
 
 
 ## Beendet alle Verträge des Dorfs ohne Strafe (Aufnahme, Eroberung, Seitenwechsel …)

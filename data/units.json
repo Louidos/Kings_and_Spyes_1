@@ -16,7 +16,9 @@
 		"tier special = Volkskrieger, wird bei Bündnis oder Aufnahme in der Kaserne freigeschaltet (summon:barracks:<id>).",
 		"tier messenger / role messenger = Bote: kämpft nie, flieht durch Sprinten, Befehl travel.",
 		"people = Volk aus peoples.json.",
-		"tier spy / role spy = Spion: immer getarnt (stealth true), kämpft nie, Aufträge im Spionagefenster (K). stealth = immer getarnt (ausser kurz nach einer Entdeckung)."
+		"tier spy / role spy = Spion: immer getarnt (stealth true), kämpft nie, Aufträge im Spionagefenster (K). stealth = immer getarnt (ausser kurz nach einer Entdeckung).",
+		"unit_damage: Faktor gegen Einheiten (Belagerungswaffen schwach). targets: buildings = greift nur Gebäude an, buildings_first = Gebäude bevorzugt. splash_radius/splash_factor: Flächenschaden (Felder, Anteil). mechanical: wird nicht geheilt (Heiler, Krankenstation).",
+		"tier ram/catapult = Belagerungswaffen (Belagerungswerkstatt). role caravan = Karawane eines Handelswegs: kämpft nie, keine Befehle (commandable false)."
 	],
 
 	"units": [
@@ -350,6 +352,50 @@
 			"aggro_range": 0, "regen": 1.0, "flee_on_hit": true, "joins_fights": false, "target_priority": 0.8, "formation_rank": 2,
 			"cost": {"food": 40, "ore": 20, "mana": 25}, "summon_time": 30, "kill_points": 4,
 			"sprite": "res://assets/sprites/units/spy_evil.png"
+		},
+
+		{
+			"id": "caravan", "name": "Karawane", "faction": "any", "tier": "caravan", "role": "caravan", "letter": "Ka", "color": "#d9b46a",
+			"description": "Ochsenkarren mit Handelswaren. Pendelt auf einem Handelsweg zwischen Burg (oder Lager) und Partnerdorf. Langsam und schwach – wer sie überfällt, erbeutet einen Teil der Ladung.",
+			"speed": 1.6, "radius": 18, "sight": 6, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 160, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.2, "aggro_range": 0, "regen": 0.5,
+			"flee_on_hit": false, "joins_fights": false, "target_priority": 0.6, "kill_points": 2, "commandable": false,
+			"sprites": { "good": "res://assets/sprites/units/caravan_good.png", "evil": "res://assets/sprites/units/caravan_evil.png" }
+		},
+
+		{
+			"id": "ram_good", "name": "Rammbock", "faction": "good", "tier": "ram", "role": "combat", "letter": "R", "color": "#8a6a3a",
+			"description": "Schwerer Rammbock unter einem Schutzdach: zerschmettert Mauern, Tore und Gebäude. Langsam, gegen Einheiten fast wehrlos – greift nur Gebäude an.",
+			"requires": ["unit:ram_good"], "speed": 1.1, "radius": 22, "sight": 5, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 450, "attack": 50, "attack_interval": 3.5, "range": 0.9, "armor": 0.45, "aggro_range": 6, "regen": 0,
+			"building_damage": 3.5, "unit_damage": 0.1, "targets": "buildings", "mechanical": true, "formation_rank": 0, "target_priority": 0.9,
+			"cost": { "wood": 120, "ore": 30, "mana": 10 }, "summon_time": 40, "kill_points": 5, "sprite": "res://assets/sprites/units/ram_good.png"
+		},
+		{
+			"id": "ram_evil", "name": "Sturmbock", "faction": "evil", "tier": "ram", "role": "combat", "letter": "R", "color": "#5a3a4a",
+			"description": "Eisenbeschlagener Sturmbock mit Dornenschild: bricht Mauern und Tore. Langsam, gegen Einheiten fast wehrlos – greift nur Gebäude an.",
+			"requires": ["unit:ram_evil"], "speed": 1.1, "radius": 22, "sight": 5, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 420, "attack": 55, "attack_interval": 3.5, "range": 0.9, "armor": 0.45, "aggro_range": 6, "regen": 0,
+			"building_damage": 3.5, "unit_damage": 0.1, "targets": "buildings", "mechanical": true, "formation_rank": 0, "target_priority": 0.9,
+			"cost": { "wood": 120, "ore": 30, "mana": 10 }, "summon_time": 40, "kill_points": 5, "sprite": "res://assets/sprites/units/ram_evil.png"
+		},
+		{
+			"id": "catapult_good", "name": "Katapult", "faction": "good", "tier": "catapult", "role": "combat", "letter": "Kt", "color": "#a08050",
+			"description": "Schleudert Felsbrocken weit über Mauern: grosse Reichweite gegen Gebäude, Mauern und Türme (Flächenschaden), schwach gegen Einheiten.",
+			"requires": ["unit:catapult_good"], "speed": 1.0, "radius": 22, "sight": 10, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 220, "attack": 40, "attack_interval": 5.0, "range": 9.0, "armor": 0.1, "aggro_range": 10, "regen": 0,
+			"building_damage": 2.5, "unit_damage": 0.3, "splash_radius": 1.2, "splash_factor": 0.5, "targets": "buildings_first",
+			"projectile": "stone", "mechanical": true, "target_priority": 0.8,
+			"cost": { "wood": 160, "stone": 60, "ore": 40, "mana": 15 }, "summon_time": 50, "kill_points": 6, "sprite": "res://assets/sprites/units/catapult_good.png"
+		},
+		{
+			"id": "catapult_evil", "name": "Schädelschleuder", "faction": "evil", "tier": "catapult", "role": "combat", "letter": "Kt", "color": "#6a3a5a",
+			"description": "Schleudert brennende Schädel über Mauern: grosse Reichweite gegen Gebäude (Flächenschaden), schwach gegen Einheiten.",
+			"requires": ["unit:catapult_evil"], "speed": 1.0, "radius": 22, "sight": 10, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 210, "attack": 38, "attack_interval": 5.0, "range": 9.5, "armor": 0.1, "aggro_range": 10, "regen": 0,
+			"building_damage": 2.5, "unit_damage": 0.3, "splash_radius": 1.3, "splash_factor": 0.5, "targets": "buildings_first",
+			"projectile": "stone", "mechanical": true, "target_priority": 0.8,
+			"cost": { "wood": 160, "stone": 60, "ore": 40, "mana": 15 }, "summon_time": 50, "kill_points": 6, "sprite": "res://assets/sprites/units/catapult_evil.png"
 		}
 	]
 }

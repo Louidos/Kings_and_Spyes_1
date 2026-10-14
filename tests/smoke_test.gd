@@ -6,7 +6,7 @@
 ## Fähigkeit im Zielmodus, "selbst auslösen", Ausbildung, Heldenleiste, Tod und
 ## Wiederbelebung über die Burg im Auswahlfenster, Lage der Leisten.
 ##
-## Phase 6 und 7 prüfen eigene Dateien (smoke_phase6.gd, smoke_phase7.gd).
+## Phase 6, 7 und 9 prüfen eigene Dateien (smoke_phase6.gd, smoke_phase7.gd, smoke_phase9.gd).
 ## passive=1: der Spieler tut nichts (kein Helden- und Phase-6-Test) – für lange Läufe,
 ## in denen nur die KI spielt.
 ##
@@ -18,6 +18,7 @@ extends Node
 ## Prüfungen der Phase 6 (Dörfer, Diplomatie, Boten) in eigener Datei
 const SmokePhase6 := preload("res://tests/smoke_phase6.gd")
 const SmokePhase7 := preload("res://tests/smoke_phase7.gd")
+const SmokePhase9 := preload("res://tests/smoke_phase9.gd")
 
 var _args := {}
 var _game: Node = null
@@ -32,6 +33,7 @@ var _hero_errors := 0
 var _test_wolf: Unit = null
 var _p6: RefCounted = null
 var _p7: RefCounted = null
+var _p9: RefCounted = null
 var _passive := false
 
 
@@ -68,6 +70,8 @@ func _process(_delta: float) -> void:
 				_hero_step = -1
 			else:
 				_p6 = SmokePhase6.new(_game)
+				if _game.get("siege_system") != null:
+					_p9 = SmokePhase9.new(_game)
 			_p7 = SmokePhase7.new(_game, _args)
 		elif Time.get_ticks_msec() - _started_ms > 120000:
 			push_error("[smoke] Weltgenerierung dauert zu lange")
@@ -80,6 +84,9 @@ func _process(_delta: float) -> void:
 			_p6.tick(GameClock.game_time)
 		if _p7 != null:
 			_p7.tick(GameClock.game_time)
+		if _p9 != null:
+			_p9.set("ui_ready", _hero_step < 0)
+			_p9.tick(GameClock.game_time)
 		if GameClock.game_time >= _sim_seconds:
 			_phase = 2
 			_report()
@@ -105,6 +112,8 @@ func _report() -> void:
 		_p6.report()
 	if _p7 != null:
 		_p7.report()
+	if _p9 != null:
+		_p9.report()
 
 
 # ---------------------------------------------------------------------------
