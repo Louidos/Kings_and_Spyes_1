@@ -73,6 +73,10 @@ var event_by_id: Dictionary = {}
 ## Zufriedenheit der Bewohner (satisfaction.json) und Tag/Nacht (daynight.json)
 var satisfaction_cfg: Dictionary = {}
 var daynight_cfg: Dictionary = {}
+## Belagerung: Ringe, Bresche, Reparatur, Türme (siege.json, Phase 9)
+var siege_cfg: Dictionary = {}
+## Handelswege, Karawanen, Versorgung (trade.json, Phase 9)
+var trade_cfg: Dictionary = {}
 
 
 func _ready() -> void:
@@ -100,6 +104,8 @@ func reload() -> void:
 	diplomacy = _load_json("diplomacy.json")
 	_prepare_diplomacy()
 	combat = _load_json("combat.json")
+	siege_cfg = _load_json("siege.json")
+	trade_cfg = _load_json("trade.json")
 	_load_research()
 	_load_spells()
 	_load_heroes()
@@ -204,6 +210,16 @@ func sat(path: String, default_value: Variant = null) -> Variant:
 ## Wert aus daynight.json über Punkt-Pfad, z. B. "phases.night"
 func dn(path: String, default_value: Variant = null) -> Variant:
 	return _dig(daynight_cfg, path, default_value)
+
+
+## Wert aus siege.json über Punkt-Pfad, z. B. "repair.hp_per_work"
+func siege(path: String, default_value: Variant = null) -> Variant:
+	return _dig(siege_cfg, path, default_value)
+
+
+## Wert aus trade.json über Punkt-Pfad, z. B. "cut.losses"
+func trade(path: String, default_value: Variant = null) -> Variant:
+	return _dig(trade_cfg, path, default_value)
 
 
 ## Schwierigkeit für die KI: Eintrag aus difficulties.json, ergänzt um ai.json →
@@ -383,6 +399,8 @@ func describe_requirement(unlock_ids: Array, faction_id: String) -> String:
 ## "daynight", "difficulty" und "event:<id>"; ab Phase 7 "espionage:<wirkung>" (Spione)
 func describe_effect_source(source: String) -> String:
 	match source:
+		"supply":
+			return "Ohne Versorgung"
 		"daynight":
 			return "Tageszeit"
 		"difficulty":
@@ -454,6 +472,8 @@ func get_effect_source_color(source: String) -> Color:
 		return Color(0.62, 0.7, 1.0)
 	if source == "feast" or source.begins_with("feast:"):
 		return Color(0.95, 0.82, 0.4)
+	if source == "supply":
+		return Color(0.95, 0.45, 0.35)
 	return Color.WHITE
 
 
@@ -481,6 +501,8 @@ func describe_bonus(key: String, add: float) -> String:
 			return "%+d Zufriedenheit aller Bewohner" % roundi(add)
 		"loyalty":
 			return "−%d %% Überlaufen und Verrat" % roundi(add * 100.0)
+		"tower_range":
+			return "%s Felder Turmreichweite" % ("%+.1f" % add).replace(".", ",")
 	if key.begins_with("cap."):
 		return "%+d Lager (%s)" % [roundi(add), str(get_resource(key.substr(4)).get("name", key.substr(4)))]
 	return "%+g %s" % [add, key]
@@ -494,12 +516,15 @@ const _MOD_NAMES := {"attack": "Angriff", "armor": "Rüstung", "hp": "Leben", "s
 	"spell_cost": "Zauberkosten", "spell_cooldown": "Abklingzeit der Zauber",
 	"spell_radius": "Zauberradius", "spell_duration": "Zauberdauer", "spell_power": "Zauberstärke",
 	"hero_xp": "Erfahrung der Helden", "ability_power": "Stärke der Heldenfähigkeiten", "lifesteal": "Lebensraub",
-	"damage_taken": "erlittener Schaden", "defense": "Verteidigung", "feast_cost": "Kosten für Feste"}
+	"damage_taken": "erlittener Schaden", "defense": "Verteidigung", "feast_cost": "Kosten für Feste",
+	"fort_hp": "Leben von Mauern, Toren und Türmen", "tower_attack": "Turmschaden"}
 const _TIER_NAMES := {"fighter": "Kämpfer", "archer": "Schützen", "elite": "Elite", "scout": "Späher",
 	"medic": "Heiler", "king": "König", "villager": "Bewohner", "summon": "Beschworene", "hero": "Helden",
-	"militia": "Miliz", "special": "Volkskrieger", "messenger": "Boten", "spy": "Spione", "refugee": "Flüchtlinge"}
+	"militia": "Miliz", "special": "Volkskrieger", "messenger": "Boten", "spy": "Spione", "refugee": "Flüchtlinge",
+	"ram": "Rammböcke", "catapult": "Katapulte", "caravan": "Karawanen"}
 const _ROLE_NAMES := {"combat": "alle Truppen ohne Helden", "worker": "Bewohner", "support": "Heiler",
-	"king": "König", "monster": "Monster", "hero": "Helden", "messenger": "Boten", "spy": "Spione"}
+	"king": "König", "monster": "Monster", "hero": "Helden", "messenger": "Boten", "spy": "Spione",
+	"caravan": "Karawanen"}
 
 
 ## Lesbare Wirkung eines Modifikators, z. B. "+10 % Angriff (Kämpfer)".
@@ -654,6 +679,22 @@ func _load_buildings() -> void:
 		b["hp"] = float(b.get("hp", 300.0))
 		b["armor"] = float(b.get("armor", 0.0))
 		b["sight"] = float(b.get("sight", 5.0))
+		# Phase 9: Befestigungen, Baumenü-Reiter, Reparatur
+		b["segment"] = bool(b.get("segment", false))
+		b["fortification"] = str(b.get("fortification", ""))
+		b["replaces"] = b.get("replaces", []) if b.get("replaces", []) is Array else []
+		b["allow_on_road"] = bool(b.get("allow_on_road", false))
+		b["menu"] = str(b.get("menu", "economy"))
+		b["max_builders"] = int(b.get("max_builders", 0))
+		b["repairable"] = bool(b.get("repairable", b["player_buildable"] or str(b.get("id", "")) == "castle"))
+		if b.get("tower", null) is Dictionary:
+			var tw: Dictionary = b["tower"]
+			tw["attack"] = float(tw.get("attack", 10.0))
+			tw["interval"] = maxf(float(tw.get("interval", 1.5)), 0.1)
+			tw["range"] = float(tw.get("range", 6.0))
+			tw["projectile"] = str(tw.get("projectile", "arrow"))
+			if not (tw.get("priority", null) is Dictionary):
+				tw["priority"] = {}
 		if not b.has("summons"):
 			b["summons"] = []
 		if not b.has("dropoff"):
@@ -767,7 +808,7 @@ func _normalize_unit(u: Dictionary) -> void:
 	u["joins_fights"] = bool(u.get("joins_fights", role in ["combat", "king", "monster", "hero"]))
 	u["target_priority"] = float(u.get("target_priority", 1.6 if role == "worker" else 1.0))
 	var rank := 0
-	if role == "worker" or role == "support" or role == "messenger" or role == "spy":
+	if role == "worker" or role == "support" or role == "messenger" or role == "spy" or role == "caravan":
 		rank = 2
 	elif u["range"] >= 2.0:
 		rank = 1
@@ -779,6 +820,13 @@ func _normalize_unit(u: Dictionary) -> void:
 		cost[k] = float(u["cost"][k])
 	u["cost"] = cost
 	u["projectile"] = str(u.get("projectile", ""))
+	# Phase 9: Belagerungswaffen und Karawanen
+	u["unit_damage"] = float(u.get("unit_damage", 1.0))
+	u["targets"] = str(u.get("targets", ""))
+	u["splash_radius"] = float(u.get("splash_radius", 0.0))
+	u["splash_factor"] = float(u.get("splash_factor", 0.0))
+	u["mechanical"] = bool(u.get("mechanical", false))
+	u["commandable"] = bool(u.get("commandable", true))
 
 
 func _load_heroes() -> void:

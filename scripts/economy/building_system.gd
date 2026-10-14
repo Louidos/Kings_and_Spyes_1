@@ -31,10 +31,16 @@ func setup(p_game: Node) -> void:
 # ---------------------------------------------------------------------------
 
 ## Prüft, ob ein Gebäude hier gebaut werden darf. "" = ja, sonst der Grund.
+## Ab Phase 9: Tore dürfen auf eigene Mauerstücke (replaces) und eigene Strassen
+## (allow_on_road); vor einem Tor muss Platz bleiben.
 func can_place(def: Dictionary, cell: Vector2i, kingdom: Kingdom) -> String:
+	return _place_reason(def, cell, kingdom, true)
+
+
+func _place_reason(def: Dictionary, cell: Vector2i, kingdom: Kingdom, check_cost: bool) -> String:
 	if def.get("is_road", false):
 		var reason := can_place_road(cell, kingdom)
-		if reason.is_empty():
+		if reason.is_empty() and check_cost:
 			reason = kingdom.missing_text(def.get("cost", {}))
 		return reason
 	var type_reason := can_build_type(def, kingdom)
@@ -43,6 +49,9 @@ func can_place(def: Dictionary, cell: Vector2i, kingdom: Kingdom) -> String:
 	var size: Vector2i = def.get("size", Vector2i(2, 2))
 	var required_id := str(def.get("requires_deposit", ""))
 	var required_found := required_id.is_empty()
+	var replaces: Array = def.get("replaces", [])
+	var on_road := bool(def.get("allow_on_road", false))
+	var siege: Variant = game.get("siege_system")
 	for y in range(cell.y, cell.y + size.y):
 		for x in range(cell.x, cell.x + size.x):
 			var c := Vector2i(x, y)
@@ -53,8 +62,16 @@ func can_place(def: Dictionary, cell: Vector2i, kingdom: Kingdom) -> String:
 			var biome := world.get_biome(c)
 			if not biome.get("buildable", false):
 				return "Hier kann nicht gebaut werden: %s" % biome.get("name", "?")
-			if world.occupancy.has(c) or world.roads.has(c):
-				return "Platz ist belegt"
+			var occ: Variant = world.occupancy.get(c, null)
+			if occ != null:
+				# Tor auf ein eigenes Mauerstück: ersetzt es
+				if not (is_instance_valid(occ) and occ.kingdom == kingdom and replaces.has(str(occ.def.get("id", "")))):
+					return "Platz ist belegt"
+			elif world.roads.has(c):
+				if not on_road or int(world.road_owner.get(c, 0)) != kingdom.id:
+					return "Platz ist belegt"
+			if siege != null and (siege as SiegeSystem).is_gate_apron(c):
+				return "Vor einem Tor muss Platz bleiben"
 			var d := world.get_deposit(c)
 			if not d.is_empty() and not d["biome_deposit"]:
 				if d["id"] == required_id:
@@ -63,14 +80,22 @@ func can_place(def: Dictionary, cell: Vector2i, kingdom: Kingdom) -> String:
 					return "Rohstoffvorkommen im Weg: %s" % d["name"]
 	if not required_found:
 		return "Muss auf einer %s stehen" % DataDB.get_deposit_by_id(required_id).get("name", required_id)
-	return kingdom.missing_text(def.get("cost", {}))
+	return kingdom.missing_text(def.get("cost", {})) if check_cost else ""
 
 
 ## Setzt ein Gebäude (als Baustelle, ausser instant). Zieht die Kosten ab.
-## Gibt null zurück, wenn es nicht bezahlt werden kann.
+## Gibt null zurück, wenn es nicht bezahlt werden kann. Ersetzt Mauerstücke (Tor).
 func place_building(def: Dictionary, cell: Vector2i, kingdom: Kingdom, instant: bool = false) -> Building:
 	if not instant and not kingdom.spend(def.get("cost", {})):
 		return null
+	var replaces: Array = def.get("replaces", [])
+	if not replaces.is_empty():
+		var sz: Vector2i = def.get("size", Vector2i(2, 2))
+		for y in range(cell.y, cell.y + sz.y):
+			for x in range(cell.x, cell.x + sz.x):
+				var old: Variant = world.occupancy.get(Vector2i(x, y), null)
+				if old != null and is_instance_valid(old) and old.kingdom == kingdom and replaces.has(str(old.def.get("id", ""))):
+					remove_building(old, float(DataDB.siege("segments.replace_refund", 0.5)))
 	var b := Building.new()
 	b.setup(def, kingdom, cell, world, game.next_uid())
 	var fp := b.get_footprint()
@@ -139,7 +164,7 @@ func transfer_building(b: Building, to: Kingdom) -> void:
 	b.kingdom = to
 	b.has_rally = false
 	var ratio := clampf(b.hp / maxf(b.max_hp, 1.0), 0.0, 1.0)
-	b.max_hp = maxf(float(b.def.get("hp", 300.0)) * to.mod("building_hp"), 1.0)
+	b.max_hp = b.compute_max_hp(to)
 	b.hp = b.max_hp * ratio
 	b.refresh_look()
 	if b.constructed and int(b.def.get("territory_radius", 0)) > 0:
@@ -216,6 +241,65 @@ func place_roads(cells: Array, kingdom: Kingdom) -> int:
 	return placed
 
 
+## Eine Kachel einer Linie (Strasse oder Mauer): "" = ok (ohne Kosten). Mauern: auf eigener
+## Strasse gilt die Prüfung des Tors (def.line_gate).
+func can_place_line_cell(def: Dictionary, cell: Vector2i, kingdom: Kingdom) -> String:
+	if bool(def.get("is_road", false)):
+		return can_place_road(cell, kingdom)
+	var gate_id := str(def.get("line_gate", ""))
+	if not gate_id.is_empty() and world.roads.has(cell) and int(world.road_owner.get(cell, 0)) == kingdom.id \
+			and not world.occupancy.has(cell):
+		return _place_reason(DataDB.get_building(gate_id), cell, kingdom, false)
+	return _place_reason(def, cell, kingdom, false)
+
+
+## Gebäude, das auf dieser Kachel einer Linie entstehen würde (Tor über eigener Strasse)
+func line_def_at(def: Dictionary, cell: Vector2i, kingdom: Kingdom) -> Dictionary:
+	var gate_id := str(def.get("line_gate", ""))
+	if not gate_id.is_empty() and world.roads.has(cell) and int(world.road_owner.get(cell, 0)) == kingdom.id \
+			and not world.occupancy.has(cell):
+		return DataDB.get_building(gate_id)
+	return def
+
+
+## Setzt eine Linie in Reihenfolge, solange gültig und bezahlbar: Strassen wie place_roads,
+## Mauern als Baustellen (instant: sofort fertig – KI-Debug/Rauchtest); über eigenen
+## Strassen ein Tor. Höchstens segments.line_max Kacheln.
+## Rückgabe {"placed": int, "gates": int, "reason": String (erster Grund, wenn nichts ging)}
+func place_line(def: Dictionary, cells: Array, kingdom: Kingdom, instant: bool = false) -> Dictionary:
+	var result := {"placed": 0, "gates": 0, "reason": ""}
+	if bool(def.get("is_road", false)):
+		result["placed"] = place_roads(cells, kingdom)
+		if int(result["placed"]) == 0 and not cells.is_empty():
+			var reason := kingdom.missing_text(def.get("cost", {}))
+			result["reason"] = reason if not reason.is_empty() else can_place_road(cells[0], kingdom)
+		return result
+	var line_max := int(DataDB.siege("segments.line_max", 80))
+	var first_reason := ""
+	var n := 0
+	for c in cells:
+		if n >= line_max:
+			break
+		n += 1
+		var reason := can_place_line_cell(def, c, kingdom)
+		if not reason.is_empty():
+			if first_reason.is_empty():
+				first_reason = reason
+			continue
+		var d := line_def_at(def, c, kingdom)
+		if not instant and not kingdom.can_afford(d.get("cost", {})):
+			first_reason = kingdom.missing_text(d.get("cost", {}))
+			break
+		if place_building(d, c, kingdom, instant) == null:
+			continue
+		result["placed"] = int(result["placed"]) + 1
+		if d != def:
+			result["gates"] = int(result["gates"]) + 1
+	if int(result["placed"]) == 0:
+		result["reason"] = first_reason
+	return result
+
+
 func is_road_site(cell: Vector2i) -> bool:
 	return world.road_progress.has(cell)
 
@@ -252,6 +336,66 @@ func remove_road(cell: Vector2i, kingdom: Kingdom = null) -> bool:
 # ---------------------------------------------------------------------------
 # Baustellen, Entfernen, Abfragen
 # ---------------------------------------------------------------------------
+
+## Anzahl Gebäude ohne Mauerstücke (KI-Wachstum, Statistik)
+func count_real_buildings(kingdom: Kingdom) -> int:
+	var n := 0
+	for b in kingdom.buildings:
+		if not b.is_segment:
+			n += 1
+	return n
+
+
+## Fertige, beschädigte Gebäude, die Bauarbeiter reparieren dürfen (repairable,
+## hp < threshold × max_hp, seit delay_seconds ohne Schaden)
+func get_repair_sites(kingdom: Kingdom) -> Array:
+	var sites: Array = []
+	var threshold := float(DataDB.siege("repair.threshold", 0.98))
+	var delay := float(DataDB.siege("repair.delay_seconds", 10))
+	var now := GameClock.game_time
+	for b in kingdom.buildings:
+		if b.constructed and b.hp < b.max_hp * threshold and now - b.last_damaged_at >= delay \
+				and bool(b.def.get("repairable", true)):
+			sites.append(b)
+	return sites
+
+
+## Kosten für amount Leben Reparatur (cost_factor × Baukosten / max_hp, sonst default_cost_per_hp)
+func repair_cost(b: Building, amount: float) -> Dictionary:
+	var cost := {}
+	var base: Dictionary = b.def.get("cost", {})
+	if base.is_empty():
+		var per_hp: Dictionary = DataDB.siege("repair.default_cost_per_hp", {})
+		for res_id in per_hp:
+			cost[res_id] = float(per_hp[res_id]) * amount
+		return cost
+	var factor := float(DataDB.siege("repair.cost_factor", 0.5))
+	for res_id in base:
+		if str(res_id) == "mana":
+			continue
+		cost[res_id] = factor * float(base[res_id]) / maxf(b.max_hp, 1.0) * amount
+	return cost
+
+
+## Reparaturarbeit: heilt hp_per_work × amount, zieht die Kosten ab. Gibt "" zurück,
+## "done" (heil) oder den Grund (fehlende Rohstoffe)
+func add_repair_work(b: Building, amount: float) -> String:
+	if not is_instance_valid(b) or not b.constructed:
+		return "done"
+	var gain := minf(float(DataDB.siege("repair.hp_per_work", 20)) * amount, b.max_hp - b.hp)
+	if gain <= 0.0:
+		return "done"
+	var cost := repair_cost(b, gain)
+	if not b.kingdom.can_afford(cost):
+		return b.kingdom.missing_text(cost)
+	b.kingdom.spend(cost)
+	b.hp = minf(b.hp + gain, b.max_hp)
+	b.queue_redraw()
+	if b.hp >= b.max_hp - 0.01:
+		b.hp = b.max_hp
+		return "done"
+	return ""
+
 
 ## Offene Gebäude-Baustellen eines Reichs
 func get_building_sites(kingdom: Kingdom) -> Array:
@@ -330,7 +474,7 @@ func _on_building_finished(b: Building) -> void:
 		game.territory.recompute_area(world, TerritorySystem.claim_rect(b, world), game.kingdoms)
 	if int(b.def.get("housing", 0)) > 0:
 		kingdom.population_changed.emit()
-	if float(b.def.get("build_time", 0.0)) > 0.0:
+	if float(b.def.get("build_time", 0.0)) > 0.0 and not b.is_segment:
 		kingdom.add_stat("buildings_built")
 		var text := "%s fertiggestellt" % b.get_display_name()
 		if b.get_worker_slots() > 0:

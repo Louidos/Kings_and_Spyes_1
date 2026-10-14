@@ -11,6 +11,8 @@
 ##   und Wanderern (Aufnehmen/Abweisen), Verlauf und eine kurze Erklärung.
 ## - "Volk & Tageszeit": Volk mit Stärken und Schwächen, Grundbonus, jetzige Wirkungen der
 ##   Tageszeit, Zeit bis zum Wechsel, Geländetabelle und globale Nachtwerte.
+## - "Handel" (Phase 9): Handelswege, Karawanen und Versorgung (TradeRouteList, dieselbe
+##   Liste wie im Diplomatiefenster, Reiter "Handelswege").
 ## Im F3-Modus erscheinen Debug-Knöpfe (Ereignis auslösen, Alle beenden,
 ## Monsterstreifzug, Zufriedenheit ±30, Überläufer, Verrat, Tageszeit erzwingen).
 ## Zeigt nur an und ruft die Systeme mit dem Spieler-Reich auf (dieselben Funktionen
@@ -24,6 +26,8 @@ signal toggled(open: bool)
 const TAB_SATISFACTION := "satisfaction"
 const TAB_EVENTS := "events"
 const TAB_PEOPLE := "people"
+## Handelswege und Versorgung (Phase 9)
+const TAB_TRADE := "trade"
 const DESIGN_WIDTH := 1048.0
 const TOP := 92.0
 const PAGE_HEIGHT := 600.0
@@ -69,6 +73,8 @@ var _debug_target_ids: Array = []
 # Volk & Tageszeit
 var _people_text: RichTextLabel
 var _people_debug: HBoxContainer
+# Handel (Phase 9)
+var trade_list: TradeRouteList
 
 
 func _ready() -> void:
@@ -188,7 +194,8 @@ func _build() -> void:
 	pages.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for entry in [[TAB_SATISFACTION, "Zufriedenheit", "Zufriedenheit der Bewohner: Ursachen, Folgen, Feste"],
 			[TAB_EVENTS, "Ereignisse", "Laufende Ereignisse, Flüchtlinge und Wanderer, Verlauf"],
-			[TAB_PEOPLE, "Volk & Tageszeit", "Stärken und Schwächen deines Volks, Tag und Nacht, Gelände"]]:
+			[TAB_PEOPLE, "Volk & Tageszeit", "Stärken und Schwächen deines Volks, Tag und Nacht, Gelände"],
+			[TAB_TRADE, "Handel", "Handelswege, Karawanen, gesichtete fremde Wege und Versorgung"]]:
 		var b := _make_tab(str(entry[1]), group)
 		b.tooltip_text = str(entry[2])
 		b.pressed.connect(show_tab.bind(str(entry[0])))
@@ -208,6 +215,8 @@ func _build() -> void:
 				_build_events(page)
 			TAB_PEOPLE:
 				_build_people(page)
+			TAB_TRADE:
+				_build_trade(page)
 	var close_button := Button.new()
 	close_button.text = "×"
 	close_button.focus_mode = Control.FOCUS_NONE
@@ -313,6 +322,15 @@ func _build_events(page: VBoxContainer) -> void:
 		_event_debug.add_child(b)
 
 
+## Handel (Phase 9): dieselbe Liste wie im Diplomatiefenster (Reiter "Handelswege")
+func _build_trade(page: VBoxContainer) -> void:
+	trade_list = TradeRouteList.new()
+	trade_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	page.add_child(trade_list)
+	trade_list.setup(game)
+	trade_list.jump_requested.connect(func(pos: Vector2) -> void: game.camera.focus_on(pos))
+
+
 func _build_people(page: VBoxContainer) -> void:
 	_people_text = _rich(16)
 	page.add_child(_people_text)
@@ -343,6 +361,9 @@ func _refresh() -> void:
 			_refresh_events()
 		TAB_PEOPLE:
 			_refresh_people()
+		TAB_TRADE:
+			if trade_list != null:
+				trade_list.refresh()
 	_dirty = false
 
 

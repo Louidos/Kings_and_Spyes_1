@@ -12,6 +12,8 @@
 ## Königreiche (Spieler und KI, ab Phase 7): Burgsymbol (Quadrat mit drei Zinnen) in
 ## der Reichsfarbe mit Ring – weiss beim Spieler, rot bei Feinden. Ruinen gefallener
 ## Burgen als graues X.
+## Phase 9: Handelswege gestrichelt, Karawanen als Goldquadrate; Mauern erscheinen als
+## dichte Gebäudepunkte.
 ##
 ## Leistung: Karte, Gebäude und Einheitenpunkte werden höchstens alle 0.25 s
 ## gezeichnet; die Punkte stehen dann schon fertig umgerechnet in Listen
@@ -35,6 +37,7 @@ const MESSENGER_OUTLINE := Color(1, 1, 1, 0.95)
 const CASTLE_PLAYER_RING := Color(1, 1, 1, 0.95)
 const CASTLE_ENEMY_RING := Color(1.0, 0.25, 0.2)
 const RUIN_COLOR := Color(0.62, 0.6, 0.56)
+const CARAVAN_OUTLINE := Color(0.95, 0.78, 0.3)
 
 var texture: Texture2D
 var world_size := Vector2.ONE
@@ -74,6 +77,13 @@ var _monster_color := Color(0.88, 0.48, 0.13)
 var _lair_points := PackedVector2Array()
 ## Boten: [{color: Color, points: PackedVector2Array}] (Mittelpunkte in Pixeln)
 var _messenger_groups: Array = []
+## Karawanen: [{color: Color, points: PackedVector2Array}] (Mittelpunkte in Pixeln)
+var _caravan_groups: Array = []
+## Handelswege in Minikarten-Pixeln: [{color: Color, points: PackedVector2Array}]
+var _route_lines: Array = []
+var _routes_dirty := true
+var _routes_rect := Rect2()
+var _route_timer := 0.0
 ## Boten blinken: jede zweite Neuberechnung werden sie nicht gezeichnet
 var _messenger_blink := false
 ## Angriffsmeldungen: [{pos: Vector2 (Welt), age: float}]
@@ -109,6 +119,9 @@ func setup_game(game: Node) -> void:
 	_world = game.world
 	_kingdoms = game.kingdoms  # gleiche Liste – neue Reiche erscheinen automatisch
 	game.combat_system.kingdom_attacked.connect(_on_kingdom_attacked)
+	var trs: Variant = game.get("trade_route_system")
+	if trs != null:
+		(trs as TradeRouteSystem).routes_changed.connect(func(_k: Kingdom) -> void: _routes_dirty = true)
 	_update_territory_boxes()
 	_refresh()
 
@@ -130,6 +143,10 @@ func _process(delta: float) -> void:
 		if _bbox_timer >= bbox_refresh_interval:
 			_bbox_timer = 0.0
 			_update_territory_boxes()
+	_route_timer += delta
+	if _route_timer >= 2.0:
+		_route_timer = 0.0
+		_routes_dirty = true
 	_redraw_timer += delta
 	if _redraw_timer >= redraw_interval:
 		_redraw_timer = 0.0
@@ -157,6 +174,7 @@ func _draw() -> void:
 	draw_texture_rect(texture, r, false)
 	if _world != null:
 		_draw_markers(r)
+		_draw_routes(r)
 		_draw_units()
 	last_draw_usec = Time.get_ticks_usec() - t0
 
@@ -278,6 +296,32 @@ func _draw_villages(r: Rect2, tile_px: Vector2) -> void:
 				draw_arc(c + Vector2(0, -1), 7.5, 0.0, TAU, 20, VILLAGE_ALLY_COLOR, 1.5, true)
 
 
+## Handelswege gestrichelt (neu berechnet nur bei Änderung oder neuer Grösse)
+func _draw_routes(r: Rect2) -> void:
+	var trs: Variant = _game.get("trade_route_system") if _game != null else null
+	if trs == null:
+		return
+	if _routes_dirty or r != _routes_rect:
+		_routes_dirty = false
+		_routes_rect = r
+		_route_lines.clear()
+		var s := r.size / world_size
+		var cols: Dictionary = DataDB.trade("display.colors", {})
+		for route in (trs as TradeRouteSystem).get_visible_routes(_game.player):
+			var rd: Dictionary = route
+			var pts := PackedVector2Array()
+			for p in rd["points"]:
+				pts.append(r.position + (p as Vector2) * s)
+			if pts.size() < 2:
+				continue
+			var key := str(rd["state"]) if int(rd["owner_id"]) == _game.player.id else "foreign"
+			_route_lines.append({"color": Color.from_string(str(cols.get(key, "#f2d16b")), Color.WHITE), "points": pts})
+	for line in _route_lines:
+		var pts: PackedVector2Array = line["points"]
+		for i in range(pts.size() - 1):
+			draw_dashed_line(pts[i], pts[i + 1], line["color"], 1.5, 4.0)
+
+
 ## Einheitenpunkte und Lager aus den vorbereiteten Listen. Reihenfolge:
 ## Monster, darüber die Lager (die Raute steht für das Lager samt seinen
 ## Monstern – Punkte darauf wären nur Unruhe; sichtbar bleiben Monster, die
@@ -296,6 +340,13 @@ func _draw_units() -> void:
 	for g in _dot_groups:
 		var group: Dictionary = g
 		draw_multiline(group["points"], group["color"], 2.0)
+	for g in _caravan_groups:
+		var group: Dictionary = g
+		for p in group["points"]:
+			var c: Vector2 = p
+			draw_rect(Rect2(c - Vector2(4, 4), Vector2(8, 8)), OUTLINE_COLOR, true)
+			draw_rect(Rect2(c - Vector2(3, 3), Vector2(6, 6)), CARAVAN_OUTLINE, true)
+			draw_rect(Rect2(c - Vector2(2, 2), Vector2(4, 4)), group["color"], true)
 	if not _messenger_blink:
 		for g in _messenger_groups:
 			var group: Dictionary = g
@@ -315,6 +366,7 @@ func _rebuild_cache() -> void:
 	_monster_fill = PackedVector2Array()
 	_lair_points = PackedVector2Array()
 	_messenger_groups.clear()
+	_caravan_groups.clear()
 	_messenger_blink = not _messenger_blink
 	if _game == null or _world == null or texture == null:
 		return
@@ -342,6 +394,7 @@ func _rebuild_cache() -> void:
 			continue
 		var points := PackedVector2Array()
 		var messengers := PackedVector2Array()
+		var caravans := PackedVector2Array()
 		for u in kingdom.units:
 			if u.inside != null or (not visible_all and u.stealthed):
 				continue
@@ -351,10 +404,17 @@ func _rebuild_cache() -> void:
 				if _game.can_see(player, u):
 					messengers.append(p + Vector2(0.5, 0.5))
 				continue
+			# Karawanen (Phase 9): Goldquadrat, blinkt nicht
+			if u.role == "caravan":
+				if _game.can_see(player, u):
+					caravans.append(p + Vector2(0.5, 0.5))
+				continue
 			points.append(Vector2(p.x - 1.0, p.y))
 			points.append(Vector2(p.x + 1.0, p.y))
 		if not messengers.is_empty():
 			_messenger_groups.append({"color": kingdom.color, "points": messengers})
+		if not caravans.is_empty():
+			_caravan_groups.append({"color": kingdom.color, "points": caravans})
 		if points.is_empty():
 			continue
 		var group := {"color": kingdom.color, "points": points}

@@ -8,18 +8,20 @@
 		"intel: Kundschaft je Beobachter und Ziel, Stufe 0–3 (names). Pro stale_seconds Alter eine Stufe weniger (nie unter 1, wenn einmal bekannt). Quellen: Späher (scout_level), Spione (spy_levels je Spionstufe), Boten, Verräter (Phase 8), gefangene Spione.",
 		"reports: Meldungen, wenn Feinde nahe oder im eigenen Gebiet gesehen werden (je Gebiet area_tiles und Reich gedrosselt).",
 		"spies: Stufen (xp, skill = Geschick gegen Entdeckung, speed = Tempo bei Aufträgen), Erfahrung je Auftrag, Auftragsdauer, Aufhetzen (Ruf/Spannung je incite_interval). Entdeckung: alle detect_interval Sekunden Wurf mit Chance = detect_base × Wachsamkeit / Geschick (begrenzt). Wachsamkeit = base (im Gebiet; ausserhalb outside_presence) + Späher/Spione des Ziels in der Nähe + Gebäude (vigilance.buildings, Umkreis building_radius) + Bonus des Reichs (Forschung, Schwierigkeit). Enttarnt: reveal_seconds sichtbar, flieht heim (Tempo × flee_speed für flee_seconds). Ertappt ein Dorf den Spion, sinkt sein Ruf beim Auftraggeber um caught_reputation.",
-		"Hinweis: Feindliche Wetterzonen (Nebel, Fluch) treffen auch getarnte Spione – die Zonenwirkung prüft die Sichtbarkeit bewusst nicht."
+		"Hinweis: Feindliche Wetterzonen (Nebel, Fluch) treffen auch getarnte Spione – die Zonenwirkung prüft die Sichtbarkeit bewusst nicht.",
+		"Phase 9: Mauern (wall) zählen beim Entdeckungswert kaum, Türme und Belagerungswerkstätten mehr; kill_caravan = Aggression für eine überfallene Karawane."
 	],
 	"discovery": {
 		"tick_seconds": 5,
 		"building_weights": {"default": 1.0, "castle": 8, "house": 0.4, "storehouse": 0.8, "barracks": 2.5, "library": 2.0, "hero_hall": 3.0,
-		                     "mana_well": 1.5, "infirmary": 1.5, "spy_den": 0.5, "village_hall": 3.0, "village_hut": 0.3},
+		                     "mana_well": 1.5, "infirmary": 1.5, "spy_den": 0.5, "village_hall": 3.0, "village_hut": 0.3,
+		                     "wall": 0.05, "gate": 0.3, "tower": 1.0, "siege_workshop": 2.0},
 		"construction_factor": 0.5, "per_population": 0.4, "per_army_power": 0.12, "per_hero_level": 1.0, "smoothing": 0.25,
 		"max_display": 150,
 		"tiers": [{"min": 0, "name": "Unauffällig", "color": "#7cc86a"}, {"min": 30, "name": "Bekannt", "color": "#e8c03c"},
 		          {"min": 60, "name": "Auffällig", "color": "#e8803c"}, {"min": 100, "name": "Weithin sichtbar", "color": "#e0503c"}]
 	},
-	"aggression": {"attack_village": 6, "attack_kingdom": 4, "destroy_building": 3, "conquest": 15, "kill_messenger": 2, "threat": 3,
+	"aggression": {"attack_village": 6, "attack_kingdom": 4, "destroy_building": 3, "conquest": 15, "kill_messenger": 2, "threat": 3, "kill_caravan": 2,
 	               "pair_cooldown": 60, "half_life": 900, "max": 60},
 	"cloak": {"reduction": 0.4, "upkeep_per_point": 0.002},
 	"awareness": {"tick_seconds": 5, "rise_per_minute": 3.0, "fall_per_minute": 1.0, "near_tiles": 80, "far_tiles": 450,

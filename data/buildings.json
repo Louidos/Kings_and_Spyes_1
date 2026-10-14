@@ -15,7 +15,9 @@
 		"people_sprites: Grafik je Volk (Dorfgebäude), sprite_fallback: Grafik, wenn weder Volks- noch Fraktionsgrafik angegeben ist.",
 		"people_color: Platzhalter in der Volksfarbe.",
 		"satisfaction: {bonus, capacity, cause} = Zufriedenheit für bis zu capacity Bewohner (mehrere Gebäude addieren die Plätze); plague_spread_mult / discover_bonus: der Tempel mildert Seuchen und entdeckt Verräter und eingeschleuste Spione eher (Phase 8).",
-		"spy_den: true = Spionagehaus (Spione beginnen eine Stufe höher, +1 Spion, Wachsamkeit siehe espionage.json). people_sprites bei der Burg: Grafik je Volk (nur wenn die Datei existiert, sonst Fraktionsgrafik)."
+		"spy_den: true = Spionagehaus (Spione beginnen eine Stufe höher, +1 Spion, Wachsamkeit siehe espionage.json). people_sprites bei der Burg: Grafik je Volk (nur wenn die Datei existiert, sonst Fraktionsgrafik).",
+		"segment: true = Mauerstück/Tor (kein eigenes Gebäude für Meldungen, Entdeckung, KI-Zählung, Ruinen). fortification: wall/gate/tower. replaces: darf auf eigene Gebäude dieser ids gesetzt werden (Tor auf Mauer). allow_on_road: darf auf eine eigene Strasse. line_gate: beim Ziehen einer Mauer über eine eigene Strasse wird stattdessen dieses Gebäude gesetzt. max_builders: höchstens so viele Bauarbeiter je Baustelle.",
+		"tower: {attack, interval, range (Felder), projectile, priority (Faktor je Stufe/Rolle, kleiner = bevorzugt)} – schiesst selbsttätig auf feindliche Einheiten (Forschung: Modifikator tower_attack, Zuschlag tower_range). menu: Reiter im Baumenü (economy = Dorf, military = Militär & Wissen, defense = Verteidigung; Standard economy). repairable: false = Bauarbeiter reparieren nicht (Standard true). armor: Rüstung eines Gebäudes (0.3 = 30 % weniger Schaden)."
 	],
 
 	"buildings": [
@@ -23,7 +25,7 @@
 			"id": "castle", "name": "Königsburg", "label": "Burg",
 			"description": "Sitz des Königs. Lager für alle Ressourcen und Wohnraum.",
 			"size": [4, 4], "cost": {}, "build_time": 0, "player_buildable": false,
-			"housing": 6, "territory_radius": 14, "hp": 2000, "sight": 9, "summons": ["scout"],
+			"housing": 6, "territory_radius": 14, "hp": 2000, "armor": 0.3, "sight": 9, "summons": ["scout"],
 			"dropoff": ["wood", "stone", "ore", "food", "mana"], "gather_radius": 10,
 			"color": "#c9a640",
 			"sprites": { "good": "res://assets/sprites/buildings/castle_good.png", "evil": "res://assets/sprites/buildings/castle_evil.png" },
@@ -123,7 +125,7 @@
 			"size": [2, 2], "cost": { "wood": 60, "stone": 40, "mana": 30 }, "build_time": 45,
 			"territory_radius": 4, "hp": 600,
 			"summons": ["fighter", "archer", "elite"],
-			"color": "#8c3b3b",
+			"menu": "military", "color": "#8c3b3b",
 			"sprites": { "good": "res://assets/sprites/buildings/barracks_good.png", "evil": "res://assets/sprites/buildings/barracks_evil.png" }
 		},
 		{
@@ -134,7 +136,7 @@
 			"territory_radius": 4, "hp": 400,
 			"summons": ["medic"],
 			"heal_aura": { "radius": 4, "hp_per_sec": 3 },
-			"color": "#d8d0c0",
+			"menu": "military", "color": "#d8d0c0",
 			"sprites": { "good": "res://assets/sprites/buildings/infirmary_good.png", "evil": "res://assets/sprites/buildings/infirmary_evil.png" }
 		},
 		{
@@ -143,7 +145,7 @@
 			"description": "Forschungsstätte: hier wird geforscht (Forschung mit R). Jede weitere forscht 25 % schneller.",
 			"size": [2, 2], "cost": { "wood": 40, "stone": 80, "mana": 10 }, "build_time": 50,
 			"territory_radius": 4, "hp": 500, "research": true,
-			"color": "#5d6fb3",
+			"menu": "military", "color": "#5d6fb3",
 			"sprites": { "good": "res://assets/sprites/buildings/library_good.png", "evil": "res://assets/sprites/buildings/library_evil.png" }
 		},
 		{
@@ -153,7 +155,7 @@
 			"requires_buildings": ["barracks"], "max_per_kingdom": 1,
 			"size": [3, 3], "cost": { "wood": 120, "stone": 150, "ore": 40, "mana": 40 }, "build_time": 70,
 			"territory_radius": 4, "hp": 900, "hero_hall": true,
-			"color": "#b8860b",
+			"menu": "military", "color": "#b8860b",
 			"sprites": { "good": "res://assets/sprites/buildings/hero_hall_good.png", "evil": "res://assets/sprites/buildings/hero_hall_evil.png" }
 		},
 		{
@@ -163,7 +165,7 @@
 			"requires": ["building:spy_den"], "max_per_kingdom": 1,
 			"size": [2, 2], "cost": { "wood": 60, "stone": 50, "mana": 30 }, "build_time": 45,
 			"territory_radius": 4, "hp": 450, "summons": ["spy"], "spy_den": true,
-			"color": "#4a4a6a",
+			"menu": "military", "color": "#4a4a6a",
 			"sprites": { "good": "res://assets/sprites/buildings/spy_den_good.png", "evil": "res://assets/sprites/buildings/spy_den_evil.png" }
 		},
 		{
@@ -233,6 +235,41 @@
 				"water_spirits": "res://assets/sprites/buildings/village_hut_water_spirits.png",
 				"kobold_traders": "res://assets/sprites/buildings/village_hut_kobold_traders.png"
 			}
+		},
+		{
+			"id": "wall", "name": "Mauer", "names": { "good": "Steinmauer", "evil": "Dornenwall" }, "label": "",
+			"description": "Mauerstück: hält Feinde auf, bis sie es zerstören. Mit gedrückter Maustaste ziehen (wie Strassen). Über eigene Strassen wird automatisch ein Tor gesetzt. Bauarbeiter reparieren beschädigte Mauern.",
+			"size": [1, 1], "cost": { "stone": 5, "wood": 1 }, "build_time": 6, "placement": "line", "line_gate": "gate",
+			"segment": true, "fortification": "wall", "hp": 500, "armor": 0.5, "territory_radius": 0, "max_builders": 1,
+			"menu": "defense", "color": "#8f8a80",
+			"sprites": { "good": "res://assets/sprites/buildings/wall_good.png", "evil": "res://assets/sprites/buildings/wall_evil.png" }
+		},
+		{
+			"id": "gate", "name": "Tor", "names": { "good": "Burgtor", "evil": "Schattentor" }, "label": "Tor",
+			"description": "Durchgang in der Mauer: eigene und verbündete Einheiten gehen hindurch, Feinde müssen es aufbrechen. Auf ein eigenes Mauerstück oder eine eigene Strasse setzen. Im Auswahlfenster verriegeln (dann nur noch eigene und Verbündete).",
+			"size": [1, 1], "cost": { "wood": 30, "stone": 25 }, "build_time": 20, "segment": true, "fortification": "gate",
+			"replaces": ["wall"], "allow_on_road": true, "hp": 1000, "armor": 0.5, "territory_radius": 0, "max_builders": 2,
+			"menu": "defense", "color": "#7a5a3a",
+			"sprites": { "good": "res://assets/sprites/buildings/gate_good.png", "evil": "res://assets/sprites/buildings/gate_evil.png" }
+		},
+		{
+			"id": "tower", "name": "Wachturm", "names": { "good": "Wachturm", "evil": "Dornenturm" }, "label": "Turm",
+			"description": "Schiesst selbsttätig auf Feinde in Reichweite (auch Monster) und hält nach fremden Spionen Ausschau. Gegen Katapulte (grössere Reichweite) hilft er wenig.",
+			"size": [2, 2], "cost": { "wood": 60, "stone": 90 }, "build_time": 50, "fortification": "tower", "territory_radius": 3,
+			"hp": 900, "armor": 0.4, "sight": 10, "loot": { "stone": 20 }, "kill_points": 3, "menu": "defense",
+			"tower": { "attack": 14, "interval": 1.4, "range": 7.0, "projectile": "arrow",
+			           "priority": { "ram": 0.5, "catapult": 0.6, "worker": 1.6, "caravan": 0.8 } },
+			"color": "#9a8f7a",
+			"sprites": { "good": "res://assets/sprites/buildings/tower_good.png", "evil": "res://assets/sprites/buildings/tower_evil.png" }
+		},
+		{
+			"id": "siege_workshop", "name": "Belagerungswerkstatt", "names": { "good": "Belagerungswerkstatt", "evil": "Kriegsschmiede" },
+			"label": "Werkst.", "labels": { "good": "Werkst.", "evil": "Schmiede" },
+			"description": "Hier entstehen Rammböcke und Katapulte. Muss erforscht werden (Militär: Belagerungskunst) und braucht eine Kaserne. Wird mit Mana errichtet.",
+			"requires": ["building:siege_workshop"], "requires_buildings": ["barracks"], "size": [3, 3],
+			"cost": { "wood": 150, "stone": 80, "ore": 40, "mana": 30 }, "build_time": 60, "territory_radius": 4, "hp": 800,
+			"summons": ["ram", "catapult"], "menu": "military", "color": "#6b4f2e",
+			"sprites": { "good": "res://assets/sprites/buildings/siege_workshop_good.png", "evil": "res://assets/sprites/buildings/siege_workshop_evil.png" }
 		},
 		{
 			"id": "road", "name": "Strasse", "label": "",

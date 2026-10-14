@@ -77,7 +77,9 @@ static func tick_summon(b: AIBrain, now: float) -> void:
 				total += 1
 	if total >= target:
 		return
-	var composition: Dictionary = DataDB.ai("army.composition", {})
+	var composition: Dictionary = (DataDB.ai("army.composition", {}) as Dictionary).duplicate()
+	# Belagerungswaffen gegen befestigte Ziele (Phase 9)
+	composition.merge(AISiege.extra_composition(b))
 	var alarm: Dictionary = b.st["alarm"]
 	var max_queue := int(DataDB.ai("army.max_queue_per_building", 2))
 	for bld in k.buildings:
@@ -602,6 +604,7 @@ static func fast_wave(b: AIBrain, now: float) -> void:
 			for u in units:
 				if u.position.distance_to(target_pos) <= fight_r:
 					near += 1
+			AISiege.wave_tick(b, wave, now)
 			if near >= ceili(units.size() * 0.5):
 				wave["state"] = "fight"
 				wave["state_at"] = now
@@ -616,6 +619,7 @@ static func fast_wave(b: AIBrain, now: float) -> void:
 				if not stuck.is_empty():
 					cmd.order_move(stuck, target_pos, true)
 		"fight":
+			AISiege.wave_tick(b, wave, now)
 			if now >= float(wave["next_reissue"]):
 				wave["next_reissue"] = now + FIGHT_ORDER_INTERVAL
 				_fight_orders(b, now, wave, units)

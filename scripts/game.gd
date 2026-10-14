@@ -52,6 +52,11 @@ signal formation_changed(formation: String)
 @onready var event_system: EventSystem = $Systems/EventSystem
 @onready var day_night_view: DayNightView = $DayNight
 @onready var event_effects: EventEffects = $EventEffects
+## Belagerung, Handelswege, Versorgung (Phase 9)
+@onready var siege_system: SiegeSystem = $Systems/SiegeSystem
+@onready var trade_route_system: TradeRouteSystem = $Systems/TradeRouteSystem
+@onready var supply_system: SupplySystem = $Systems/SupplySystem
+@onready var trade_route_view: TradeRouteView = $TradeRoutes
 @onready var selection: SelectionController = $Selection
 @onready var hud: CanvasLayer = $HUD
 @onready var pause_menu: CanvasLayer = $PauseMenu
@@ -152,6 +157,11 @@ func _start_game() -> void:
 	day_night_system.setup(self)
 	satisfaction_system.setup(self)
 	event_system.setup(self)
+	# Phase 9: Belagerung nach Kampf, Bau, Arbeit und Befehl (setzt nav.gate_rule); Handelswege
+	# nach Diplomatie und Dörfern; Versorgung danach und vor den ersten Siedlungen (Gebiet)
+	siege_system.setup(self)
+	trade_route_system.setup(self)
+	supply_system.setup(self)
 	placement.setup(self)
 	selection.setup(self)
 	unit_overlay.setup(self)
@@ -160,6 +170,7 @@ func _start_game() -> void:
 	spell_targeting.setup(self)
 	event_effects.setup(self)
 	day_night_view.setup(self)
+	trade_route_view.setup(self)
 	kingdom_defeated.connect(_on_kingdom_defeated)
 	victory_system.victory_reached.connect(_on_victory_reached)
 
@@ -450,6 +461,8 @@ func _unhandled_input(event: InputEvent) -> void:
 		var key := event as InputEventKey
 		if key != null and key.shift_pressed:
 			_debug_spawn_golem()
+		elif key != null and key.ctrl_pressed:
+			_debug_spawn_ram()
 		else:
 			_debug_spawn_wolves()
 	elif event.is_action_pressed("debug_hero_level") and hud.is_debug_visible():
@@ -491,6 +504,22 @@ func _debug_spawn_golem() -> void:
 	var c: Vector2i = nav.nearest_free(world.world_to_cell(pos), 4)
 	if c.x >= 0 and unit_system.spawn_unit(wild, "golem", world.cell_to_world(c)) != null:
 		Notify.warning("Debug: Übungsgolem erscheint", pos)
+
+
+## Debug (Strg+F11): ein feindlicher Rammbock (Monster-Reich, Typ der Gegenfraktion)
+## an der Maus, der zur Burg des Spielers marschiert
+func _debug_spawn_ram() -> void:
+	var pos := world_map.get_global_mouse_position()
+	var c: Vector2i = nav.nearest_free(world.world_to_cell(pos), 4)
+	var type_id := "ram_evil" if player.faction_id == "good" else "ram_good"
+	if c.x < 0:
+		return
+	var ram := unit_system.spawn_unit(wild, type_id, world.cell_to_world(c))
+	if ram == null:
+		return
+	if is_instance_valid(player.castle):
+		command_system.order_move([ram], player.castle.get_approach_point(ram.position), true)
+	Notify.warning("Debug: feindlicher Rammbock erscheint", pos)
 
 
 ## Debug (F12): ausgewählter Held (sonst der erste lebende) steigt eine Stufe auf

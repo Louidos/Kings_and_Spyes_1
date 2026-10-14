@@ -23,6 +23,8 @@
 ##   rechts Volk mit Stärken und Schwächen, Beziehung (immer Krieg), bekannte Kriege,
 ##   Verträge mit Dörfern und Aufmerksamkeit auf dich (nur mit Kundschaft), Knöpfe
 ##   "Spion schicken (K)", "Hinspringen" und im F3-Modus "Besiegen (Test)".
+## - Reiter "Handelswege" (Phase 9; dieselbe Liste steht auch in der Reichsübersicht,
+##   Reiter "Handel"): TradeRouteList mit eigenen und gesichteten Handelswegen und der Versorgung.
 ## Zeigt nur an und ruft das DiplomacySystem mit dem Spieler-Reich auf (dieselben
 ## Funktionen nutzt ab Phase 7 die KI). Aktualisiert wird alle 0.25 s, solange
 ## das Fenster offen ist, und bei Signalen; die Liste wird nur neu gebaut, wenn
@@ -35,6 +37,8 @@ signal toggled(open: bool)
 
 const TAB_VILLAGES := "villages"
 const TAB_REALMS := "realms"
+## Handelswege (Phase 9)
+const TAB_TRADE := "trade"
 const DESIGN_WIDTH := 1048.0
 const TOP := 92.0
 const MARGIN_X := 16.0
@@ -84,6 +88,8 @@ var _trade_amount := 50
 var _tabs: Dictionary = {}
 var _count_label: Label
 var _footer: Label
+## Handelsliste im Reiter "Handelswege"
+var trade_list: TradeRouteList
 
 # Liste links
 var _list: VBoxContainer
@@ -299,6 +305,10 @@ func _build() -> void:
 	tab_realms.tooltip_text = "Feindliche Königreiche: Volk, Kriege, geschätzte Stärke (Kundschaft nötig)"
 	tab_realms.pressed.connect(_show_tab.bind(TAB_REALMS))
 	title_row.add_child(tab_realms)
+	var tab_trade := _make_tab("Handelswege", group)
+	tab_trade.tooltip_text = "Handelswege, Karawanen, gesichtete fremde Wege und Versorgung"
+	tab_trade.pressed.connect(_show_tab.bind(TAB_TRADE))
+	title_row.add_child(tab_trade)
 	var spacer := Control.new()
 	spacer.custom_minimum_size = Vector2(6, 0)
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -335,6 +345,15 @@ func _build() -> void:
 	pages.add_child(realms_page)
 	_tabs[TAB_REALMS] = {"button": tab_realms, "page": realms_page}
 	_build_realms_page(realms_page)
+	var trade_page := ScrollContainer.new()
+	trade_page.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	pages.add_child(trade_page)
+	trade_list = TradeRouteList.new()
+	trade_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	trade_page.add_child(trade_list)
+	trade_list.setup(game)
+	trade_list.jump_requested.connect(func(pos: Vector2) -> void: game.camera.focus_on(pos))
+	_tabs[TAB_TRADE] = {"button": tab_trade, "page": trade_page}
 
 	_footer = _label(15, COLOR_DIM)
 	_footer.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -669,17 +688,25 @@ func _make_tab(text: String, group: ButtonGroup) -> ResearchTipButton:
 	return b
 
 
-## Reiter zeigen ("villages" oder "realms")
+## Reiter von aussen wählen (TAB_VILLAGES, TAB_REALMS, TAB_TRADE)
+func show_tab(tab: String) -> void:
+	_show_tab(tab)
+
+
+## Reiter zeigen ("villages", "realms" oder "trade")
 func _show_tab(tab: String) -> void:
 	_tab = tab if _tabs.has(tab) else TAB_VILLAGES
 	for id in _tabs:
 		var entry: Dictionary = _tabs[id]
 		(entry["button"] as Button).set_pressed_no_signal(id == _tab)
 		(entry["page"] as Control).visible = id == _tab
-	if _tab == TAB_REALMS:
-		_footer.text = "Mit feindlichen Königreichen gibt es keinen Frieden  ·  Wissen über sie bringen Späher und Spione (K)  ·  N / Esc: schliessen"
-	else:
-		_footer.text = "Ruf steigt durch Geschenke, Handel, Verträge und Schutz; Angriffe, Drohungen und Vertragsbruch senken ihn  ·  N / Esc: schliessen"
+	match _tab:
+		TAB_REALMS:
+			_footer.text = "Mit feindlichen Königreichen gibt es keinen Frieden  ·  Wissen über sie bringen Späher und Spione (K)  ·  N / Esc: schliessen"
+		TAB_TRADE:
+			_footer.text = "Karawanen pendeln auf Handelswegen – schütze sie, überfalle die der Feinde  ·  N / Esc: schliessen"
+		_:
+			_footer.text = "Ruf steigt durch Geschenke, Handel, Verträge und Schutz; Angriffe, Drohungen und Vertragsbruch senken ihn  ·  N / Esc: schliessen"
 	_confirm_action = ""
 	if visible:
 		_refresh()
@@ -709,6 +736,8 @@ func _place() -> void:
 func _refresh() -> void:
 	if game == null or not visible:
 		return
+	if _tab == TAB_TRADE and trade_list != null:
+		trade_list.refresh()
 	var k: Kingdom = game.player
 	var vs: VillageSystem = game.village_system
 	var ds: DiplomacySystem = game.diplomacy_system
@@ -1106,6 +1135,9 @@ func _status_tag(k: Kingdom, v: Kingdom) -> Array:
 		return ["Krieg", COLOR_WAR]
 	var mine := ds.get_treaty_with(v, k)
 	if not mine.is_empty():
+		var route: Dictionary = game.trade_route_system.get_route_for(k, v)
+		if not route.is_empty() and str(route["state"]) == "cut":
+			return ["✕ Weg", COLOR_BAD]
 		return [str(TREATY_SHORT.get(mine, mine)), COLOR_ALLY if mine == "alliance" else COLOR_GOOD]
 	if not ds.get_treaty(v).is_empty():
 		return ["Vertrag vergeben", COLOR_DIM]
@@ -1333,6 +1365,10 @@ func _treaty_text(k: Kingdom, v: Kingdom) -> String:
 			text += "\nMilizen helfen dir im Umkreis von %d Kacheln" % int(DataDB.diplo("treaties.alliance.help_radius", 25))
 			if not special.is_empty():
 				text += "  ·  Kaserne: %s" % str(DataDB.get_unit_type(special).get("name", special))
+	# Handelsweg (Phase 9)
+	var route: Dictionary = game.trade_route_system.get_route_for(k, v)
+	if not route.is_empty():
+		text += "\n" + tip.esc(game.trade_route_system.get_route_text(route, k)) + "  ·  Reiter Handelswege"
 	return text
 
 

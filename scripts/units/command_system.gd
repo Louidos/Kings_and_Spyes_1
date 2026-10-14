@@ -50,6 +50,8 @@ const COMMANDS := {
 	"defect": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "läuft über"},
 	# Flüchtlinge/Wanderer (Phase 8): gehen an den Gebietsrand und warten dort auf Antwort (EventSystem)
 	"seek_refuge": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "bittet um Aufnahme"},
+	# Karawane (Phase 9): zieht mit Waren zum Ziel, kämpft nie, danach Befehl gelöscht
+	"haul": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "zieht mit Waren"},
 }
 
 ## Einheiten weiter als so viele Kacheln vom Gruppenmittelpunkt marschieren einzeln
@@ -138,7 +140,8 @@ func order_attack(units: Array, target: Object) -> void:
 		return
 	var followers: Array = []
 	for u in list:
-		if not is_fighter(u):
+		# Rammböcke greifen keine Einheiten an: sie gehen nur mit
+		if not is_fighter(u) or (u.target_mode == "buildings" and target is Unit):
 			followers.append(u)
 			continue
 		_prepare(u)
@@ -152,7 +155,7 @@ func order_attack(units: Array, target: Object) -> void:
 
 
 ## Einzelreise ohne Kampf (Spione, Boten, ab Phase 9 Karawanen): Befehl cmd ("travel",
-## "infiltrate", "return"), Ziel dest. command_finished(u, cmd, ok) meldet die Ankunft.
+## "infiltrate", "return", "haul"), Ziel dest. command_finished(u, cmd, ok) meldet die Ankunft.
 func order_travel(u: Unit, dest: Vector2, cmd: String = "travel") -> void:
 	if not is_instance_valid(u) or not u.is_alive():
 		return
@@ -319,6 +322,19 @@ func _on_path_failed(u: Unit) -> void:
 		return  # Verfolgung: entscheidet der Kampftakt
 	if u.follow_leader != null:
 		_stop_following(u)
+	# Weg versperrt (Phase 9): Kämpfer brechen durch die Mauer, die den Weg versperrt
+	if u.path_fail != "" and (u.command == "attack_move" or u.command == "attack" \
+			or (u.command == "move" and is_fighter(u))):
+		var siege: SiegeSystem = game.siege_system
+		var wall := siege.find_breach_target(u)
+		if wall != null:
+			if u.command == "move":
+				u.command = "attack_move"
+				siege.notify_blocked(u, wall)
+			u.target = wall
+			u.repath_timer = 0.0
+			return
+		siege.notify_no_way(u)
 	_finish(u, false)
 
 
@@ -521,11 +537,11 @@ func _keep_king_home(list: Array, dest: Vector2) -> Array:
 	return result
 
 
-## Nur lebende Einheiten
+## Nur lebende Einheiten, die Befehle annehmen (Karawanen nicht, Phase 9)
 func _commandable(units: Array) -> Array:
 	var list: Array = []
 	for u in units:
-		if is_instance_valid(u) and u is Unit and u.is_alive():
+		if is_instance_valid(u) and u is Unit and u.is_alive() and bool(u.type_def.get("commandable", true)):
 			list.append(u)
 	return list
 
@@ -536,6 +552,8 @@ func _commandable(units: Array) -> Array:
 func _prepare(u: Unit) -> void:
 	_stop_following(u)
 	u.order_id += 1
+	u.breach_tries = 0
+	u.resume_target_uid = 0
 	if u.can_work() and (u.command.is_empty() or u.command == "defend" or u.command == "flee"):
 		work_system.suspend(u)
 	elif u.inside != null:

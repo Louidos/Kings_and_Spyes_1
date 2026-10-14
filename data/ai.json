@@ -15,7 +15,10 @@
 		"lairs: Monsterlager räumen (ab min_minute, mit mindestens min_army Einheiten, höchstens max_distance Kacheln von der Burg).",
 		"rivalry: Spannung zwischen KI-Reichen (0–100; Krieg ab war_at, Frieden unter peace_at; Zufallsschritt drift_per_hour, Grenznähe border_tiles/border_per_hour, Zwischenfälle incident (höchstens alle incident_cooldown s), Kriegsmüdigkeit, Mindestdauer von Krieg und Frieden).",
 		"defeat: ruin_seconds = so lange bleiben Ruinen eines gefallenen Reichs sichtbar.",
-		"satisfaction (Phase 8): unter build_below Ø-Zufriedenheit baut die KI Taverne bzw. Tempel, unter feast_below feiert sie ein Fest."
+		"satisfaction (Phase 8): unter build_below Ø-Zufriedenheit baut die KI Taverne bzw. Tempel, unter feast_below feiert sie ein Fest.",
+		"fortify (Phase 9): Befestigung bei Bedrohung (Alarm, höchstens einer je 60 s, gilt threat_memory s) oder ab min_minute, wenn ein feindliches Reich das KI-Reich entdeckt hat. towers = Türme je Schwierigkeit (+1 je tower_per_pop Bewohner, höchstens doppelt), Ring tower_ring [innen, aussen] Kacheln um die Burg. Mauerring ab ring_threat Alarmen oder ring_minute (je Schwierigkeit, −1 = nie), Radius ring_radius, höchstens ring_segments_per_think Stücke je Denkvorgang, ring_gates Tore zuerst; reserve bleibt übrig; repair_builders = so viele Bauarbeiter mehr für Reparaturen.",
+		"siege: Belagerungswaffen gegen befestigte Ziele (ab fortified_walls Mauerstücken oder fortified_towers Türmen): max_units + per_wave je bisheriger Welle, höchstens cap; attack_radius = Befestigungen in diesem Umkreis (Kacheln) um das Wellenziel werden angegriffen.",
+		"routes: Handelswege der KI – ab start_trade_minute einmal ein Handelsvertrag mit dem nächsten freien Dorf (bis start_trade_max_distance Kacheln); prefer_trade_first = Handel vor Bündnis, solange kein Handelsweg besteht; Geleitschutz für abgeschnittene Wege (escort_share des Heimbestands, mindestens escort_min Einheiten, bis escort_distance Kacheln, höchstens alle escort_cooldown s)."
 	],
 	"kingdom_names": {"good": "Königreich der %s", "evil": "Dunkles Reich der %s"},
 	"people_personality": {
@@ -56,7 +59,7 @@
 		{"building": "library", "count": 1}, {"building": "farm", "count": 3}, {"building": "infirmary", "count": 1},
 		{"building": "spy_den", "count": 1}, {"building": "hero_hall", "count": 1}, {"building": "house", "count": 6},
 		{"building": "farm", "count": 5}, {"building": "mana_well", "count": 2}, {"building": "barracks", "count": 2},
-		{"building": "library", "count": 2}, {"building": "temple", "count": 1}, {"building": "storehouse", "count": 2}
+		{"building": "library", "count": 2}, {"building": "temple", "count": 1}, {"building": "siege_workshop", "count": 1}, {"building": "storehouse", "count": 2}
 	],
 	"build": {"wait_seconds": 90, "max_sites_base": 2, "max_sites_per_builders": 1, "max_sites": 4,
 	          "growth": {"house_per_pop": 4, "farm_per_pop": 9, "storehouse_per_pop": 25, "lumberyard_per_pop": 30, "max_buildings": 90},
@@ -69,11 +72,11 @@
 	         "gatherer_until_farms": 2, "hunger_gatherer_mult": 3.0},
 	"research": {
 		"prefer": {
-			"good": ["good_tools", "good_weapons", "good_scouting", "good_healing", "good_manalore", "good_masonry", "good_knights",
-			         "hero_lore", "good_blessing", "good_spy_network", "good_shields", "good_manafocus", "good_farcast", "good_rotation",
+			"good": ["good_tools", "good_weapons", "good_scouting", "good_healing", "good_manalore", "good_masonry", "good_watchfire", "good_knights",
+			         "hero_lore", "good_blessing", "good_spy_network", "good_shields", "good_siegecraft", "good_manafocus", "good_farcast", "good_rotation",
 			         "good_veil", "good_spellflow", "good_rain", "good_steadfast", "good_guardians", "good_realm_veil", "good_festivals"],
-			"evil": ["evil_hardhand", "evil_blades", "evil_informants", "evil_mending", "evil_soulmana", "evil_darkbuild", "evil_dread",
-			         "hero_lore", "evil_curse", "evil_shadow_network", "evil_thorns", "evil_soulfocus", "evil_farcast", "evil_shadowfields",
+			"evil": ["evil_hardhand", "evil_blades", "evil_informants", "evil_mending", "evil_soulmana", "evil_darkbuild", "evil_watchfire", "evil_dread",
+			         "hero_lore", "evil_curse", "evil_shadow_network", "evil_thorns", "evil_siegecraft", "evil_soulfocus", "evil_farcast", "evil_shadowfields",
 			         "evil_cloak", "evil_darkflow", "evil_fog", "evil_frenzy", "evil_brood", "evil_realm_shroud", "evil_iron_rule"]},
 		"tier_penalty": 0.15, "min_minute": 8},
 	"army": {"composition": {"fighter": 4.0, "archer": 3.0, "elite": 2.0, "medic": 1.0, "special": 1.5},
@@ -97,5 +100,12 @@
 	            "incident_cooldown": 60, "war_at": 70, "peace_at": 25, "war_weariness_per_hour": 0.8, "min_war_seconds": 1800,
 	            "min_peace_seconds": 1200},
 	"defeat": {"ruin_seconds": 1800},
-	"satisfaction": {"build_below": 45, "feast_below": 35}
+	"satisfaction": {"build_below": 45, "feast_below": 35},
+	"fortify": {"min_minute": 25, "threat_memory": 1200,
+	            "towers": {"easy": 1, "normal": 3, "hard": 5, "epic": 7}, "tower_per_pop": 12, "tower_ring": [6, 9],
+	            "ring_threat": 2, "ring_minute": {"easy": -1, "normal": 120, "hard": 75, "epic": 50},
+	            "ring_radius": 12, "ring_segments_per_think": 16, "ring_gates": 4, "reserve": {"stone": 40}, "repair_builders": 2},
+	"siege": {"fortified_walls": 8, "fortified_towers": 2, "max_units": 2, "per_wave": 0.5, "cap": 5, "attack_radius": 16},
+	"routes": {"start_trade_minute": 6, "start_trade_max_distance": 90, "escort_share": 0.25, "escort_min": 3,
+	           "escort_distance": 70, "escort_cooldown": 300, "prefer_trade_first": true}
 }

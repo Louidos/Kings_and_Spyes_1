@@ -144,6 +144,14 @@ static func _village_diplomacy(b: AIBrain, v: Kingdom, now: float) -> bool:
 			return ds.annex(k, v)
 	var treaty := ds.get_treaty(v)
 	var own := not treaty.is_empty() and int(treaty.get("partner_id", 0)) == k.id
+	# Phase 9: erst ein Handelsweg (Handelsvertrag), solange das Reich keinen hat
+	var trs: Variant = b.game.get("trade_route_system")
+	if treaty.is_empty() and bool(DataDB.ai("routes.prefer_trade_first", true)) and trs != null \
+			and (trs as TradeRouteSystem).get_routes(k).is_empty():
+		var trade_offer := ds.get_treaty_offer(k, v, "trade")
+		if bool(trade_offer["possible"]) and float(trade_offer["chance"]) >= float(DataDB.ai("villages.other_treaty_min_chance", 0.7)):
+			ds.propose_treaty(k, v, "trade")
+			return true
 	if rep >= friendly and (treaty.is_empty() or (own and str(treaty["type"]) != "alliance")):
 		var offer := ds.get_treaty_offer(k, v, "alliance")
 		if bool(offer["possible"]) and float(offer["chance"]) >= float(DataDB.ai("villages.alliance_min_chance", 0.6)):

@@ -127,7 +127,7 @@ func move_to(u: Unit, target: Vector2, keep_path: bool = false) -> void:
 	if u.position.distance_to(target) > LEG_TILES * world.tile_size:
 		u.has_path_final = true
 		u.path_final = target
-		leg = _leg_point(u.position, target)
+		leg = _leg_point(u.position, target, u.kingdom.id)
 	_request(u, leg, keep_path)
 
 
@@ -142,10 +142,21 @@ func _request(u: Unit, target: Vector2, keep_path: bool) -> void:
 		_path_queue.append(u)
 
 
-## Zwischenziel LEG_TILES Kacheln in Richtung to (nächste freie Kachel)
-func _leg_point(from: Vector2, to: Vector2) -> Vector2:
-	var p := from + (to - from).normalized() * LEG_TILES * world.tile_size
-	return world.cell_to_world(game.nav.nearest_free(world.world_to_cell(p), 6))
+## Zwischenziel LEG_TILES Kacheln in Richtung to (nächste freie Kachel). Liegt es in
+## einem Mauerring, der weder mit Start noch Ziel verbunden ist (für Reich kid), werden
+## kürzere Abstände probiert; ohne freie Kachel gilt das Endziel.
+func _leg_point(from: Vector2, to: Vector2, kid: int = 0) -> Vector2:
+	var nav: NavGrid = game.nav
+	var dir := (to - from).normalized()
+	var a := nav.nearest_free(world.world_to_cell(from), 3)
+	var b := nav.nearest_free(world.world_to_cell(to), 3)
+	for tiles in [LEG_TILES, 40.0, 32.0, 24.0, 16.0, 8.0]:
+		var c := nav.nearest_free(world.world_to_cell(from + dir * float(tiles) * world.tile_size), 6)
+		if c.x < 0:
+			continue
+		if a.x < 0 or b.x < 0 or nav.leg_ok(c, a, b, kid):
+			return world.cell_to_world(c)
+	return to
 
 
 ## Nächster Abschnitt eines langen Weges (vom Ende des aktuellen aus)
@@ -155,7 +166,7 @@ func _request_next_leg(u: Unit) -> void:
 		u.has_path_final = false
 		_request(u, u.path_final, true)
 	else:
-		_request(u, _leg_point(from, u.path_final), true)
+		_request(u, _leg_point(from, u.path_final, u.kingdom.id), true)
 
 
 ## Kurze Strecke ohne Wegsuche: läuft geradeaus, wenn unterwegs nichts
@@ -175,13 +186,19 @@ func move_direct(u: Unit, target: Vector2, max_tiles: float = 4.0) -> void:
 	u.moving = dist > 0.5
 
 
-## Führt die gerade Linie von a nach b an keiner blockierten Kachel vorbei?
+## Führt die gerade Linie von a nach b an keiner blockierten Kachel vorbei? Kein
+## Durchschlüpfen zwischen diagonal stossenden Hindernissen (z. B. Mauerecken).
 func can_walk_direct(a: Vector2, b: Vector2) -> bool:
 	var steps := ceili(a.distance_to(b) / (world.tile_size * 0.4))
+	var prev := world.world_to_cell(a)
+	var nav: NavGrid = game.nav
 	for i in range(1, steps + 1):
 		var c := world.world_to_cell(a.lerp(b, float(i) / steps))
-		if not world.in_bounds(c) or game.nav.is_solid(c):
+		if not world.in_bounds(c) or nav.is_solid(c):
 			return false
+		if c.x != prev.x and c.y != prev.y and nav.is_solid(Vector2i(c.x, prev.y)) and nav.is_solid(Vector2i(prev.x, c.y)):
+			return false
+		prev = c
 	return true
 
 
@@ -227,7 +244,11 @@ func _process(_delta: float) -> void:
 		return
 	var ts := float(world.tile_size)
 	var arrivals: Array = []
+	var blocked: Array = []
 	var leg_early := LEG_EARLY_TILES * ts
+	var nav: NavGrid = game.nav
+	# Tor-Prüfung beim Wegpunktwechsel (Beziehung geändert, Tor verriegelt)
+	var gate_check := not nav.gates.is_empty()
 	for u in units:
 		if not u.moving:
 			continue
@@ -239,6 +260,7 @@ func _process(_delta: float) -> void:
 		var unit_speed: float = u.speed if u.speed_cap <= 0.0 else minf(u.speed, u.speed_cap)
 		var base_speed: float = unit_speed * ts
 		var budget := dt
+		var gate_cell := Vector2i(-1, -1)
 		while budget > 0.0 and u.path_index < u.path.size():
 			var cost := world.get_move_cost(world.world_to_cell(u.position))
 			var speed := base_speed / clampf(cost, 0.1, 50.0)
@@ -249,9 +271,17 @@ func _process(_delta: float) -> void:
 				u.position = target
 				budget -= dist / speed
 				u.path_index += 1
+				if gate_check and u.path_index < u.path.size():
+					var nc := world.world_to_cell(u.path[u.path_index])
+					if nav.gates.has(nc) and not nav.gate_passable(nc, u.kingdom.id):
+						gate_cell = nc
+						break
 			else:
 				u.position += (target - u.position) / dist * step
 				budget = 0.0
+		if gate_cell.x >= 0:
+			blocked.append([u, gate_cell])
+			continue
 		if u.path_index >= u.path.size():
 			u.moving = false
 			if u.has_path_final or u.path_pending:
@@ -262,6 +292,15 @@ func _process(_delta: float) -> void:
 				continue
 			arrivals.append(u)
 	# Erst nach der Schleife melden: Empfänger dürfen Einheiten verändern
+	for entry in blocked:
+		var bu: Unit = entry[0]
+		if not is_instance_valid(bu):
+			continue
+		stop(bu)
+		bu.path_fail = "gate"
+		bu.path_fail_cell = entry[1]
+		bu.path_fail_region = 0
+		path_failed.emit(bu)
 	for u in arrivals:
 		if is_instance_valid(u):
 			arrived.emit(u)
@@ -306,12 +345,17 @@ func _process_path_queue() -> void:
 			continue
 		u.path_pending = false
 		done += 1
-		var p: PackedVector2Array = game.nav.find_path(world, u.position, u.path_target)
+		var nav: NavGrid = game.nav
+		var p: PackedVector2Array = nav.find_path(world, u.position, u.path_target, u.kingdom.id)
 		if p.is_empty():
 			u.has_path_final = false
 			u.moving = false
+			u.path_fail = nav.last_fail
+			u.path_fail_region = nav.last_fail_region
+			u.path_fail_cell = nav.last_fail_cell
 			path_failed.emit(u)
 			continue
+		u.path_fail = ""
 		u.path = p
 		u.path_index = 0
 		u.moving = true

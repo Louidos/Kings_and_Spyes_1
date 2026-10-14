@@ -45,7 +45,7 @@ static func tick_build(b: AIBrain, now: float) -> void:
 	var k := b.k
 	var bs: BuildingSystem = b.game.building_system
 	var ws: WorkSystem = b.game.work_system
-	var sites := bs.get_building_sites(k).size()
+	var sites := _real_sites(bs, k)
 	var builders := ws.get_job_count(k, "builder")
 	var max_sites := clampi(int(DataDB.ai("build.max_sites_base", 2)) + builders * int(DataDB.ai("build.max_sites_per_builders", 1)),
 			1, int(DataDB.ai("build.max_sites", 4)))
@@ -65,7 +65,7 @@ static func tick_build(b: AIBrain, now: float) -> void:
 			continue
 		if _try_build(b, id, now) != Try.SKIP:
 			return
-	if k.buildings.size() >= int(DataDB.ai("build.growth.max_buildings", 90)):
+	if AISiege.building_count(k) >= int(DataDB.ai("build.growth.max_buildings", 90)):
 		b.st["build_waiting"] = {}
 		return
 	# Sammler finden nichts mehr (Vorkommen erschöpft): neue Hütte an der nächsten Gruppe
@@ -136,6 +136,15 @@ static func wait_limit(k: Kingdom, cost: Dictionary) -> float:
 			return base
 		needed = maxf(needed, missing / per_min * 60.0)
 	return clampf(needed * 1.3, base, MAX_WAIT_SECONDS)
+
+
+## Baustellen ohne Mauerstücke (ein Mauerring soll das übrige Bauen nicht blockieren)
+static func _real_sites(bs: BuildingSystem, k: Kingdom) -> int:
+	var n := 0
+	for bld in bs.get_building_sites(k):
+		if not bld.is_segment:
+			n += 1
+	return n
 
 
 static func _has_site(bs: BuildingSystem, k: Kingdom, id: String) -> bool:
@@ -506,7 +515,11 @@ static func job_targets(b: AIBrain, workers: int, problems: Variant = null) -> D
 	var ws: WorkSystem = b.game.work_system
 	var bs: BuildingSystem = b.game.building_system
 	var targets := {"idle": 0}
-	var sites := bs.get_building_sites(k).size()
+	# Baustellen (Mauerstücke zählen zusammen als eine) plus Reparaturen (Phase 9)
+	var sites := _real_sites(bs, k)
+	if bs.get_building_sites(k).size() > sites:
+		sites += 1
+	sites += mini(ws.get_repair_site_count(k), int(DataDB.ai("fortify.repair_builders", 2)))
 	var builders := clampi(sites * int(DataDB.ai("jobs.builders_per_site", 1)), int(DataDB.ai("jobs.builders_min", 1)),
 			int(DataDB.ai("jobs.builders_max", 4)))
 	builders = mini(builders, maxi(workers - 2, 1))

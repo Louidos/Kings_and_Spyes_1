@@ -26,8 +26,11 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Spieltempo | + / − (oder die Buttons oben rechts: Pause, 0.5x, 1x, 2x, 3x) |
 | Gebäude bauen | Baumenü unten anklicken → Vorschau (grün = möglich, rot = Grund wird angezeigt) → Linksklick |
 | Mehrere gleiche Gebäude | Umschalttaste beim Klicken gedrückt halten |
+| Baumenü-Reiter | Dorf / Militär & Wissen / Verteidigung (über den Knöpfen des Baumenüs) |
 | Strassen | „Strasse“ im Baumenü → Maustaste gedrückt halten und ziehen (bleibt aktiv bis Rechtsklick/Esc) |
-| Abreissen | X oder „Abreissen“ im Baumenü: Strassen anklicken/überziehen, Gebäude anklicken → Auswahlfenster |
+| Mauer | Baumenü → Verteidigung → „Mauer“: wie Strassen ziehen (über eigenen Strassen entstehen Tore) |
+| Tor | Baumenü → Verteidigung → „Tor“ auf ein eigenes Mauerstück oder eine eigene Strasse setzen; Tor auswählen → „Verriegeln“ / „Öffnen“ |
+| Abreissen | X oder „Abreissen“ im Baumenü: Strassen und eigene Mauern anklicken/überziehen, Gebäude anklicken → Auswahlfenster |
 | Bauen abbrechen | Rechtsklick oder Esc |
 | Auswählen | Linksklick auf Einheit oder Gebäude (Klick ins Leere / Esc hebt auf), Umschalttaste = hinzufügen |
 | Rahmenauswahl | Linke Maustaste gedrückt ziehen – wählt eigene Truppen (Bewohner nur, wenn keine Truppen im Rahmen sind) |
@@ -43,9 +46,10 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Heldenfenster | G oder Button „Helden“ oben: eigene Helden (Stufenwahl, Ausbildung, Wiederbelebung) und Anwerben |
 | Helden auswählen | Heldenleiste unten links über dem Infobereich (Klick wählt, Doppelklick springt hin, Rechtsklick öffnet das Heldenfenster; gefallener Held: Klick belebt wieder, sobald es geht) – Helden sind auch Teil von Armeen |
 | Heldenfähigkeiten | C / V / B (oder die Knöpfe im Auswahlfenster) – auch wenn die ganze Armee ausgewählt ist; Tab wechselt den Helden; Rechtsklick auf einen Knopf schaltet „selbst auslösen“ um (goldener Rahmen). Fähigkeiten mit Ziel: Feind bzw. Stelle anklicken, Rechtsklick/Esc bricht ab |
-| Diplomatie | N oder Button „Diplomatie“ oben: Reiter „Dörfer“ (alle neutralen Dörfer mit Ruf, Vertrag, Entfernung und Stärke; Geschenke, Verträge, Handel, Aufnahme, Drohung, Krieg/Frieden) und „Reiche“ (feindliche Königreiche: Volk, Kriege, geschätzte Stärke – nur mit Kundschaft). Esc oder N schliesst. Ein Dorfgebäude, eine Miliz oder ein Bote auswählen → Knopf „Diplomatie (N)“ im Auswahlfenster |
+| Diplomatie | N oder Button „Diplomatie“ oben: Reiter „Dörfer“ (alle neutralen Dörfer mit Ruf, Vertrag, Entfernung und Stärke; Geschenke, Verträge, Handel, Aufnahme, Drohung, Krieg/Frieden) „Reiche“ (feindliche Königreiche: Volk, Kriege, geschätzte Stärke – nur mit Kundschaft) und „Handelswege“. Esc oder N schliesst. Ein Dorfgebäude, eine Miliz oder ein Bote auswählen → Knopf „Diplomatie (N)“ im Auswahlfenster |
 | Spionage | K oder Button „Spionage · 42“ oben (Zahl und Strich = dein Entdeckungswert, roter Punkt = fremder Spion entdeckt oder ein Reich ist aufmerksamer geworden): Reiter „Übersicht“ (Ursachen, Reichstarnung), „Reiche & Dörfer“ (Kundschaft), „Spione“ (beschwören, Aufträge). Esc oder K schliesst |
 | Spion: Auftrag | Spion auswählen → „Auftrag (K)“ im Auswahlfenster, oder Spionagefenster, Reiter „Spione“: Auftrag, Ziel (und Zweitziel) wählen → „Auftrag erteilen“; „Zurückrufen“ holt ihn heim |
+| Handelswege | N → Reiter „Handelswege“ oder L → Reiter „Handel“: Karawanen, Ladung, Lieferungen, Verluste, „Weg freigeben“, gesichtete fremde Wege, Versorgung |
 | Krieg gegen ein Dorf | mit eigenen Truppen zweimal Rechtsklick (innerhalb von 3 s) auf eine Einheit oder ein Gebäude des Dorfs – der erste Klick warnt nur – oder „Krieg erklären“ im Diplomatiefenster |
 | Reichsübersicht | L oder Button „Reich“ oben (Zufriedenheit, Ereignisse, Volk und Tageszeit; Esc oder L schliesst). Gesicht in der Ressourcenleiste und Sonne/Mond neben dem Datum öffnen sie ebenfalls |
 | Flüchtlinge aufnehmen | Meldung, Ereignisleiste (oben Mitte) oder einen Flüchtling anklicken → „Aufnehmen“ / „Abweisen“ |
@@ -53,7 +57,7 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Meldungen | Klick springt zur Stelle; Meldungen zur Stufenwahl oder Wiederbelebung öffnen das Heldenfenster |
 | Arbeitsverteilung ein/aus | J |
 | Spielmenü | Esc (wenn kein Fenster offen ist und nichts gebaut/ausgewählt wird) |
-| Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu, F11 setzt 3 Wölfe an die Maus, Umschalt+F11 einen Übungsgolem, F12 gibt dem ausgewählten Helden eine Stufe (zum Testen); im Spionagefenster erscheinen Debug-Knöpfe (Aufmerksamkeit, Kundschaft, KI-Angriff, KI-Reich besiegen, Rivalen-Krieg) |
+| Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu, F11 setzt 3 Wölfe an die Maus, Umschalt+F11 einen Übungsgolem, Strg+F11 einen feindlichen Rammbock (marschiert zur Burg), F12 gibt dem ausgewählten Helden eine Stufe (zum Testen); im Spionagefenster erscheinen Debug-Knöpfe (Aufmerksamkeit, Kundschaft, KI-Angriff, KI-Reich besiegen, Rivalen-Krieg), in der Reichsübersicht (L) Knöpfe für Ereignisse, Zufriedenheit und Tageszeit |
 
 Alle Tasten lassen sich im Editor unter *Projekt → Projekteinstellungen → Eingabe-Zuordnung* ändern.
 
@@ -231,7 +235,21 @@ assets/
   auf Signale (`WorldData.cell_changed`, `road_changed`, `TerritorySystem.changed` …). Das ist die
   Grundlage für Speichern/Laden in Phase 10.
 - **Wegfindung** (`NavGrid`, A* über die ganze Karte): Gelände kostet unterschiedlich viel, Strassen
-  sind schneller, Gebäude blockieren.
+  sind schneller, Gebäude blockieren. Ab Phase 9: Tore sind im Grundzustand blockiert und werden je
+  Suche nur für Reiche geöffnet, die hindurch dürfen (`gate_rule` vom SiegeSystem); von Mauern
+  eingeschlossene Flächen („Ringe“) bekommen Labels (lokale Flutfüllung nach jeder Änderung), damit
+  ein eingemauertes Ziel A* nie die ganze Karte absuchen lässt; `last_fail` nennt den Grund.
+- **Belagerung und Handel** (Phase 9, `data/siege.json`, `data/trade.json`):
+  - `SiegeSystem` (`scripts/units/`): meldet Mauern, Tore und Türme (normale Gebäude mit
+    `fortification`) beim NavGrid an, Türme schiessen selbsttätig, `find_breach_target` sucht das Mauerstück,
+    das einen Weg versperrt (Bresche), `find_siege_target` die Ziele für Rammböcke und Katapulte.
+  - `TradeRouteSystem` (`scripts/economy/`): Handelswege zu Dörfern mit Handelsvertrag oder Bündnis;
+    Lieferungen fahren als Karawane (Befehl `"haul"`), Überfälle bringen Beute, Verluste oder Feinde am Weg
+    schneiden ihn ab. `TradeRouteView` (`scripts/view/`) zeichnet die Wege gestrichelt, die Minikarte auch.
+  - `SupplySystem` (`scripts/economy/`): fern vom eigenen bzw. verbündeten Gebiet und offenen Handelswegen
+    erholen sich verletzte Einheiten nicht (Wirkung `supply:regen` über das MagicSystem).
+  - KI: `AISiege` (`scripts/ai/`) baut Türme und einen Mauerring bei Bedrohung, bringt Belagerungswaffen
+    gegen befestigte Ziele und schliesst früh einen Handelsvertrag.
 - **Gebiet**: Jedes fertige Gebäude beansprucht einen Kreis; bei Überschneidung gewinnt das ältere.
   Gebaut werden darf nur im eigenen Gebiet; Sammler holen nichts aus fremdem Gebiet (z. B. eines Dorfs).
 
@@ -516,6 +534,30 @@ Monsterstreifzug, Zufriedenheit ±30, Überläufer jetzt, Verrat jetzt, Tag/Nach
 Rauchtest: `tests/run_smoke.sh 600` (prüft Phase 8 in `tests/smoke_phase8.gd`); lange Läufe mit
 `p8=natural seconds=3600 size=medium`, ein bestimmtes Volk mit `people=<id>`.
 
+## Phase 9 testen
+
+Tipp: F3 an, F9 = Rohstoffe.
+
+1. Baumenü → Verteidigung → Mauer: mit gedrückter Maustaste einen Ring um ein Stück Land ziehen. Über eine
+   Strasse entsteht automatisch ein Tor. Schliesst du den Ring ohne Tor, warnt eine Meldung.
+2. Ein Tor auf ein Mauerstück setzen. Eigene Bewohner und Truppen gehen hindurch. Tor auswählen → „Verriegeln“.
+3. F11 setzt Wölfe vor die Mauer. Sie finden keinen Weg und greifen Mauer oder Tor an. Sind sie weg,
+   reparieren Bauarbeiter die Schäden (Stein wird abgezogen).
+4. Wachturm bauen: Die Vorschau zeigt die Reichweite. Er schiesst sichtbare Pfeile auf Wölfe und Feinde.
+5. Forschung → Militär „Belagerungskunst“ → Belagerungswerkstatt → Rammbock und Katapult. Rechtsklick auf ein
+   feindliches Gebäude oder Lager: Katapulte schiessen von weit, Rammböcke greifen nur Gebäude an.
+   Strg+F11 schickt einen feindlichen Rammbock gegen deine Burg.
+6. Diplomatie (N): Handelsvertrag mit einem Dorf. Eine Karawane pendelt (gestrichelte Linie auf Karte und
+   Minikarte). N → Reiter „Handelswege“ (oder L → Reiter „Handel“) zeigt Ladung, Lieferungen und Verluste.
+7. Wölfe (F11) auf den Weg setzen oder die Karawane über den F3-Knopf überfallen: Erst geht die Ladung
+   verloren, dann ist der Weg abgeschnitten (rotes ✕). Sind keine Feinde mehr da, öffnet er sich nach einigen
+   Minuten, oder du gibst ihn über den Knopf frei.
+8. KI-Karawanen (gestrichelt braun, sobald gesichtet) überfallen: Du bekommst Beute, ihre Lieferungen fallen aus.
+9. Armee weit aus dem Gebiet schicken: Verletzte erholen sich nicht (Wirkung „Ohne Versorgung“). Im eigenen
+   Gebiet, nahe einem offenen Handelsweg oder durch Heiler geht es wieder.
+10. KI: Nach Angriffen baut sie Türme, auf Normal später auch einen Mauerring. Gegen deine Mauern bringt sie
+    Rammböcke und Katapulte.
+
 ## Grafiken austauschen
 
 Alle Grafiken sind zunächst automatisch erzeugte Platzhalter. Legt man eine PNG-Datei
@@ -532,5 +574,5 @@ beim nächsten Start automatisch verwendet – ohne Code-Änderung.
 - [x] Phase 6 – Neutrale Dörfer, Diplomatie, Handel, Ruf, Boten
 - [x] Phase 7 – Gegnerische Königreiche mit KI, Entdeckung, Spionage
 - [x] Phase 8 – Zufriedenheit, Verrat, Flüchtlinge, Ereignisse, Monster, Tag/Nacht
-- [ ] Phase 9 – Belagerungen und Handelswege
+- [x] Phase 9 – Belagerungen und Handelswege
 - [ ] Phase 10 – Speichern/Laden, Schwierigkeitsgrade, UI-Feinschliff, Balancing

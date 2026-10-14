@@ -537,6 +537,12 @@ func _compute_parts(k: Kingdom, st: Dictionary, now: float) -> Array:
 				* minf(1.0, ratio / maxf(float(DataDB.sat("safety.troops_full_ratio", 0.25)), 0.01))
 		if troops_v >= 0.5:
 			parts.append(["Schutz durch Truppen", troops_v, "safety"])
+	# Mauerring um die Burg und Türme (Phase 9, siege.json → safety)
+	var siege: Variant = game.get("siege_system")
+	if siege != null:
+		var fort_v := float(siege.get_safety_bonus(k))
+		if fort_v >= 0.5:
+			parts.append(["Schutz durch Mauern und Türme", fort_v, "safety"])
 	# Gebäude (Taverne, Tempel): Plätze aller fertigen Gebäude je Typ
 	var caps := {}
 	for b in k.buildings:
@@ -1018,7 +1024,8 @@ func _on_kingdom_attacked(victim: Kingdom, _attacker: Kingdom, pos: Vector2) -> 
 
 
 func _on_building_destroyed(b: Building, _killer: Kingdom) -> void:
-	if b == null or not is_tracked(b.kingdom):
+	# Mauerstücke und Tore (Phase 9) zählen nicht als verlorene Gebäude
+	if b == null or b.is_segment or not is_tracked(b.kingdom):
 		return
 	_push_time(_state(b.kingdom)["lost_buildings"])
 
