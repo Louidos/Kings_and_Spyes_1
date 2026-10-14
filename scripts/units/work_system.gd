@@ -40,6 +40,9 @@ var _unreachable: Dictionary = {}
 ## Zählt Änderungen an Gebäuden/Reservierungen (zusammen mit
 ## WorldData.deposit_version: "hat sich seit der letzten Suche etwas getan?")
 var _local_version := 0
+## Reich, für das gerade gesucht wird (_spiral_find/_cell_ok): fremdes Gebiet
+## (Dörfer, andere Reiche) ist tabu, 0 = nicht prüfen
+var _search_kingdom_id := 0
 var _retry_seconds := 3.0
 var _wander_radius := 4
 var _tick_count := 0
@@ -62,6 +65,8 @@ func setup(p_game: Node) -> void:
 	building_system.building_completed.connect(func(_b: Building) -> void: _local_version += 1)
 	building_system.building_removed.connect(on_building_removed)
 	building_system.roads_changed.connect(_wake_all_builders)
+	# Gebiet gewechselt (Dorf aufgenommen, neues Gebäude): Sammelplätze neu suchen
+	game.territory.changed.connect(func(_kid: int, _bbox: Rect2i, _dirty: Rect2i) -> void: _local_version += 1)
 
 
 # ---------------------------------------------------------------------------
@@ -372,8 +377,9 @@ func _find_gather_work(u: Unit, job: Dictionary) -> void:
 	var best_cell := Vector2i(-1, -1)
 	var best_dropoff: Building = null
 	var best_score := INF
-	# Bisheriges Vorkommen weiter nutzen, solange es etwas hergibt
-	if u.target_cell.x >= 0 and world.is_gatherable(u.target_cell, indices):
+	# Bisheriges Vorkommen weiter nutzen, solange es etwas hergibt (und nicht in fremdem Gebiet liegt)
+	if u.target_cell.x >= 0 and world.is_gatherable(u.target_cell, indices) \
+			and not _is_foreign(u.target_cell, u.kingdom.id):
 		var cw := world.cell_to_world(u.target_cell)
 		for d in candidates:
 			if _in_reach(d, u.target_cell, 1):
@@ -392,6 +398,7 @@ func _find_gather_work(u: Unit, job: Dictionary) -> void:
 		# Neues Ziel: Arbeitsweg (hin und zurück) plus etwas Anmarsch, geteilt
 		# durch den Bonus der Annahmestelle. Die nächsten Annahmestellen zuerst;
 		# weiter entfernte nur, solange noch nichts gefunden wurde.
+		_search_kingdom_id = u.kingdom.id
 		for n in candidates.size():
 			if n >= MAX_DROPOFF_CANDIDATES and best_dropoff != null:
 				break
@@ -406,6 +413,7 @@ func _find_gather_work(u: Unit, job: Dictionary) -> void:
 				best_score = score
 				best_cell = cell
 				best_dropoff = d
+		_search_kingdom_id = 0
 		if best_dropoff == null:
 			u.failed_search_version = _version()
 			_wait(u, str(job.get("hint", "Nichts zu tun")), job)
@@ -746,12 +754,21 @@ func _cell_ok(c: Vector2i, mask: PackedByteArray) -> bool:
 	# Nicht bei Monsterhöhlen sammeln (bis das Lager besiegt ist)
 	if not world.danger.is_empty() and world.danger[i] > 0:
 		return false
+	# Nicht im Gebiet eines anderen Reichs (z. B. eines neutralen Dorfs)
+	if _search_kingdom_id != 0 and world.territory[i] != 0 and world.territory[i] != _search_kingdom_id:
+		return false
 	if _unreachable.has(c):
 		if int(_unreachable[c]) == game.nav.solid_version:
 			return false
 		_unreachable.erase(c)
 	var max_g: int = DataDB.deposits[t - 1]["max_gatherers"]
 	return int(_reservations.get(c, 0)) < max_g
+
+
+## Gehört die Kachel einem anderen Reich als kingdom_id?
+func _is_foreign(c: Vector2i, kingdom_id: int) -> bool:
+	var owner_id := world.get_owner(c)
+	return owner_id != 0 and owner_id != kingdom_id
 
 
 ## Liegt die Kachel im Sammelradius der Annahmestelle (plus Toleranz)?
