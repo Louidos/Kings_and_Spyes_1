@@ -3,8 +3,9 @@
 ## Meldungen oben rechts (Notify.posted). Die neueste steht oben, höchstens
 ## MAX_ENTRIES gleichzeitig. Jede Meldung verschwindet nach LIFETIME echten
 ## Sekunden (blendet aus); solange die Maus darauf liegt, bleibt sie stehen.
-## Klick auf eine Meldung mit Ort springt mit der Kamera dorthin,
-## Meldungen ohne Ort werden per Klick geschlossen.
+## Klick auf eine Meldung mit Ort springt mit der Kamera dorthin, eine Meldung
+## mit Verweis öffnet das Fenster (HUD.open_link, z. B. Heldenfenster bei einer
+## Stufenwahl), Meldungen ohne Ort werden per Klick geschlossen.
 class_name NotificationPanel
 extends VBoxContainer
 
@@ -69,7 +70,10 @@ func _on_posted(text: String, kind: String, world_pos: Variant) -> void:
 	b.add_theme_stylebox_override("hover_pressed", _make_style(color, 0.92))
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	var has_pos := world_pos is Vector2
-	b.tooltip_text = "Klicken: zur Stelle springen" if has_pos else "Klicken: schliessen"
+	if world_pos is Dictionary and (world_pos as Dictionary).has("window"):
+		b.tooltip_text = "Klicken: Fenster öffnen"
+	else:
+		b.tooltip_text = "Klicken: zur Stelle springen" if has_pos else "Klicken: schliessen"
 	b.pressed.connect(_on_entry_pressed.bind(b, world_pos))
 	add_child(b)
 	move_child(b, 0)
@@ -79,7 +83,14 @@ func _on_posted(text: String, kind: String, world_pos: Variant) -> void:
 
 
 func _on_entry_pressed(b: Button, world_pos: Variant) -> void:
-	if world_pos is Vector2:
+	if world_pos is Dictionary:
+		# Verweis: Fenster öffnen (das HUD kennt die Fenster), dazu ggf. die Stelle
+		var link: Dictionary = world_pos
+		if game != null and game.hud != null and game.hud.has_method("open_link"):
+			game.hud.call("open_link", link)
+		if link.get("pos") is Vector2 and game != null and game.camera != null:
+			game.camera.focus_on(link["pos"])
+	elif world_pos is Vector2:
 		if game != null and game.camera != null:
 			game.camera.focus_on(world_pos)
 	else:

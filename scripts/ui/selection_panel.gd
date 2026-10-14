@@ -10,6 +10,9 @@
 ##   Arbeiter (−/+), Beschwören mit Warteschlange und Sammelpunkt, Abreissen.
 ## - Fremdes (Monsterhöhle, Monster, ab Phase 7 Gegner): nur Anzeige – Reich,
 ##   Leben, Kampfwerte bzw. was im Lager wartet.
+## - Helden (auch der aktive Held einer gemischten Auswahl): Stufe, Erfahrung,
+##   Stufenwahl und die Fähigkeitsknöpfe C / V / B (HeroSelectionBox); Burg:
+##   gefallene Helden wiederbeleben; Heldenhalle: Ausbildung.
 ## - Magie: bei einer Einheit laufende Zauberwirkungen (Restzeit, in der
 ##   Zauberfarbe), "Getarnt" und bei beschworenen Wächtern die Restzeit;
 ##   bei der Forschungsstätte die laufende Forschung und "Forschung öffnen (R)".
@@ -104,6 +107,9 @@ var _work_button: Button
 var _attack_move_button: Button
 var _formation_button: Button
 
+## Helden-Abschnitt (Stufe, Fähigkeiten; Burg: Wiederbeleben; Halle: Ausbildung)
+var _hero_box: HeroSelectionBox
+
 var _demolish_button: Button
 ## Restzeit der Abriss-Bestätigung (Echtzeit, 0 = keine Bestätigung offen)
 var _confirm_left := 0.0
@@ -190,6 +196,9 @@ func _ready() -> void:
 	_job_option.item_selected.connect(_on_job_selected)
 	_job_row.add_child(_job_option)
 
+	_hero_box = HeroSelectionBox.new()
+	vbox.add_child(_hero_box)
+
 	_build_actions(vbox)
 
 	_research_button = Button.new()
@@ -226,6 +235,9 @@ func setup(p_game: Node) -> void:
 	game.player.resources_changed.connect(_on_resources_changed)
 	game.work_system.jobs_changed.connect(_on_jobs_changed)
 	game.command_system.armies_changed.connect(_on_armies_changed)
+	_hero_box.setup(game)
+	game.selection.focus_hero_changed.connect(_on_focus_hero_changed)
+	game.hero_system.heroes_changed.connect(_on_heroes_changed)
 	_on_selection_changed(game.selection.selected)
 
 
@@ -286,6 +298,18 @@ func _on_armies_changed(k: Kingdom) -> void:
 		_dirty = true
 
 
+## Tab: anderer aktiver Held der Auswahl
+func _on_focus_hero_changed(_u: Unit) -> void:
+	if _mode != "":
+		_dirty = true
+
+
+## Helden geändert (Stufe, Wahl, Tod, Wiederbelebung …)
+func _on_heroes_changed(k: Kingdom) -> void:
+	if k == game.player and _mode != "":
+		_dirty = true
+
+
 func _on_formation_changed(_formation: String) -> void:
 	_update_formation_button()
 
@@ -316,6 +340,7 @@ func _refresh() -> void:
 	else:
 		_mode = ""
 		visible = false
+		_hero_box.hide_box()
 
 
 # ---------------------------------------------------------------------------
@@ -358,6 +383,7 @@ func _show_building(b: Building) -> void:
 		_set_text(_facts, _building_facts(b))
 	_magic_box.visible = false
 	_show_research(b, own)
+	_hero_box.show_building(b if own else null)
 
 	# Beschwören (nur eigene, fertige Gebäude)
 	var can_summon := own and b.constructed and not summons.is_empty()
@@ -609,7 +635,8 @@ func _make_summon_button(def: Dictionary, k: Kingdom) -> Dictionary:
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	var costs := {}
-	var cost: Dictionary = def.get("cost", {})
+	# Helden: wirkliche Kosten (jeder weitere Held kostet mehr)
+	var cost: Dictionary = game.summon_system.get_cost(k, id)
 	for r in DataDB.resources:
 		var res_id := str(r["id"])
 		var amount := float(cost.get(res_id, 0.0))
@@ -654,9 +681,13 @@ func _refresh_summons(b: Building) -> void:
 			row.modulate = tint
 		# Fehlende Ressourcen rot
 		var costs: Dictionary = entry["costs"]
+		var cost: Dictionary = ss.get_cost(k, str(entry["id"]))
 		for res_id in costs:
 			var pair: Array = costs[res_id]
 			var label: Label = pair[0]
+			# Heldenkosten steigen mit jedem Helden: Zahl nachführen
+			pair[1] = float(cost.get(res_id, 0.0))
+			_set_label_text(label, str(ceili(float(pair[1]))))
 			_set_color(label, COLOR_BAD if k.get_amount(str(res_id)) + 0.0001 < float(pair[1]) else COLOR_TEXT)
 		var time_label: Label = entry["time"]
 		_set_label_text(time_label, "%d s" % ceili(_summon_seconds(def, k)))
@@ -722,7 +753,7 @@ func _type_stat(def: Dictionary, k: Kingdom, key: String) -> float:
 func _summon_tooltip(def: Dictionary, k: Kingdom) -> String:
 	var lines: PackedStringArray = []
 	lines.append(str(def.get("name", "?")))
-	lines.append("Kosten: " + DataDB.cost_to_text(def.get("cost", {})))
+	lines.append("Kosten: " + DataDB.cost_to_text(game.summon_system.get_cost(k, str(def.get("id", "")))))
 	lines.append("Dauer: %d s" % ceili(_summon_seconds(def, k)))
 	var stats: PackedStringArray = []
 	stats.append("Leben %d" % roundi(_type_stat(def, k, "hp")))
@@ -799,6 +830,10 @@ func _show_unit(u: Unit) -> void:
 		_set_text(_note, "")
 	_show_magic(u)
 	_hide_research()
+	if own and u.hero_id != 0:
+		_hero_box.show_hero(u, false)
+	else:
+		_hero_box.hide_box()
 	_job_row.visible = own and u.can_work()
 	if _job_row.visible:
 		_update_job_options(u)
@@ -860,6 +895,8 @@ func _show_units(units: Array) -> void:
 	_set_text(_note, MULTI_HINT)
 	_magic_box.visible = false
 	_hide_research()
+	# Aktiver Held der Auswahl (Tab wechselt): Fähigkeiten auch mit der ganzen Armee
+	_hero_box.show_hero(game.selection.get_focus_hero(), true)
 	_summon_box.visible = false
 	_worker_row.visible = false
 	_job_row.visible = false
@@ -985,6 +1022,15 @@ func _stat_source_line(u: Unit, key: String, label: String, value: float, as_per
 			for mod_key in keys:
 				if entry.has(mod_key):
 					parts.append("%s %s" % [_source_name(str(source)), _factor_text(float(entry[mod_key]), key)])
+	# Helden: Stufe, Talente und passive Fähigkeiten (Unit.hero_mods)
+	if u.hero_mods.has(key):
+		for part in (u.hero_mods[key] as Dictionary).get("parts", []):
+			var p: Array = part
+			if not is_equal_approx(float(p[2]), 1.0):
+				parts.append("%s %s" % [str(p[0]), _factor_text(float(p[2]), key)])
+			if absf(float(p[1])) > 0.0001:
+				var hero_add := ("%+d %%" % roundi(float(p[1]) * 100.0)) if as_percent else ("%s%s" % ["+" if float(p[1]) > 0.0 else "−", _num(absf(float(p[1])))])
+				parts.append("%s %s" % [str(p[0]), hero_add.replace("-", "−")])
 	for e in u.effects:
 		var eff: Dictionary = e
 		if str(eff.get("key", "")) != key:

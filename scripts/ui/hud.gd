@@ -3,11 +3,13 @@
 ## Spieloberfläche:
 ## - oben: Reich, Ressourcen, Kampfpunkte und Bewohner (ResourceBar), Button
 ##   "Forschung (R)" mit Fortschritt, Datum, Tempo
-## - Forschungsfenster (ResearchPanel, Taste R) in einer eigenen Ebene darüber
+## - Forschungsfenster (ResearchPanel, Taste R) und Heldenfenster (HeroPanel,
+##   Taste G, Button "Helden (G)") in eigenen Ebenen darüber; es ist immer nur
+##   eines der beiden offen (beide stehen in der Mitte)
 ## - oben links: Arbeitsverteilung (JobPanel, Taste J)
 ## - oben rechts: Meldungen (NotificationPanel)
 ## - unten links: Auswahlfenster (SelectionPanel), darunter die Armeeleiste
-##   (ArmyBar) und der Infobereich (Kachel, Gebäude oder Einheit unter der Maus)
+##   (ArmyBar), die Heldenleiste (HeroBar) und der Infobereich (Kachel, Gebäude oder Einheit unter der Maus)
 ## - unten Mitte: Baumenü (BuildMenu) mit Steuerungshinweis darüber
 ## - unten rechts: Minikarte
 ## Das HUD zeigt nur an und leitet Klicks an die Systeme weiter –
@@ -27,6 +29,8 @@ const RESEARCH_LAYER := 11
 ## Forschungs-Button oben: so oft pro Sekunde aktualisieren
 const RESEARCH_REFRESH_INTERVAL := 0.25
 const COLOR_RESEARCH_IDLE := Color(1.0, 0.85, 0.3)
+## Ebene des Heldenfensters (wie das Forschungsfenster)
+const HERO_LAYER := 11
 
 @onready var kingdom_label: Label = %KingdomLabel
 @onready var resource_bar: ResourceBar = %ResourceBar
@@ -55,6 +59,11 @@ var research_panel: ResearchPanel
 var _research_layer: CanvasLayer
 var _research_button: ResearchTipButton
 var _research_timer := 0.0
+## Heldenfenster (Taste G), sein Button oben und die Heldenleiste unten links
+var hero_panel: HeroPanel
+var hero_bar: HeroBar
+var _hero_layer: CanvasLayer
+var _hero_button: ResearchTipButton
 ## Hinweis "Kampfpunkte ausgeben" kam schon (einmal je Partie)
 var _kp_hint_shown := false
 
@@ -102,7 +111,14 @@ func setup(p_game: Node) -> void:
 	bottom_left.add_child(army_bar)
 	bottom_left.move_child(army_bar, info_panel.get_index())
 	army_bar.setup(game)
+	# Heldenleiste direkt über dem Infobereich (unter der Armeeleiste): feste Lage
+	hero_bar = HeroBar.new()
+	hero_bar.name = "HeroBar"
+	bottom_left.add_child(hero_bar)
+	bottom_left.move_child(hero_bar, info_panel.get_index())
+	hero_bar.setup(game)
 	_setup_research()
+	_setup_heroes()
 
 
 ## Forschungsfenster ein-/ausblenden (Taste R, Button oben)
@@ -121,10 +137,40 @@ func is_research_open() -> bool:
 	return research_panel != null and research_panel.is_open()
 
 
-## Esc schliesst das Forschungsfenster auch, wenn gerade ein Tooltip offen ist
-## (Godot verbraucht Esc sonst nur zum Schliessen des Tooltips).
+## Heldenfenster ein-/ausblenden (Taste G, Button oben)
+func toggle_heroes() -> void:
+	if hero_panel != null:
+		hero_panel.toggle()
+
+
+## Heldenfenster öffnen (Reiter HeroPanel.TAB_HEROES / TAB_RECRUIT, optional bei einem Helden)
+func open_heroes(tab: String = "", hero_id: int = 0) -> void:
+	if hero_panel != null:
+		hero_panel.open(tab, hero_id)
+
+
+func is_heroes_open() -> bool:
+	return hero_panel != null and hero_panel.is_open()
+
+
+## Verweis aus einer Meldung öffnen ({"window": "heroes", "hero_id": …} oder "research")
+func open_link(link: Dictionary) -> void:
+	match str(link.get("window", "")):
+		"heroes":
+			open_heroes(HeroPanel.TAB_HEROES, int(link.get("hero_id", 0)))
+		"research":
+			open_research()
+
+
+## Esc schliesst das Forschungs- bzw. Heldenfenster auch, wenn gerade ein
+## Tooltip offen ist (Godot verbraucht Esc sonst nur zum Schliessen des Tooltips).
 func _input(event: InputEvent) -> void:
-	if is_research_open() and event.is_action_pressed("game_menu") and not event.is_echo():
+	if not event.is_action_pressed("game_menu") or event.is_echo():
+		return
+	if is_heroes_open():
+		hero_panel.close()
+		get_viewport().set_input_as_handled()
+	elif is_research_open():
 		research_panel.close()
 		get_viewport().set_input_as_handled()
 
@@ -134,9 +180,12 @@ func toggle_job_panel() -> void:
 	job_panel.toggle()
 
 
-## Esc: schliesst das oberste offene Fenster (Forschung, Arbeitsverteilung).
+## Esc: schliesst das oberste offene Fenster (Helden, Forschung, Arbeitsverteilung).
 ## true = etwas wurde geschlossen (dann nichts weiter tun).
 func close_top_panel() -> bool:
+	if is_heroes_open():
+		hero_panel.close()
+		return true
 	if is_research_open():
 		research_panel.close()
 		return true
@@ -160,7 +209,7 @@ func _process(delta: float) -> void:
 		_blink_time += delta
 		paused_label.modulate.a = 0.6 + 0.4 * cos(_blink_time * 3.0)
 	if debug_label.visible and world_map != null:
-		debug_label.text = "FPS %d  ·  Zoom %.2f  ·  Chunks %d  ·  Seed %s  ·  F9: +100 Ressourcen  ·  F10: König −150  ·  F11: 3 Wölfe an der Maus" % [
+		debug_label.text = "FPS %d  ·  Zoom %.2f  ·  Chunks %d  ·  Seed %s  ·  F9: +100 Ressourcen  ·  F10: König −150  ·  F11: 3 Wölfe an der Maus  ·  F12: Held +1 Stufe" % [
 			Engine.get_frames_per_second(), camera.zoom.x,
 			world_map.get_loaded_chunk_count(), GameSession.seed_text]
 	if world != null:
@@ -173,6 +222,7 @@ func _process(delta: float) -> void:
 		if _research_timer >= RESEARCH_REFRESH_INTERVAL:
 			_research_timer = 0.0
 			_refresh_research_button()
+			_refresh_hero_button()
 
 
 # ---------------------------------------------------------------------------
@@ -213,6 +263,9 @@ func _setup_research() -> void:
 
 func _on_research_toggled(open: bool) -> void:
 	_research_button.set_pressed_no_signal(open)
+	# Beide Fenster stehen in der Mitte: nur eines offen
+	if open and is_heroes_open():
+		hero_panel.close()
 
 
 func _on_research_state_changed(k: Kingdom) -> void:
@@ -284,6 +337,84 @@ func _research_button_tip() -> String:
 	lines.append("Erforscht: %d von %d" % [k.researched.size(), rs.get_tree_for(k).size()])
 	if ResearchPanel.has_affordable_upgrade(rs, k):
 		lines.append(tip.colored("Kampfpunkte ausgeben möglich (Reiter „Kampfpunkte“)", Color(0.55, 0.88, 0.5)))
+	return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Helden
+# ---------------------------------------------------------------------------
+
+## Heldenfenster in eigener Ebene und Button "Helden (G)" rechts neben "Forschung (R)"
+func _setup_heroes() -> void:
+	_hero_layer = CanvasLayer.new()
+	_hero_layer.layer = HERO_LAYER
+	_hero_layer.name = "HeroLayer"
+	add_child(_hero_layer)
+	hero_panel = HeroPanel.new()
+	hero_panel.name = "HeroPanel"
+	_hero_layer.add_child(hero_panel)
+	hero_panel.setup(game)
+	hero_panel.toggled.connect(_on_heroes_toggled)
+	visibility_changed.connect(func() -> void: _hero_layer.visible = visible)
+	_hero_layer.visible = visible
+
+	_hero_button = ResearchTipButton.new()
+	_hero_button.name = "HeroButton"
+	_hero_button.text = "Helden (G)"
+	_hero_button.toggle_mode = true
+	_hero_button.add_theme_font_size_override("font_size", 16)
+	_hero_button.badge_color = HeroUI.COLOR_PENDING
+	_hero_button.underline_color = HeroUI.COLOR_XP
+	_hero_button.tip_source = _hero_button_tip
+	_hero_button.pressed.connect(toggle_heroes)
+	var hbox := date_label.get_parent()
+	hbox.add_child(_hero_button)
+	hbox.move_child(_hero_button, date_label.get_index())
+	game.hero_system.heroes_changed.connect(_on_heroes_changed)
+	_refresh_hero_button()
+
+
+func _on_heroes_toggled(open: bool) -> void:
+	_hero_button.set_pressed_no_signal(open)
+	if open and is_research_open():
+		research_panel.close()
+
+
+func _on_heroes_changed(k: Kingdom) -> void:
+	if k == game.player:
+		_refresh_hero_button()
+
+
+## "Helden (G) · 2/3"; Punkt bei offener Stufenwahl oder wenn ein Held wiederbelebt werden kann
+func _refresh_hero_button() -> void:
+	if _hero_button == null:
+		return
+	var k: Kingdom = game.player
+	var hs: HeroSystem = game.hero_system
+	var n := hs.count_heroes(k)
+	var text := "Helden (G)" if n == 0 else "Helden (G) · %d/%d" % [n, hs.max_heroes(k)]
+	if _hero_button.text != text:
+		_hero_button.text = text
+	_hero_button.badge_visible = HeroPanel.needs_attention(hs, k)
+
+
+func _hero_button_tip() -> String:
+	var k: Kingdom = game.player
+	var hs: HeroSystem = game.hero_system
+	var tip := ResearchTipButton
+	var lines: PackedStringArray = ["[b]Helden[/b] (Taste G)"]
+	if hs.get_heroes(k).is_empty():
+		var hall_name := DataDB.get_building_name(DataDB.get_building("hero_hall"), k.faction_id)
+		lines.append(tip.colored("Noch keine Helden – in der %s anwerben (Reiter „Anwerben“)" % hall_name, COLOR_RESEARCH_IDLE))
+	for rec in hs.get_heroes(k):
+		var line := "%s – Stufe %d" % [hs.get_title(rec), int(rec["level"])]
+		if int(rec["pending"]) > 0:
+			lines.append(tip.colored(line + " – Stufenwahl offen", HeroUI.COLOR_PENDING))
+		elif bool(rec["dead"]):
+			lines.append(tip.colored(line + " – " + HeroUI.state_text(hs, rec, null), HeroUI.COLOR_BAD))
+		else:
+			lines.append(tip.esc(line))
+	lines.append("Helden: %d von %d" % [hs.count_heroes(k), hs.max_heroes(k)])
 	return "\n".join(lines)
 
 

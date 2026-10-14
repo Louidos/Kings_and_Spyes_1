@@ -13,6 +13,8 @@
 ##   eigenen Beschwörungsgebäude den Sammelpunkt setzen.
 ## - 1–9: Armee wählen (zweimal schnell: Kamera hin), Strg+Zahl: speichern,
 ##   Umschalt+Zahl: hinzufügen.
+## - Helden: der "aktive Held" der Auswahl (erster Held, Tab wechselt) bekommt
+##   die Fähigkeitstasten C / V / B – auch in einer gemischten Auswahl (Armee).
 ## Der König lässt sich nur durch direktes Anklicken auswählen (nicht per
 ## Rahmen, Doppelklick oder Armee). Fremde Einheiten und Gebäude kann man nur
 ## ansehen, nicht befehligen.
@@ -27,6 +29,8 @@ signal selection_changed(objs: Array)
 signal attack_move_armed_changed(armed: bool)
 ## Ein Befehl wurde gegeben (für Markierungen): kind "move", "attack_move", "attack", "rally"
 signal command_issued(pos: Vector2, kind: String)
+## Der aktive Held der Auswahl hat gewechselt (Tab, neue Auswahl); null = keiner
+signal focus_hero_changed(u: Unit)
 
 ## Klickradius für Einheiten in Bildschirmpixeln
 const UNIT_PICK_RADIUS := 20.0
@@ -52,6 +56,8 @@ var _press_world := Vector2.ZERO
 var _cur_screen := Vector2.ZERO
 var _press_shift := false
 var _box: SelectionBox
+## uid des aktiven Helden der Auswahl (0 = keiner; nur Laufzeit)
+var _focus_hero_uid := 0
 var _last_army := 0
 var _last_army_msec := -100000
 ## Entfernte Objekte: Signal einmal pro Frame statt einmal pro Einheit
@@ -108,6 +114,7 @@ func select(objs: Array, additive: bool = false) -> void:
 	selected = new_list
 	if _armed and get_own_units().is_empty():
 		cancel_arm()
+	_update_focus_hero()
 	selection_changed.emit(selected)
 
 
@@ -135,6 +142,58 @@ func get_own_units() -> Array:
 		if is_instance_valid(o) and o is Unit and o.is_alive() and o.kingdom == game.player:
 			list.append(o)
 	return list
+
+
+## Eigene lebende Helden der Auswahl (in Auswahlreihenfolge)
+func get_selected_heroes() -> Array:
+	var list: Array = []
+	for u in get_own_units():
+		if (u as Unit).hero_id != 0:
+			list.append(u)
+	return list
+
+
+## Aktiver Held der Auswahl (bekommt C / V / B) oder null
+func get_focus_hero() -> Unit:
+	if _focus_hero_uid == 0:
+		return null
+	for u in get_selected_heroes():
+		if (u as Unit).uid == _focus_hero_uid:
+			return u
+	return null
+
+
+## Tab: nächster Held der Auswahl wird aktiv
+func cycle_hero() -> void:
+	var heroes := get_selected_heroes()
+	if heroes.is_empty():
+		return
+	var index := 0
+	for i in heroes.size():
+		if (heroes[i] as Unit).uid == _focus_hero_uid:
+			index = (i + 1) % heroes.size()
+			break
+	_set_focus_hero(heroes[index])
+
+
+## Aktiven Helden prüfen: bleibt er ausgewählt, bleibt er aktiv, sonst der erste Held
+func _update_focus_hero() -> void:
+	var heroes := get_selected_heroes()
+	for u in heroes:
+		if (u as Unit).uid == _focus_hero_uid:
+			return
+	_set_focus_hero(heroes[0] if not heroes.is_empty() else null)
+
+
+func _set_focus_hero(u: Unit) -> void:
+	var uid := u.uid if u != null else 0
+	if uid == _focus_hero_uid:
+		return
+	_focus_hero_uid = uid
+	# Ein laufender Zielmodus gehört zum bisherigen Helden
+	if game != null and not game.spell_targeting.ability_id.is_empty():
+		game.spell_targeting.cancel()
+	focus_hero_changed.emit(u)
 
 
 ## Nächster Rechtsklick (oder Linksklick) gibt "angreifend vorrücken"
@@ -580,4 +639,5 @@ func _emit_after_removal() -> void:
 	_removal_pending = false
 	if _armed and get_own_units().is_empty():
 		cancel_arm()
+	_update_focus_hero()
 	selection_changed.emit(selected)

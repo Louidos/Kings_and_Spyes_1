@@ -18,11 +18,18 @@
 ## Auswahl bleibt erhalten.
 ## Legt ausserdem die Zauberleiste (SpellBar) an (eigene CanvasLayer), damit
 ## das HUD-Skript nicht angefasst werden muss.
+## Heldenfähigkeiten (start_ability) nutzen denselben Zielmodus: Kreis der
+## Reichweite um den Helden, Wirkungskreis bzw. Ring um den Feind an der Maus;
+## Linksklick befiehlt HeroSystem.order_ability (zu weit: der Held läuft hin).
+## Fähigkeiten ohne Ziel wirken sofort, ohne Zielmodus. So gelten alle
+## bestehenden Sperren (Auswahl, Bauen, Esc) auch für Fähigkeiten.
 class_name SpellTargeting
 extends Node2D
 
-## Zielmodus an/aus (spell_id leer = aus)
+## Zielmodus an/aus (spell_id leer = aus; auch bei Heldenfähigkeiten leer)
 signal targeting_changed(spell_id: String)
+## Zielmodus einer Heldenfähigkeit an/aus (ability_id leer = aus)
+signal ability_targeting_changed(ability_id: String)
 
 ## can_cast mit Reichweitenprüfung höchstens so oft (Sekunden)
 const CHECK_INTERVAL := 0.1
@@ -49,9 +56,14 @@ const AREA_LINE_PX := 2.0
 const TARGET_RING := 17.0
 ## So lange nach dem Zaubern wird der zweite Klick eines Doppelklicks verbraucht (ms)
 const DOUBLE_CLICK_GUARD_MSEC := 500
+## Feind unter der Maus (Fähigkeit mit Ziel "enemy"): Suchradius in Bildschirmpixeln
+const ENEMY_PICK_RADIUS := 22.0
 
 var game: Node
 var spell_id := ""
+## Heldenfähigkeit im Zielmodus ("" = keine) und der wirkende Held (uid)
+var ability_id := ""
+var ability_hero_uid := 0
 ## Zauberleiste (unten rechts)
 var bar: SpellBar
 
@@ -107,7 +119,12 @@ func setup(p_game: Node) -> void:
 
 
 func is_active() -> bool:
-	return not spell_id.is_empty()
+	return not spell_id.is_empty() or not ability_id.is_empty()
+
+
+## Zielmodus einer Heldenfähigkeit für diesen Helden?
+func is_ability_targeting(hero_uid: int, p_ability_id: String) -> bool:
+	return not ability_id.is_empty() and ability_id == p_ability_id and ability_hero_uid == hero_uid
 
 
 ## Zielmodus für einen Zauber starten (Bauen und Angriff-Vorrücken enden,
@@ -120,6 +137,8 @@ func start(p_spell_id: String) -> void:
 		return
 	game.placement.cancel()
 	game.selection.cancel_arm()
+	if not ability_id.is_empty():
+		cancel()
 	spell_id = p_spell_id
 	_def = def
 	_color = def.get("color", Color.WHITE)
@@ -143,6 +162,12 @@ func start(p_spell_id: String) -> void:
 
 
 func cancel() -> void:
+	if not ability_id.is_empty():
+		_end_ability()
+		Input.set_default_cursor_shape(Input.CURSOR_ARROW)
+		set_process(false)
+		queue_redraw()
+		ability_targeting_changed.emit("")
 	if spell_id.is_empty():
 		return
 	spell_id = ""
@@ -176,6 +201,15 @@ func _create_bar() -> void:
 func _process(delta: float) -> void:
 	if not is_active():
 		set_process(false)
+		return
+	if not ability_id.is_empty():
+		# Bauen gestartet, Menü, Spielende oder der Held lebt nicht mehr: Zielmodus endet
+		if game.placement.is_active() or not game.camera.input_enabled or _ability_hero() == null:
+			cancel()
+			return
+		_update_mouse()
+		_check_ability(false)
+		queue_redraw()
 		return
 	# Bauen gestartet, Menü, Spielende oder kein König mehr: Zielmodus endet
 	var king: Variant = game.player.king
@@ -223,7 +257,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if mb.pressed:
 			_mouse_screen = mb.position
 			_mouse_seen = true
-			_try_cast(_screen_to_world(mb.position))
+			if not ability_id.is_empty():
+				_try_ability(_screen_to_world(mb.position))
+			else:
+				_try_cast(_screen_to_world(mb.position))
 	elif mb.button_index == MOUSE_BUTTON_RIGHT:
 		get_viewport().set_input_as_handled()
 		if mb.pressed:
@@ -427,6 +464,9 @@ func _draw_area() -> void:
 func _draw() -> void:
 	if not is_active() or _over_ui:
 		return
+	if not ability_id.is_empty():
+		_draw_ability()
+		return
 	var zoom := maxf(game.camera.zoom.x, 0.01)
 	var px := 1.0 / zoom
 	var ts := float(game.world.tile_size)
@@ -526,6 +566,193 @@ func _draw_lines(lines: PackedStringArray, colors: Array[Color]) -> void:
 		draw_string_outline(font, pos, lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, 5, Color(0, 0, 0, 0.85))
 		draw_string(font, pos, lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, fs, colors[i])
 		y += float(fs) * 0.25
+
+
+# ---------------------------------------------------------------------------
+# Heldenfähigkeiten
+# ---------------------------------------------------------------------------
+
+## Fähigkeit eines Helden auslösen (Knopf oder C / V / B): ohne Ziel sofort,
+## mit Ziel (Feind, Stelle) startet der Zielmodus. Läuft der Zielmodus für
+## dieselbe Fähigkeit schon, endet er (zweiter Druck = abbrechen).
+## Gibt false zurück, wenn es gerade nicht geht (der Grund kommt als Meldung).
+func start_ability(u: Unit, p_ability_id: String) -> bool:
+	if game == null or u == null or not is_instance_valid(u):
+		return false
+	if is_ability_targeting(u.uid, p_ability_id):
+		cancel()
+		return false
+	var hs: HeroSystem = game.hero_system
+	var def := DataDB.get_ability(p_ability_id)
+	var ability_name := str(def.get("name", p_ability_id))
+	var reason := hs.can_use(u, p_ability_id)
+	if not HeroUI.is_ready_reason(reason):
+		Notify.warning("%s: %s" % [ability_name, reason])
+		return false
+	if not HeroUI.needs_target(p_ability_id):
+		cancel()
+		reason = hs.order_ability(u, p_ability_id, null)
+		if not reason.is_empty():
+			Notify.warning("%s: %s" % [ability_name, reason])
+			return false
+		return true
+	game.placement.cancel()
+	game.selection.cancel_arm()
+	cancel()
+	ability_id = p_ability_id
+	ability_hero_uid = u.uid
+	_def = def
+	_color = def.get("color", Color.WHITE)
+	_side = hs.get_ability_side(p_ability_id)
+	_reason = ""
+	_targets.clear()
+	Input.set_default_cursor_shape(Input.CURSOR_CROSS)
+	set_process(true)
+	if not _mouse_seen:
+		_mouse_screen = get_viewport().get_mouse_position()
+	_update_mouse()
+	_check_ability(true)
+	queue_redraw()
+	ability_targeting_changed.emit(ability_id)
+	return true
+
+
+func _end_ability() -> void:
+	ability_id = ""
+	ability_hero_uid = 0
+	_def = {}
+	_reason = ""
+	_targets.clear()
+
+
+## Held der laufenden Fähigkeit (lebend) oder null
+func _ability_hero() -> Unit:
+	var u: Variant = game.find_by_uid(ability_hero_uid)
+	if is_instance_valid(u) and u is Unit and (u as Unit).is_alive() and (u as Unit).hero_id != 0:
+		return u
+	return null
+
+
+## Ziel an der Mausposition: Feind (Unit) bzw. die Stelle (Vector2)
+func _ability_target(pos: Vector2) -> Variant:
+	if str(_def.get("target", "")) != "enemy":
+		return pos
+	var radius := maxf(ENEMY_PICK_RADIUS / maxf(game.camera.zoom.x, 0.25), float(game.world.tile_size) * 0.8)
+	var best: Unit = null
+	var best_d := INF
+	for w in game.magic_system.units_in(pos, radius):
+		var o := w as Unit
+		if o == null or not game.are_hostile(game.player, o.kingdom) or not game.can_see(game.player, o):
+			continue
+		var d := o.position.distance_squared_to(pos)
+		if d < best_d:
+			best_d = d
+			best = o
+	return best
+
+
+## Grund an der Mausposition (Reichweite egal – der Held läuft hin), höchstens 10× pro Sekunde
+func _check_ability(force: bool) -> void:
+	_check_age += get_process_delta_time()
+	var cell: Vector2i = game.world.world_to_cell(_mouse_world)
+	if not force:
+		if _check_age < CHECK_INTERVAL:
+			return
+		if cell == _check_cell and _check_age < RECHECK_INTERVAL:
+			return
+	_check_age = 0.0
+	_check_cell = cell
+	var u := _ability_hero()
+	if u == null:
+		return
+	var hs: HeroSystem = game.hero_system
+	var target: Variant = _ability_target(_mouse_world)
+	_reason = hs.can_use(u, ability_id, target, true)
+	var rec := hs.find_record(u)
+	_radius_tiles = float(hs.get_ability_values(rec, ability_id).get("radius", 0.0))
+	_targets = hs.get_ability_targets(u, ability_id, _mouse_world) if not _side.is_empty() else []
+	if target is Unit and _targets.is_empty():
+		_targets = [target]
+
+
+func _try_ability(pos: Vector2) -> void:
+	var u := _ability_hero()
+	if u == null:
+		cancel()
+		return
+	var hs: HeroSystem = game.hero_system
+	var reason := hs.order_ability(u, ability_id, _ability_target(pos))
+	if not reason.is_empty():
+		Notify.warning("%s: %s" % [str(_def.get("name", ability_id)), reason])
+		_reason = reason
+		queue_redraw()
+		return
+	_cast_end_msec = Time.get_ticks_msec()
+	cancel()
+
+
+## Reichweite um den Helden, Wirkungskreis bzw. Ring um den Feind an der Maus
+func _draw_ability() -> void:
+	var u := _ability_hero()
+	if u == null:
+		return
+	var hs: HeroSystem = game.hero_system
+	var zoom := maxf(game.camera.zoom.x, 0.01)
+	var px := 1.0 / zoom
+	var ts := float(game.world.tile_size)
+	var ok := _reason.is_empty()
+	var col := _color if ok else COLOR_BAD
+	var line_col := SpellTargeting._readable(col)
+	var c := _mouse_world
+	var v := hs.get_ability_values(hs.find_record(u), ability_id)
+	var range_px := float(v.get("range", 0.0)) * ts
+	var in_range := u.position.distance_to(c) <= range_px + ts * 0.5
+	# Reichweite: gestrichelter Kreis um den Helden
+	if range_px > 0.0:
+		var steps := 48
+		for i in steps:
+			if i % 2 == 1:
+				continue
+			var a := TAU * float(i) / float(steps) + _spin * 0.3
+			draw_arc(u.position, range_px, a, a + TAU / float(steps), 4, Color(SpellTargeting._readable(_color), 0.7), 2.0 * px, true)
+		draw_line(u.position, c, Color(line_col, 0.35), 1.5 * px, true)
+	# Getroffene Einheiten
+	for t in _targets:
+		if not is_instance_valid(t):
+			continue
+		var w := t as Unit
+		draw_arc(w.position, TARGET_RING, 0.0, TAU, 24, Color(0, 0, 0, 0.5), 4.0 * px, true)
+		draw_arc(w.position, TARGET_RING, 0.0, TAU, 24, Color(line_col, 0.95), 2.0 * px, true)
+	# Wirkungskreis an der Maus (bei Fähigkeiten auf einen Feind nur das Fadenkreuz)
+	if str(_def.get("target", "")) == "point":
+		var radius := maxf(_radius_tiles, 0.6) * ts
+		draw_circle(c, radius, Color(col, 0.16 if ok else 0.13))
+		draw_arc(c, radius, 0.0, TAU, 72, Color(0, 0, 0, 0.45), 5.0 * px, true)
+		draw_arc(c, radius, 0.0, TAU, 72, Color(line_col, 0.95), 2.5 * px, true)
+	var m := 7.0 * px
+	draw_line(c - Vector2(m, 0), c + Vector2(m, 0), Color(line_col, 0.9), 2.0 * px, true)
+	draw_line(c - Vector2(0, m), c + Vector2(0, m), Color(line_col, 0.9), 2.0 * px, true)
+
+	var lines: PackedStringArray = ["%s (%s)" % [str(_def.get("name", ability_id)), u.get_display_name()]]
+	var colors: Array[Color] = [SpellTargeting._readable(_color)]
+	if not ok:
+		lines.append(_reason)
+		colors.append(COLOR_BAD_TEXT)
+	else:
+		var info := _count_text()
+		if str(_def.get("target", "")) == "enemy":
+			info = ""
+		if not info.is_empty():
+			lines.append(info)
+			colors.append(COLOR_COUNT)
+		if not in_range:
+			lines.append("Zu weit – der Held läuft hin")
+			colors.append(COLOR_COUNT)
+		lines.append("Linksklick: wirken  ·  Rechtsklick: abbrechen")
+		colors.append(COLOR_HINT)
+	draw_set_transform(c, 0.0, Vector2(px, px))
+	_draw_lines(lines, colors)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## Dunkle Zauberfarben für Linien und Text aufhellen

@@ -243,6 +243,7 @@ func add_stat(key: String, amount: int = 1) -> void:
 
 
 ## Meldung an den Spieler – nur wenn dieses Reich vom Spieler gesteuert wird.
+## world_pos: Vector2 (Klick springt hin), null oder ein Verweis (siehe Notify.post).
 func notify(text: String, kind: String = "info", world_pos: Variant = null) -> void:
 	if is_player:
 		Notify.post(text, kind, world_pos)

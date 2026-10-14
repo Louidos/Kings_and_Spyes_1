@@ -289,7 +289,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not _playing or pause_menu.is_open or _game_over != null:
 		return
 	if event.is_action_pressed("game_menu"):
-		# Esc: erst offene Fenster (Forschung, Arbeitsverteilung) schliessen, dann
+		# Esc: erst offene Fenster (Helden, Forschung, Arbeitsverteilung) schliessen, dann
 		# Zielmodus/Bauen abbrechen, dann Auswahl aufheben, dann Menü
 		if hud.close_top_panel():
 			pass
@@ -305,6 +305,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.toggle_job_panel()
 	elif event.is_action_pressed("toggle_research"):
 		hud.toggle_research()
+	elif event.is_action_pressed("toggle_heroes"):
+		hud.toggle_heroes()
+	elif event.is_action_pressed("hero_ability_1"):
+		use_hero_ability(0)
+	elif event.is_action_pressed("hero_ability_2"):
+		use_hero_ability(1)
+	elif event.is_action_pressed("hero_ability_3"):
+		use_hero_ability(2)
+	elif event.is_action_pressed("hero_cycle"):
+		selection.cycle_hero()
 	elif event.is_action_pressed("demolish_mode"):
 		placement.start_demolish()
 	elif event.is_action_pressed("debug_resources") and hud.is_debug_visible():
@@ -379,6 +389,23 @@ func _debug_hero_level() -> void:
 		Notify.warning("Debug: kein lebender Held")
 		return
 	hero_system.debug_level_up(player, hero_id)
+
+
+## C / V / B: Fähigkeit index (0–2) des aktiven Helden der Auswahl – auch wenn
+## er mit seiner Armee ausgewählt ist. Mit Ziel startet der Zielmodus.
+func use_hero_ability(index: int) -> void:
+	var u := selection.get_focus_hero()
+	if u == null:
+		Notify.info("Kein Held ausgewählt – Heldenleiste unten links")
+		return
+	var abilities: Array = hero_system.get_type(hero_system.find_record(u)).get("abilities", [])
+	if index < 0 or index >= abilities.size():
+		return
+	var ability_id := str(abilities[index])
+	if HeroUI.is_passive(ability_id):
+		Notify.info("%s wirkt von selbst (passiv)" % str(DataDB.get_ability(ability_id).get("name", "")))
+		return
+	spell_targeting.start_ability(u, ability_id)
 
 
 ## Formation des Spielers wechseln (Block <-> Linie); gilt für die nächsten Marschbefehle

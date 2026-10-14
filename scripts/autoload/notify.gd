@@ -2,10 +2,12 @@
 ##
 ## Meldungen an den Spieler ("Bau fertig", "Hungersnot!" ...). Systeme rufen
 ## nur Notify.info/good/warning/danger auf; die Anzeige übernimmt das HUD.
-## Optional mit Weltposition – ein Klick auf die Meldung springt dorthin.
+## Optional mit Weltposition – ein Klick auf die Meldung springt dorthin –
+## oder mit einem Verweis auf ein Fenster (z. B. Heldenfenster bei einer Stufenwahl).
 extends Node
 
-## kind: "info", "good", "warning" oder "danger"; world_pos: Vector2 oder null
+## kind: "info", "good", "warning" oder "danger"; world_pos: Vector2, null oder
+## ein Verweis {"window": "heroes", "hero_id": int, "pos": Vector2 (optional)}
 signal posted(text: String, kind: String, world_pos: Variant)
 
 ## Gleiche Meldung innerhalb dieser Zeit (echte Sekunden) wird verworfen
@@ -15,6 +17,8 @@ const REPEAT_GUARD_SECONDS := 6.0
 var _last_shown: Dictionary = {}
 
 
+## world_pos: Vector2 (Klick springt hin), null (Klick schliesst) oder ein Verweis
+## {"window": Fenstername für das HUD, weitere Schlüssel je Fenster, "pos": Vector2 optional}
 func post(text: String, kind: String = "info", world_pos: Variant = null) -> void:
 	var now := Time.get_ticks_msec()
 	if _last_shown.has(text) and now - int(_last_shown[text]) < REPEAT_GUARD_SECONDS * 1000.0:
