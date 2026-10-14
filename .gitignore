@@ -9,3 +9,6 @@ export_credentials.cfg
 # Betriebssystem
 .DS_Store
 Thumbs.db
+
+# Arbeitskopien der Werkzeuge
+.claude/
