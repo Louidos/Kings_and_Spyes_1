@@ -38,17 +38,19 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Formation Block / Linie | F oder Button im Auswahlfenster |
 | Sammelpunkt | Burg/Kaserne/Krankenstation auswählen → Rechtsklick in die Welt |
 | Einheiten beschwören | Burg (Späher), Kaserne (Kämpfer, Schützen, Elite – nach Forschung), Krankenstation (Heiler) auswählen → Buttons |
-| Forschung | R oder Button „Forschung (R)“ oben: Forschungsbaum und Reiter „Kampfpunkte“ (Esc oder R schliesst) |
+| Forschung | R oder Button „Forschung“ oben: Forschungsbaum und Reiter „Kampfpunkte“ (Esc oder R schliesst) |
 | Zaubern | Zauber in der Zauberleiste (unten rechts) anklicken → Kreis an die Stelle führen → Linksklick; Rechtsklick/Esc bricht ab |
-| Heldenfenster | G oder Button „Helden (G)“ oben: eigene Helden (Stufenwahl, Ausbildung, Wiederbelebung) und Anwerben |
+| Heldenfenster | G oder Button „Helden“ oben: eigene Helden (Stufenwahl, Ausbildung, Wiederbelebung) und Anwerben |
 | Helden auswählen | Heldenleiste unten links über dem Infobereich (Klick wählt, Doppelklick springt hin, Rechtsklick öffnet das Heldenfenster; gefallener Held: Klick belebt wieder, sobald es geht) – Helden sind auch Teil von Armeen |
 | Heldenfähigkeiten | C / V / B (oder die Knöpfe im Auswahlfenster) – auch wenn die ganze Armee ausgewählt ist; Tab wechselt den Helden; Rechtsklick auf einen Knopf schaltet „selbst auslösen“ um (goldener Rahmen). Fähigkeiten mit Ziel: Feind bzw. Stelle anklicken, Rechtsklick/Esc bricht ab |
-| Diplomatie | N oder Button „Diplomatie (N)“ oben: alle neutralen Dörfer mit Ruf, Vertrag, Entfernung und Stärke; Geschenke, Verträge, Handel, Aufnahme, Drohung, Krieg/Frieden (Esc oder N schliesst). Ein Dorfgebäude, eine Miliz oder ein Bote auswählen → Knopf „Diplomatie (N)“ im Auswahlfenster |
+| Diplomatie | N oder Button „Diplomatie“ oben: Reiter „Dörfer“ (alle neutralen Dörfer mit Ruf, Vertrag, Entfernung und Stärke; Geschenke, Verträge, Handel, Aufnahme, Drohung, Krieg/Frieden) und „Reiche“ (feindliche Königreiche: Volk, Kriege, geschätzte Stärke – nur mit Kundschaft). Esc oder N schliesst. Ein Dorfgebäude, eine Miliz oder ein Bote auswählen → Knopf „Diplomatie (N)“ im Auswahlfenster |
+| Spionage | K oder Button „Spionage · 42“ oben (Zahl und Strich = dein Entdeckungswert, roter Punkt = fremder Spion entdeckt oder ein Reich ist aufmerksamer geworden): Reiter „Übersicht“ (Ursachen, Reichstarnung), „Reiche & Dörfer“ (Kundschaft), „Spione“ (beschwören, Aufträge). Esc oder K schliesst |
+| Spion: Auftrag | Spion auswählen → „Auftrag (K)“ im Auswahlfenster, oder Spionagefenster, Reiter „Spione“: Auftrag, Ziel (und Zweitziel) wählen → „Auftrag erteilen“; „Zurückrufen“ holt ihn heim |
 | Krieg gegen ein Dorf | mit eigenen Truppen zweimal Rechtsklick (innerhalb von 3 s) auf eine Einheit oder ein Gebäude des Dorfs – der erste Klick warnt nur – oder „Krieg erklären“ im Diplomatiefenster |
 | Meldungen | Klick springt zur Stelle; Meldungen zur Stufenwahl oder Wiederbelebung öffnen das Heldenfenster |
 | Arbeitsverteilung ein/aus | J |
 | Spielmenü | Esc (wenn kein Fenster offen ist und nichts gebaut/ausgewählt wird) |
-| Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu, F11 setzt 3 Wölfe an die Maus, Umschalt+F11 einen Übungsgolem, F12 gibt dem ausgewählten Helden eine Stufe (zum Testen) |
+| Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu, F11 setzt 3 Wölfe an die Maus, Umschalt+F11 einen Übungsgolem, F12 gibt dem ausgewählten Helden eine Stufe (zum Testen); im Spionagefenster erscheinen Debug-Knöpfe (Aufmerksamkeit, Kundschaft, KI-Angriff, KI-Reich besiegen, Rivalen-Krieg) |
 
 Alle Tasten lassen sich im Editor unter *Projekt → Projekteinstellungen → Eingabe-Zuordnung* ändern.
 
@@ -65,6 +67,9 @@ data/                    Spieldaten (JSON) – ohne Code änderbar
   peoples.json             Völker (alle 22): Stärken/Schwächen, Gelände- und Tag/Nacht-Boni, Dorfdaten
   diplomacy.json           Ruf, Geschenke, Verträge, Handel, Aufnahme, Drohung, Dörfer, Boten
   difficulties.json        Schwierigkeitsgrade
+  ai.json                  Gegner-KI: Namen, Persönlichkeiten, Schwierigkeit (Reiche, erste Welle, Faktoren),
+                           Bauliste, Berufe, Forschung, Armee, Wellen, Lager, Rivalität, Niederlage
+  espionage.json           Entdeckung, Aggression, Reichstarnung, Aufmerksamkeit, Kundschaft, Berichte, Spione
   resources.json           Ressourcen und Rohstoffvorkommen (Bäume, Steine, Erz, Beeren, Manaquellen)
   buildings.json           Gebäude: Kosten, Bauzeit, Wohnraum, Gebiet, Annahme, Produktion
   jobs.json                Berufe der Bewohner (Holzfäller, Bauer, Bauarbeiter ...)
@@ -83,6 +88,10 @@ scripts/
   units/                   Einheiten, UnitSystem (Bewegung), WorkSystem (Berufe), CombatSystem (Kampf),
                            CommandSystem (Befehle, Formationen, Armeen), SummonSystem, MonsterSystem
   diplomacy/               VillageSystem (Dörfer), DiplomacySystem (Ruf, Verträge, Handel), MessengerSystem (Boten)
+  ai/                      AISystem (KI-Reiche gründen, Takt), AIBrain (Gehirn je Reich) mit den Modulen AIEconomy,
+                           AIMilitary, AIDiplomacy; AIRivalry (Spannung zwischen KI-Reichen)
+  espionage/               EspionageSystem (Entdeckung, Aufmerksamkeit, Kundschaft, Tarnung), SpySystem (Spione)
+  kingdoms/                VictorySystem (Niederlage der KI-Reiche, Ruinen, Sieg)
   camera/                  Strategie-Kamera
   view/                    Darstellung über der Welt: Lebensbalken/Auswahlringe, Kampfeffekte
   ui/                      HUD-Panels, Bauvorschau, Auswahl und Befehle, Spielende
@@ -147,8 +156,38 @@ assets/
   Kampfsignale (`kingdom_attacked`, `unit_died`, `building_destroyed`) feuern mitten in den Schleifen des
   CombatSystems – Folgen (Alarm, Boten, Vertragsende) landen deshalb in einer Warteschlange und laufen
   im eigenen Takt. Zustand je System in einfachen Feldern (`to_dict`/`from_dict`/`rebuild_runtime`).
-- **Diplomatie-Oberfläche** (`scripts/ui/`): `DiplomacyPanel` (Fenster N, Reiter „Dörfer“, Phase 7 ergänzt
-  „Reiche“), Dorf-Abschnitt im `SelectionPanel`, Kriegsbestätigung im `SelectionController` (zweiter
+- **Gegnerische Königreiche** (`scripts/ai/`, Phase 7): Das `AISystem` gründet je nach Schwierigkeit und
+  Kartengrösse KI-Reiche (Fraktion der Gegenseite, eigenes Volk, `controller = "ai"`) auf den Plätzen vom Typ
+  `"kingdom"`, setzt die Faktoren der Schwierigkeit (Quelle `"difficulty"`) und lässt die Gehirne gestaffelt
+  denken (alle paar Spielsekunden eines; dazu ein billiger Schnelltakt für Verteidigung und Wellen).
+  `AIBrain` hält nur Laufzeit – der Zustand liegt als einfache Werte in `Kingdom.ai_state`. Die Module sind
+  statische Funktionen: `AIEconomy` (Bauliste, reaktives Bauen, Bauplatzsuche mit Prüfbudget, Berufe –
+  Soll-Verteilung zwischengespeichert, Umverteilung gedrosselt –, Forschung), `AIMilitary` (Beschwören,
+  Helden, Zauber, Verteidigung, Lager räumen, Angriffswellen mit Sammeln, Marsch und Rückzug) und
+  `AIDiplomacy` (Dörfer umwerben, Späher, Spione, Reichstarnung). Die KI benutzt nur die öffentlichen
+  Schnittstellen, die auch der Spieler nutzt. Angriffe auf den Spieler kommen erst, wenn er **entdeckt**
+  ist und die Zeitsperre der Schwierigkeit (`first_attack_minutes`, Normal 45 min) abgelaufen ist.
+  `AIRivalry` lässt die KI-Reiche untereinander Spannung aufbauen bis zum Krieg.
+- **Entdeckung und Spionage** (`scripts/espionage/`): Das `EspionageSystem` berechnet je Reich einen
+  **Entdeckungswert** (Gebäude, Bevölkerung, Armee, Helden, abklingende Aggression; Reichstarnung −40 %),
+  daraus je Beobachter und Ziel die **Aufmerksamkeit** (Nähe, Sprünge durch Angriffe, Boten, ertappte
+  Spione; Stufen Gerüchte und entdeckt) und die **Kundschaft** (Stufe 0–3 mit Alter; Quellen: Späher,
+  Spione, Boten, Angriffe). Was der Spieler über fremde Reiche sieht (Auswahlfenster, Diplomatie, Spionage),
+  hängt nur an `get_intel_level`, `details_visible`, `estimate_strength` und `get_kingdom_summary`. Das
+  `SpySystem` führt Spione (Stufe der Einheit `spy`, immer getarnt) mit Aufträgen *Auskundschaften*, *Dorf
+  aufhetzen*, *Rivalen aufhetzen* (Befehle `infiltrate`/`spy`/`return` über `CommandSystem.order_travel`),
+  würfelt die Entdeckung gegen die Wachsamkeit des Gastgebers und lässt Spione mit Erfahrung aufsteigen.
+- **Sieg und Niederlage** (`scripts/kingdoms/victory_system.gd`): Fällt die Burg oder stirbt der König eines
+  KI-Reichs, zerfällt es im eigenen Takt (Gebäude werden zu Ruinen, Truppen lösen sich auf, Verträge enden,
+  das Gebiet verschwindet). Sind alle feindlichen Reiche gefallen, zeigt `game.gd` den Siegbildschirm mit
+  Statistik („Weiterspielen“ möglich). Fällt die Burg oder der König des Spielers, ist das Spiel verloren.
+- **Spionage-Oberfläche** (`scripts/ui/`): `EspionagePanel` (Fenster K, Reiter „Übersicht“, „Reiche &
+  Dörfer“, „Spione“), Knopf „Spionage“ oben mit Entdeckungsbalken (`HUD`), Spion-Abschnitt und
+  Kundschaft im `SelectionPanel`, Burgsymbole und Ruinen in der `Minimap`, Ruinen in der Welt
+  (`CombatEffects`). Die vier Fenster in der Mitte (Forschung, Helden, Diplomatie, Spionage) schliessen sich
+  gegenseitig; Esc schliesst das offene zuerst.
+- **Diplomatie-Oberfläche** (`scripts/ui/`): `DiplomacyPanel` (Fenster N, Reiter „Dörfer“ und „Reiche“),
+  Dorf-Abschnitt im `SelectionPanel`, Kriegsbestätigung im `SelectionController` (zweiter
   Rechtsklick), Dorf- und Botensymbole in der `Minimap`, Gebietsname im Infobereich des HUD.
 - **Quellen**: Was ein Reich verändert, wird mit seiner Quelle gespeichert (`"research:<id>"`,
   `"upgrade:<id>"`, `"spell:<id>"`, Bündnisse `"alliance:<dorf-id>"`, aufgenommene Dörfer
@@ -165,7 +204,8 @@ assets/
 - **Beziehungen**: `Game.set_relation(a, b, "war" | "peace" | "alliance")`; Kampf nur bei Krieg.
   Die wilden Monster sind ein eigenes Reich, mit allen im Krieg. `Game.can_see` ist die Stelle für
   Sichtbarkeit (ab Phase 7: Entdeckung, Spione).
-- **Spielende**: `Game.defeat_kingdom` – stirbt der König des Spielers, ist das Spiel verloren.
+- **Spielende**: `Game.defeat_kingdom` – stirbt der König des Spielers oder fällt seine Burg, ist das Spiel
+  verloren; sind alle feindlichen Königreiche gefallen, ist es gewonnen (`VictorySystem`).
 - **Trennung Simulation/Darstellung**: Die Systeme kennen weder Karte noch HUD. Die Darstellung hört
   auf Signale (`WorldData.cell_changed`, `road_changed`, `TerritorySystem.changed` …). Das ist die
   Grundlage für Speichern/Laden in Phase 10.
@@ -211,6 +251,18 @@ Alle Dateien in `data/` enthalten `_hinweis`-Felder mit Erklärungen. Beispiele:
 - Dörfer und Milizen: `diplomacy.json` → `village` (`militia_base`, `militia_per_size`, `refill_seconds`,
   `start_stock`); Werte der Milizen und Volkskrieger in `units.json` (`militia_*`, z. B. `dwarf_ironguard`).
 - Boten: `diplomacy.json` → `messenger` (`cooldown`, `max_village_distance`, `sprint_mult`).
+- Gegner-KI: `ai.json` → `difficulty.<id>` (Anzahl Reiche je Kartengrösse `kingdoms`, erste Welle gegen den
+  Spieler `first_attack_minutes`, Pause `wave_interval`, Wellengrösse `wave_min_size`/`first_wave_max`,
+  `army_size_mult`, `awareness_mult`), Bauliste `build_order`, Persönlichkeiten `personalities`
+  (z. B. `aggressive`: mehr Armee, frühere Wellen), Rückzug `difficulty.<id>.retreat_ratio`, Rivalität `rivalry`
+  (`war_at`, `peace_at`), Berufe `jobs` (Drosselung `rebalance_every`, `rebalance_min_gap`, `targets_seconds`).
+  Beispiel: spätere erste Welle auf Normal – `difficulty.normal.first_attack_minutes` 45 → 60.
+- Entdeckung und Spionage: `espionage.json` → `discovery.building_weights` (z. B. `barracks: 2.5`),
+  `per_population`, `per_army_power`, Stufen `discovery.tiers`; Aufmerksamkeit `awareness` (`rumour` 30,
+  `discovered` 60, `rise_per_minute`); Reichstarnung `cloak` (`reduction` 0.4, `upkeep_per_point`); Spione
+  `spies` (`max_base`, `levels` mit Geschick und Tempo, `detect_base`, `vigilance.buildings`, Dauer der
+  Aufträge `scout_duration`, `incite_duration`). Beispiel: Spione schwerer zu entdecken – `spies.detect_base`
+  0.03 → 0.02.
 - Neues Volk: in `peoples.json` einen Eintrag mit `"faction": "neutral"`, `village_title`, `village_names`,
   `produces`, `militia_unit` und `special_unit` (beide in `units.json` anlegen) – Dörfer dieses Volks
   entstehen dann automatisch bei der Weltgenerierung.
@@ -365,6 +417,46 @@ Tipp: F3 (Debug) einschalten – F9 gibt Ressourcen. Im Diplomatiefenster ersche
    nach 60 s ohne Angriff, wenn der Ruf nicht zu tief ist.
 10. Sinkt der Ruf unter −50, wird ein Dorf feindlich (ab Phase 7 schliesst es sich dann dem Gegner an).
 
+## Phase 7 testen
+
+Tipp: F3 (Debug) einschalten – im Spionagefenster erscheinen dann „Aufmerksamkeit +30“, „Volle Kundschaft“,
+„KI greift jetzt an“, „KI-Reich besiegen“ und „Rivalen: Krieg“, im Diplomatiefenster (Reiter „Reiche“)
+„Besiegen (Test)“; F9 gibt Ressourcen.
+
+1. Neues Spiel (Normal, mittlere Karte). In mittlerer Entfernung liegen zwei feindliche Königreiche (bei BÖSE
+   gute, bei GUT böse), jedes mit eigenem Volk und Namen. Ihre Grenzen in der Volksfarbe und ihre Burgen
+   (Burgsymbol auf der Minikarte, roter Ring) sind sichtbar.
+2. Burg eines Feindes anklicken: ohne Kundschaft steht im Auswahlfenster nur „Keine Kundschaft“, fremde
+   Einheiten zeigen „?“ statt Werten. Späher hinschicken: Das Auswahlfenster zeigt dann die Heeresgrösse
+   ungefähr („Kundschaft: Bericht“).
+3. Die KI baut auf (Häuser, Höfe, Kaserne, Bibliothek …), beschwört Truppen, räumt Monsterlager in ihrer Nähe
+   und umwirbt Dörfer (Geschenke, Verträge – im Diplomatiefenster sichtbar, sobald du Kundschaft hast).
+4. Oben „Spionage · 12“: dein Entdeckungswert. Er steigt mit Gebäuden, Bevölkerung, Armee und Angriffen
+   (Aggression klingt ab). Die Ursachen stehen im Spionagefenster (K), Reiter „Übersicht“.
+5. Forschung *Kundschafter* (BÖSE: *Spitzel*), dann im Spionagefenster, Reiter „Spione“, „Spion beschwören“
+   (Burg; mit *Spionagenetz* bzw. *Schattennetz* im Kundschafterhaus eine Stufe höher). Auftrag
+   *Auskundschaften* auf ein Reich → genaue Kundschaft (Stufe 3, Diplomatie → „Reiche“ zeigt Stärke, Kriege,
+   Verträge). *Dorf aufhetzen* senkt den Ruf eines Dorfs gegenüber einem Reich. *Rivalen aufhetzen* (bei zwei
+   KI-Reichen) treibt sie in den Krieg gegeneinander. Die Vorschau zeigt die Entdeckungsgefahr am Ziel.
+   Spione können entdeckt werden (Meldung, kurz sichtbar, sie fliehen heim) und steigen mit Erfahrung bis
+   Stufe 3. Einen Spion auswählen → „Auftrag (K)“ öffnet ihn im Spionagefenster.
+6. Fremde Spione kommen zu dir, wenn ein Reich Gerüchte über dich hört. Späher, eigene Spione und das
+   Kundschafterhaus entdecken sie (roter Punkt am Spionage-Knopf); entdeckte Spione kann man angreifen.
+7. Auf Normal greift die KI frühestens nach 45 Minuten an und erst, wenn sie dich entdeckt hat (Meldung).
+   Späher melden Truppen nahe der Grenze, Feinde im eigenen Gebiet werden immer gemeldet. Wird eine Welle zu
+   stark geschwächt, zieht sie sich zurück.
+8. *Reichsschleier* (BÖSE: *Reichsschatten*, Magie Stufe 4): ein Klick in der Zauberleiste oder „Tarnung
+   einschalten“ im Spionagefenster senkt den Entdeckungswert um 40 % und kostet laufend Mana (endet bei
+   Manamangel).
+9. Ein Reich fällt, wenn sein König stirbt oder seine Burg zerstört wird: Gebäude werden zu Ruinen, Truppen
+   lösen sich auf, das Gebiet verschwindet. Sind alle feindlichen Reiche gefallen, erscheint der
+   **Siegbildschirm** mit Statistik („Weiterspielen“ oder Hauptmenü). Fällt deine Burg, ist das Spiel
+   verloren. Schneller Test: F3 → Spionagefenster → „KI-Reich besiegen“.
+
+Rauchtest mit echter KI über lange Zeit (ohne Debug-Stufen):
+`godot --headless res://tests/smoke_test.tscn -- faction=evil seconds=3600 p7=natural size=medium`
+(`passive=1`: der Spieler tut nichts; der Bericht zeigt Zeitleiste, Wellen und Denkzeit der KI).
+
 ## Grafiken austauschen
 
 Alle Grafiken sind zunächst automatisch erzeugte Platzhalter. Legt man eine PNG-Datei
@@ -379,7 +471,7 @@ beim nächsten Start automatisch verwendet – ohne Code-Änderung.
 - [x] Phase 4 – Forschung, Mana und Magie
 - [x] Phase 5 – Helden
 - [x] Phase 6 – Neutrale Dörfer, Diplomatie, Handel, Ruf, Boten
-- [ ] Phase 7 – Gegnerische Königreiche mit KI, Entdeckung, Spionage
+- [x] Phase 7 – Gegnerische Königreiche mit KI, Entdeckung, Spionage
 - [ ] Phase 8 – Zufriedenheit, Verrat, Flüchtlinge, Ereignisse, Monster, Tag/Nacht
 - [ ] Phase 9 – Belagerungen und Handelswege
 - [ ] Phase 10 – Speichern/Laden, Schwierigkeitsgrade, UI-Feinschliff, Balancing

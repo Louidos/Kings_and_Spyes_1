@@ -57,6 +57,8 @@ var _spotted: Array = [0, 0]
 var _incite_due := -1.0
 ## Oberflächentest (Spionagefenster, Reiter "Reiche"): Schritt (-1 = aus) und Wartezeit
 var _ui_step := -1
+## Bild, in dem der Siegbildschirm zuerst zu sehen war (-1 = noch nicht)
+var _victory_frame := -1
 var _ui_wait := 0.0
 var _shots_dir := ""
 
@@ -134,7 +136,10 @@ func tick(t: float) -> void:
 				_stage = 8
 		8:
 			# Der Siegbildschirm hält die Spielzeit an: nicht auf die Zeit warten
-			if _game.is_victory_shown() or t >= _seconds - 35.0:
+			# (ein paar Bilder warten, damit der Siegbildschirm gezeichnet ist – Bildschirmfoto)
+			if _game.is_victory_shown() and _victory_frame < 0:
+				_victory_frame = Engine.get_process_frames()
+			if (_victory_frame >= 0 and Engine.get_process_frames() >= _victory_frame + 3) or t >= _seconds - 35.0:
 				_s7()
 				_stage = 9
 
@@ -461,15 +466,19 @@ func _ui_tick(t: float) -> void:
 			hud.toggle_espionage()
 			_check(hud.is_espionage_open() and not hud.is_diplomacy_open(), "K öffnet das Spionagefenster und schliesst die Diplomatie")
 			_check(hud.close_top_panel() and not hud.is_espionage_open(), "Esc schliesst das Spionagefenster")
-			hud.open_link({"window": "espionage", "tab": "spies", "spy_uid": _spy_a})
-			_check(hud.is_espionage_open() and panel.get_tab() == EspionagePanel.TAB_SPIES and panel.get_spy_uid() == _spy_a,
+			# Verweis wie in der Meldung "Spion bereit" (ein lebender Spion – A kann entdeckt worden sein)
+			var own_spies: Array = g.spy_system.get_spies(player)
+			var uid: int = (own_spies[-1] as Unit).uid if not own_spies.is_empty() else 0
+			hud.open_link({"window": "espionage", "tab": "spies", "spy_uid": uid})
+			_check(hud.is_espionage_open() and panel.get_tab() == EspionagePanel.TAB_SPIES and (uid == 0 or panel.get_spy_uid() == uid),
 					"Meldungsverweis öffnet den Spion im Spionagefenster")
 			hud.close_top_panel()
 			g.selection.select([_ai0.castle])
 		5:
+			var owner_label: Label = hud.selection_panel.get("_owner")
 			var facts: Label = hud.selection_panel.get("_facts")
-			_check(hud.selection_panel.visible and facts.text.contains("Kundschaft"), "Auswahl der KI-Burg zeigt die Kundschaft (%s)" %
-					facts.text.get_slice("\n", 0))
+			_check(hud.selection_panel.visible and owner_label.text.contains("Kundschaft") and not facts.text.is_empty(),
+					"Auswahl der KI-Burg zeigt die Kundschaft (%s | %s)" % [owner_label.text, facts.text.get_slice("\n", 0)])
 			_shot("phase7_5_auswahl_burg")
 			g.selection.clear()
 			print("[smoke] Phase 7: Oberflächentest fertig")
@@ -620,6 +629,7 @@ func _s7() -> void:
 				"%s gefallen: Gebäude %d, Einheiten %d, Gebiet weg" % [k.display_name, k.buildings.size(), k.units.size()])
 	_check(not (g.victory_system.ruins as Array).is_empty(), "Ruinen: %d" % (g.victory_system.ruins as Array).size())
 	_check(g.is_victory_shown(), "Siegbildschirm zu sehen")
+	_shot("phase7_6_sieg")
 	g.continue_after_victory()
 	_check(not GameClock.paused and not g.is_victory_shown(), "Weiterspielen nach dem Sieg")
 

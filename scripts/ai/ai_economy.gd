@@ -425,50 +425,82 @@ static func _site_by_efficiency(b: AIBrain, def: Dictionary, c0: Vector2i, r0: i
 # Berufe
 # ---------------------------------------------------------------------------
 
-## Verteilt die Bewohner (höchstens jobs.max_changes Wechsel): Unbeschäftigte zuerst,
-## dann (jeden vierten Denkvorgang) vom grössten Überschuss zum grössten Mangel.
-## Beschworene Kampfeinheiten bekommen keine Berufe.
+## Verteilt die Bewohner: Unbeschäftigte sofort (höchstens jobs.max_changes je
+## Denkvorgang), Umverteilung vom grössten Überschuss zum grössten Mangel nur jeden
+## jobs.rebalance_every-ten Denkvorgang, höchstens jobs.max_rebalance Wechsel und erst ab
+## einer Lücke von jobs.rebalance_min_gap (jeder Wechsel lässt die Einheit neu suchen und
+## laufen – ohne Schwelle pendeln die Bewohner mit den schwankenden Vorräten hin und her).
+## Die Soll-Verteilung wird zwischengespeichert (jobs.targets_seconds), solange sich
+## Bewohnerzahl, Gebäude und Baustellen nicht ändern. Eine Schleife über die Einheiten
+## zählt Berufe, Unbeschäftigte und Probleme. Beschworene Kampfeinheiten bekommen keine Berufe.
 static func tick_jobs(b: AIBrain) -> void:
 	var k := b.k
 	var ws: WorkSystem = b.game.work_system
 	var counts := {}
+	var problems := {}
 	var workers := 0
+	var idle := 0
 	for u in k.units:
 		if u.role != "worker" or not u.can_work() or not u.is_alive():
 			continue
 		workers += 1
 		counts[u.job_id] = int(counts.get(u.job_id, 0)) + 1
+		if not u.problem.is_empty():
+			problems[u.job_id] = true
+		if u.job_id == "idle" and u.command.is_empty():
+			idle += 1
 	if workers == 0:
 		return
-	var targets := job_targets(b, workers)
+	var rebalance := int(b.st["think_count"]) % maxi(int(DataDB.ai("jobs.rebalance_every", 6)), 1) == 0
+	if idle == 0 and not rebalance:
+		return
+	var targets := _cached_targets(b, workers, problems)
 	var max_changes := int(DataDB.ai("jobs.max_changes", 4))
 	var changes := 0
-	while changes < max_changes and ws.get_idle_count(k) > 0:
+	while changes < max_changes and idle > 0:
 		var job := _largest_deficit(targets, counts, "")
 		if job.is_empty() or not ws.assign_job(k, job):
 			break
 		counts[job] = int(counts.get(job, 0)) + 1
 		counts["idle"] = int(counts.get("idle", 0)) - 1
+		idle -= 1
 		changes += 1
-	if int(b.st["think_count"]) % 4 != 0:
+	if not rebalance:
 		return
-	while changes < max_changes:
-		var to := _largest_deficit(targets, counts, "")
+	var min_gap := maxi(int(DataDB.ai("jobs.rebalance_min_gap", 2)), 1)
+	var moves := 0
+	var max_moves := int(DataDB.ai("jobs.max_rebalance", 2))
+	while moves < max_moves:
+		var to := _largest_deficit(targets, counts, "", min_gap)
 		if to.is_empty():
 			break
 		var from := _largest_surplus(targets, counts, to)
 		if from.is_empty() or not ws.unassign_job(k, from):
 			break
 		counts[from] = int(counts.get(from, 0)) - 1
-		changes += 1
+		moves += 1
 		if not ws.assign_job(k, to):
 			counts["idle"] = int(counts.get("idle", 0)) + 1
 			break
 		counts[to] = int(counts.get(to, 0)) + 1
 
 
-## Soll-Verteilung der Bewohner: Beruf -> Anzahl (Summe = workers)
-static func job_targets(b: AIBrain, workers: int) -> Dictionary:
+## Soll-Verteilung aus dem Zwischenspeicher des Gehirns (neu bei geänderter Bewohnerzahl,
+## Gebäude- oder Baustellenzahl, sonst alle jobs.targets_seconds Spielsekunden)
+static func _cached_targets(b: AIBrain, workers: int, problems: Dictionary) -> Dictionary:
+	var now := GameClock.game_time
+	var key := [workers, b.k.buildings.size(), b.k.starving]
+	var cache := b.job_cache
+	if not cache.is_empty() and cache["key"] == key and now < float(cache["until"]):
+		return cache["targets"]
+	var targets := job_targets(b, workers, problems)
+	b.job_cache = {"key": key, "until": now + float(DataDB.ai("jobs.targets_seconds", 20)), "targets": targets}
+	return targets
+
+
+## Soll-Verteilung der Bewohner: Beruf -> Anzahl (Summe = workers). problems: Berufe,
+## deren Einheiten gerade ein Problem melden (null = beim WorkSystem nachfragen)
+static func job_targets(b: AIBrain, workers: int, problems: Variant = null) -> Dictionary:
 	var k := b.k
 	var ws: WorkSystem = b.game.work_system
 	var bs: BuildingSystem = b.game.building_system
@@ -508,7 +540,7 @@ static func job_targets(b: AIBrain, workers: int) -> Dictionary:
 				value *= 0.5
 		if not _has_gather_site(b, job):
 			value = 0.0
-		elif not ws.get_job_problem(k, job).is_empty():
+		elif (problems as Dictionary).has(job) if problems is Dictionary else not ws.get_job_problem(k, job).is_empty():
 			value *= 0.5
 		w[job] = value
 		total += value
@@ -545,10 +577,10 @@ static func _has_gather_site(b: AIBrain, job: String) -> bool:
 	return false
 
 
-## Beruf mit dem grössten Mangel (Soll − Ist >= 1), "" wenn keiner
-static func _largest_deficit(targets: Dictionary, counts: Dictionary, exclude: String) -> String:
+## Beruf mit dem grössten Mangel (Soll − Ist >= min_gap), "" wenn keiner
+static func _largest_deficit(targets: Dictionary, counts: Dictionary, exclude: String, min_gap: int = 1) -> String:
 	var best := ""
-	var best_d := 0
+	var best_d := min_gap - 1
 	for job in targets:
 		if job == "idle" or job == exclude:
 			continue

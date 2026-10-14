@@ -35,6 +35,9 @@ var enemy_power := 0.0
 ## can_place-Aufrufe und betrachtete Kacheln (begrenzt die Rechenzeit im schlechtesten Fall)
 var checks_left := 0
 var scan_left := 0
+## Laufzeit: zwischengespeicherte Soll-Verteilung der Berufe (AIEconomy._cached_targets)
+## {"key": [Bewohner, Gebäude, Hunger], "until": Spielzeit, "targets": {Beruf: Anzahl}}
+var job_cache: Dictionary = {}
 
 
 func _init(p_sys: AISystem, p_kingdom: Kingdom) -> void:
@@ -112,10 +115,9 @@ func think(now: float) -> void:
 	var t0 := Time.get_ticks_usec()
 	AIEconomy.tick_build(self, now)
 	t0 = _measure("build", t0)
-	# Berufe jeden zweiten Denkvorgang, bei Unbeschäftigten sofort
-	if n % 2 == 0 or (game.work_system as WorkSystem).get_idle_count(k) > 0:
-		AIEconomy.tick_jobs(self)
-		t0 = _measure("jobs", t0)
+	# Berufe: Unbeschäftigte sofort, Umverteilung gedrosselt (AIEconomy.tick_jobs)
+	AIEconomy.tick_jobs(self)
+	t0 = _measure("jobs", t0)
 	if n % 2 == 0:
 		AIEconomy.tick_research(self, now)
 		AIEconomy.tick_upgrades(self)

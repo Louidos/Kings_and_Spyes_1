@@ -305,11 +305,62 @@ das Fenster kommt zurzeit ohne sie aus (Text, Volksfarbe, Ruf-Balken):
 Haussymbol der Dörfer und Ringe (rot = Krieg, gold = Bündnis) auf der Minikarte, Gebietsgrenzen in der
 Volksfarbe und Ruf-Balken zeichnet das Spiel selbst. `trader.png` (Händler/Karawane) folgt in Phase 9.
 
-## 🕓 Phase 7 – Gegner und Spionage
+## ✅ Phase 7 – Gegner und Spionage
 
-`spy_good.png`, `spy_evil.png`, Völker-Einheiten der Gegenseite (Liste folgt)
+Gegnerische Königreiche bauen mit denselben Gebäuden und Einheiten wie der Spieler (Fraktion der
+Gegenseite). Ihre Grenzen und Platzhalter erscheinen in der **Volksfarbe** (`data/peoples.json` → `color`).
+
+**Spione** (`assets/sprites/units/`, 64 × 64, transparent – getarnt halb durchsichtig, enttarnt normal):
+
+| Datei | Einheit | Aussehen |
+|---|---|---|
+| `spy_good.png` | Kundschafterin (GUT) | schlanke Gestalt mit hellblauem Kapuzenumhang, Fernrohr am Gürtel |
+| `spy_evil.png` | Schattenspion (BÖSE) | geduckte Gestalt in violettem Schattenmantel, Dolch, glühende Augen |
+
+**Gebäude** (`assets/sprites/buildings/`, 128 × 128, transparent):
+
+| Datei | Gebäude | Motiv |
+|---|---|---|
+| `spy_den_good.png` | Kundschafterhaus (GUT) | schmales Holzhaus mit Ausguck, Brieftauben, Landkarten am Fenster |
+| `spy_den_evil.png` | Schattenloge (BÖSE) | dunkles Steinhaus mit verhängten Fenstern, violette Laterne, Raben |
+
+**Burgen je Volk** (`assets/sprites/buildings/`, 256 × 256, transparent, optional – ohne Datei nimmt das
+Spiel die Burg der Fraktion `castle_good.png` / `castle_evil.png`):
+
+| Datei | Volk | Motiv |
+|---|---|---|
+| `castle_humans.png` | Menschen | Steinburg mit blauen Bannern, Zinnen, Torhaus |
+| `castle_high_elves.png` | Hochelfen | schlanke weisse Türme mit goldenen Spitzen |
+| `castle_druids.png` | Druiden | Burg aus lebendem Holz, Steinkreis, Efeu |
+| `castle_light_wardens.png` | Lichtwächter | helle Festung mit Sonnensymbol und Leuchtfeuer |
+| `castle_griffin_riders.png` | Greifenreiter | Bergfeste mit Greifenhorsten auf den Türmen |
+| `castle_star_mages.png` | Sternenmagier | Turmburg mit Sternwarte und blauen Kuppeln |
+| `castle_blood_elves.png` | Blutelfen | rot-goldene Türme, scharfe Spitzen, Glutkristalle |
+| `castle_orcs.png` | Orks | grobe Palisadenfeste mit Schädeln und Eisenspitzen |
+| `castle_night_riders.png` | Nachtreiter | schwarze Festung mit Ställen und Mondbannern |
+| `castle_warlocks.png` | Hexenmeister | Basaltburg am Lavastrom, violette Runen |
+| `castle_undead.png` | Untote | verfallene Gruft-Festung, grüne Geisterlichter |
+| `castle_demon_summoners.png` | Dämonenbeschwörer | Obsidianfeste mit Beschwörungskreis und Feuer |
+| `castle_shadow_cult.png` | Schattenkult | Tempelburg im Nebel, schwarze Schleier |
+| `castle_trolls.png` | Trolle | Felsenburg aus aufgetürmten Steinen, Knochenzaun |
+
+**Effekte** (`assets/sprites/effects/`, 128 × 128, transparent): `ruin.png` – Trümmerhaufen von oben
+(eingestürzte Mauern, verkohlte Balken); wird auf die Grundfläche des zerstörten Gebäudes gestreckt. Ohne
+Datei zeichnet das Spiel einen graubraunen Rahmen mit Bruchlinien.
+
+**Zauber-Symbole** (`assets/ui/icons/`, 64 × 64, wie die übrigen Zauber-Symbole):
+
+| Datei | Zauber | Motiv |
+|---|---|---|
+| `spell_realm_veil.png` | Reichsschleier (GUT) | Burg hinter einem hellblauen, durchscheinenden Schleier |
+| `spell_realm_shroud.png` | Reichsschatten (BÖSE) | Burg, von violettem Schattennebel verhüllt |
+
+Burgsymbole und Ruinen-Kreuze auf der Minikarte, Kundschaft-Punkte, der Entdeckungsbalken oben und die
+Fenster zeichnet das Spiel selbst.
 
 ## 🕓 Phase 8 – Monster, Ereignisse
+
+Völker-Einheiten der Gegenseite (eigene Kämpfer je Volk der KI-Reiche, Liste folgt)
 
 Weitere Monster: `monster_wyvern.png` (Wolf, Spinne und Golem: siehe Phase 3)
 Weitere: `refugee.png` (Flüchtling), Ereignis-Icons `event_drought.png`, `event_plague.png`,
