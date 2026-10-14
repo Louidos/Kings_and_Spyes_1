@@ -47,6 +47,10 @@ var _esp_deadline := 0.0
 var _ai_spy_uid := 0
 var _detected_seen := false
 var _cloak_test := false
+## Gemeldete Einheiten der Welle (enemy_spotted): [nahe der Grenze, im Gebiet] (Höchstwerte)
+var _spotted: Array = [0, 0]
+## Spielzeit für die zweite Prüfung des Aufhetzens (-1 = keine)
+var _incite_due := -1.0
 
 
 func _init(game: Node, args: Dictionary) -> void:
@@ -273,7 +277,6 @@ func _esp_results() -> void:
 	var g := _game
 	var esp: EspionageSystem = g.espionage_system
 	var spies: SpySystem = g.spy_system
-	var ds: DiplomacySystem = g.diplomacy_system
 	var player: Kingdom = g.player
 	var parts := esp.get_discovery_parts(player)
 	_check(float(parts.get("aggression", 0.0)) >= 15.0, "Aggression im Entdeckungswert (%.1f)" % float(parts.get("aggression", 0.0)))
@@ -299,21 +302,39 @@ func _esp_results() -> void:
 			_check(false, "Spion A ohne Kundschaft (Zustand %s, Kundschaft %d)" % [str(rec["state"]), level])
 	else:
 		print("[smoke] Hinweis: Spion A ist nicht mehr da (entdeckt und getötet?)")
-	if _incite_village != null:
-		var found := false
-		for e in ds.get_history(_incite_village, _ai0):
-			if str(e.get("reason", "")) == "Aufwiegelung" and float(e.get("delta", 0.0)) < 0.0:
-				found = true
-		var b: Variant = g.find_by_uid(_spy_b)
-		var state := str(spies.get_record(b).get("state", "-")) if b is Unit else "tot"
-		if found or state == "active":
-			_check(found, "Aufwiegelung senkt den Ruf von %s bei %s (%+.0f, Spion B %s)" % [_ai0.display_name,
-					_incite_village.display_name, ds.get_reputation(_incite_village, _ai0), state])
-		else:
-			print("[smoke] Hinweis: Spion B %s, noch kein Aufhetzen" % state)
+	_incite_check(false)
 	g.espionage_system.debug_set_awareness(_ai0, player, 45.0)
 	_esp_stage = 0
 	_esp_deadline = GameClock.game_time + 200.0
+
+
+## Aufhetzen (Spion B): Verlauf des Dorfs zeigt "Aufwiegelung" mit sinkendem Ruf.
+## final = false: noch nicht aufgehetzt, aber unterwegs/gerade angekommen -> später prüfen
+func _incite_check(final: bool) -> void:
+	if _incite_village == null:
+		return
+	var g := _game
+	var ds: DiplomacySystem = g.diplomacy_system
+	var spies: SpySystem = g.spy_system
+	var found := false
+	for e in ds.get_history(_incite_village, _ai0):
+		if str(e.get("reason", "")) == "Aufwiegelung" and float(e.get("delta", 0.0)) < 0.0:
+			found = true
+	var b: Variant = g.find_by_uid(_spy_b)
+	var rec: Dictionary = spies.get_record(b) if b is Unit else {}
+	var state := str(rec.get("state", "tot"))
+	var waiting := not found and (state == "travel" or (state == "active"
+			and GameClock.game_time - float(rec.get("active_since", 0.0)) < float(DataDB.esp("spies.incite_interval", 30)) + 5.0))
+	if waiting and not final:
+		_incite_due = GameClock.game_time + 60.0
+		print("[smoke] Hinweis: Spion B %s, Aufhetzen wird später geprüft" % state)
+		return
+	_incite_due = -1.0
+	if found or state == "active" or state == "idle":
+		_check(found, "Aufwiegelung senkt den Ruf von %s bei %s (%+.0f, Spion B %s, Stufe %d)" % [_ai0.display_name,
+				_incite_village.display_name, ds.get_reputation(_incite_village, _ai0), state, int(rec.get("level", 0))])
+	else:
+		print("[smoke] Hinweis: Spion B %s, kein Aufhetzen geprüft" % state)
 
 
 ## KI-Spion beim Spieler (läuft neben den Stufen S3–S6): er wird angeworben, kommt
@@ -323,6 +344,8 @@ func _esp_tick(t: float) -> void:
 	var spies: SpySystem = g.spy_system
 	var esp: EspionageSystem = g.espionage_system
 	var player: Kingdom = g.player
+	if _incite_due >= 0.0 and t >= _incite_due:
+		_incite_check(true)
 	if _cloak_test and t >= 300.0:
 		_cloak_test = false
 		_check(not esp.is_cloaked(player) and player.get_upkeep("mana") == 0.0, "Reichstarnung endet bei Manamangel")
@@ -414,6 +437,10 @@ func _s4() -> void:
 	g.combat_system.kingdom_attacked.connect(func(victim: Kingdom, attacker: Kingdom, _pos: Vector2) -> void:
 		if victim == g.player and attacker == _ai0:
 			_attack_seen = true)
+	(g.espionage_system as EspionageSystem).enemy_spotted.connect(func(observer: Kingdom, foe: Kingdom, _pos: Vector2,
+			count: int, inside: bool) -> void:
+		if observer == g.player and foe == _ai0:
+			_spotted[1 if inside else 0] = maxi(int(_spotted[1 if inside else 0]), count))
 
 
 ## S5: die Welle hat den Spieler erreicht; danach zurückrufen (der Test soll nicht
@@ -432,6 +459,8 @@ func _s5(t: float) -> bool:
 		return false
 	_check(_attack_seen or _near_seen, "Welle von %s erreicht den Spieler (Angriff gemeldet: %s, nahe der Burg: %s, Zustand %s)" % [
 			_ai0.display_name, str(_attack_seen), str(_near_seen), str(wave.get("state", "beendet"))])
+	_check(int(_spotted[1]) > 0, "Feinde im Gebiet des Spielers gemeldet (bis %d im Gebiet, %d nahe der Grenze)" % [
+			int(_spotted[1]), int(_spotted[0])])
 	ai.debug_recall_wave(_ai0)
 	ai.debug_fast = false
 	if _ai.size() >= 2:
@@ -473,6 +502,18 @@ func _s_growth() -> void:
 	if _natural and _seconds >= 1800.0:
 		_check(_player_alive_1800, "Burg und König des Spielers stehen bei t = 1800 s")
 	_check(_think_ms() < 3.0, "KI-Denkzeit im Schnitt unter 3 ms (%.2f ms)" % _think_ms())
+	# Speichern (Phase 10): Zustand der Spionage-Systeme übersteht to_dict/from_dict/rebuild_runtime
+	var esp: EspionageSystem = g.espionage_system
+	var spies: SpySystem = g.spy_system
+	var esp_d := esp.to_dict()
+	var spy_d := spies.to_dict()
+	esp.from_dict(esp_d)
+	esp.rebuild_runtime()
+	spies.from_dict(spy_d)
+	spies.rebuild_runtime()
+	_check(esp.awareness.size() == (esp_d["awareness"] as Dictionary).size() and spies.spies.size() <= (spy_d["spies"] as Dictionary).size()
+			and esp.get_discovery(g.player) > 0.0, "Spionage: to_dict/from_dict/rebuild_runtime (%d Aufmerksamkeiten, %d Spione)" % [
+			esp.awareness.size(), spies.spies.size()])
 
 
 ## Mittlere Denkzeit eines KI-Denkvorgangs in Millisekunden

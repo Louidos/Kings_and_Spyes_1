@@ -407,7 +407,15 @@ func report() -> void:
 		var treaty := ds.get_treaty(_a)
 		var deliveries := int(treaty.get("deliveries", 0))
 		var rep_now := ds.get_reputation(_a, player)
-		if GameClock.game_time > 600.0:
+		# Phase 7: KI-Spione hetzen dem Spieler freundliche Dörfer auf – dann sinkt der Ruf gewollt
+		var incited := false
+		for e in ds.get_history(_a, player):
+			if str(e.get("reason", "")) == "Aufwiegelung":
+				incited = true
+		if GameClock.game_time > 600.0 and incited:
+			print("[smoke] Hinweis: %s wurde von einem fremden Spion aufgehetzt (Ruf %+.1f, Vertrag %s, %d Lieferungen)" % [
+					_a.display_name, rep_now, str(treaty.get("type", "-")), deliveries])
+		elif GameClock.game_time > 600.0:
 			_check(str(treaty.get("type", "")) == "trade" and deliveries >= 1 and rep_now > _trade_rep_s5,
 					"Handelsvertrag mit %s: %d Lieferungen, Ruf %+.1f (Beginn) → %+.1f (t=400) → %+.1f" % [
 					_a.display_name, deliveries, _trade_rep, _trade_rep_s5, rep_now])
