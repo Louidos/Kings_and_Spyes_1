@@ -77,6 +77,10 @@ var daynight_cfg: Dictionary = {}
 var siege_cfg: Dictionary = {}
 ## Handelswege, Karawanen, Versorgung (trade.json, Phase 9)
 var trade_cfg: Dictionary = {}
+## Hilfefenster F1 (help.json): Tasten-Abschnitte, Spielablauf-Themen
+var help_cfg: Dictionary = {}
+## md5 über alle Texte in data/*.json (Spielstände merken sich, mit welchen Daten sie entstanden)
+var data_fingerprint: String = ""
 
 
 func _ready() -> void:
@@ -114,7 +118,9 @@ func reload() -> void:
 	_load_events()
 	satisfaction_cfg = _load_json("satisfaction.json")
 	daynight_cfg = _load_json("daynight.json")
+	help_cfg = _load_json("help.json")
 	_validate_peoples()
+	data_fingerprint = _compute_fingerprint()
 
 
 ## Liest einen Wert aus game_config.json über einen Punkt-Pfad, z. B. "camera.zoom_max".
@@ -977,6 +983,20 @@ func _dig(root: Dictionary, path: String, default_value: Variant) -> Variant:
 		else:
 			return default_value
 	return node
+
+
+## md5 über alle Datendateien (alphabetisch), für den Kopf der Spielstände
+func _compute_fingerprint() -> String:
+	var names: Array = []
+	for f in DirAccess.get_files_at(DATA_DIR):
+		if f.ends_with(".json"):
+			names.append(f)
+	names.sort()
+	var ctx := HashingContext.new()
+	ctx.start(HashingContext.HASH_MD5)
+	for f in names:
+		ctx.update(FileAccess.get_file_as_bytes(DATA_DIR + str(f)))
+	return ctx.finish().hex_encode()
 
 
 func _load_json(file_name: String) -> Dictionary:

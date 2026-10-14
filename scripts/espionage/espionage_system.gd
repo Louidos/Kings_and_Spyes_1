@@ -963,7 +963,8 @@ func to_dict() -> Dictionary:
 	return {"discovery": discovery.duplicate(true), "aggression": aggression.duplicate(true),
 			"pair_aggr_at": pair_aggr_at.duplicate(), "awareness": awareness.duplicate(),
 			"awareness_tier": awareness_tier.duplicate(), "intel": intel.duplicate(true), "cloaks": cloaks.duplicate(true),
-			"reported": reported.duplicate(), "sightings": sightings.duplicate(), "spy_scout_since": spy_scout_since.duplicate()}
+			"reported": reported.duplicate(), "sightings": sightings.duplicate(), "spy_scout_since": spy_scout_since.duplicate(),
+			"acc": [_disc_acc, _aw_acc, _rep_acc]}
 
 
 func from_dict(d: Dictionary) -> void:
@@ -977,13 +978,15 @@ func from_dict(d: Dictionary) -> void:
 	reported = (d.get("reported", {}) as Dictionary).duplicate()
 	sightings = (d.get("sightings", {}) as Dictionary).duplicate()
 	spy_scout_since = (d.get("spy_scout_since", {}) as Dictionary).duplicate()
+	var acc: Array = d.get("acc", [0.0, 0.0, 0.0])
+	if acc.size() >= 3:
+		_disc_acc = float(acc[0])
+		_aw_acc = float(acc[1])
+		_rep_acc = float(acc[2])
 
 
-## Nach dem Laden: Tarnungs-Upkeep wieder setzen (idempotent), Taktzähler zurück
+## Nach dem Laden: Tarnungs-Upkeep wieder setzen (idempotent)
 func rebuild_runtime() -> void:
-	_disc_acc = 0.0
-	_aw_acc = 0.0
-	_rep_acc = 0.0
 	for kid in cloaks.keys():
 		var k: Kingdom = game.get_kingdom(int(kid))
 		if k == null or k.defeated:

@@ -235,7 +235,7 @@ func _has_fallen(k: Kingdom) -> bool:
 
 func to_dict() -> Dictionary:
 	return {"ruins": ruins.duplicate(true), "fallen": fallen.duplicate(true), "victory_done": victory_done,
-			"continued": continued}
+			"continued": continued, "pending": _pending.duplicate(true), "ruin_check_acc": _ruin_check_acc}
 
 
 func from_dict(d: Dictionary) -> void:
@@ -243,9 +243,11 @@ func from_dict(d: Dictionary) -> void:
 	fallen = (d.get("fallen", []) as Array).duplicate(true)
 	victory_done = bool(d.get("victory_done", false))
 	continued = bool(d.get("continued", false))
-	rebuild_runtime()
+	_pending = (d.get("pending", []) as Array).duplicate(true)
+	_ruin_check_acc = float(d.get("ruin_check_acc", 0.0))
 
 
+## Nach dem Laden: Ruinen neu zeichnen (die Warteliste _pending ist gespeichert und bleibt,
+## sonst würde ein Reich mit zerstörter Burg nie besiegt)
 func rebuild_runtime() -> void:
-	_pending.clear()
 	ruins_changed.emit()

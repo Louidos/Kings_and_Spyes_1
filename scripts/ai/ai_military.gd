@@ -376,7 +376,8 @@ static func plan_wave(b: AIBrain, now: float) -> void:
 		if units.is_empty():
 			continue
 		var wave_power := b.power_of(units)
-		var ratio := 1.0 if str(c["kind"]) == "lair" else float(DataDB.ai("waves.strength_ratio", 1.2))
+		var ratio := 1.0 if str(c["kind"]) == "lair" \
+				else float(DataDB.ai("waves.strength_ratio", 1.2)) / maxf(b.aggression(), 0.1)
 		if wave_power < ratio * float(c["defense"]):
 			continue
 		var score := _score(b, c)
@@ -489,7 +490,7 @@ static func _score(b: AIBrain, cand: Dictionary) -> float:
 	var weights: Dictionary = DataDB.ai("waves.target_weights", {})
 	var score := float(weights.get(kind, 0.5))
 	if kind != "lair":
-		score *= float(b.personality.get("aggression", 1.0))
+		score *= b.aggression()
 	score /= 1.0 + float(DataDB.ai("waves.distance_weight", 0.004)) * float(cand["tiles"])
 	return score / sqrt(maxf(float(cand["defense"]), 1.0))
 

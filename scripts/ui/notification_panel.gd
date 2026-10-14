@@ -82,17 +82,25 @@ func _on_posted(text: String, kind: String, world_pos: Variant) -> void:
 		_remove(_entries.size() - 1)
 
 
-func _on_entry_pressed(b: Button, world_pos: Variant) -> void:
+## Ziel einer Meldung öffnen (auch aus dem Protokoll): Verweis -> Fenster (und Stelle),
+## Vector2 -> Kamera springt hin
+static func open_target(p_game: Node, world_pos: Variant) -> void:
+	if p_game == null:
+		return
 	if world_pos is Dictionary:
 		# Verweis: Fenster öffnen (das HUD kennt die Fenster), dazu ggf. die Stelle
 		var link: Dictionary = world_pos
-		if game != null and game.hud != null and game.hud.has_method("open_link"):
-			game.hud.call("open_link", link)
-		if link.get("pos") is Vector2 and game != null and game.camera != null:
-			game.camera.focus_on(link["pos"])
-	elif world_pos is Vector2:
-		if game != null and game.camera != null:
-			game.camera.focus_on(world_pos)
+		if p_game.hud != null and p_game.hud.has_method("open_link"):
+			p_game.hud.call("open_link", link)
+		if link.get("pos") is Vector2 and p_game.camera != null:
+			p_game.camera.focus_on(link["pos"])
+	elif world_pos is Vector2 and p_game.camera != null:
+		p_game.camera.focus_on(world_pos)
+
+
+func _on_entry_pressed(b: Button, world_pos: Variant) -> void:
+	if world_pos is Dictionary or world_pos is Vector2:
+		open_target(game, world_pos)
 	else:
 		for i in _entries.size():
 			var entry: Dictionary = _entries[i]

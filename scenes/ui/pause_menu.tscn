@@ -59,20 +59,41 @@ layout_mode = 2
 [node name="ResumeButton" type="Button" parent="Root/Center/Panel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
+tooltip_text = "Weiterspielen (Esc)"
 text = "Fortsetzen"
 
 [node name="SaveButton" type="Button" parent="Root/Center/Panel/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
-tooltip_text = "Kommt in Phase 10"
-disabled = true
-text = "Speichern (Phase 10)"
+tooltip_text = "Partie unter einem Namen speichern"
+text = "Speichern"
+
+[node name="LoadButton" type="Button" parent="Root/Center/Panel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Gespeicherte Partie laden"
+text = "Laden"
+
+[node name="SettingsButton" type="Button" parent="Root/Center/Panel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Ton, Kamera, Anzeige, automatisches Speichern"
+text = "Einstellungen"
+
+[node name="HelpButton" type="Button" parent="Root/Center/Panel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+tooltip_text = "Alle Tasten und Spielablauf (F1)"
+text = "Hilfe (F1)"
 
 [node name="MainMenuButton" type="Button" parent="Root/Center/Panel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
+tooltip_text = "Partie verlassen und zum Hauptmenü"
 text = "Zum Hauptmenü"
 
 [node name="QuitButton" type="Button" parent="Root/Center/Panel/VBox"]
 unique_name_in_owner = true
 layout_mode = 2
+tooltip_text = "Spiel schliessen"
 text = "Spiel beenden"

@@ -361,6 +361,21 @@ func _fort_neighbor(dir: Vector2i) -> bool:
 			and (other as Building).fort_kind != ""
 
 
+## Gespeicherter Zustand (Phase 10; Kopien, Arbeiter als uids). Wiederhergestellt
+## wird über BuildingSystem.restore_building.
+func to_dict() -> Dictionary:
+	var worker_uids: Array = []
+	for u in workers:
+		if is_instance_valid(u):
+			worker_uids.append(u.uid)
+	return {"uid": uid, "def_id": str(def.get("id", "")), "kingdom_id": kingdom.id if kingdom != null else 0,
+			"cell": cell, "constructed": constructed, "progress": progress, "hp": hp, "max_hp": max_hp,
+			"last_damaged_at": last_damaged_at, "summon_queue": summon_queue.duplicate(true),
+			"rally_point": rally_point, "has_rally": has_rally, "summon_count": summon_count,
+			"loot_factor": loot_factor, "biome_efficiency": biome_efficiency, "extra": extra.duplicate(true),
+			"worker_uids": worker_uids}
+
+
 ## Kurz aufblitzen lassen (nach einem Treffer)
 func flash() -> void:
 	hit_flash = 0.15

@@ -992,3 +992,28 @@ func _separate() -> void:
 		if world.in_bounds(c) and not game.nav.is_solid(c):
 			u.position = new_pos
 	_separate_cursor = (_separate_cursor + i) % n
+
+
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10)
+# ---------------------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {"rng": _rng.state, "tick_count": _tick_count}
+
+
+func from_dict(d: Dictionary) -> void:
+	_rng.state = int(d.get("rng", _rng.state))
+	_tick_count = int(d.get("tick_count", 0))
+
+
+## Laufzeit leeren, Umgebungssuche im nächsten Takt neu aufbauen
+func rebuild_runtime() -> void:
+	_dead_units.clear()
+	_dead_buildings.clear()
+	_death_log.clear()
+	_death_flush_at = -1.0
+	_attack_events.clear()
+	_hostile_cache.clear()
+	_index_dirty = true
+	_separate_cursor = 0

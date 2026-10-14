@@ -193,6 +193,11 @@ func grant_unlock(source: String, unlock_id: String) -> void:
 func revoke_unlocks(source: String) -> void:
 	if not unlock_sources.erase(source):
 		return
+	_rebuild_unlocks()
+
+
+## Zwischenspeicher unlocks aus unlock_sources neu aufbauen
+func _rebuild_unlocks() -> void:
 	unlocks.clear()
 	for src in unlock_sources:
 		for unlock_id in unlock_sources[src]:
@@ -356,3 +361,60 @@ func take_income_sample() -> Dictionary:
 	for res_id in sample:
 		_income_acc[res_id] = 0.0
 	return sample
+
+
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10)
+# ---------------------------------------------------------------------------
+
+## Nicht gespeicherte Felder: abgeleitet (unlocks, modifiers), Nodes (über uid) oder
+## nur lesbar. Felder mit "_" am Anfang sind Laufzeit und werden nie gespeichert.
+## Alle anderen Felder (auch neue späterer Phasen) speichert to_dict automatisch.
+const SAVE_SKIP := ["buildings", "units", "castle", "king", "unlocks", "modifiers", "is_player",
+		"mana_cap_bonus", "mana_regen"]
+
+
+## Gespeicherter Zustand (Kopien; Burg und König als uid)
+func to_dict() -> Dictionary:
+	var d := {}
+	for p in get_property_list():
+		if not (int(p["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE):
+			continue
+		var prop := str(p["name"])
+		if prop.begins_with("_") or SAVE_SKIP.has(prop):
+			continue
+		var value: Variant = get(prop)
+		if value is Object:
+			continue
+		d[prop] = value.duplicate(true) if (value is Dictionary or value is Array) else value
+	d["castle_uid"] = castle.uid if is_instance_valid(castle) else 0
+	d["king_uid"] = king.uid if is_instance_valid(king) else 0
+	return d
+
+
+## Zustand übernehmen (nur Daten; Burg und König löst SaveGame im zweiten Durchgang auf).
+## Fehlende Schlüssel behalten ihren Wert aus setup().
+func from_dict(d: Dictionary) -> void:
+	for p in get_property_list():
+		if not (int(p["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE):
+			continue
+		var prop := str(p["name"])
+		if prop.begins_with("_") or SAVE_SKIP.has(prop) or not d.has(prop):
+			continue
+		var value: Variant = d[prop]
+		var current: Variant = get(prop)
+		if current is Array and value is Array:
+			(current as Array).clear()
+			(current as Array).append_array((value as Array).duplicate(true))
+		elif current is Dictionary and value is Dictionary:
+			set(prop, (value as Dictionary).duplicate(true))
+		elif current is float and (value is int or value is float):
+			set(prop, float(value))
+		elif current is int and (value is int or value is float):
+			set(prop, int(value))
+		elif typeof(current) == typeof(value):
+			set(prop, value)
+	for res_id in resources:
+		_income_acc[res_id] = 0.0
+	_rebuild_unlocks()
+	_recompute_modifiers()

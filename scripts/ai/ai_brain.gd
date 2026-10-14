@@ -52,6 +52,11 @@ func _init(p_sys: AISystem, p_kingdom: Kingdom) -> void:
 	diff = sys.get_difficulty()
 
 
+## Angriffslust: Persönlichkeit × Schwierigkeit (difficulties.json ai_aggression_mult)
+func aggression() -> float:
+	return float(personality.get("aggression", 1.0)) * float(diff.get("ai_aggression_mult", 1.0))
+
+
 ## Vorgaben für Kingdom.ai_state (alles einfache Werte):
 ## "personality", "next_think" (-1 = noch nicht), "think_count",
 ## "build_waiting" {"building", "since"} (wartet auf Geld), "skip_until" {Gebäude-id: Spielzeit},

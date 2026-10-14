@@ -12,7 +12,8 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 ## Starten
 
 1. Godot öffnen → **Importieren** → `project.godot` in diesem Ordner wählen.
-2. **F5** drücken (Projekt starten) → Hauptmenü → *Neues Spiel*.
+2. **F5** drücken (Projekt starten) → Hauptmenü → *Neues Spiel* (oder *Fortsetzen* / *Laden*).
+   F5 startet nur im Editor das Projekt – im laufenden Spiel ist F5 *Schnellspeichern*.
 
 ## Steuerung
 
@@ -56,7 +57,10 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Überläufer aufhalten | dem Überläufer einen Befehl geben (z. B. Rechtsklick ins Gelände oder „Halt“) |
 | Meldungen | Klick springt zur Stelle; Meldungen zur Stufenwahl oder Wiederbelebung öffnen das Heldenfenster |
 | Arbeitsverteilung ein/aus | J |
-| Spielmenü | Esc (wenn kein Fenster offen ist und nichts gebaut/ausgewählt wird) |
+| Hilfe (alle Tasten, Spielablauf, Schwierigkeit) | F1 (auch im Spielmenü: „Hilfe (F1)“) |
+| Meldungsprotokoll | M oder Knopf „Protokoll (M)“ über den Meldungen: alle Meldungen der Partie, Filter, Klick springt zur Stelle |
+| Schnellspeichern / Schnellladen | F5 / F8 (vorige Schnellspeicherung bleibt als Sicherung) |
+| Spielmenü | Esc (wenn kein Fenster offen ist und nichts gebaut/ausgewählt wird): Fortsetzen, **Speichern**, **Laden**, **Einstellungen**, Hilfe, Hauptmenü, Beenden |
 | Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu, F11 setzt 3 Wölfe an die Maus, Umschalt+F11 einen Übungsgolem, Strg+F11 einen feindlichen Rammbock (marschiert zur Burg), F12 gibt dem ausgewählten Helden eine Stufe (zum Testen); im Spionagefenster erscheinen Debug-Knöpfe (Aufmerksamkeit, Kundschaft, KI-Angriff, KI-Reich besiegen, Rivalen-Krieg), in der Reichsübersicht (L) Knöpfe für Ereignisse, Zufriedenheit und Tageszeit |
 
 Alle Tasten lassen sich im Editor unter *Projekt → Projekteinstellungen → Eingabe-Zuordnung* ändern.
@@ -73,7 +77,8 @@ data/                    Spieldaten (JSON) – ohne Code änderbar
   factions.json            Fraktionen
   peoples.json             Völker (alle 22): Stärken/Schwächen, Gelände- und Tag/Nacht-Boni, Dorfdaten
   diplomacy.json           Ruf, Geschenke, Verträge, Handel, Aufnahme, Drohung, Dörfer, Boten
-  difficulties.json        Schwierigkeitsgrade
+  difficulties.json        Schwierigkeitsgrade (KI, Monster, Startvorrat, Beschreibung)
+  help.json                Hilfefenster F1 (Tasten, Spielablauf)
   ai.json                  Gegner-KI: Namen, Persönlichkeiten, Schwierigkeit (Reiche, erste Welle, Faktoren),
                            Bauliste, Berufe, Forschung, Armee, Wellen, Lager, Rivalität, Niederlage
   espionage.json           Entdeckung, Aggression, Reichstarnung, Aufmerksamkeit, Kundschaft, Berichte, Spione
@@ -89,7 +94,9 @@ scenes/                  Szenen (.tscn)
   game.tscn                Spielszene
   ui/                      HUD, Spielmenü, Ladebildschirm
 scripts/
-  autoload/                Globale Dienste: DataDB, Settings, GameSession, GameClock, Assets, Notify
+  autoload/                Globale Dienste: DataDB, Settings, GameSession, GameClock, Assets, Notify, SaveManager
+  save/                    Spielstände: SaveGame (Inhalt, Laden), SaveCodec (Typen in JSON), SaveMigration
+  kingdoms/                Schwierigkeit (Difficulty), Sieg und Niederlage (VictorySystem)
   world/                   Kartendaten, Generator, Chunk-Darstellung, Tilesets, Gebiet, Wegfindung
   economy/                 Reich (Kingdom), Gebäude, BuildingSystem, EconomySystem
   units/                   Einheiten, UnitSystem (Bewegung), WorkSystem (Berufe), CombatSystem (Kampf),
@@ -101,7 +108,8 @@ scripts/
   kingdoms/                VictorySystem (Niederlage der KI-Reiche, Ruinen, Sieg)
   camera/                  Strategie-Kamera
   view/                    Darstellung über der Welt: Lebensbalken/Auswahlringe, Kampfeffekte
-  ui/                      HUD-Panels, Bauvorschau, Auswahl und Befehle, Spielende
+  ui/                      HUD-Panels, Bauvorschau, Auswahl und Befehle, Spielende, Speichern/Laden,
+                           Einstellungen, Hilfe (F1), Meldungsprotokoll (M)
   util/                    Hilfen (Grafik laden / Platzhalter erzeugen und zeichnen)
 assets/
   sprites/                 terrain/, units/, buildings/, heroes/, resources/, effects/
@@ -558,6 +566,58 @@ Tipp: F3 an, F9 = Rohstoffe.
 10. KI: Nach Angriffen baut sie Türme, auf Normal später auch einen Mauerring. Gegen deine Mauern bringt sie
     Rammböcke und Katapulte.
 
+## Speichern und Laden (Phase 10)
+
+- **Ablage**: `user://saves/<name>.save` – unter Windows `%APPDATA%\Koenigreiche\saves`, unter Linux
+  `~/.local/share/Koenigreiche/saves` (`project.godot`: eigener Benutzerordner „Koenigreiche“; dort liegt auch
+  `settings.cfg` – frühere Einstellungen gelten deshalb einmalig nicht mehr). Plätze: beliebig viele mit Namen,
+  `quicksave` (F5/F8), `autosave_1…3` (reihum, Abstand in den Einstellungen).
+- **Datei**: Zeile 1 `KOENIGREICHE-SAVE 1`, Zeile 2 Kopf als JSON (Name, Datum, Spielzeit, Fraktion, Schwierigkeit,
+  Karte, Seed, Versionen, Prüfsumme), danach die Daten als JSON (zstd-komprimiert, abschaltbar). Geschrieben
+  wird nach `.tmp`, die alte Datei wird zur Sicherung `.bak`, dann umbenannt; Codieren und Schreiben laufen im
+  Hintergrund (`SaveManager`).
+- **Inhalt** (`SaveGame`): Die Welt wird aus dem Seed neu erzeugt; gespeichert werden nur ihre Änderungen
+  (`WorldData.changed_cells`, Strassen, nachwachsende Vorkommen) und ein Fingerabdruck der frischen Welt.
+  Dazu alle Reiche (`Kingdom.to_dict` speichert jedes Feld ausser abgeleiteten und `_`-Feldern automatisch),
+  Gebäude (`Building.to_dict`), Einheiten (`Unit.to_dict`, Verweise als uid, laufende Wege), alle Systeme,
+  Uhr, Sitzung und das Meldungsprotokoll.
+- **Typen** (`SaveCodec`): int/float, Vektoren, Farben, gepackte Arrays, Dictionaries mit Zahlen-Schlüsseln und
+  64-Bit-Zahlen bleiben erhalten (`{"#v2": [x, y]}`, `{"#d": [[k, v]]}` …).
+- **Schnittstelle jedes Systems**: `to_dict()` (nur einfache Werte, Kopien), `from_dict(d)` (nur Daten, keine
+  Signale) und `rebuild_runtime()` (Zwischenspeicher und Wirkungen neu, idempotent). Register `SaveGame.SYSTEMS`
+  (fehlende Systeme werden übersprungen; weitere Nodes unter *Systems* mit den drei Methoden werden automatisch
+  mitgespeichert), Reihenfolge des Neuaufbaus `SaveGame.REBUILD_ORDER`.
+- **Laden**: Kopf prüfen → Welt im Thread erzeugen, Fingerabdruck vergleichen, Änderungen anwenden, Wege
+  berechnen → Reiche, Gebäude (ohne Signale), Gebiet, Einheiten, Verweise, Systeme (`from_dict`, dann
+  `rebuild_runtime`), zuletzt Leben und Meldungen. Arbeiter suchen ihren Arbeitsschritt neu, Gruppenmärsche
+  gehen einzeln weiter.
+- **Regeln für neue Felder**: neues Feld → in `to_dict`/`from_dict` mit Standardwert (Kingdom: automatisch).
+  Feld umbenannt oder umgedeutet → `SaveGame.SAVE_VERSION + 1` und ein Schritt in `SaveMigration.migrate`.
+  Ergibt derselbe Seed eine andere Welt (Generator oder `worldgen.json`/`biomes.json` geändert) →
+  `WorldGenerator.VERSION + 1` (alte Spielstände werden als nicht ladbar angezeigt). Geänderte Spieldaten sonst:
+  nur ein gelber Hinweis in der Liste.
+- **Schwierigkeit** (`Difficulty`, `data/difficulties.json`): Quelle `"difficulty"` auf KI-Reichen (Ertrag,
+  Stärke, Tempo, Wachsamkeit) und den wilden Monstern (Stärke), Startressourcen des Spielers, Angriffslust der
+  KI, Nachwuchs der Monsterlager; ab Phase 8 auch Streifzüge und Ereignisse. Beim Laden neu gesetzt.
+- **Einstellungen** (`Settings`, `SettingsForm` im Haupt- und Spielmenü): Lautstärken (Busse Master, Music,
+  SFX, UI), Kamera, Vollbild, Grösse der Oberfläche, Tag-Nacht-Abdunklung, automatisch speichern, Kompression.
+
+## Phase 10 testen (Entwurf)
+
+1. Neues Spiel, ein paar Minuten spielen, **F5**, ein Gebäude abreissen, **F8** → alles wie vorher (Gebäude im
+   Bau, Warteschlangen, Sammelpunkte, Helden, Zauberzonen, Monsterlager).
+2. **Esc → Speichern** mit Namen; noch einmal mit gleichem Namen → Rückfrage „überschreiben?“.
+3. **Hauptmenü → Laden**: Liste mit Datum, Spielzeit, Fraktion, Schwierigkeit, Karte, Seed; Löschen mit
+   Rückfrage; „Fortsetzen“ lädt den neuesten Spielstand.
+4. **Einstellungen**: Autospeichern 5 min → nach 5 min Hinweis „Automatisch gespeichert“ oben rechts,
+   höchstens 3 Autospeicherstände.
+5. Grösse der Oberfläche 125 % → HUD und Menüs grösser.
+6. **F1** Hilfe (Steuerung, Spielablauf, Schwierigkeit), **M** Protokoll mit Klick zur Stelle.
+7. Schwierigkeit *Leicht*: Monster schwächer (Auswahlfenster einer Höhle), mehr Startvorräte; *Episch*: frühe,
+   grosse Wellen.
+8. Rauchtest `tests/run_smoke.sh 900` – enthält den Rundlauf Speichern → Laden in eine frische Szene → Vergleich
+   → Weiterspielen (abschaltbar mit `p10=off`).
+
 ## Grafiken austauschen
 
 Alle Grafiken sind zunächst automatisch erzeugte Platzhalter. Legt man eine PNG-Datei
@@ -575,4 +635,5 @@ beim nächsten Start automatisch verwendet – ohne Code-Änderung.
 - [x] Phase 7 – Gegnerische Königreiche mit KI, Entdeckung, Spionage
 - [x] Phase 8 – Zufriedenheit, Verrat, Flüchtlinge, Ereignisse, Monster, Tag/Nacht
 - [x] Phase 9 – Belagerungen und Handelswege
-- [ ] Phase 10 – Speichern/Laden, Schwierigkeitsgrade, UI-Feinschliff, Balancing
+- [ ] Phase 10 – Speichern/Laden, Schwierigkeitsgrade, UI-Feinschliff, Balancing (Speichern/Laden,
+  Schwierigkeit, Einstellungen, Hilfe und Protokoll fertig; Balancing folgt)

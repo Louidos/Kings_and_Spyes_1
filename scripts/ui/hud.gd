@@ -100,8 +100,13 @@ var event_banner: EventBanner
 var refugee_dialog: RefugeeDialog
 var _refugee_layer: CanvasLayer
 var day_clock: DayClock
-## Hinweis "Kampfpunkte ausgeben" kam schon (einmal je Partie)
-var _kp_hint_shown := false
+## Hilfe (F1) und Meldungsprotokoll (M), Knopf "Protokoll (M)" über den Meldungen
+var help_panel: HelpPanel
+var message_log: MessageLogPanel
+var _log_button: Button
+## Hinweis oben rechts beim Speichern ("Speichere …", "Gespeichert")
+var _save_indicator: Label
+var _save_indicator_time := 0.0
 
 var _pause_button: Button
 ## Ein Button je Tempostufe (gleiche Reihenfolge wie GameClock.speed_steps)
@@ -162,6 +167,7 @@ func setup(p_game: Node) -> void:
 	_setup_diplomacy()
 	_setup_espionage()
 	_setup_kingdom()
+	_setup_phase10()
 
 
 ## Forschungsfenster ein-/ausblenden (Taste R, Button oben)
@@ -257,6 +263,106 @@ func open_link(link: Dictionary) -> void:
 			open_trade()
 
 
+## Hilfe (F1) ein-/ausblenden
+func toggle_help() -> void:
+	if help_panel != null:
+		help_panel.toggle()
+
+
+func open_help() -> void:
+	if help_panel != null:
+		help_panel.open()
+
+
+func is_help_open() -> bool:
+	return help_panel != null and help_panel.is_open()
+
+
+## Meldungsprotokoll (M) ein-/ausblenden
+func toggle_log() -> void:
+	if message_log != null:
+		message_log.toggle()
+
+
+func is_log_open() -> bool:
+	return message_log != null and message_log.is_open()
+
+
+## Hilfe, Protokoll, Speicherhinweis, UI-Grösse (Phase 10)
+func _setup_phase10() -> void:
+	help_panel = HelpPanel.new()
+	help_panel.name = "HelpPanel"
+	add_child(help_panel)
+	message_log = MessageLogPanel.new()
+	message_log.name = "MessageLog"
+	add_child(message_log)
+	message_log.setup(game)
+	message_log.toggled.connect(func(open: bool) -> void:
+		_log_button.set_pressed_no_signal(open)
+		if open:
+			_close_other_panels(message_log))
+	_log_button = Button.new()
+	_log_button.name = "LogButton"
+	_log_button.text = "Protokoll (M)"
+	_log_button.toggle_mode = true
+	_log_button.focus_mode = Control.FOCUS_NONE
+	_log_button.tooltip_text = "Alle Meldungen der Partie (Taste M)"
+	_log_button.add_theme_font_size_override("font_size", 14)
+	_log_button.pressed.connect(toggle_log)
+	$Root.add_child(_log_button)
+	_log_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_log_button.position = Vector2(get_viewport().get_visible_rect().size.x - 12.0 - 130.0, 62.0)
+	_log_button.size = Vector2(130, 30)
+	_log_button.offset_left = -142.0
+	_log_button.offset_right = -12.0
+	_log_button.offset_top = 62.0
+	_log_button.offset_bottom = 92.0
+	notification_panel.offset_top = 100.0
+	_save_indicator = Label.new()
+	_save_indicator.name = "SaveIndicator"
+	_save_indicator.add_theme_font_size_override("font_size", 15)
+	_save_indicator.add_theme_color_override("font_outline_color", Color.BLACK)
+	_save_indicator.add_theme_constant_override("outline_size", 5)
+	_save_indicator.visible = false
+	$Root.add_child(_save_indicator)
+	_save_indicator.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_save_indicator.offset_left = -400.0
+	_save_indicator.offset_right = -160.0
+	_save_indicator.offset_top = 66.0
+	_save_indicator.offset_bottom = 90.0
+	_save_indicator.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	SaveManager.save_finished.connect(_on_save_finished)
+	var diff := GameSession.get_difficulty()
+	kingdom_label.tooltip_text += "\nSchwierigkeit: %s" % str(diff.get("name", GameSession.difficulty_id))
+	UiStyle.register_scaled_layer(self, $Root as Control)
+	Settings.changed.connect(_on_settings_changed)
+	get_viewport().size_changed.connect(_on_settings_changed)
+	_on_settings_changed()
+
+
+func _on_settings_changed() -> void:
+	if is_inside_tree():
+		UiStyle.apply_ui_scale(get_tree())
+
+
+## Speicherhinweis zeigen ("Speichere …" beim Start, danach Ergebnis), blendet nach 2 s aus
+func show_save_indicator(text: String) -> void:
+	_save_indicator.text = text
+	_save_indicator.visible = true
+	_save_indicator.modulate.a = 1.0
+	_save_indicator_time = 2.0
+
+
+func _on_save_finished(slot: String, ok: bool, message: String) -> void:
+	if not ok:
+		show_save_indicator("Speichern fehlgeschlagen")
+		_save_indicator.tooltip_text = message
+	elif slot.begins_with(SaveManager.AUTO_PREFIX):
+		show_save_indicator("Automatisch gespeichert")
+	else:
+		show_save_indicator("Gespeichert")
+
+
 ## Esc schliesst das Spionage-, Diplomatie-, Helden- bzw. Forschungsfenster auch, wenn
 ## gerade ein Tooltip offen ist (Godot verbraucht Esc sonst nur zum Schliessen des Tooltips).
 func _input(event: InputEvent) -> void:
@@ -290,8 +396,14 @@ func toggle_job_panel() -> void:
 ## Esc: schliesst das oberste offene Fenster (Spionage, Diplomatie, Helden, Forschung,
 ## Arbeitsverteilung). true = etwas wurde geschlossen (dann nichts weiter tun).
 func close_top_panel() -> bool:
+	if is_help_open():
+		help_panel.close()
+		return true
 	if refugee_dialog != null and refugee_dialog.is_open():
 		refugee_dialog.close()
+		return true
+	if is_log_open():
+		message_log.close()
 		return true
 	if is_kingdom_open():
 		kingdom_panel.close()
@@ -324,11 +436,17 @@ func toggle_debug() -> void:
 
 func _process(delta: float) -> void:
 	date_label.text = _date_text()
+	if _save_indicator != null and _save_indicator.visible:
+		_save_indicator_time -= delta
+		if _save_indicator_time <= 0.0:
+			_save_indicator.visible = false
+		elif _save_indicator_time < 0.5:
+			_save_indicator.modulate.a = _save_indicator_time / 0.5
 	if paused_label.visible:
 		_blink_time += delta
 		paused_label.modulate.a = 0.6 + 0.4 * cos(_blink_time * 3.0)
 	if debug_label.visible and world_map != null:
-		debug_label.text = "FPS %d  ·  Zoom %.2f  ·  Chunks %d  ·  Seed %s  ·  F9: +100 Ressourcen  ·  F10: König −150  ·  F11: 3 Wölfe an der Maus  ·  Strg+F11: feindlicher Rammbock  ·  F12: Held +1 Stufe  ·  L: Reich (Debug-Knöpfe dort)" % [
+		debug_label.text = "FPS %d  ·  Zoom %.2f  ·  Chunks %d  ·  Seed %s  ·  F9: +100 Ressourcen  ·  F10: König −150  ·  F11: 3 Wölfe an der Maus  ·  Umschalt+F11: Golem  ·  Strg+F11: feindlicher Rammbock  ·  F12: Held +1 Stufe  ·  L: Reich (Debug-Knöpfe dort)" % [
 			Engine.get_frames_per_second(), camera.zoom.x,
 			world_map.get_loaded_chunk_count(), GameSession.seed_text]
 	if world != null:
@@ -392,9 +510,9 @@ func _on_research_toggled(open: bool) -> void:
 
 
 ## Schliesst alle Fenster in der Mitte ausser keep (Forschung, Helden, Diplomatie,
-## Spionage, Reichsübersicht)
-func _close_other_panels(keep: Control) -> void:
-	for panel in [research_panel, hero_panel, diplomacy_panel, espionage_panel, kingdom_panel]:
+## Spionage, Reichsübersicht, Meldungsprotokoll)
+func _close_other_panels(keep: Object) -> void:
+	for panel in [research_panel, hero_panel, diplomacy_panel, espionage_panel, kingdom_panel, message_log]:
 		if panel != null and panel != keep and panel.is_open():
 			panel.close()
 
@@ -435,8 +553,8 @@ func _refresh_research_button() -> void:
 	var affordable := ResearchPanel.has_affordable_upgrade(rs, k)
 	_research_button.badge_visible = affordable
 	# Einmal je Partie: Hinweis, dass Kampfpunkte ausgegeben werden können
-	if affordable and not _kp_hint_shown:
-		_kp_hint_shown = true
+	if affordable and not bool(k.flags.get("kp_hint_shown", false)):
+		k.flags["kp_hint_shown"] = true
 		Notify.good("Du kannst Kampfpunkte ausgeben: Forschung (R) → Kampfpunkte")
 
 

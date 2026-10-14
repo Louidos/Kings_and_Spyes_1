@@ -385,6 +385,44 @@ func get_status_text() -> String:
 	return text
 
 
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10)
+# ---------------------------------------------------------------------------
+
+## Felder späterer Phasen, die gespeichert werden, sofern es sie gibt (Phase 8
+## Zufriedenheit, Phase 9 Rammbock-Ziel). Wiederhergestellt über UnitSystem.restore_unit.
+const SAVE_OPTIONAL := ["satisfaction", "resume_target_uid"]
+
+
+## Gespeicherter Zustand: einfache Werte, Verweise als uid, Weg nur wenn unterwegs
+func to_dict() -> Dictionary:
+	var d := {"uid": uid, "type_id": type_id, "kingdom_id": kingdom.id if kingdom != null else 0,
+			"pos": position, "hp": hp, "effects": effects.duplicate(true), "expires_at": expires_at,
+			"hero_id": hero_id, "custom_name": custom_name, "command": command, "command_pos": command_pos,
+			"order_id": order_id, "target_uid": _uid_of(target), "attack_cooldown": attack_cooldown,
+			"last_damaged_at": last_damaged_at, "home_uid": home_uid, "has_home": has_home, "home_pos": home_pos,
+			"dormant": dormant, "regroup_pending": regroup_pending, "timer": timer,
+			"cast_ability": cast_ability, "cast_target_uid": cast_target_uid, "cast_pos": cast_pos,
+			"inside_uid": _uid_of(inside), "job_id": job_id, "carry_res": carry_res, "carry_amount": carry_amount,
+			"work_acc": work_acc, "work_uid": _uid_of(work_building), "state": state}
+	if follow_leader != null and is_instance_valid(follow_leader):
+		d["follows"] = true
+	if moving or path_pending:
+		d["motion"] = {"path": path.duplicate(), "i": path_index, "moving": moving, "pending": path_pending,
+				"target": path_target, "final": path_final, "has_final": has_path_final}
+	for prop in SAVE_OPTIONAL:
+		var value: Variant = get(prop)
+		if value != null:
+			d[prop] = value
+	return d
+
+
+static func _uid_of(o: Variant) -> int:
+	if o == null or not is_instance_valid(o):
+		return 0
+	return int(o.get("uid"))
+
+
 ## Kurz aufblitzen lassen (nach einem Treffer). Färbt nur ein, ohne neu zu zeichnen.
 func flash() -> void:
 	hit_flash = 0.15

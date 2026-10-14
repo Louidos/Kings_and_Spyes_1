@@ -1,0 +1,68 @@
+{
+	"_hinweis": "Hilfefenster (F1). sections: Abschnitte des Reiters Steuerung; je Zeile entweder action (Name aus project.godot → Eingabe-Zuordnung, die Taste wird aus der aktuellen Belegung gelesen) oder keys (fester Text) sowie text. topics: Kurztexte des Reiters Spielablauf (title, text). Der Reiter Schwierigkeit entsteht aus difficulties.json.",
+	"sections": [
+		{"title": "Kamera und Zeit", "rows": [
+			{"keys": "WASD, Pfeiltasten, Bildschirmrand, mittlere Maustaste ziehen", "text": "Kamera verschieben"},
+			{"keys": "Mausrad, Q / E, Bild↑ / Bild↓", "text": "Zoomen"},
+			{"action": "camera_home", "text": "Zur Burg springen"},
+			{"action": "game_pause", "text": "Pause an/aus"},
+			{"action": "game_speed_up", "text": "Schneller (auch +)"},
+			{"action": "game_speed_down", "text": "Langsamer (auch −)"},
+			{"keys": "Linksklick auf die Minikarte", "text": "Zur Stelle springen"}
+		]},
+		{"title": "Bauen und Wirtschaft", "rows": [
+			{"keys": "Baumenü unten, Linksklick", "text": "Gebäude setzen (Umschalt: mehrere)"},
+			{"keys": "„Strasse“ im Baumenü, ziehen", "text": "Strassen bauen"},
+			{"action": "demolish_mode", "text": "Abreissen"},
+			{"action": "toggle_jobs", "text": "Arbeitsverteilung ein/aus"},
+			{"action": "toggle_research", "text": "Forschung und Kampfpunkte"},
+			{"keys": "Rechtsklick / Esc", "text": "Bauen oder Zielmodus abbrechen"}
+		]},
+		{"title": "Einheiten und Kampf", "rows": [
+			{"keys": "Linksklick, Rahmen ziehen, Doppelklick", "text": "Auswählen (Umschalt: hinzufügen)"},
+			{"keys": "Rechtsklick", "text": "Bewegen bzw. angreifen"},
+			{"keys": "Strg + Rechtsklick", "text": "Angreifend vorrücken"},
+			{"keys": "Strg + 1…9 / Umschalt + 1…9 / 1…9", "text": "Armee speichern / ergänzen / wählen"},
+			{"action": "toggle_formation", "text": "Formation Block / Linie"},
+			{"keys": "Rechtsklick mit Gebäude ausgewählt", "text": "Sammelpunkt setzen"}
+		]},
+		{"title": "Helden und Magie", "rows": [
+			{"action": "toggle_heroes", "text": "Heldenfenster"},
+			{"action": "hero_ability_1", "text": "Heldenfähigkeit 1"},
+			{"action": "hero_ability_2", "text": "Heldenfähigkeit 2"},
+			{"action": "hero_ability_3", "text": "Heldenfähigkeit 3"},
+			{"action": "hero_cycle", "text": "Nächster Held der Auswahl"},
+			{"keys": "Zauberleiste unten rechts", "text": "Zaubern (Kreis führen, Linksklick)"}
+		]},
+		{"title": "Diplomatie und Spionage", "rows": [
+			{"action": "toggle_diplomacy", "text": "Diplomatie: Dörfer, Reiche, Handelswege"},
+			{"action": "toggle_espionage", "text": "Spionage: Entdeckung, Kundschaft, Spione"},
+			{"keys": "2× Rechtsklick auf ein Dorf", "text": "Krieg gegen ein Dorf"}
+		]},
+		{"title": "Reich", "rows": [
+			{"action": "toggle_kingdom", "text": "Reichsübersicht: Zufriedenheit, Ereignisse, Volk, Handel"},
+			{"keys": "Flüchtling anklicken oder Meldung", "text": "Flüchtlinge aufnehmen oder abweisen"},
+			{"keys": "Baumenü → Verteidigung, ziehen", "text": "Mauern ziehen (über Strassen entstehen Tore)"},
+			{"keys": "Tor auswählen → „Verriegeln“", "text": "Tor schliessen"}
+		]},
+		{"title": "Spiel", "rows": [
+			{"action": "toggle_help", "text": "Diese Hilfe"},
+			{"action": "toggle_log", "text": "Meldungsprotokoll"},
+			{"action": "quick_save", "text": "Schnellspeichern"},
+			{"action": "quick_load", "text": "Schnellladen"},
+			{"action": "game_menu", "text": "Fenster schliessen bzw. Spielmenü (Speichern, Laden, Einstellungen)"},
+			{"action": "toggle_debug", "text": "Debug-Anzeige (dann F9–F12: Testhilfen)"}
+		]}
+	],
+	"topics": [
+		{"title": "Wirtschaft", "text": "Bewohner sammeln Holz, Stein, Erz und Nahrung und bringen sie zur Burg oder zu Sammelhütten. Häuser geben Wohnraum, mit genug Nahrung wächst das Dorf. Fertige Gebäude vergrössern dein Gebiet; gebaut wird nur im eigenen Gebiet."},
+		{"title": "Kampf", "text": "Kaserne, Krankenstation und Burg beschwören Einheiten. Im eigenen Gebiet kämpfen sie stärker. Monsterlager bringen Beute und Kampfpunkte; mit Kampfpunkten verbesserst du das Mana."},
+		{"title": "Magie und Forschung", "text": "Forschung schaltet Einheiten, Gebäude und Zauber frei. Mana entsteht an der Burg und in Manabrunnen; Zauber wirken in einem Kreis."},
+		{"title": "Helden", "text": "In der Heldenhalle wirbst du Helden an. Sie steigen durch Kämpfe auf, wählen Fähigkeiten und Talente und führen Armeen an. Gefallene Helden lassen sich an der Burg wiederbeleben."},
+		{"title": "Diplomatie", "text": "Neutrale Dörfer haben einen Ruf dir gegenüber. Geschenke, Handel und Verträge verbessern ihn; Bündnisse schalten Volkseinheiten frei, Dörfer können aufgenommen oder erobert werden."},
+		{"title": "Gegner und Spionage", "text": "Gegnerische Königreiche wachsen wie du. Je grösser und angriffslustiger dein Reich, desto eher entdecken sie dich und greifen an. Spione kundschaften aus und hetzen Dörfer auf."},
+		{"title": "Zufriedenheit und Ereignisse", "text": "Bewohner wollen Nahrung, Wohnraum und Sicherheit; Taverne, Tempel und Feste heben die Stimmung. Unzufriedene arbeiten schlechter, laufen über oder verraten dich. Seltene Ereignisse (Dürre, Seuche, Magiesturm, Monsterwellen, Flüchtlinge) treffen alle Reiche. Nachts sinkt die Sicht und Monster streifen häufiger umher."},
+		{"title": "Belagerung und Handel", "text": "Mauern, Tore und Wachtürme schützen dein Reich; Bauarbeiter reparieren Schäden. Rammböcke und Katapulte brechen feindliche Mauern. Handelsverträge mit Dörfern schicken Karawanen auf den Weg – schütze sie, denn überfallene Wege liefern nichts. Truppen fern vom Gebiet erholen sich nicht."},
+		{"title": "Speichern", "text": "F5 speichert schnell, F8 lädt diesen Stand. Im Spielmenü (Esc) speicherst du unter einem Namen und lädst ältere Stände. Das Spiel speichert ausserdem automatisch (Einstellungen: Abstand, reihum drei Plätze)."}
+	]
+}

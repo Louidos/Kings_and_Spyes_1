@@ -21,6 +21,8 @@ var _info: Label
 var _dim: ColorRect
 var _menu_button: Button
 var _continue_button: Button
+## Niederlage: neuesten Spielstand laden (Phase 10)
+var _load_button: Button
 var _victory := false
 
 
@@ -59,13 +61,21 @@ func _ready() -> void:
 	_continue_button = _make_button("Weiterspielen", box)
 	_continue_button.visible = false
 	_continue_button.pressed.connect(func() -> void: continue_pressed.emit())
+	_load_button = _make_button("Letzten Spielstand laden", box)
+	_load_button.visible = false
+	_load_button.pressed.connect(_load_last)
 	_menu_button = _make_button("Zum Hauptmenü", box)
+	_menu_button.tooltip_text = "Partie verlassen"
 	_menu_button.pressed.connect(func() -> void:
 		GameClock.stop()
 		get_tree().change_scene_to_file("res://scenes/main_menu.tscn"))
 	var restart := _make_button("Neu starten (gleiche Karte)", box)
+	restart.tooltip_text = "Neue Partie mit gleicher Fraktion, Schwierigkeit, Karte und Seed"
 	restart.pressed.connect(func() -> void:
-		# GameSession behält Fraktion, Schwierigkeit, Grösse und Seed
+		# GameSession behält Fraktion, Schwierigkeit, Grösse und Seed (kein Spielstand)
+		GameSession.pending_load_path = ""
+		GameSession.play_seconds = 0.0
+		GameSession.last_save_name = ""
 		GameClock.stop()
 		get_tree().change_scene_to_file("res://scenes/game.tscn"))
 	var quit := _make_button("Spiel beenden", box)
@@ -80,8 +90,21 @@ func open(title: String, text: String) -> void:
 	_dim.color = DEFEAT_DIM
 	_info.text = text
 	_continue_button.visible = false
+	_load_button.visible = true
+	var entry := SaveManager.most_recent()
+	_load_button.disabled = entry.is_empty()
+	_load_button.tooltip_text = "Kein Spielstand vorhanden" if entry.is_empty() else \
+			"%s (%s)" % [str((entry["header"] as Dictionary).get("name", "")), str((entry["header"] as Dictionary).get("time_text", ""))]
 	visible = true
 	_menu_button.grab_focus()
+
+
+func _load_last() -> void:
+	var entry := SaveManager.most_recent()
+	if entry.is_empty() or not SaveManager.request_load(str(entry["slot"])).is_empty():
+		return
+	GameClock.stop()
+	get_tree().change_scene_to_file("res://scenes/game.tscn")
 
 
 ## Sieg: goldene Schrift, "Weiterspielen" oben und vorgewählt
@@ -92,6 +115,7 @@ func open_victory(title: String, text: String) -> void:
 	_dim.color = VICTORY_DIM
 	_info.text = text
 	_continue_button.visible = true
+	_load_button.visible = false
 	visible = true
 	_continue_button.grab_focus()
 

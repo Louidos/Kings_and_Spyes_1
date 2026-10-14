@@ -1,7 +1,7 @@
 ## MainMenu
 ##
-## Hauptmenü: Neues Spiel (Fraktion, Volk mit Stärken und Schwächen, Schwierigkeit,
-## Kartengrösse, Seed), Laden (ab Phase 10), Einstellungen, Beenden.
+## Hauptmenü: Fortsetzen (neuester Spielstand), Neues Spiel (Fraktion, Volk mit Stärken und
+## Schwächen, Schwierigkeit, Kartengrösse, Seed), Laden (Liste der Spielstände), Einstellungen, Beenden.
 ## Fraktionen, Schwierigkeitsgrade und Kartengrössen kommen aus /data.
 extends Control
 
@@ -18,9 +18,6 @@ const BACKGROUND_IMAGE := "res://assets/ui/menu_background.png"
 @onready var difficulty_option: OptionButton = %DifficultyOption
 @onready var map_size_option: OptionButton = %MapSizeOption
 @onready var seed_edit: LineEdit = %SeedEdit
-@onready var edge_scroll_check: CheckBox = %EdgeScrollCheck
-@onready var camera_speed_slider: HSlider = %CameraSpeedSlider
-@onready var fullscreen_check: CheckBox = %FullscreenCheck
 @onready var version_label: Label = %VersionLabel
 
 var _selected_faction: String = "good"
@@ -28,8 +25,12 @@ var _selected_faction: String = "good"
 var _people_option: OptionButton
 var _people_text: RichTextLabel
 var _selected_people := ""
-## Einstellung "Tag-Nacht-Abdunklung" (im Code eingefügt)
-var _tint_check: CheckBox
+## Seite "Laden" (Liste der Spielstände) und Formular der Einstellungen
+var load_panel: SaveLoadPanel
+var settings_form: SettingsForm
+var _continue_button: Button
+var _error_label: Label
+var _difficulty_hint: Label
 
 
 func _ready() -> void:
@@ -38,25 +39,130 @@ func _ready() -> void:
 	_build_people_picker()
 	_build_faction_buttons()
 	_fill_options()
-	_build_tint_check()
 	seed_edit.text = GameSession.random_seed_text()
 
 	%NewGameButton.pressed.connect(_show.bind(new_game_panel))
+	%LoadButton.pressed.connect(_open_load)
 	%SettingsButton.pressed.connect(_open_settings)
 	%QuitButton.pressed.connect(func() -> void: get_tree().quit())
 	%BackButton.pressed.connect(_show.bind(main_buttons))
-	%SettingsBackButton.pressed.connect(_close_settings)
 	%RandomSeedButton.pressed.connect(func() -> void: seed_edit.text = GameSession.random_seed_text())
 	%StartButton.pressed.connect(_start_game)
+	%NewGameButton.tooltip_text = "Neue Partie: Fraktion, Volk, Schwierigkeit, Karte, Seed"
+	%SettingsButton.tooltip_text = "Ton, Kamera, Anzeige, automatisches Speichern"
+	%QuitButton.tooltip_text = "Spiel schliessen"
+	%RandomSeedButton.tooltip_text = "Zufälligen Seed würfeln"
+	%StartButton.tooltip_text = "Partie mit diesen Einstellungen starten"
+	%BackButton.tooltip_text = "Zurück zum Hauptmenü"
+	difficulty_option.tooltip_text = Difficulty.describe(GameSession.difficulty_id)
+	map_size_option.tooltip_text = "Grösse der Welt"
 
-	var v := Engine.get_version_info()
-	version_label.text = "Phase 8  ·  Godot %d.%d.%d" % [v.major, v.minor, v.patch]
+	# Fortsetzen (neuester ladbarer Spielstand) über "Neues Spiel"
+	_continue_button = Button.new()
+	_continue_button.text = "Fortsetzen"
+	_continue_button.custom_minimum_size = Vector2(0, 46)
+	_continue_button.add_theme_font_size_override("font_size", 22)
+	_continue_button.pressed.connect(_continue_game)
+	main_buttons.add_child(_continue_button)
+	main_buttons.move_child(_continue_button, 0)
+	_error_label = Label.new()
+	_error_label.add_theme_color_override("font_color", Color(1.0, 0.45, 0.4))
+	_error_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_error_label.custom_minimum_size.x = 420
+	_error_label.visible = false
+	main_buttons.add_child(_error_label)
+	main_buttons.move_child(_error_label, 0)
+	if not GameSession.last_error.is_empty():
+		_error_label.text = GameSession.last_error
+		_error_label.visible = true
+		GameSession.last_error = ""
+	# Kurztext zur Schwierigkeit unter der Auswahl
+	_difficulty_hint = Label.new()
+	_difficulty_hint.add_theme_font_size_override("font_size", 14)
+	_difficulty_hint.add_theme_color_override("font_color", Color(0.8, 0.77, 0.7))
+	var grid := difficulty_option.get_parent()
+	var spacer := Control.new()
+	grid.add_child(spacer)
+	grid.move_child(spacer, difficulty_option.get_index() + 1)
+	grid.add_child(_difficulty_hint)
+	grid.move_child(_difficulty_hint, spacer.get_index() + 1)
+	difficulty_option.item_selected.connect(func(_i: int) -> void: _update_difficulty_hint())
+	_update_difficulty_hint()
+	# Seiten: Laden und Einstellungen
+	load_panel = SaveLoadPanel.new()
+	load_panel.visible = false
+	load_panel.closed.connect(_show.bind(main_buttons))
+	load_panel.load_requested.connect(_on_load_requested)
+	main_buttons.get_parent().add_child(load_panel)
+	main_buttons.get_parent().move_child(load_panel, settings_panel.get_index())
+	settings_form = SettingsForm.new()
+	settings_form.closed.connect(_close_settings)
+	settings_panel.add_child(settings_form)
+	Settings.changed.connect(_apply_ui_scale)
+	_apply_ui_scale()
+
+	version_label.text = "Version %s  ·  Godot %d.%d.%d" % [str(ProjectSettings.get_setting("application/config/version", "1.0.0")),
+			Engine.get_version_info().major, Engine.get_version_info().minor, Engine.get_version_info().patch]
+	_refresh_continue()
 	_show(main_buttons)
 
 
+func _exit_tree() -> void:
+	# Im Spiel skalieren die Ebenen selbst (UiStyle); der Faktor des Fensters gilt nur hier
+	if is_inside_tree():
+		get_tree().root.content_scale_factor = 1.0
+
+
+func _apply_ui_scale() -> void:
+	if is_inside_tree():
+		get_tree().root.content_scale_factor = Settings.ui_scale
+
+
 func _show(panel: Control) -> void:
-	for p in [main_buttons, new_game_panel, settings_panel]:
-		p.visible = p == panel
+	for p in [main_buttons, new_game_panel, settings_panel, load_panel]:
+		if p != null:
+			p.visible = p == panel
+	if panel == main_buttons:
+		_refresh_continue()
+
+
+func _update_difficulty_hint() -> void:
+	var id := str(difficulty_option.get_selected_metadata())
+	_difficulty_hint.text = Difficulty.short_text(id)
+	difficulty_option.tooltip_text = Difficulty.describe(id)
+	_difficulty_hint.tooltip_text = Difficulty.describe(id)
+
+
+## "Fortsetzen" nur, wenn es einen ladbaren Spielstand gibt
+func _refresh_continue() -> void:
+	if _continue_button == null:
+		return
+	var entry := SaveManager.most_recent()
+	_continue_button.visible = not entry.is_empty()
+	if not entry.is_empty():
+		var h: Dictionary = entry["header"]
+		_continue_button.tooltip_text = "%s – gespeichert %s" % [str(h.get("name", "")), SaveGame.format_date(int(h.get("saved_at", 0)))]
+
+
+func _continue_game() -> void:
+	var entry := SaveManager.most_recent()
+	if not entry.is_empty():
+		_on_load_requested(str(entry["slot"]))
+
+
+func _open_load() -> void:
+	_show(load_panel)
+	load_panel.open_mode("load")
+
+
+func _on_load_requested(slot: String) -> void:
+	var err := SaveManager.request_load(slot)
+	if not err.is_empty():
+		_error_label.text = "Laden nicht möglich: " + err
+		_error_label.visible = true
+		_show(main_buttons)
+		return
+	get_tree().change_scene_to_file(GAME_SCENE)
 
 
 func _load_background() -> void:
@@ -169,16 +275,6 @@ static func people_text(p: Dictionary) -> String:
 	return "\n".join(lines)
 
 
-## Einstellung "Tag-Nacht-Abdunklung" vor dem Zurück-Knopf
-func _build_tint_check() -> void:
-	_tint_check = CheckBox.new()
-	_tint_check.text = "Tag-Nacht-Abdunklung"
-	_tint_check.tooltip_text = "Abends und nachts wird die Welt dunkler (die Oberfläche bleibt hell)"
-	var back: Control = %SettingsBackButton
-	back.get_parent().add_child(_tint_check)
-	back.get_parent().move_child(_tint_check, back.get_index())
-
-
 func _fill_options() -> void:
 	difficulty_option.clear()
 	for d in DataDB.difficulties:
@@ -209,18 +305,10 @@ func _start_game() -> void:
 # ---------------------------------------------------------------------------
 
 func _open_settings() -> void:
-	edge_scroll_check.button_pressed = Settings.edge_scroll
-	camera_speed_slider.value = Settings.camera_speed
-	fullscreen_check.button_pressed = Settings.fullscreen
-	_tint_check.button_pressed = Settings.day_night_tint
+	settings_form.refresh()
 	_show(settings_panel)
 
 
+## Das Formular hat schon gespeichert
 func _close_settings() -> void:
-	Settings.edge_scroll = edge_scroll_check.button_pressed
-	Settings.camera_speed = camera_speed_slider.value
-	Settings.fullscreen = fullscreen_check.button_pressed
-	Settings.day_night_tint = _tint_check.button_pressed
-	Settings.save_settings()
-	Settings.apply()
 	_show(main_buttons)

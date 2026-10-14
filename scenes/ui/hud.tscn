@@ -136,7 +136,8 @@ theme_override_constants/outline_size = 6
 theme_override_font_sizes/font_size = 15
 text = "Linksklick / Ziehen: auswählen  ·  Rechtsklick: bewegen / angreifen  ·  Strg+1–9: Armee  ·  J: Arbeitsverteilung  ·  X: Abreissen
 WASD / Pfeile / Rand: Kamera  ·  Mausrad, Q/E: Zoom  ·  Leertaste: Pause  ·  + / −: Tempo  ·  H: Burg  ·  Esc: abbrechen / Menü
-R: Forschung  ·  G: Helden  ·  N: Diplomatie  ·  K: Spionage  ·  L: Reich  ·  C / V / B: Heldenfähigkeiten  ·  Tab: anderer Held"
+R: Forschung  ·  G: Helden  ·  N: Diplomatie  ·  K: Spionage  ·  L: Reich  ·  C / V / B: Heldenfähigkeiten  ·  Tab: anderer Held
+F1: Hilfe  ·  M: Protokoll  ·  Esc: Menü (Speichern/Laden)  ·  F5 / F8: Schnell speichern / laden"
 horizontal_alignment = 1
 
 [node name="BuildMenu" type="PanelContainer" parent="Root/BottomCenter"]

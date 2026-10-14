@@ -67,6 +67,62 @@ func spawn_unit(kingdom: Kingdom, type_id: String, pos: Vector2, uid: int = 0,
 	return u
 
 
+## Spielstand laden (Phase 10): Einheit aus Unit.to_dict wiederherstellen (gleiche uid).
+## Verweise (Ziel, Gebäude, Arbeitsplatz) und Weg setzt SaveGame im zweiten Durchgang.
+## null bei unbekanntem Typ oder Reich.
+func restore_unit(d: Dictionary) -> Unit:
+	var kingdom: Kingdom = game.get_kingdom(int(d.get("kingdom_id", 0)))
+	var type_id := str(d.get("type_id", ""))
+	if kingdom == null or DataDB.get_unit_type(type_id).is_empty():
+		return null
+	var init := func(nu: Unit) -> void:
+		nu.hero_id = int(d.get("hero_id", 0))
+		nu.custom_name = str(d.get("custom_name", ""))
+		nu.effects = (d.get("effects", []) as Array).duplicate(true)
+		nu.expires_at = float(d.get("expires_at", -1.0))
+		for prop in Unit.SAVE_OPTIONAL:
+			if d.has(prop) and nu.get(prop) != null:
+				nu.set(prop, d[prop])
+	var u := spawn_unit(kingdom, type_id, d.get("pos", Vector2.ZERO), int(d.get("uid", 0)), init)
+	if u == null:
+		return null
+	u.command = str(d.get("command", ""))
+	u.command_pos = d.get("command_pos", u.position)
+	u.order_id = int(d.get("order_id", 0))
+	u.attack_cooldown = float(d.get("attack_cooldown", 0.0))
+	u.last_damaged_at = float(d.get("last_damaged_at", -1000.0))
+	u.home_uid = int(d.get("home_uid", 0))
+	u.has_home = bool(d.get("has_home", false))
+	u.home_pos = d.get("home_pos", Vector2.ZERO)
+	u.dormant = bool(d.get("dormant", false))
+	u.regroup_pending = bool(d.get("regroup_pending", false))
+	u.timer = float(d.get("timer", 0.0))
+	u.cast_ability = str(d.get("cast_ability", ""))
+	u.cast_target_uid = int(d.get("cast_target_uid", 0))
+	u.cast_pos = d.get("cast_pos", Vector2.ZERO)
+	u.job_id = str(d.get("job_id", "idle"))
+	u.carry_res = str(d.get("carry_res", ""))
+	u.carry_amount = float(d.get("carry_amount", 0.0))
+	u.work_acc = float(d.get("work_acc", 0.0))
+	u.state = int(d.get("state", Unit.State.IDLE))
+	return u
+
+
+## Spielstand laden: gespeicherten Weg fortsetzen (motion aus Unit.to_dict)
+func restore_motion(u: Unit, m: Dictionary) -> void:
+	u.path = m.get("path", PackedVector2Array())
+	u.path_index = clampi(int(m.get("i", 0)), 0, u.path.size())
+	u.moving = bool(m.get("moving", false)) and u.path_index < u.path.size()
+	u.path_target = m.get("target", u.position)
+	u.path_final = m.get("final", Vector2.ZERO)
+	u.has_path_final = bool(m.get("has_final", false))
+	u.path_pending = false
+	if not u.path.is_empty():
+		u.path_bounds = _bounds_of(u.path)
+	if bool(m.get("pending", false)):
+		_request(u, u.path_target, true)
+
+
 ## Der einzige Weg, eine Einheit zu entfernen (später auch Tod, Überlaufen).
 func remove_unit(u: Unit) -> void:
 	if not is_instance_valid(u) or not units.has(u):
@@ -367,3 +423,24 @@ func _bounds_of(p: PackedVector2Array) -> Rect2i:
 	for pt in p:
 		r = r.expand(world.world_to_cell(pt))
 	return r
+
+
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10): Einheiten speichert SaveGame selbst, Wege neu berechnet
+# ---------------------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {}
+
+
+func from_dict(_d: Dictionary) -> void:
+	pass
+
+
+## Wartende Wegberechnungen ohne gültige Einheit verwerfen
+func rebuild_runtime() -> void:
+	var keep: Array = []
+	for u in _path_queue:
+		if is_instance_valid(u) and u.path_pending and not keep.has(u):
+			keep.append(u)
+	_path_queue = keep

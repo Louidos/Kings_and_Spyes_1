@@ -603,6 +603,17 @@ func dismiss(k: Kingdom, hero_id: int) -> void:
 	k.notify("%s hat dein Reich verlassen" % _title(rec), "info")
 
 
+## Gespeicherter Zustand (Phase 10); die Helden selbst stehen in Kingdom.heroes
+func to_dict() -> Dictionary:
+	return {"rng": _rng.state, "aura_timer": _aura_timer, "autocast_timer": _autocast_timer}
+
+
+func from_dict(d: Dictionary) -> void:
+	_rng.state = int(d.get("rng", _rng.state))
+	_aura_timer = float(d.get("aura_timer", 0.0))
+	_autocast_timer = float(d.get("autocast_timer", 0.0))
+
+
 ## Nach dem Laden (Phase 10): abgeleitete Werte neu aufbauen (beliebig oft aufrufbar)
 func rebuild_runtime() -> void:
 	_cast_repath_at.clear()

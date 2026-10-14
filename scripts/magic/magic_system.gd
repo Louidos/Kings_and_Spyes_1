@@ -378,6 +378,17 @@ func remove_unit_effects(u: Unit, source: String, ref: int = -1) -> void:
 		u.refresh_stats()
 
 
+## Gespeicherter Zustand (Phase 10): Wettergebiete, Tarnungen, Takt
+func to_dict() -> Dictionary:
+	return {"zones": zones.duplicate(true), "veils": veils.duplicate(true), "zone_timer": _zone_timer}
+
+
+func from_dict(d: Dictionary) -> void:
+	zones = (d.get("zones", []) as Array).duplicate(true)
+	veils = (d.get("veils", []) as Array).duplicate(true)
+	_zone_timer = float(d.get("zone_timer", 0.0))
+
+
 ## Nach dem Laden (Phase 10): Zwischenspeicher aus dem gespeicherten Zustand neu aufbauen
 func rebuild_runtime() -> void:
 	_affected.clear()

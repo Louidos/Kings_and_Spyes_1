@@ -392,7 +392,7 @@ func _on_unit_removed(u: Unit) -> void:
 
 func to_dict() -> Dictionary:
 	return {"messengers": messengers.duplicate(true), "cooldown_until": cooldown_until.duplicate(),
-			"stats": stats.duplicate()}
+			"stats": stats.duplicate(), "pending": _pending.duplicate(true), "tick_acc": _tick_acc}
 
 
 func from_dict(d: Dictionary) -> void:
@@ -401,12 +401,12 @@ func from_dict(d: Dictionary) -> void:
 	var s: Dictionary = d.get("stats", {})
 	for key in stats:
 		stats[key] = int(s.get(key, 0))
+	_pending = (d.get("pending", []) as Array).duplicate(true)
+	_tick_acc = float(d.get("tick_acc", 0.0))
 
 
 ## Nach dem Laden: Boten wieder auf den Weg schicken (Wege werden nicht gespeichert)
 func rebuild_runtime() -> void:
-	_pending.clear()
-	_tick_acc = 0.0
 	for uid in messengers.keys():
 		var found: Variant = game.find_by_uid(int(uid))
 		if not (found is Unit):
