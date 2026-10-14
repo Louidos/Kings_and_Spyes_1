@@ -13,7 +13,8 @@
 		"sprites: Grafik je Fraktion (128x128, Burg 256x256); sprite: eine Grafik für alle. Fehlt die Datei, wird ein Platzhalter in 'color' mit 'label' gezeichnet.",
 		"capturable: true = wird bei 0 Leben erobert statt zerstört (Dorfzentrum).",
 		"people_sprites: Grafik je Volk (Dorfgebäude), sprite_fallback: Grafik, wenn weder Volks- noch Fraktionsgrafik angegeben ist.",
-		"people_color: Platzhalter in der Volksfarbe."
+		"people_color: Platzhalter in der Volksfarbe.",
+		"spy_den: true = Spionagehaus (Spione beginnen eine Stufe höher, +1 Spion, Wachsamkeit siehe espionage.json). people_sprites bei der Burg: Grafik je Volk (nur wenn die Datei existiert, sonst Fraktionsgrafik)."
 	],
 
 	"buildings": [
@@ -24,7 +25,23 @@
 			"housing": 6, "territory_radius": 14, "hp": 2000, "sight": 9, "summons": ["scout"],
 			"dropoff": ["wood", "stone", "ore", "food", "mana"], "gather_radius": 10,
 			"color": "#c9a640",
-			"sprites": { "good": "res://assets/sprites/buildings/castle_good.png", "evil": "res://assets/sprites/buildings/castle_evil.png" }
+			"sprites": { "good": "res://assets/sprites/buildings/castle_good.png", "evil": "res://assets/sprites/buildings/castle_evil.png" },
+			"people_sprites": {
+				"humans": "res://assets/sprites/buildings/castle_humans.png",
+				"high_elves": "res://assets/sprites/buildings/castle_high_elves.png",
+				"druids": "res://assets/sprites/buildings/castle_druids.png",
+				"light_wardens": "res://assets/sprites/buildings/castle_light_wardens.png",
+				"griffin_riders": "res://assets/sprites/buildings/castle_griffin_riders.png",
+				"star_mages": "res://assets/sprites/buildings/castle_star_mages.png",
+				"blood_elves": "res://assets/sprites/buildings/castle_blood_elves.png",
+				"orcs": "res://assets/sprites/buildings/castle_orcs.png",
+				"night_riders": "res://assets/sprites/buildings/castle_night_riders.png",
+				"warlocks": "res://assets/sprites/buildings/castle_warlocks.png",
+				"undead": "res://assets/sprites/buildings/castle_undead.png",
+				"demon_summoners": "res://assets/sprites/buildings/castle_demon_summoners.png",
+				"shadow_cult": "res://assets/sprites/buildings/castle_shadow_cult.png",
+				"trolls": "res://assets/sprites/buildings/castle_trolls.png"
+			}
 		},
 		{
 			"id": "house", "name": "Wohnhaus", "label": "Haus",
@@ -137,6 +154,16 @@
 			"territory_radius": 4, "hp": 900, "hero_hall": true,
 			"color": "#b8860b",
 			"sprites": { "good": "res://assets/sprites/buildings/hero_hall_good.png", "evil": "res://assets/sprites/buildings/hero_hall_evil.png" }
+		},
+		{
+			"id": "spy_den", "name": "Kundschafterhaus", "names": { "good": "Kundschafterhaus", "evil": "Schattenloge" },
+			"label": "Spione", "labels": { "good": "Kundsch.", "evil": "Loge" },
+			"description": "Bildet Spione aus: sie beginnen eine Stufe höher. Erhöht die Wachsamkeit gegen fremde Spione und erlaubt einen Spion mehr. Nur eines pro Reich.",
+			"requires": ["building:spy_den"], "max_per_kingdom": 1,
+			"size": [2, 2], "cost": { "wood": 60, "stone": 50, "mana": 30 }, "build_time": 45,
+			"territory_radius": 4, "hp": 450, "summons": ["spy"], "spy_den": true,
+			"color": "#4a4a6a",
+			"sprites": { "good": "res://assets/sprites/buildings/spy_den_good.png", "evil": "res://assets/sprites/buildings/spy_den_evil.png" }
 		},
 		{
 			"id": "monster_lair", "name": "Monsterhöhle", "label": "Höhle",

@@ -1,5 +1,5 @@
 {
-	"_hinweis": "Schwierigkeitsgrade. Die Multiplikatoren sind vorläufig und werden ab Phase 7 (Gegner-KI) genutzt und in Phase 10 ausbalanciert.",
+	"_hinweis": "Schwierigkeitsgrade der Gegner-KI (ab Phase 7 genutzt): enemy_income_mult → Sammeln/Produktion, enemy_strength_mult → Leben/Angriff/Gebäudeleben der KI-Reiche (Quelle difficulty), ai_think_interval → Denkpause der KI in Spielsekunden; weitere Stellschrauben in ai.json → difficulty. Ausbalanciert wird in Phase 10.",
 
 	"default": "normal",
 

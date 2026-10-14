@@ -8,7 +8,8 @@
 		"effects: Liste von Wirkungen auf Einheiten im Kreis. side: own (eigene und verbündete), enemy (feindliche). key: Wert (attack, armor, speed, aggro_range, regen …; hp_per_sec = Lebenspunkte pro Sekunde, auch im Kampf, negativ = Schaden), mult: Faktor, add: Zuschlag.",
 		"Weitere Felder je Art: heal_instant (sofort geheilte Lebenspunkte), stealth (eigene Truppen getarnt, bis sie angreifen), zone (Wetter: production = Faktor für Gebäude und Sammler im Gebiet, resources = welche Ressourcen; effects = Wirkungen auf Einheiten im Gebiet; drop_targets_beyond = Feinde im Gebiet lassen von Zielen ab, die weiter als so viele Kacheln entfernt sind), summon (Einheitentyp, Anzahl).",
 		"settings.cast_range_outside: so viele Kacheln ausserhalb des eigenen Gebiets darf gezaubert werden.",
-		"upgrades: Verbesserungen für Kampfpunkte (Stufen mit steigenden Kosten). per_level: mana_cap = +Mana-Maximum, mana_regen = +Mana pro Sekunde an der Burg."
+		"upgrades: Verbesserungen für Kampfpunkte (Stufen mit steigenden Kosten). per_level: mana_cap = +Mana-Maximum, mana_regen = +Mana pro Sekunde an der Burg.",
+		"realm_cloak: true = Reichstarnung (kein Ziel, an/aus mit einem Klick; Entdeckungswert sinkt; upkeep = Grundkosten pro Sekunde, dazu espionage.json cloak.upkeep_per_point × Entdeckungswert). Diese Zauber haben bewusst kein stealth (das wäre die Tarnung von Einheiten)."
 	],
 
 	"settings": {
@@ -49,6 +50,10 @@
 		  "color": "#ffe9a0", "icon": "res://assets/ui/icons/spell_call_guardians.png",
 		  "mana_cost": 50, "cooldown": 120, "radius": 1, "duration": 60, "requires": ["spell:call_guardians"],
 		  "summon": { "unit": "light_guardian", "count": 3 } },
+		{ "id": "realm_veil", "faction": "good", "school": "stealth", "name": "Reichsschleier", "letter": "V",
+		  "description": "Ein Schleier aus Licht legt sich über das ganze Reich: fremde Reiche werden langsamer auf dich aufmerksam (Entdeckungswert −40 %). Klick schaltet an und aus. Kostet laufend Mana.",
+		  "color": "#dfe8ff", "icon": "res://assets/ui/icons/spell_realm_veil.png",
+		  "mana_cost": 40, "upkeep": 0.08, "cooldown": 60, "radius": 0, "duration": -1, "requires": ["spell:realm_veil"], "realm_cloak": true },
 
 		{ "id": "curse_weakness", "faction": "evil", "school": "combat", "name": "Fluch der Schwäche", "letter": "F",
 		  "description": "Feinde im Kreis schlagen 25 % schwächer zu und sind schlechter geschützt.",
@@ -75,6 +80,10 @@
 		  "description": "Drei Schattendiener kriechen hervor und kämpfen eine Minute lang.",
 		  "color": "#7d3c98", "icon": "res://assets/ui/icons/spell_shadow_brood.png",
 		  "mana_cost": 50, "cooldown": 120, "radius": 1, "duration": 60, "requires": ["spell:shadow_brood"],
-		  "summon": { "unit": "shadow_servant", "count": 3 } }
+		  "summon": { "unit": "shadow_servant", "count": 3 } },
+		{ "id": "realm_shroud", "faction": "evil", "school": "stealth", "name": "Reichsschatten", "letter": "V",
+		  "description": "Schatten verhüllen das ganze Reich: fremde Reiche werden langsamer auf dich aufmerksam (Entdeckungswert −40 %). Klick schaltet an und aus. Kostet laufend Mana.",
+		  "color": "#3a2f4f", "icon": "res://assets/ui/icons/spell_realm_shroud.png",
+		  "mana_cost": 40, "upkeep": 0.08, "cooldown": 60, "radius": 0, "duration": -1, "requires": ["spell:realm_shroud"], "realm_cloak": true }
 	]
 }

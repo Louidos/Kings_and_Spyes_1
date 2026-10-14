@@ -15,7 +15,8 @@
 		"tier militia = Dorfwache eines Volks (faction neutral, ersetzt das Dorf aus dem eigenen Vorrat, cost = Kosten für das Dorf).",
 		"tier special = Volkskrieger, wird bei Bündnis oder Aufnahme in der Kaserne freigeschaltet (summon:barracks:<id>).",
 		"tier messenger / role messenger = Bote: kämpft nie, flieht durch Sprinten, Befehl travel.",
-		"people = Volk aus peoples.json."
+		"people = Volk aus peoples.json.",
+		"tier spy / role spy = Spion: immer getarnt (stealth true), kämpft nie, Aufträge im Spionagefenster (K). stealth = immer getarnt (ausser kurz nach einer Entdeckung)."
 	],
 
 	"units": [
@@ -329,6 +330,26 @@
 			"projectile": "bolt", "building_damage": 2.5,
 			"cost": {"ore": 30, "food": 20, "mana": 10}, "summon_time": 20, "kill_points": 3,
 			"sprite": "res://assets/sprites/units/kobold_bombardier.png"
+		},
+
+		{
+			"id": "spy_good", "name": "Kundschafterin", "faction": "good", "tier": "spy", "role": "spy", "letter": "Sp", "color": "#9fd8ff",
+			"description": "Getarnt und flink. Kundschaftet fremde Reiche aus und wiegelt Dörfer auf (Spionagefenster K).",
+			"requires": ["unit:spy_good"], "stealth": true, "speed": 3.2, "radius": 13, "sight": 9, "food_per_day": 4,
+			"can_work": false, "needs_housing": false, "hp": 70, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.05,
+			"aggro_range": 0, "regen": 1.0, "flee_on_hit": true, "joins_fights": false, "target_priority": 0.8, "formation_rank": 2,
+			"cost": {"food": 40, "ore": 20, "mana": 25}, "summon_time": 30, "kill_points": 4,
+			"sprite": "res://assets/sprites/units/spy_good.png"
+		},
+
+		{
+			"id": "spy_evil", "name": "Schattenspion", "faction": "evil", "tier": "spy", "role": "spy", "letter": "Sp", "color": "#5b2a86",
+			"description": "Ein Schatten unter Schatten. Späht fremde Reiche aus und hetzt Dörfer auf (Spionagefenster K).",
+			"requires": ["unit:spy_evil"], "stealth": true, "speed": 3.3, "radius": 13, "sight": 9, "food_per_day": 3,
+			"can_work": false, "needs_housing": false, "hp": 65, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.05,
+			"aggro_range": 0, "regen": 1.0, "flee_on_hit": true, "joins_fights": false, "target_priority": 0.8, "formation_rank": 2,
+			"cost": {"food": 40, "ore": 20, "mana": 25}, "summon_time": 30, "kill_points": 4,
+			"sprite": "res://assets/sprites/units/spy_evil.png"
 		}
 	]
 }
