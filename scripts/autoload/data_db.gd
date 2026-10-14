@@ -486,45 +486,51 @@ func _load_units() -> void:
 	units = data.get("units", [])
 	unit_by_id.clear()
 	for u in units:
-		u["speed"] = float(u.get("speed", 2.0))
-		u["radius"] = float(u.get("radius", 13.0))
-		u["food_per_day"] = float(u.get("food_per_day", 0.0))
-		u["can_work"] = bool(u.get("can_work", false))
-		u["carry"] = int(u.get("carry", 0))
-		u["needs_housing"] = bool(u.get("needs_housing", false))
-		u["faction"] = str(u.get("faction", "any"))
-		u["tier"] = str(u.get("tier", ""))
-		u["role"] = str(u.get("role", "worker"))
-		u["letter"] = str(u.get("letter", ""))
-		for key in ["hp", "attack", "attack_interval", "range", "armor", "aggro_range", "regen", "heal",
-				"heal_range", "summon_time", "kill_points"]:
-			u[key] = float(u.get(key, 0.0))
-		u["hp"] = maxf(u["hp"], 1.0)
-		u["attack_interval"] = maxf(u["attack_interval"], 0.1)
-		u["sight"] = float(u.get("sight", 6.0))
-		u["building_damage"] = float(u.get("building_damage", 1.0))
-		u["people"] = str(u.get("people", ""))
-		var req: Array = u.get("requires", [])
-		u["requires"] = req
-		# Verhalten: aus der Rolle abgeleitet, wenn nicht ausdrücklich angegeben
-		var role: String = u["role"]
-		u["flee_on_hit"] = bool(u.get("flee_on_hit", role == "worker"))
-		u["joins_fights"] = bool(u.get("joins_fights", role in ["combat", "king", "monster"]))
-		u["target_priority"] = float(u.get("target_priority", 1.6 if role == "worker" else 1.0))
-		var rank := 0
-		if role == "worker" or role == "support":
-			rank = 2
-		elif u["range"] >= 2.0:
-			rank = 1
-		u["formation_rank"] = int(u.get("formation_rank", rank))
-		if u.has("color"):
-			u["color"] = _parse_color(u["color"])
-		var cost := {}
-		for k in u.get("cost", {}):
-			cost[k] = float(u["cost"][k])
-		u["cost"] = cost
-		u["projectile"] = str(u.get("projectile", ""))
+		_normalize_unit(u)
 		unit_by_id[u["id"]] = u
+
+
+## Werte eines Einheitentyps vereinheitlichen (Zahlen, Standardwerte, Verhalten).
+## Auch für Helden (heroes.json → stats).
+func _normalize_unit(u: Dictionary) -> void:
+	u["speed"] = float(u.get("speed", 2.0))
+	u["radius"] = float(u.get("radius", 13.0))
+	u["food_per_day"] = float(u.get("food_per_day", 0.0))
+	u["can_work"] = bool(u.get("can_work", false))
+	u["carry"] = int(u.get("carry", 0))
+	u["needs_housing"] = bool(u.get("needs_housing", false))
+	u["faction"] = str(u.get("faction", "any"))
+	u["tier"] = str(u.get("tier", ""))
+	u["role"] = str(u.get("role", "worker"))
+	u["letter"] = str(u.get("letter", ""))
+	for key in ["hp", "attack", "attack_interval", "range", "armor", "aggro_range", "regen", "heal",
+			"heal_range", "summon_time", "kill_points"]:
+		u[key] = float(u.get(key, 0.0))
+	u["hp"] = maxf(u["hp"], 1.0)
+	u["attack_interval"] = maxf(u["attack_interval"], 0.1)
+	u["sight"] = float(u.get("sight", 6.0))
+	u["building_damage"] = float(u.get("building_damage", 1.0))
+	u["people"] = str(u.get("people", ""))
+	var req: Array = u.get("requires", [])
+	u["requires"] = req
+	# Verhalten: aus der Rolle abgeleitet, wenn nicht ausdrücklich angegeben
+	var role: String = u["role"]
+	u["flee_on_hit"] = bool(u.get("flee_on_hit", role == "worker"))
+	u["joins_fights"] = bool(u.get("joins_fights", role in ["combat", "king", "monster", "hero"]))
+	u["target_priority"] = float(u.get("target_priority", 1.6 if role == "worker" else 1.0))
+	var rank := 0
+	if role == "worker" or role == "support":
+		rank = 2
+	elif u["range"] >= 2.0:
+		rank = 1
+	u["formation_rank"] = int(u.get("formation_rank", rank))
+	if u.has("color"):
+		u["color"] = _parse_color(u["color"])
+	var cost := {}
+	for k in u.get("cost", {}):
+		cost[k] = float(u["cost"][k])
+	u["cost"] = cost
+	u["projectile"] = str(u.get("projectile", ""))
 
 
 func _load_research() -> void:

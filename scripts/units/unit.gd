@@ -115,6 +115,11 @@ var regroup_pending := false
 var stealthed := false
 ## Beschworene Zaubereinheit: verschwindet zu dieser Spielzeit (-1 = nie)
 var expires_at := -1.0
+## Held: id des Heldeneintrags im Reich (Kingdom.heroes), 0 = kein Held
+var hero_id := 0
+## Held: Faktoren je Wert aus Stufe und passiven Fähigkeiten (z. B. "hp" -> 1.4),
+## vom HeroSystem gesetzt; danach refresh_stats
+var hero_mods: Dictionary = {}
 
 # --- Arbeit (WorkSystem) ---
 var job_id: String = "idle":
@@ -216,6 +221,8 @@ func _stat(key: String) -> float:
 	if kingdom != null:
 		# Schlüssel, Schlüssel je Stufe ("attack.archer") und je Rolle ("hp@combat" = alle Truppen)
 		mult *= kingdom.mod(key) * kingdom.mod(key + "." + tier) * kingdom.mod(key + "@" + role)
+	if not hero_mods.is_empty():
+		mult *= float(hero_mods.get(key, 1.0))
 	return (value + add) * mult
 
 

@@ -576,6 +576,19 @@ func _on_upkeep_unpaid(k: Kingdom, source: String) -> void:
 # Intern
 # ---------------------------------------------------------------------------
 
+## Öffentlich (Heldenauren, Fähigkeiten, später Ereignisse): Wirkungen auf alle
+## Einheiten im Kreis wie bei Zaubern. source z. B. "hero:<fähigkeit>", until -1 =
+## bis zum Entfernen. Im Simulationstakt use_index = true (schneller).
+func apply_area_effects(k: Kingdom, source: String, effects: Array, pos: Vector2, radius_px: float, until: float,
+		power: float = 1.0, ref: int = 0, use_index: bool = false) -> void:
+	_apply_effects(k, source, effects, pos, radius_px, until, power, ref, use_index)
+
+
+## Einheiten im Kreis (öffentlich, z. B. Flächenschaden der Helden). use_index nur im Simulationstakt.
+func units_in(pos: Vector2, radius_px: float, use_index: bool = false) -> Array:
+	return _units_in(pos, radius_px, use_index)
+
+
 ## Wirkungen auf Einheiten im Kreis. side own = verbündet, enemy = feindlich.
 ## power verstärkt die Wirkung (mult 1.25 mit power 1.2 -> 1.30, add × power).
 ## Eine bestehende gleiche Wirkung wird nur verlängert (kein Neuberechnen) –
@@ -648,8 +661,13 @@ func _end_veil(v: Dictionary) -> void:
 
 
 func _summon(k: Kingdom, summon: Dictionary, pos: Vector2, until: float) -> void:
-	var type_id := str(summon.get("unit", ""))
-	var count := int(summon.get("count", 1))
+	summon_units(k, str(summon.get("unit", "")), int(summon.get("count", 1)), pos, until)
+
+
+## Beschwört count Einheiten im Kreis um pos (auch für Heldenfähigkeiten). until:
+## Spielzeit, zu der sie verschwinden (-1 = bleiben). Gibt die neuen Einheiten zurück.
+func summon_units(k: Kingdom, type_id: String, count: int, pos: Vector2, until: float) -> Array:
+	var list: Array = []
 	for i in count:
 		var spot := pos + Vector2.from_angle(TAU * i / maxf(count, 1.0)) * _ts * 0.9
 		var c: Vector2i = game.nav.nearest_free(world.world_to_cell(spot), 4)
@@ -663,6 +681,8 @@ func _summon(k: Kingdom, summon: Dictionary, pos: Vector2, until: float) -> void
 		u.command_pos = u.position
 		if until >= 0.0:
 			_temporary[u.uid] = u
+		list.append(u)
+	return list
 
 
 ## Wer zaubert: der angegebene (lebend) oder der König des Reichs, sonst null
