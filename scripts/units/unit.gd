@@ -135,6 +135,17 @@ var cast_ability := ""
 var cast_target_uid := 0
 var cast_pos := Vector2.ZERO
 
+# --- Zufriedenheit, Volk und Gelände (Phase 8) ---
+## Zufriedenheit 0–100 (nur Bewohner; -1 = noch nicht erfasst). SatisfactionSystem, wird gespeichert.
+var satisfaction := -1.0
+## Faktor auf die Arbeitsleistung (Zufriedenheit, Seuche, aufgehaltener Überläufer). Abgeleitet (SatisfactionSystem), nicht speichern.
+var work_mult := 1.0
+## Geländeboni des Volks auf dem Biom unter der Einheit: Schlüssel -> Faktor. Abgeleitet (PeopleSystem), nicht speichern.
+## Gemeinsame, nur lesbare Dictionaries – nie verändern.
+var terrain_mods: Dictionary = {}
+## Biom-Index, für den terrain_mods gilt (-1 = neu bestimmen)
+var terrain_biome := -1
+
 # --- Arbeit (WorkSystem) ---
 var job_id: String = "idle":
 	set(value):
@@ -253,6 +264,8 @@ func _stat_from(value: float, key: String) -> float:
 		var m: Dictionary = hero_mods[key]
 		add += float(m.get("add", 0.0))
 		mult *= float(m.get("mult", 1.0))
+	if not terrain_mods.is_empty():
+		mult *= float(terrain_mods.get(key, 1.0))
 	return (value + add) * mult
 
 

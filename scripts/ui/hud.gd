@@ -6,6 +6,9 @@
 ## - Forschungsfenster (ResearchPanel, Taste R), Heldenfenster (HeroPanel,
 ##   Taste G) und Diplomatiefenster (DiplomacyPanel, Taste N) in eigenen Ebenen
 ##   darüber; es ist immer nur eines davon offen (alle stehen in der Mitte)
+## - Reichsübersicht (KingdomPanel, Taste L, Phase 8) mit Knopf "Reich (L)", Tageszeit-
+##   Symbol (DayClock), Ereignisleiste unter der oberen Leiste (EventBanner) und
+##   Flüchtlingsdialog (RefugeeDialog, eigene Ebene darüber)
 ## - oben links: Arbeitsverteilung (JobPanel, Taste J)
 ## - oben rechts: Meldungen (NotificationPanel)
 ## - unten links: Auswahlfenster (SelectionPanel), darunter die Armeeleiste
@@ -36,7 +39,7 @@ const DIPLOMACY_LAYER := 11
 const COLOR_URGENT := Color(1.0, 0.36, 0.3)
 ## Innenabstand links/rechts der Knöpfe in der oberen Leiste (schmaler als im
 ## Theme, damit Ressourcen, drei Fenster-Knöpfe, Datum und Tempo in 1920 passen)
-const TOP_BUTTON_MARGIN := 8.0
+const TOP_BUTTON_MARGIN := 6.0
 
 @onready var kingdom_label: Label = %KingdomLabel
 @onready var resource_bar: ResourceBar = %ResourceBar
@@ -74,6 +77,15 @@ var _hero_button: ResearchTipButton
 var diplomacy_panel: DiplomacyPanel
 var _diplomacy_layer: CanvasLayer
 var _diplomacy_button: ResearchTipButton
+## Reichsübersicht (Taste L), ihr Button, Tageszeit-Symbol, Ereignisleiste und
+## Flüchtlingsdialog (Phase 8)
+var kingdom_panel: KingdomPanel
+var _kingdom_layer: CanvasLayer
+var _kingdom_button: ResearchTipButton
+var event_banner: EventBanner
+var refugee_dialog: RefugeeDialog
+var _refugee_layer: CanvasLayer
+var day_clock: DayClock
 ## Hinweis "Kampfpunkte ausgeben" kam schon (einmal je Partie)
 var _kp_hint_shown := false
 
@@ -90,9 +102,10 @@ func _ready() -> void:
 	GameClock.speed_changed.connect(_on_speed_changed)
 	_on_speed_changed(GameClock.paused, GameClock.get_speed())
 	var faction := GameSession.get_faction()
-	# Nur der Fraktionsname (in Fraktionsfarbe): die obere Leiste ist voll
-	kingdom_label.text = str(faction.get("name", "?"))
-	kingdom_label.tooltip_text = "Dein Königreich (Fraktion %s)" % faction.get("name", "?")
+	# Volk und Fraktion (in Fraktionsfarbe), kurz: die obere Leiste ist voll
+	var people_name := str(GameSession.get_people().get("name", ""))
+	kingdom_label.text = str(faction.get("name", "?")) if people_name.is_empty() else people_name
+	kingdom_label.tooltip_text = "Dein Königreich – Volk: %s, Fraktion %s (Reichsübersicht: L)" % [people_name, faction.get("name", "?")]
 	kingdom_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	kingdom_label.add_theme_color_override("font_color", faction.get("color", Color.WHITE))
 	info_label.text = "Bewege die Maus über die Karte."
@@ -133,6 +146,7 @@ func setup(p_game: Node) -> void:
 	_setup_research()
 	_setup_heroes()
 	_setup_diplomacy()
+	_setup_kingdom()
 
 
 ## Forschungsfenster ein-/ausblenden (Taste R, Button oben)
@@ -193,6 +207,10 @@ func open_link(link: Dictionary) -> void:
 			open_research()
 		"diplomacy":
 			open_diplomacy(int(link.get("village_id", 0)))
+		"kingdom":
+			open_kingdom(str(link.get("tab", "")))
+		"refugees":
+			open_refugee_dialog(int(link.get("offer_id", 0)))
 
 
 ## Esc schliesst das Diplomatie-, Helden- bzw. Forschungsfenster auch, wenn gerade ein
@@ -200,7 +218,13 @@ func open_link(link: Dictionary) -> void:
 func _input(event: InputEvent) -> void:
 	if not event.is_action_pressed("game_menu") or event.is_echo():
 		return
-	if is_diplomacy_open():
+	if refugee_dialog != null and refugee_dialog.is_open():
+		refugee_dialog.close()
+		get_viewport().set_input_as_handled()
+	elif is_kingdom_open():
+		kingdom_panel.close()
+		get_viewport().set_input_as_handled()
+	elif is_diplomacy_open():
 		diplomacy_panel.close()
 		get_viewport().set_input_as_handled()
 	elif is_heroes_open():
@@ -219,6 +243,12 @@ func toggle_job_panel() -> void:
 ## Esc: schliesst das oberste offene Fenster (Diplomatie, Helden, Forschung,
 ## Arbeitsverteilung). true = etwas wurde geschlossen (dann nichts weiter tun).
 func close_top_panel() -> bool:
+	if refugee_dialog != null and refugee_dialog.is_open():
+		refugee_dialog.close()
+		return true
+	if is_kingdom_open():
+		kingdom_panel.close()
+		return true
 	if is_diplomacy_open():
 		diplomacy_panel.close()
 		return true
@@ -243,12 +273,12 @@ func toggle_debug() -> void:
 
 
 func _process(delta: float) -> void:
-	date_label.text = GameClock.get_time_string()
+	date_label.text = _date_text()
 	if paused_label.visible:
 		_blink_time += delta
 		paused_label.modulate.a = 0.6 + 0.4 * cos(_blink_time * 3.0)
 	if debug_label.visible and world_map != null:
-		debug_label.text = "FPS %d  ·  Zoom %.2f  ·  Chunks %d  ·  Seed %s  ·  F9: +100 Ressourcen  ·  F10: König −150  ·  F11: 3 Wölfe an der Maus  ·  F12: Held +1 Stufe" % [
+		debug_label.text = "FPS %d  ·  Zoom %.2f  ·  Chunks %d  ·  Seed %s  ·  F9: +100 Ressourcen  ·  F10: König −150  ·  F11: 3 Wölfe an der Maus  ·  F12: Held +1 Stufe  ·  L: Reich (Debug-Knöpfe dort)" % [
 			Engine.get_frames_per_second(), camera.zoom.x,
 			world_map.get_loaded_chunk_count(), GameSession.seed_text]
 	if world != null:
@@ -263,6 +293,7 @@ func _process(delta: float) -> void:
 			_refresh_research_button()
 			_refresh_hero_button()
 			_refresh_diplomacy_button()
+			_refresh_kingdom_button()
 
 
 # ---------------------------------------------------------------------------
@@ -539,6 +570,151 @@ func _diplomacy_button_tip() -> String:
 
 
 # ---------------------------------------------------------------------------
+# Reichsübersicht, Tageszeit, Ereignisleiste, Flüchtlinge (Phase 8)
+# ---------------------------------------------------------------------------
+
+const KINGDOM_LAYER := 11
+const REFUGEE_LAYER := 12
+
+
+## Reichsübersicht in eigener Ebene, Knopf "Reich (L)" und Tageszeit-Symbol vor dem Datum,
+## Ereignisleiste unter der oberen Leiste, Flüchtlingsdialog in eigener Ebene darüber
+func _setup_kingdom() -> void:
+	_kingdom_layer = CanvasLayer.new()
+	_kingdom_layer.layer = KINGDOM_LAYER
+	_kingdom_layer.name = "KingdomLayer"
+	add_child(_kingdom_layer)
+	kingdom_panel = KingdomPanel.new()
+	kingdom_panel.name = "KingdomPanel"
+	_kingdom_layer.add_child(kingdom_panel)
+	kingdom_panel.setup(game)
+	kingdom_panel.toggled.connect(_on_kingdom_toggled)
+	_refugee_layer = CanvasLayer.new()
+	_refugee_layer.layer = REFUGEE_LAYER
+	_refugee_layer.name = "RefugeeLayer"
+	add_child(_refugee_layer)
+	refugee_dialog = RefugeeDialog.new()
+	refugee_dialog.name = "RefugeeDialog"
+	_refugee_layer.add_child(refugee_dialog)
+	refugee_dialog.setup(game)
+	visibility_changed.connect(func() -> void:
+		_kingdom_layer.visible = visible
+		_refugee_layer.visible = visible)
+	_kingdom_layer.visible = visible
+	_refugee_layer.visible = visible
+	# Die zentrierten Fenster schliessen sich gegenseitig (auch die übrigen Fenster schliessen die Reichsübersicht)
+	for p in [research_panel, hero_panel, diplomacy_panel, get("espionage_panel")]:
+		if p is Control and (p as Object).has_signal("toggled") and p != kingdom_panel:
+			(p as Object).connect("toggled", func(open: bool) -> void:
+				if open and is_kingdom_open():
+					kingdom_panel.close())
+
+	_kingdom_button = ResearchTipButton.new()
+	_kingdom_button.name = "KingdomButton"
+	_kingdom_button.text = "Reich (L)"
+	_kingdom_button.toggle_mode = true
+	_kingdom_button.add_theme_font_size_override("font_size", 16)
+	_compact(_kingdom_button)
+	_kingdom_button.badge_color = COLOR_URGENT
+	_kingdom_button.tip_source = _kingdom_button_tip
+	_kingdom_button.pressed.connect(toggle_kingdom)
+	var hbox := date_label.get_parent()
+	# Platz in der oberen Leiste: Datum kurz ("T3 · 22:14"), etwas engere Abstände
+	hbox.add_theme_constant_override("separation", 6)
+	date_label.custom_minimum_size.x = 0.0
+	date_label.tooltip_text = "Spieltag und Uhrzeit (Tageszeit: Symbol links daneben)"
+	date_label.mouse_filter = Control.MOUSE_FILTER_STOP
+	hbox.add_child(_kingdom_button)
+	hbox.move_child(_kingdom_button, date_label.get_index())
+	day_clock = DayClock.new()
+	day_clock.name = "DayClock"
+	day_clock.setup(game)
+	day_clock.clicked.connect(open_kingdom.bind(KingdomPanel.TAB_PEOPLE))
+	hbox.add_child(day_clock)
+	hbox.move_child(day_clock, date_label.get_index())
+
+	event_banner = EventBanner.new()
+	event_banner.name = "EventBanner"
+	$Root.add_child(event_banner)
+	event_banner.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	event_banner.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	event_banner.offset_top = 52.0
+	event_banner.setup(game, self)
+	resource_bar.satisfaction_clicked.connect(open_kingdom.bind(KingdomPanel.TAB_SATISFACTION))
+	_refresh_kingdom_button()
+
+
+## Kurzes Datum für die obere Leiste: "T3 · 22:14"
+func _date_text() -> String:
+	var h := GameClock.get_hour_float()
+	return "T%d · %02d:%02d" % [GameClock.get_day(), int(h), int(h * 60.0) % 60]
+
+
+## Reichsübersicht ein-/ausblenden (Taste L, Button oben)
+func toggle_kingdom() -> void:
+	if kingdom_panel != null:
+		kingdom_panel.toggle()
+
+
+## Reichsübersicht öffnen (KingdomPanel.TAB_SATISFACTION / TAB_EVENTS / TAB_PEOPLE)
+func open_kingdom(tab: String = "") -> void:
+	if kingdom_panel != null:
+		kingdom_panel.open(tab)
+
+
+func is_kingdom_open() -> bool:
+	return kingdom_panel != null and kingdom_panel.is_open()
+
+
+## Flüchtlingsdialog für ein Angebot öffnen
+func open_refugee_dialog(offer_id: int) -> void:
+	if refugee_dialog != null:
+		refugee_dialog.open(offer_id)
+
+
+func _on_kingdom_toggled(open: bool) -> void:
+	_kingdom_button.set_pressed_no_signal(open)
+	if not open:
+		return
+	for p in [research_panel, hero_panel, diplomacy_panel, get("espionage_panel")]:
+		if p is Control and (p as Object).has_method("is_open") and (p as Object).call("is_open"):
+			(p as Object).call("close")
+
+
+## Strich in der Farbe der Stufe (Ø/100); Punkt bei offenem Angebot oder kritischer Zufriedenheit
+func _refresh_kingdom_button() -> void:
+	if _kingdom_button == null:
+		return
+	var k: Kingdom = game.player
+	var avg: float = game.satisfaction_system.get_average(k)
+	_kingdom_button.underline_ratio = avg / 100.0 if avg >= 0.0 else -1.0
+	_kingdom_button.underline_color = SatisfactionSystem.tier_for(maxf(avg, 0.0))["color"]
+	_kingdom_button.badge_visible = not game.event_system.get_offers(k).is_empty() \
+			or (avg >= 0.0 and avg < float(DataDB.sat("notify.avg_critical", 25)))
+
+
+func _kingdom_button_tip() -> String:
+	var k: Kingdom = game.player
+	var tip := ResearchTipButton
+	var avg: float = game.satisfaction_system.get_average(k)
+	var lines: PackedStringArray = ["[b]Reichsübersicht[/b] (Taste L)"]
+	if avg >= 0.0:
+		var tier := SatisfactionSystem.tier_for(avg)
+		lines.append(tip.colored("Zufriedenheit Ø %d – %s" % [roundi(avg), str(tier["name"])], tier["color"]))
+	var active: Array = game.event_system.get_active(k)
+	if not active.is_empty():
+		var names: PackedStringArray = []
+		for ev in active:
+			names.append(str(DataDB.get_event(str(ev["event_id"])).get("name", "")))
+		lines.append("Ereignisse: " + tip.esc(", ".join(names)))
+	var offers: Array = game.event_system.get_offers(k)
+	if not offers.is_empty():
+		lines.append(tip.colored("%d Gruppe(n) bitten um Aufnahme" % offers.size(), COLOR_URGENT))
+	lines.append("Volk: %s  ·  %s" % [tip.esc(DataDB.get_people_name(k.people_id)), tip.esc(game.day_night_system.get_phase_name())])
+	return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Tempo
 # ---------------------------------------------------------------------------
 
@@ -563,7 +739,7 @@ func _make_speed_button(text: String, group: ButtonGroup, tooltip: String) -> Bu
 	b.tooltip_text = tooltip
 	# Kein Tastaturfokus, sonst würde die Leertaste den Button auslösen
 	b.focus_mode = Control.FOCUS_NONE
-	b.custom_minimum_size = Vector2(42, 0)
+	b.custom_minimum_size = Vector2(38, 0)
 	_compact(b)
 	speed_bar.add_child(b)
 	return b

@@ -15,6 +15,8 @@ var seed_text: String = ""
 var world_seed: int = 0
 ## Rauchtest/Debug: feste Anzahl KI-Reiche (−1 = aus Daten)
 var ai_count_override := -1
+## Volk des Spielers (peoples.json), passend zur Fraktion (Phase 8)
+var people_id: String = ""
 
 
 func _ready() -> void:
@@ -22,9 +24,15 @@ func _ready() -> void:
 	map_size_id = DataDB.cfg("map.default_size", "large")
 
 
-## Startet eine neue Partie mit den gegebenen Parametern.
-func setup_new_game(p_faction: String, p_difficulty: String, p_map_size: String, p_seed_text: String) -> void:
+## Startet eine neue Partie mit den gegebenen Parametern. p_people: Volk des Spielers
+## (leer oder unpassend = erstes Volk der Fraktion).
+func setup_new_game(p_faction: String, p_difficulty: String, p_map_size: String, p_seed_text: String,
+		p_people: String = "") -> void:
 	faction_id = p_faction
+	people_id = p_people
+	if str(DataDB.get_people(people_id).get("faction", "")) != faction_id:
+		var list := DataDB.get_peoples_of_faction(faction_id)
+		people_id = str((list[0] as Dictionary).get("id", "")) if not list.is_empty() else ""
 	difficulty_id = p_difficulty
 	map_size_id = p_map_size
 	seed_text = p_seed_text.strip_edges()
@@ -41,6 +49,11 @@ func get_map_tiles() -> int:
 
 func get_faction() -> Dictionary:
 	return DataDB.get_faction(faction_id)
+
+
+## Volk des Spielers ({} wenn keins)
+func get_people() -> Dictionary:
+	return DataDB.get_people(people_id)
 
 
 func get_difficulty() -> Dictionary:

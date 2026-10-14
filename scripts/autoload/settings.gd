@@ -13,6 +13,8 @@ var edge_scroll: bool = true
 ## Faktor auf die Kamerageschwindigkeit (0.5 – 2.0)
 var camera_speed: float = 1.0
 var fullscreen: bool = false
+## Welt bei Nacht und in der Dämmerung abdunkeln (Phase 8)
+var day_night_tint: bool = true
 
 
 func _ready() -> void:
@@ -27,6 +29,7 @@ func load_settings() -> void:
 	edge_scroll = cf.get_value("camera", "edge_scroll", edge_scroll)
 	camera_speed = cf.get_value("camera", "speed", camera_speed)
 	fullscreen = cf.get_value("display", "fullscreen", fullscreen)
+	day_night_tint = cf.get_value("display", "day_night_tint", day_night_tint)
 
 
 func save_settings() -> void:
@@ -34,6 +37,7 @@ func save_settings() -> void:
 	cf.set_value("camera", "edge_scroll", edge_scroll)
 	cf.set_value("camera", "speed", camera_speed)
 	cf.set_value("display", "fullscreen", fullscreen)
+	cf.set_value("display", "day_night_tint", day_night_tint)
 	cf.save(FILE_PATH)
 
 

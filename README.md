@@ -45,6 +45,9 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Heldenfähigkeiten | C / V / B (oder die Knöpfe im Auswahlfenster) – auch wenn die ganze Armee ausgewählt ist; Tab wechselt den Helden; Rechtsklick auf einen Knopf schaltet „selbst auslösen“ um (goldener Rahmen). Fähigkeiten mit Ziel: Feind bzw. Stelle anklicken, Rechtsklick/Esc bricht ab |
 | Diplomatie | N oder Button „Diplomatie (N)“ oben: alle neutralen Dörfer mit Ruf, Vertrag, Entfernung und Stärke; Geschenke, Verträge, Handel, Aufnahme, Drohung, Krieg/Frieden (Esc oder N schliesst). Ein Dorfgebäude, eine Miliz oder ein Bote auswählen → Knopf „Diplomatie (N)“ im Auswahlfenster |
 | Krieg gegen ein Dorf | mit eigenen Truppen zweimal Rechtsklick (innerhalb von 3 s) auf eine Einheit oder ein Gebäude des Dorfs – der erste Klick warnt nur – oder „Krieg erklären“ im Diplomatiefenster |
+| Reichsübersicht | L oder Button „Reich (L)“ oben (Zufriedenheit, Ereignisse, Volk und Tageszeit; Esc oder L schliesst). Gesicht in der Ressourcenleiste und Sonne/Mond neben dem Datum öffnen sie ebenfalls |
+| Flüchtlinge aufnehmen | Meldung, Ereignisleiste (oben Mitte) oder einen Flüchtling anklicken → „Aufnehmen“ / „Abweisen“ |
+| Überläufer aufhalten | dem Überläufer einen Befehl geben (z. B. Rechtsklick ins Gelände oder „Halt“) |
 | Meldungen | Klick springt zur Stelle; Meldungen zur Stufenwahl oder Wiederbelebung öffnen das Heldenfenster |
 | Arbeitsverteilung ein/aus | J |
 | Spielmenü | Esc (wenn kein Fenster offen ist und nichts gebaut/ausgewählt wird) |
@@ -165,6 +168,24 @@ assets/
 - **Beziehungen**: `Game.set_relation(a, b, "war" | "peace" | "alliance")`; Kampf nur bei Krieg.
   Die wilden Monster sind ein eigenes Reich, mit allen im Krieg. `Game.can_see` ist die Stelle für
   Sichtbarkeit (ab Phase 7: Entdeckung, Spione).
+- **Völker, Tag/Nacht, Zufriedenheit, Ereignisse (Phase 8)**:
+  - `PeopleSystem` (`scripts/world/`): Grundbonus des Volks als Quelle `"people:<id>"`, Geländeboni je Einheit
+    im abgeleiteten Feld `Unit.terrain_mods` (nur bei Biomwechsel neu, höchstens 250 Einheiten je Takt).
+  - `DayNightSystem` (`scripts/world/`): Abschnitte Morgen/Tag/Abend/Nacht aus der Uhrzeit, Quelle `"daynight"`
+    je Reich (globale Nachtwerte, Tag-/Nachtboni des Volks, eigene Werte für Monster); `DayNightView`
+    (CanvasModulate) dunkelt nur die Welt ab, `DayClock` zeigt Sonne bzw. Mond.
+  - `SatisfactionSystem` (`scripts/economy/`): `Unit.satisfaction` je Bewohner nähert sich einem Ziel aus
+    Reichs- und persönlichen Ursachen; Folgen über `Unit.work_mult` (Arbeitsleistung), Überlaufen (Befehl
+    `"defect"`, am Ziel `UnitSystem.transfer_unit`) und Verrat (`EspionageSystem.report_betrayal`); Feste als
+    Quelle `"feast"`. Neue Gebäude Taverne und Tempel (`satisfaction` in buildings.json).
+  - `EventSystem` (`scripts/events/`): seltene Zufallsereignisse aus `data/events.json` (Dürre, Seuche,
+    Magiesturm, Monsterwelle, Flüchtlinge, Wanderer, Erntedank, Manablüte) für alle Reiche; Quellen
+    `"event:<id>#<nr>"`, Einheitenwirkungen `"event:<id>"`. Flüchtlinge und Wanderer gehören dem Reich
+    „Wanderer“ (Befehl `"seek_refuge"`), die KI entscheidet selbst. `EventEffects` zeichnet Gebiete und Blitze.
+  - `MonsterSystem` (ausgebaut): Streifzüge zu nahen Siedlungen (nachts häufiger), Monsterwellen
+    (`spawn_wave`), wachsende Lager, neue Lager an freien Plätzen, heimatlose Monster schliessen sich an.
+  - Daten: `data/events.json`, `data/satisfaction.json`, `data/daynight.json`; Oberfläche `KingdomPanel`,
+    `EventBanner`, `RefugeeDialog`, `MoodIcon`. Jedes System hat `to_dict`/`from_dict`/`rebuild_runtime`.
 - **Spielende**: `Game.defeat_kingdom` – stirbt der König des Spielers, ist das Spiel verloren.
 - **Trennung Simulation/Darstellung**: Die Systeme kennen weder Karte noch HUD. Die Darstellung hört
   auf Signale (`WorldData.cell_changed`, `road_changed`, `TerritorySystem.changed` …). Das ist die
@@ -365,6 +386,44 @@ Tipp: F3 (Debug) einschalten – F9 gibt Ressourcen. Im Diplomatiefenster ersche
    nach 60 s ohne Angriff, wenn der Ruf nicht zu tief ist.
 10. Sinkt der Ruf unter −50, wird ein Dorf feindlich (ab Phase 7 schliesst es sich dann dem Gegner an).
 
+## Phase 8 testen
+
+Tipp: F3 einschalten → in der Reichsübersicht (L) erscheinen Debug-Knöpfe: Ereignis auslösen, Alle beenden,
+Monsterstreifzug, Zufriedenheit ±30, Überläufer jetzt, Verrat jetzt, Tag/Nacht/Dämmerung/echte Zeit
+(F9 = Ressourcen).
+
+1. **Neues Spiel:** Unter der Fraktion wählst du dein **Volk**; Stärken und Schwächen stehen darunter. Oben links
+   steht der Name deines Volks (in der Farbe der Fraktion, Tooltip mit Fraktion).
+2. **Tag und Nacht:** Oben neben dem Datum zeigt ein Symbol Sonne bzw. Mond (Tooltip: Boni deines Volks). Abends
+   wird die Welt dunkler, nachts sinkt die Sicht, Monster werden aktiver und streifen häufiger umher. Im
+   Auswahlfenster zeigt die Werteherkunft „Tageszeit“. Abdunklung abschaltbar in den Einstellungen.
+3. **Gelände:** Einheiten auf dem Lieblingsgelände ihres Volks sind stärker oder schneller (Auswahlfenster:
+   „Wald (Hochelfen): +10 % Angriff …“). Die Tabelle steht in der Reichsübersicht unter „Volk & Tageszeit“.
+4. **Zufriedenheit:** Oben in der Leiste ein Gesicht mit dem Durchschnitt (Tooltip: Ursachen). Bewohner anklicken
+   zeigt ihre eigene Zufriedenheit. Hunger, Überfüllung, Feinde im Gebiet und Angriffe senken sie; **Taverne**
+   (Schenke), **Tempel** (Schattenschrein, braucht eine Bibliothek), Truppen, volle Speicher und **Feste** heben sie.
+   - Unter 50 sinkt die Arbeitsleistung.
+   - Unter 25 laufen Bewohner über (sichtbar zu einem Nachbarreich, Dorf oder an den Kartenrand; ein Befehl hält
+     sie auf).
+   - Unter 20 droht Verrat (der Gegner erfährt mehr über dich).
+   - Schnelltest: F3 → „Zufriedenheit −30“ zweimal → „Überläufer jetzt“.
+5. **Ereignisse** sind selten (frühestens nach 20 Minuten, danach etwa alle 30 Minuten irgendwo im Land). Aktive
+   Ereignisse stehen oben in der Mitte mit Restzeit. Sofort testen: F3 → Reichsübersicht → Ereignis auswählen →
+   „Auslösen“.
+   - Dürre: Höfe liefern halb so viel; Segensregen hilft.
+   - Seuche: Kranke arbeiten kaum, stecken andere an; Krankenstation, Heiler und Tempel helfen.
+   - Magiesturm: Mana springt, Zauber sind billiger, Blitze.
+   - Monsterwelle: Meldung mit Herkunft.
+   - Erntedank und Manablüte.
+6. **Flüchtlinge und Wanderer** kommen an den Rand deines Gebiets. Meldung oder Leiste anklicken → Dialog mit
+   Wohnraum, Nahrung und Geschenken → Aufnehmen oder Abweisen. Aufgenommene werden Bewohner; unter ihnen kann ein
+   Spion sein, den ein Tempel eher entlarvt. Abgewiesene ziehen weiter, zu einem Dorf oder zum Gegner.
+7. **Wilde Monster:** Lager wachsen mit der Zeit. Zerstörte Lager entstehen später woanders neu. Monster ziehen auf
+   Streifzüge zu nahen Siedlungen, auch zur KI und zu Dörfern (Minikarte: oranger Ring mit Pfeil).
+
+Rauchtest: `tests/run_smoke.sh 600` (prüft Phase 8 in `tests/smoke_phase8.gd`); lange Läufe mit
+`p8=natural seconds=3600 size=medium`, ein bestimmtes Volk mit `people=<id>`.
+
 ## Grafiken austauschen
 
 Alle Grafiken sind zunächst automatisch erzeugte Platzhalter. Legt man eine PNG-Datei
@@ -380,6 +439,6 @@ beim nächsten Start automatisch verwendet – ohne Code-Änderung.
 - [x] Phase 5 – Helden
 - [x] Phase 6 – Neutrale Dörfer, Diplomatie, Handel, Ruf, Boten
 - [ ] Phase 7 – Gegnerische Königreiche mit KI, Entdeckung, Spionage
-- [ ] Phase 8 – Zufriedenheit, Verrat, Flüchtlinge, Ereignisse, Monster, Tag/Nacht
+- [x] Phase 8 – Zufriedenheit, Verrat, Flüchtlinge, Ereignisse, Monster, Tag/Nacht
 - [ ] Phase 9 – Belagerungen und Handelswege
 - [ ] Phase 10 – Speichern/Laden, Schwierigkeitsgrade, UI-Feinschliff, Balancing

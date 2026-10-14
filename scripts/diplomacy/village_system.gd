@@ -292,7 +292,8 @@ func get_strength_text(k: Kingdom) -> String:
 
 
 ## Produktion pro Spielminute (Ressource -> Menge): Waren des Volks × Produktionsfaktor
-## (aufgenommen voll, erobert gemindert). Zerstörte Dörfer produzieren nichts.
+## (aufgenommen voll, erobert gemindert) × Modifikatoren des Dorfreichs (Phase 8:
+## Dürre, Erntedank). Zerstörte Dörfer produzieren nichts.
 func get_production(k: Kingdom) -> Dictionary:
 	var rec := get_record(k)
 	var result := {}
@@ -301,8 +302,16 @@ func get_production(k: Kingdom) -> Dictionary:
 	var produces: Dictionary = get_people(k).get("produces", {})
 	var factor := float(rec.get("production_factor", 1.0))
 	for res_id in produces:
-		result[res_id] = float(produces[res_id]) * factor
+		result[res_id] = float(produces[res_id]) * factor * k.mod("production") * k.mod("production." + str(res_id))
 	return result
+
+
+## Flüchtlinge/Überläufer ziehen ins Dorf: Bevölkerung + n (Anzeige, ab Phase 9 evtl. Produktion)
+func add_population(v: Kingdom, n: int) -> void:
+	var rec := get_record(v)
+	if rec.is_empty() or n <= 0:
+		return
+	rec["population"] = int(rec.get("population", 0)) + n
 
 
 ## Dorf, dem die Kachel gehört (nur selbstständige Dörfer), sonst null

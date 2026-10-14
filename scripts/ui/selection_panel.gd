@@ -122,6 +122,12 @@ var _diplo_button: Button
 var _village_id := 0
 
 var _demolish_button: Button
+## Zufriedenheit eines Bewohners bzw. Ø der Auswahl (Phase 8) und Flüchtlinge aufnehmen
+var _mood_row: ResourceBar.TipBox
+var _mood_icon: MoodIcon
+var _mood_label: Label
+var _refugee_row: HBoxContainer
+var _refugee_offer_id := 0
 ## Restzeit der Abriss-Bestätigung (Echtzeit, 0 = keine Bestätigung offen)
 var _confirm_left := 0.0
 var _timer := 0.0
@@ -158,6 +164,7 @@ func _ready() -> void:
 	_research_bar.visible = false
 	vbox.add_child(_research_bar)
 	_bonus = _make_label(vbox, SMALL_FONT_SIZE, COLOR_GREY)
+	_build_mood_row(vbox)
 	_magic_box = VBoxContainer.new()
 	_magic_box.add_theme_constant_override("separation", 0)
 	_magic_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -223,6 +230,7 @@ func _ready() -> void:
 	_diplo_button.pressed.connect(_on_diplo_pressed)
 	_village_row.add_child(_diplo_button)
 
+	_build_refugee_row(vbox)
 	_build_actions(vbox)
 
 	_research_button = Button.new()
@@ -387,6 +395,8 @@ func _show_building(b: Building) -> void:
 	_set_text(_note, "")
 	_job_row.visible = false
 	_actions.visible = false
+	_mood_row.visible = false
+	_refugee_row.visible = false
 
 	# Leben: fremde Gebäude, beschädigte und solche, die Einheiten beschwören
 	var summons: Array = b.get_summon_tiers()
@@ -486,6 +496,16 @@ func _building_facts(b: Building) -> String:
 	var slots := b.get_worker_slots()
 	if slots > 0 and not b.constructed:
 		facts.append("Arbeitsplätze: %d (wenn fertig)" % slots)
+	var sat: Dictionary = def.get("satisfaction", {})
+	if not sat.is_empty():
+		var line := "Versorgt bis zu %d Bewohner: %+d Zufriedenheit" % [int(sat.get("capacity", 0)), roundi(float(sat.get("bonus", 0)))]
+		if b.constructed and b.kingdom != null:
+			var n := 0
+			for u in b.kingdom.units:
+				if bool(u.type_def.get("needs_housing", false)):
+					n += 1
+			line += " (Abdeckung %d %%)" % roundi(minf(1.0, float(sat.get("capacity", 0)) / maxf(float(n), 1.0)) * 100.0)
+		facts.append(line)
 	var aura: Dictionary = def.get("heal_aura", {})
 	if b.constructed and not aura.is_empty():
 		facts.append("Heilt eigene Einheiten im Umkreis von %d Feldern (%s Leben/s)" % [
@@ -862,12 +882,13 @@ func _show_unit(u: Unit) -> void:
 		# Das Warnzeichen fehlt in manchen Schriften – "(!)" ist überall lesbar.
 		# Befehlstexte beginnen klein ("hält die Stellung"), als Zeile gross.
 		_set_text(_status, _capitalize(u.get_status_text().replace("⚠", "(!)")))
-		_set_text(_bonus, game.combat_system.get_bonus_text(u))
+		_set_text(_bonus, _join_bonus(game.combat_system.get_bonus_text(u), _terrain_text(u)))
 		_set_text(_note, KING_NOTE if u.role == "king" else "")
 	else:
 		_set_text(_status, "")
-		_set_text(_bonus, "")
+		_set_text(_bonus, _terrain_text(u))
 		_set_text(_note, "")
+	_show_unit_phase8(u, own)
 	_show_magic(u)
 	_hide_research()
 	if own and u.hero_id != 0:
@@ -933,6 +954,7 @@ func _show_units(units: Array) -> void:
 	_set_text(_facts, _multi_counts)
 	_set_text(_bonus, "")
 	_set_text(_note, MULTI_HINT)
+	_show_units_mood(units)
 	_magic_box.visible = false
 	_hide_research()
 	# Aktiver Held der Auswahl (Tab wechselt): Fähigkeiten auch mit der ganzen Armee
@@ -1062,6 +1084,11 @@ func _stat_source_line(u: Unit, key: String, label: String, value: float, as_per
 			for mod_key in keys:
 				if entry.has(mod_key):
 					parts.append("%s %s" % [_source_name(str(source)), _factor_text(float(entry[mod_key]), key)])
+	# Gelände des Volks (Phase 8): erlittener Schaden als Verteidigung
+	var terrain_key := key
+	if not u.terrain_mods.is_empty() and u.terrain_mods.has(terrain_key):
+		var biome_name := str(DataDB.get_biome(u.terrain_biome).get("name", "")) if u.terrain_biome >= 0 else ""
+		parts.append("Gelände %s %s" % [biome_name, _factor_text(float(u.terrain_mods[terrain_key]), key)])
 	# Helden: Stufe, Talente und passive Fähigkeiten (Unit.hero_mods)
 	if u.hero_mods.has(key):
 		for part in (u.hero_mods[key] as Dictionary).get("parts", []):
@@ -1516,3 +1543,137 @@ func _set_button_text(b: Button, text: String) -> void:
 func _set_color(label: Label, color: Color) -> void:
 	if label.get_theme_color("font_color") != color:
 		label.add_theme_color_override("font_color", color)
+
+
+# ---------------------------------------------------------------------------
+# Zufriedenheit, Gelände, Überläufer und Flüchtlinge (Phase 8)
+# ---------------------------------------------------------------------------
+
+func _build_mood_row(parent: Control) -> void:
+	_mood_row = ResourceBar.TipBox.new()
+	_mood_row.add_theme_constant_override("separation", 6)
+	_mood_row.mouse_filter = Control.MOUSE_FILTER_STOP
+	_mood_row.rich = true
+	_mood_row.visible = false
+	parent.add_child(_mood_row)
+	_mood_icon = MoodIcon.new()
+	_mood_icon.custom_minimum_size = Vector2(18, 18)
+	_mood_row.add_child(_mood_icon)
+	_mood_label = Label.new()
+	_mood_label.add_theme_font_size_override("font_size", SMALL_FONT_SIZE)
+	_mood_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mood_row.add_child(_mood_label)
+
+
+func _build_refugee_row(parent: Control) -> void:
+	_refugee_row = HBoxContainer.new()
+	_refugee_row.add_theme_constant_override("separation", 6)
+	_refugee_row.visible = false
+	parent.add_child(_refugee_row)
+	var label := Label.new()
+	label.text = "Bitten um Aufnahme:"
+	label.add_theme_font_size_override("font_size", FONT_SIZE)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_refugee_row.add_child(label)
+	var accept := _make_compact_button("Aufnehmen", FONT_SIZE)
+	accept.tooltip_text = "Die Gruppe wird Teil deines Reichs (Bewohner)"
+	accept.pressed.connect(_on_refugee_accept)
+	_refugee_row.add_child(accept)
+	var reject := _make_compact_button("Abweisen", FONT_SIZE)
+	reject.tooltip_text = "Die Gruppe zieht weiter"
+	reject.pressed.connect(_on_refugee_reject)
+	_refugee_row.add_child(reject)
+
+
+## "Wald (Hochelfen): +10 % Angriff" (Geländebonus des Volks) oder ""
+func _terrain_text(u: Unit) -> String:
+	var ps: Variant = game.get("people_system")
+	return str(ps.get_terrain_text(u)) if ps != null else ""
+
+
+static func _join_bonus(a: String, b: String) -> String:
+	if a.is_empty():
+		return b
+	if b.is_empty():
+		return a
+	return a + " · " + b
+
+
+## Eigener Bewohner: Zufriedenheit; Überläufer: Status; Gruppe mit Angebot: Aufnehmen/Abweisen
+func _show_unit_phase8(u: Unit, own: bool) -> void:
+	var ss: Variant = game.get("satisfaction_system")
+	var es: Variant = game.get("event_system")
+	_mood_row.visible = false
+	_refugee_row.visible = false
+	_refugee_offer_id = 0
+	if ss == null:
+		return
+	if own and bool(u.type_def.get("needs_housing", false)) and u.satisfaction >= 0.0:
+		var tier := SatisfactionSystem.tier_for(u.satisfaction)
+		var work := roundi((u.work_mult - 1.0) * 100.0)
+		var text := "Zufriedenheit %d · %s" % [roundi(u.satisfaction), str(tier["name"])]
+		if work != 0:
+			text += (" · Arbeit %+d %%" % work).replace("-", "−")
+		_mood_icon.set_value(u.satisfaction)
+		_set_label_text(_mood_label, text)
+		_set_color(_mood_label, tier["color"])
+		_mood_row.source = _unit_mood_tip.bind(u)
+		_mood_row.visible = true
+		if ss.is_defector(u):
+			_set_text(_status, str(ss.get_defector_text(u)))
+	if es != null and not own:
+		var offer: Dictionary = es.get_offer_of_unit(u)
+		if not offer.is_empty() and int(offer["target_id"]) == game.player.id and str(offer["state"]) != "leaving":
+			_refugee_offer_id = int(offer["id"])
+			_refugee_row.visible = true
+			_set_text(_facts, str(es.get_offer_text(offer, game.player)))
+
+
+## Mehrere Einheiten: Ø-Zufriedenheit der Bewohner darunter
+func _show_units_mood(units: Array) -> void:
+	_refugee_row.visible = false
+	var total := 0.0
+	var n := 0
+	for o in units:
+		var u: Unit = o
+		if bool(u.type_def.get("needs_housing", false)) and u.satisfaction >= 0.0:
+			total += u.satisfaction
+			n += 1
+	_mood_row.visible = n > 0
+	if n == 0:
+		return
+	var avg := total / n
+	_mood_icon.set_value(avg)
+	_set_label_text(_mood_label, "Zufriedenheit Ø %d" % roundi(avg))
+	_set_color(_mood_label, SatisfactionSystem.tier_for(avg)["color"])
+	_mood_row.source = Callable()
+	_mood_row.tooltip_text = "Durchschnitt der %d ausgewählten Bewohner" % n
+
+
+func _unit_mood_tip(u: Unit) -> String:
+	if not is_instance_valid(u):
+		return ""
+	var ss: SatisfactionSystem = game.satisfaction_system
+	var tip := ResearchTipButton
+	var lines: PackedStringArray = ["[b]Zufriedenheit %d[/b] (Ziel %d)" % [roundi(u.satisfaction), roundi(ss.get_target(u))]]
+	for p in ss.get_unit_breakdown(u):
+		var v := float(p["value"])
+		if absf(v) < 0.5:
+			continue
+		lines.append(tip.colored(("%+d %s" % [roundi(v), str(p["cause"])]).replace("-", "−"), COLOR_UP if v > 0.0 else COLOR_BAD))
+	lines.append("Arbeitsleistung ×%s" % String.num(u.work_mult, 2).replace(".", ","))
+	return "\n".join(lines)
+
+
+func _on_refugee_accept() -> void:
+	var reason: String = game.event_system.accept_offer(game.player, _refugee_offer_id)
+	if not reason.is_empty():
+		Notify.warning(reason)
+	_dirty = true
+
+
+func _on_refugee_reject() -> void:
+	var reason: String = game.event_system.reject_offer(game.player, _refugee_offer_id)
+	if not reason.is_empty():
+		Notify.warning(reason)
+	_dirty = true

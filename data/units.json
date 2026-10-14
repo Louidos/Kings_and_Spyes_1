@@ -16,7 +16,8 @@
 		"tier special = Volkskrieger, wird bei Bündnis oder Aufnahme in der Kaserne freigeschaltet (summon:barracks:<id>).",
 		"tier messenger / role messenger = Bote: kämpft nie, flieht durch Sprinten, Befehl travel.",
 		"people = Volk aus peoples.json.",
-		"tier spy / role spy = Spion: immer getarnt (stealth true), kämpft nie, Aufträge im Spionagefenster (K). stealth = immer getarnt (ausser kurz nach einer Entdeckung)."
+		"tier spy / role spy = Spion: immer getarnt (stealth true), kämpft nie, Aufträge im Spionagefenster (K). stealth = immer getarnt (ausser kurz nach einer Entdeckung).",
+		"tier refugee = Flüchtling/Wanderer (Reich „Wanderer“, kämpft nie, wird bei Aufnahme zum Bewohner). Die Wyvern erscheint nur in Monsterwellen und in gewachsenen Lagern (nicht in camps.by_biome)."
 	],
 
 	"units": [
@@ -168,6 +169,13 @@
 			"kill_points": 5,
 			"sprite": "res://assets/sprites/units/monster_golem.png"
 		},
+		{
+			"id": "wyvern", "name": "Wyvern", "faction": "wild", "tier": "monster", "role": "monster", "letter": "Wy", "color": "#5f8a4a",
+			"speed": 3.2, "radius": 20, "sight": 7, "food_per_day": 0,
+			"hp": 220, "attack": 18, "attack_interval": 1.3, "range": 0.9, "armor": 0.15, "aggro_range": 6, "regen": 1.5,
+			"kill_points": 4,
+			"sprite": "res://assets/sprites/units/monster_wyvern.png"
+		},
 
 		{
 			"id": "messenger", "name": "Bote", "faction": "any", "tier": "messenger", "role": "messenger", "letter": "Bo", "color": "#e8dcb0",
@@ -176,6 +184,22 @@
 			"hp": 45, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 1.0,
 			"flee_on_hit": false, "joins_fights": false, "target_priority": 0.7, "kill_points": 1,
 			"sprite": "res://assets/sprites/units/messenger.png"
+		},
+		{
+			"id": "refugee", "name": "Flüchtling", "faction": "any", "tier": "refugee", "role": "worker", "letter": "Fl", "color": "#c9b8a0",
+			"description": "Ein Mensch auf der Flucht. Bittet am Rand eines Reichs um Aufnahme.",
+			"speed": 1.8, "radius": 14, "sight": 4, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 35, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
+			"flee_on_hit": true, "joins_fights": false, "target_priority": 0.5, "kill_points": 0,
+			"sprite": "res://assets/sprites/units/refugee.png"
+		},
+		{
+			"id": "wanderer", "name": "Wanderer", "faction": "any", "tier": "refugee", "role": "worker", "letter": "Wa", "color": "#8fb7d9",
+			"description": "Reisender Handwerker, der sich niederlassen möchte und Waren mitbringt.",
+			"speed": 2.0, "radius": 14, "sight": 5, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 45, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
+			"flee_on_hit": true, "joins_fights": false, "target_priority": 0.5, "kill_points": 0,
+			"sprite": "res://assets/sprites/units/wanderer.png"
 		},
 
 		{

@@ -1,0 +1,39 @@
+{
+	"_hinweis": [
+		"Zufriedenheit der Bewohner (Einheiten mit needs_housing). Werte 0–100. Jeder Bewohner strebt mit approach_per_minute Punkten pro Minute zu seinem Zielwert = base + Summe aller Ursachen (+ persönliche Laune ± personal_spread, fest je Bewohner).",
+		"food: Hungersnot (starving), Vorrat unter low_days Tagesverbrauch (low), ab plenty_days (plenty). housing: Überfüllung (Bevölkerung/Wohnraum − 1) × crowded_per_ratio, höchstens crowded_max; ab free_ratio freiem Wohnraum free.",
+		"safety: Feinde im eigenen Gebiet (sichtbare feindliche Einheiten, auch Monster; ab many_count zusätzlich many_extra), Angriff auf das Reich (klingt in attack_seconds ab), verlorene Gebäude und getötete Bewohner (je Fall, Höchstwert, Abklingzeit), eigene Truppen im Gebiet (troops bei troops_full_ratio Kämpfern je Bewohner).",
+		"Gebäude: in buildings.json → satisfaction {bonus, capacity, cause}: bonus × min(1, Plätze aller fertigen Gebäude dieses Typs / Bewohner).",
+		"idle: Bewohner ohne Beruf länger als seconds. faction / people: Grundwert je Fraktion bzw. Volk (troops_mult: Faktor auf den Truppen-Bonus). ai_bonus: Zuschlag für KI-Reiche je Schwierigkeit. Reichsboni: Kingdom.bonus(\"satisfaction\") (Forschung, Feste) und bonus(\"loyalty\") (verringert Überlaufen und Verrat).",
+		"effects.work_curve: Arbeitsleistung je Zufriedenheit (Paare [Wert, Faktor], linear dazwischen). tiers: Stufen für die Anzeige.",
+		"defection: unter below wird alle check_seconds je Bewohner gewürfelt: chance × (below − Wert)/below × (1 − loyalty); höchstens ein Überläufer je Reich alle kingdom_gap s, erst ab min_minutes, nicht für Neuankömmlinge (newcomer_seconds). Ziele (Reiche/Dörfer) bis max_distance Kacheln, sonst der Kartenrand. Wird ein Überläufer per Befehl aufgehalten, arbeitet er abort_seconds lang nur mit abort_work_mult. Am Ziel bringt er dem neuen Reich Kundschaft der Stufe intel_level über sein altes Reich mit und hat dort arrive_satisfaction.",
+		"betrayal: Verrat unter below (nur wenn ein feindliches Reich existiert); sofort entdeckt mit discover_chance (+ Tempel), sonst Meldung nach late_discover_seconds. hidden_spy: eingeschleuste Spione verraten alle leak_seconds und werden dabei mit discover_chance entdeckt.",
+		"feast: Fest feiern kostet cost + per_population_food × Bewohner Nahrung (× Modifikator feast_cost), bringt bonus für seconds, Abklingzeit cooldown. notify: Meldung bei Durchschnitt unter avg_low bzw. avg_critical (höchstens alle interval s)."
+	],
+	"tick_seconds": 2.0, "base": 60, "approach_per_minute": 8, "personal_spread": 6,
+	"food": {"starving": -35, "low_days": 0.5, "low": -10, "plenty_days": 2.0, "plenty": 5},
+	"housing": {"crowded_per_ratio": -50, "crowded_max": -30, "free_ratio": 0.1, "free": 4},
+	"safety": {"scan_seconds": 5, "enemies_inside": -12, "many_count": 8, "many_extra": -8,
+						 "attack": -12, "attack_seconds": 300, "building_lost": -6, "building_lost_max": -18, "building_lost_seconds": 600,
+						 "death": -3, "death_max": -12, "death_seconds": 600, "troops": 6, "troops_full_ratio": 0.25},
+	"idle": {"seconds": 180, "value": -4},
+	"faction": {"good": {"base": 0, "troops_mult": 1.0}, "evil": {"base": -4, "troops_mult": 1.5}},
+	"people": {"humans": 0, "high_elves": 0, "druids": 3, "light_wardens": 2, "griffin_riders": 0, "star_mages": 0,
+						 "blood_elves": -2, "orcs": -3, "night_riders": 0, "warlocks": -2, "undead": 6, "demon_summoners": -4, "shadow_cult": 0, "trolls": -2},
+	"ai_bonus": {"easy": 0, "normal": 0, "hard": 5, "epic": 10},
+	"effects": {
+		"work_curve": [[0, 0.6], [25, 0.7], [50, 1.0], [80, 1.0], [100, 1.1]],
+		"tiers": [{"min": 0, "name": "Aufgebracht", "color": "#e0503c"}, {"min": 25, "name": "Unzufrieden", "color": "#e8a03c"},
+							{"min": 50, "name": "Zufrieden", "color": "#d8d0b8"}, {"min": 75, "name": "Glücklich", "color": "#7cc86a"}]
+	},
+	"defection": {"below": 25, "check_seconds": 30, "chance": 0.08, "kingdom_gap": 180, "min_minutes": 15, "newcomer_seconds": 300,
+								"max_distance": 140, "edge_margin": 3, "weights": {"kingdom": 1.0, "village": 1.0, "edge": 0.5},
+								"abort_seconds": 300, "abort_work_mult": 0.5, "arrive_satisfaction": 50, "intel_level": 1},
+	"betrayal": {"below": 20, "check_seconds": 60, "chance": 0.04, "kingdom_gap": 900, "min_minutes": 30,
+							 "discover_chance": 0.35, "temple_discover_bonus": 0.25, "late_discover_seconds": [300, 900]},
+	"hidden_spy": {"leak_seconds": 600, "discover_chance": 0.2, "temple_discover_bonus": 0.2, "vigilance_factor": 0.1},
+	"feast": {"cost": {"food": 100, "mana": 20}, "per_population_food": 3, "bonus": 15, "seconds": 900, "cooldown": 2400},
+	"notify": {"avg_low": 40, "avg_critical": 25, "interval": 600},
+	"tips": {"Hunger": "Mehr Bauern oder Sammler einsetzen (J).", "Überfüllt": "Wohnhäuser bauen.",
+					 "Feinde im Gebiet": "Truppen schicken.", "Ohne Arbeit": "Berufe verteilen (J).", "Seuche": "Krankenstation und Heiler helfen."}
+}

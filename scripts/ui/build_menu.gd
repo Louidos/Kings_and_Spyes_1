@@ -13,7 +13,7 @@ extends PanelContainer
 
 const REFRESH_INTERVAL := 0.25
 ## Höchstens so viele Buttons pro Zeile
-const MAX_COLUMNS := 5
+const MAX_COLUMNS := 6
 const BUTTON_MIN_WIDTH := 150.0
 const FONT_SIZE := 16
 const UNAFFORDABLE_TINT := Color(1.0, 0.75, 0.75)
@@ -271,6 +271,9 @@ static func build_tooltip(def: Dictionary) -> String:
 	var bonus := float(def.get("gather_bonus", 0.0))
 	if bonus > 0.0:
 		lines.append("Sammeltempo: +%d %%" % roundi(bonus * 100.0))
+	var sat: Dictionary = def.get("satisfaction", {})
+	if not sat.is_empty():
+		lines.append("Zufriedenheit %+d für bis zu %d Bewohner" % [roundi(float(sat.get("bonus", 0))), int(sat.get("capacity", 0))])
 	var workers := int(def.get("workers", 0))
 	if workers > 0:
 		var job_name := str(DataDB.get_job(str(def.get("job", ""))).get("name", ""))

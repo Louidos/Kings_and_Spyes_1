@@ -98,7 +98,8 @@ static func _reactive_need(b: AIBrain) -> String:
 			or k.get_amount("food") < float(DataDB.ai("build.reactive.food_low", 30))
 	if low and bs.count_buildings(k, "farm", false) > 0 and not ws.has_free_slot(k, "farmer") and not _has_site(bs, k, "farm"):
 		return "farm"
-	return ""
+	# Phase 8: Taverne bzw. Tempel bei unzufriedenen Bewohnern
+	return AISatisfaction.building_need(b)
 
 
 ## Sammelhütte, die gebaut werden sollte: ein Sammelberuf hat ein Problem (nichts in

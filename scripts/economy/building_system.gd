@@ -380,10 +380,11 @@ func _on_sim_tick(dt: float) -> void:
 			var base: Dictionary = b.def.get("base_production", {})
 			if per_worker.is_empty() and base.is_empty():
 				continue
-			var working := 0
+			# Arbeiter zählen nach ihrer Arbeitsleistung (Zufriedenheit, Seuche)
+			var working := 0.0
 			for u in b.workers:
 				if u.state == Unit.State.WORKING:
-					working += 1
+					working += u.work_mult
 			var job := DataDB.get_job(str(b.def.get("job", "")))
 			var factor: float = game.work_system.work_factor(kingdom, job)
 			var gains := {}

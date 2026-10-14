@@ -257,11 +257,13 @@ func on_building_removed(b: Building) -> void:
 	_site_workers.erase(b)
 
 
-## Arbeitstempo: bei Hungersnot langsamer (ausser für Nahrungsberufe)
-func work_factor(kingdom: Kingdom, job: Dictionary) -> float:
+## Arbeitstempo: bei Hungersnot langsamer (ausser Nahrungsberufe), dazu die
+## Arbeitsleistung des Bewohners (Zufriedenheit, Seuche – Unit.work_mult)
+func work_factor(kingdom: Kingdom, job: Dictionary, u: Unit = null) -> float:
+	var f := 1.0
 	if kingdom.starving and not job.get("food_job", false):
-		return float(DataDB.eco("starvation.work_factor", 0.5))
-	return 1.0
+		f = float(DataDB.eco("starvation.work_factor", 0.5))
+	return f * (u.work_mult if u != null else 1.0)
 
 
 # ---------------------------------------------------------------------------
@@ -438,7 +440,7 @@ func _tick_gather(u: Unit, dt: float) -> void:
 	var capacity := _carry_capacity(u)
 	var res_id := str(job.get("resource", ""))
 	var bonus := u.dropoff.get_gather_bonus() if is_instance_valid(u.dropoff) else 0.0
-	var mult: float = u.kingdom.mod("gather") * u.kingdom.mod("gather." + res_id) * work_factor(u.kingdom, job) \
+	var mult: float = u.kingdom.mod("gather") * u.kingdom.mod("gather." + res_id) * work_factor(u.kingdom, job, u) \
 			* game.magic_system.get_production_factor(u.kingdom, u.position, res_id)
 	u.work_acc += float(job.get("gather_rate", 1.0)) * (1.0 + bonus) * mult * dt
 	while u.work_acc >= 1.0 and u.carry_amount < capacity:
@@ -563,7 +565,7 @@ func _tick_build(u: Unit, dt: float) -> void:
 		_think(u)
 		return
 	var job := DataDB.get_job(u.job_id)
-	var amount := float(job.get("work_rate", 1.0)) * u.kingdom.mod("build") * work_factor(u.kingdom, job) * dt
+	var amount := float(job.get("work_rate", 1.0)) * u.kingdom.mod("build") * work_factor(u.kingdom, job, u) * dt
 	var finished := false
 	if u.target_road.x >= 0:
 		finished = building_system.add_road_work(u.target_road, amount)

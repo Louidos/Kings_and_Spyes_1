@@ -309,14 +309,55 @@ Volksfarbe und Ruf-Balken zeichnet das Spiel selbst. `trader.png` (Händler/Kara
 
 `spy_good.png`, `spy_evil.png`, Völker-Einheiten der Gegenseite (Liste folgt)
 
-## 🕓 Phase 8 – Monster, Ereignisse
+## ✅ Phase 8 – Zufriedenheit, Ereignisse, Monster, Tag/Nacht
 
-Weitere Monster: `monster_wyvern.png` (Wolf, Spinne und Golem: siehe Phase 3)
-Weitere: `refugee.png` (Flüchtling), Ereignis-Icons `event_drought.png`, `event_plague.png`,
-`event_magic_storm.png`, `event_monster_wave.png`, `event_refugees.png`
+**Gebäude** (`assets/sprites/buildings/`, 128 × 128):
+
+| Datei | Motiv |
+|---|---|
+| `tavern_good.png` | Fachwerk-Gasthaus mit Schild und Laternen |
+| `tavern_evil.png` | düstere Schenke, grüne Laternen |
+| `temple_good.png` | weisser Tempel mit Sonnenkuppel (3×3 – Grafik 128 × 128, gestreckt wie die Heldenhalle) |
+| `temple_evil.png` | Schattenschrein aus schwarzem Stein, violette Flammen |
+
+**Einheiten** (`assets/sprites/units/`, 64 × 64):
+
+| Datei | Motiv |
+|---|---|
+| `refugee.png` | Flüchtling mit Bündel, zerlumpt |
+| `wanderer.png` | Reisender mit Rucksack und Wanderstab |
+| `monster_wyvern.png` | grüne Wyvern von oben, Flügel angelegt (Wolf, Spinne und Golem: siehe Phase 3) |
+
+**Ereignis-Symbole** (`assets/ui/icons/`, 32 × 32):
+
+| Datei | Motiv |
+|---|---|
+| `event_drought.png` | rissige Erde, Sonne |
+| `event_plague.png` | grüne Wolke, Totenkopf |
+| `event_magic_storm.png` | violetter Wirbel mit Blitz |
+| `event_monster_wave.png` | Monsterkrallen |
+| `event_refugees.png` | Menschen mit Bündeln |
+| `event_wanderers.png` | Stab und Rucksack |
+| `event_harvest_festival.png` | Garbe und Kürbis |
+| `event_mana_bloom.png` | blaue Blüte |
+
+**Stimmung** (`assets/ui/icons/`, 32 × 32, optional – sonst gezeichnet): `mood_angry.png`, `mood_unhappy.png`,
+`mood_content.png`, `mood_happy.png`
+
+**Tageszeit** (`assets/ui/icons/`, 32 × 32, optional): `daytime_sun.png`, `daytime_moon.png`
+
+**Effekte** (`assets/sprites/effects/`, 256 × 256, optional, gestreckt über das Gebiet): `event_drought.png`,
+`event_magic_storm.png`
+
+Tönung bei Nacht, Blitze, Seuchenwolken und Ereignisgebiete zeichnet das Spiel selbst.
 
 ## 🕓 Phase 9 – Belagerung
 
 `wall.png`, `tower_good.png` / `tower_evil.png`, `gate_good.png` / `gate_evil.png`,
 `siege_ram.png`, `siege_catapult.png`
 Handelswege: `trader.png` (Händler/Karawane)
+
+## 🕓 Phase 10 – Völker
+
+Volkswappen `people_<id>.png` (64 × 64, z. B. `people_humans.png`) für Menü und Reichsübersicht;
+Völker-Einheiten der Gegenseite (aus Phase 7 verschoben, Liste folgt).

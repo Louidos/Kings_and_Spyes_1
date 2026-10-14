@@ -14,6 +14,7 @@
 		"capturable: true = wird bei 0 Leben erobert statt zerstört (Dorfzentrum).",
 		"people_sprites: Grafik je Volk (Dorfgebäude), sprite_fallback: Grafik, wenn weder Volks- noch Fraktionsgrafik angegeben ist.",
 		"people_color: Platzhalter in der Volksfarbe.",
+		"satisfaction: {bonus, capacity, cause} = Zufriedenheit für bis zu capacity Bewohner (mehrere Gebäude addieren die Plätze); plague_spread_mult / discover_bonus: der Tempel mildert Seuchen und entdeckt Verräter und eingeschleuste Spione eher (Phase 8).",
 		"spy_den: true = Spionagehaus (Spione beginnen eine Stufe höher, +1 Spion, Wachsamkeit siehe espionage.json). people_sprites bei der Burg: Grafik je Volk (nur wenn die Datei existiert, sonst Fraktionsgrafik)."
 	],
 
@@ -164,6 +165,27 @@
 			"territory_radius": 4, "hp": 450, "summons": ["spy"], "spy_den": true,
 			"color": "#4a4a6a",
 			"sprites": { "good": "res://assets/sprites/buildings/spy_den_good.png", "evil": "res://assets/sprites/buildings/spy_den_evil.png" }
+		},
+		{
+			"id": "tavern", "name": "Taverne", "names": { "good": "Taverne", "evil": "Schenke" },
+			"label": "Taverne", "labels": { "good": "Taverne", "evil": "Schenke" },
+			"description": "Hier treffen sich die Bewohner nach der Arbeit: +10 Zufriedenheit für bis zu 20 Bewohner (für mehr Bewohner weitere bauen).",
+			"size": [2, 2], "cost": { "wood": 60, "stone": 20, "food": 30 }, "build_time": 35,
+			"territory_radius": 4, "hp": 350,
+			"satisfaction": { "bonus": 10, "capacity": 20, "cause": "Taverne" },
+			"color": "#b5651d",
+			"sprites": { "good": "res://assets/sprites/buildings/tavern_good.png", "evil": "res://assets/sprites/buildings/tavern_evil.png" }
+		},
+		{
+			"id": "temple", "name": "Tempel", "names": { "good": "Tempel des Lichts", "evil": "Schattenschrein" },
+			"label": "Tempel", "labels": { "good": "Tempel", "evil": "Schrein" },
+			"description": "Ort des Glaubens: +8 Zufriedenheit für bis zu 30 Bewohner. Seuchen breiten sich langsamer aus, Verräter und eingeschleuste Spione fallen eher auf. Braucht eine Forschungsstätte.",
+			"requires_buildings": ["library"],
+			"size": [3, 3], "cost": { "wood": 80, "stone": 120, "mana": 40 }, "build_time": 70,
+			"territory_radius": 5, "hp": 700,
+			"satisfaction": { "bonus": 8, "capacity": 30, "cause": "Tempel", "plague_spread_mult": 0.7, "discover_bonus": 0.25 },
+			"color": "#e8e0c8",
+			"sprites": { "good": "res://assets/sprites/buildings/temple_good.png", "evil": "res://assets/sprites/buildings/temple_evil.png" }
 		},
 		{
 			"id": "monster_lair", "name": "Monsterhöhle", "label": "Höhle",

@@ -124,6 +124,8 @@ func think(now: float) -> void:
 	t0 = _measure("summon", t0)
 	if n % 3 == 0:
 		AIMilitary.tick_heroes(self, now)
+		# Phase 8: Fest bei Unzufriedenheit
+		AISatisfaction.tick_feast(self)
 		t0 = _measure("heroes", t0)
 	if now >= float(st["spy_next"]):
 		var spy_mult := maxf(float(personality.get("spy_mult", 1.0)), 0.1)
