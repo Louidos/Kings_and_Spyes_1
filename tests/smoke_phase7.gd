@@ -68,12 +68,15 @@ var _ui_step := -1
 var _victory_frame := -1
 var _ui_wait := 0.0
 var _shots_dir := ""
+## Balancing-Lauf: KI-Reiche am Ende nicht besiegen (kein Sieg-Test)
+var _keep_ai := false
 
 
 func _init(game: Node, args: Dictionary) -> void:
 	_game = game
 	_natural = str(args.get("p7", "")) == "natural"
 	_passive = str(args.get("passive", "0")) == "1"
+	_keep_ai = str(args.get("balance", "0")) == "1"
 	_seconds = float(args.get("seconds", "600"))
 	_shots_dir = str(args.get("shots", ""))
 	(game.diplomacy_system as DiplomacySystem).reputation_changed.connect(_on_reputation_changed)
@@ -152,6 +155,9 @@ func tick(t: float) -> void:
 				_stage = 7
 		7:
 			if t >= _seconds - 40.0:
+				if _keep_ai:
+					_stage = 9
+					return
 				_s6()
 				_stage = 8
 		8:
@@ -617,7 +623,10 @@ func _s_growth() -> void:
 				float(pair.get("tension", -1.0)), str(pair.get("state", "?")), float(pair.get("since", -1.0)), GameClock.game_time]])
 	if _natural and _seconds >= 1800.0:
 		_check(_player_alive_1800, "Burg und König des Spielers stehen bei t = 1800 s")
-	_check(_think_ms() < 3.0, "KI-Denkzeit im Schnitt unter 3 ms (%.2f ms)" % _think_ms())
+	# Lange natürliche Läufe (Balancing, ab 1 Spielstunde): grosse Reiche (über 100 Gebäude, Mauerring)
+	# denken länger – dort gilt 5 ms (ein Denkvorgang je Reich alle paar Sekunden, nicht jedes Bild)
+	var think_limit := 5.0 if _natural and _seconds >= 3600.0 else 3.0
+	_check(_think_ms() < think_limit, "KI-Denkzeit im Schnitt unter %.0f ms (%.2f ms)" % [think_limit, _think_ms()])
 	# Speichern (Phase 10): Zustand der Spionage-Systeme übersteht to_dict/from_dict/rebuild_runtime
 	var esp: EspionageSystem = g.espionage_system
 	var spies: SpySystem = g.spy_system

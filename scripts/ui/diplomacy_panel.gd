@@ -187,6 +187,7 @@ func setup(p_game: Node) -> void:
 	ds.side_switched.connect(_on_changed.unbind(3))
 	game.relation_changed.connect(_on_changed.unbind(3))
 	get_viewport().size_changed.connect(_place)
+	Settings.changed.connect(_place)
 	minimum_size_changed.connect(_queue_place)
 	_show_tab(TAB_VILLAGES)
 
@@ -567,12 +568,14 @@ func _build_actions(parent: Control) -> void:
 	var gift_row := _row(_actions)
 	gift_row.add_child(_section_label("Geschenk"))
 	_gift_option = _res_option()
+	_gift_option.tooltip_text = "Ware des Geschenks"
 	_gift_option.select(maxi(_res_ids.find("food"), 0))
 	_gift_option.item_selected.connect(_on_option_changed.unbind(1))
 	gift_row.add_child(_gift_option)
 	var gift_group := ButtonGroup.new()
 	for amount in GIFT_AMOUNTS:
 		var b := _amount_button(str(amount), gift_group)
+		b.tooltip_text = "Geschenk: %d Einheiten" % int(amount)
 		b.set_pressed_no_signal(int(amount) == _gift_amount)
 		b.pressed.connect(_on_gift_amount_pressed.bind(int(amount)))
 		gift_row.add_child(b)
@@ -612,11 +615,13 @@ func _build_actions(parent: Control) -> void:
 	var trade_group := ButtonGroup.new()
 	for amount in TRADE_AMOUNTS:
 		var b := _amount_button(str(amount), trade_group)
+		b.tooltip_text = "Handel: %d Einheiten geben" % int(amount)
 		b.set_pressed_no_signal(int(amount) == _trade_amount)
 		b.pressed.connect(_on_trade_amount_pressed.bind(int(amount)))
 		trade_row.add_child(b)
 		_trade_amount_buttons.append(b)
 	_trade_give_option = _res_option()
+	_trade_give_option.tooltip_text = "Ware, die du gibst"
 	_trade_give_option.select(maxi(_res_ids.find("wood"), 0))
 	_trade_give_option.item_selected.connect(_on_option_changed.unbind(1))
 	trade_row.add_child(_trade_give_option)
@@ -625,6 +630,7 @@ func _build_actions(parent: Control) -> void:
 	get_label.tooltip_text = "Menge und Ware, die du gibst → Ware, die du bekommst"
 	trade_row.add_child(get_label)
 	_trade_get_option = _res_option()
+	_trade_get_option.tooltip_text = "Ware, die du bekommst"
 	_trade_get_option.select(maxi(_res_ids.find("ore"), 0))
 	_trade_get_option.item_selected.connect(_on_option_changed.unbind(1))
 	trade_row.add_child(_trade_get_option)
@@ -719,14 +725,7 @@ func _queue_place() -> void:
 
 ## Mitte oben; bei kleinem Fenster verkleinert, aber nie ausserhalb
 func _place() -> void:
-	var vp := get_viewport_rect().size
-	var want := Vector2(DESIGN_WIDTH, get_combined_minimum_size().y)
-	size = want
-	var s := minf(1.0, minf((vp.x - 16.0) / want.x, (vp.y - TOP - 8.0) / want.y))
-	s = maxf(s, 0.4)
-	scale = Vector2(s, s)
-	var top := clampf(TOP, 8.0, maxf(vp.y - want.y * s - 8.0, 8.0))
-	position = Vector2(floorf((vp.x - want.x * s) * 0.5), floorf(top))
+	UiStyle.place_window(self, DESIGN_WIDTH, TOP)
 
 
 # ---------------------------------------------------------------------------

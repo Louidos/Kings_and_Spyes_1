@@ -915,7 +915,7 @@ func _destroy_building(b: Variant, killer: Kingdom) -> void:
 	if b.is_segment:
 		game.siege_system.on_segment_destroyed(b, killer)
 		building_destroyed.emit(b, killer)
-		game.building_system.remove_building(b, 0.0)
+		game.building_system.remove_building(b, 0.0, true)
 		return
 	if killer != null and killer != k:
 		var loot: Dictionary = b.get_loot()
@@ -933,7 +933,7 @@ func _destroy_building(b: Variant, killer: Kingdom) -> void:
 	if k.is_player:
 		k.notify("%s wurde zerstört!" % b.get_display_name(), "danger", b.position)
 	building_destroyed.emit(b, killer)
-	game.building_system.remove_building(b, 0.0)
+	game.building_system.remove_building(b, 0.0, true)
 
 
 ## Todesfälle des Spielers sammeln und gebündelt melden

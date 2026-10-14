@@ -50,8 +50,11 @@ const COLOR_URGENT := Color(1.0, 0.36, 0.3)
 const TOP_BUTTON_MARGIN := 5.0
 ## Abstand zwischen den Elementen der oberen Leiste
 const TOP_BAR_SEPARATION := 4
+## Höhe der oberen Leiste (wie in hud.tscn)
+const TOP_BAR_HEIGHT := 48.0
 
 @onready var kingdom_label: Label = %KingdomLabel
+@onready var top_bar: PanelContainer = $Root/TopBar
 @onready var resource_bar: ResourceBar = %ResourceBar
 @onready var date_label: Label = %DateLabel
 @onready var speed_bar: HBoxContainer = %SpeedBar
@@ -337,12 +340,55 @@ func _setup_phase10() -> void:
 	UiStyle.register_scaled_layer(self, $Root as Control)
 	Settings.changed.connect(_on_settings_changed)
 	get_viewport().size_changed.connect(_on_settings_changed)
+	# Inhalt der oberen Leiste wird breiter/schmaler (z. B. "Forschung steht · 45 %"): neu einpassen
+	top_bar.minimum_size_changed.connect(_fit_top_bar, CONNECT_DEFERRED)
+	($Root as Control).resized.connect(_fit_top_bar, CONNECT_DEFERRED)
 	_on_settings_changed()
 
 
 func _on_settings_changed() -> void:
 	if is_inside_tree():
 		UiStyle.apply_ui_scale(get_tree())
+		_fit_top_bar()
+
+
+## Obere Leiste in die verfügbare Breite einpassen (UI-Grösse 125 %/150 % lässt nur
+## 1536 bzw. 1280 Punkte): zuerst den Reichsnamen ausblenden (steht im Tooltip der
+## Reichsübersicht), reicht das nicht, wird die Leiste als Ganzes verkleinert –
+## nie kleiner als nötig, Klicks und Tooltips stimmen weiter.
+func _fit_top_bar() -> void:
+	if not is_inside_tree():
+		return
+	var avail := ($Root as Control).size.x
+	if avail <= 1.0:
+		return  # noch kein Layout
+	var sep := float(top_bar.get_node("HBox").get_theme_constant("separation"))
+	var label_w := kingdom_label.get_combined_minimum_size().x + sep
+	var need := top_bar.get_combined_minimum_size().x
+	var need_full := need if kingdom_label.visible else need + label_w
+	var show_label := need_full <= avail
+	if kingdom_label.visible != show_label:
+		kingdom_label.visible = show_label
+	need = need_full if show_label else need_full - label_w
+	var f := 1.0 if need <= avail else maxf(avail / need, 0.5)
+	if is_equal_approx(f, 1.0):
+		top_bar.scale = Vector2.ONE
+		top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+		top_bar.offset_left = 0.0
+		top_bar.offset_right = 0.0
+		top_bar.offset_top = 0.0
+		top_bar.offset_bottom = TOP_BAR_HEIGHT
+	else:
+		top_bar.set_anchors_preset(Control.PRESET_TOP_LEFT)
+		top_bar.position = Vector2.ZERO
+		top_bar.size = Vector2(avail / f, TOP_BAR_HEIGHT)
+		top_bar.scale = Vector2(f, f)
+
+
+## Obere Leiste ragt nicht über den Rand (Rauchtest)
+func top_bar_fits() -> bool:
+	var right := (top_bar.get_global_transform_with_canvas() * Vector2(top_bar.size.x, 0.0)).x
+	return right <= get_viewport().get_visible_rect().size.x + 1.0
 
 
 ## Speicherhinweis zeigen ("Speichere …" beim Start, danach Ergebnis), blendet nach 2 s aus
@@ -940,6 +986,9 @@ func _kingdom_button_tip() -> String:
 	var tip := ResearchTipButton
 	var avg: float = game.satisfaction_system.get_average(k)
 	var lines: PackedStringArray = ["[b]Reichsübersicht[/b] (Taste L)"]
+	if not kingdom_label.visible:
+		# Reichsname ist bei grosser UI-Grösse ausgeblendet: hier nennen
+		lines.append(tip.esc(kingdom_label.text))
 	if avg >= 0.0:
 		var tier := SatisfactionSystem.tier_for(avg)
 		lines.append(tip.colored("Zufriedenheit Ø %d – %s" % [roundi(avg), str(tier["name"])], tier["color"]))

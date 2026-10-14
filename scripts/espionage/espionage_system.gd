@@ -400,6 +400,16 @@ static func _rect_gap(a: Rect2i, b: Rect2i) -> int:
 
 
 ## Faktor der Schwierigkeit für KI-Beobachter (ai.json difficulty.awareness_mult), sonst 1
+## Ab dieser Spielminute sinkt die Aufmerksamkeit der KI nicht mehr unter patience_floor:
+## patience_minutes der Schwierigkeit (ai.json difficulty), sonst espionage.json
+func _patience_minutes() -> float:
+	var fallback := float(DataDB.esp("awareness.patience_minutes", 120))
+	var ai: Variant = game.get("ai_system")
+	if ai is AISystem:
+		return float((ai as AISystem).get_difficulty().get("patience_minutes", fallback))
+	return fallback
+
+
 func _awareness_mult(observer: Kingdom) -> float:
 	if observer.controller != "ai":
 		return 1.0
@@ -424,7 +434,7 @@ func _tick_awareness(dt: float, now: float) -> void:
 		bboxes[k.id] = TerritorySystem.kingdom_bbox(k, world)
 	var rise := float(DataDB.esp("awareness.rise_per_minute", 3.0)) * dt / 60.0
 	var fall := float(DataDB.esp("awareness.fall_per_minute", 1.0)) * dt / 60.0
-	var patient := now / 60.0 >= float(DataDB.esp("awareness.patience_minutes", 120))
+	var patient := now / 60.0 >= _patience_minutes()
 	var floor_value := float(DataDB.esp("awareness.patience_floor", 35))
 	for o in parties:
 		var observer: Kingdom = o

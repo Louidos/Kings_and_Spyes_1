@@ -205,6 +205,7 @@ func setup(p_game: Node) -> void:
 	rs.research_completed.connect(_on_research_completed)
 	rs.upgrade_bought.connect(_on_upgrade_bought)
 	get_viewport().size_changed.connect(_place)
+	Settings.changed.connect(_place)
 	_show_tab(TAB_TREE)
 
 
@@ -684,14 +685,7 @@ func _show_tab(tab: String) -> void:
 
 ## Mitte oben; bei kleinem Fenster verkleinert, aber nie ausserhalb
 func _place() -> void:
-	var vp := get_viewport_rect().size
-	var want := Vector2(DESIGN_WIDTH, get_combined_minimum_size().y)
-	size = want
-	var s := minf(1.0, minf((vp.x - 16.0) / want.x, (vp.y - TOP - 8.0) / want.y))
-	s = maxf(s, 0.4)
-	scale = Vector2(s, s)
-	var top := clampf(TOP, 8.0, maxf(vp.y - want.y * s - 8.0, 8.0))
-	position = Vector2(floorf((vp.x - want.x * s) * 0.5), floorf(top))
+	UiStyle.place_window(self, DESIGN_WIDTH, TOP)
 
 
 # ---------------------------------------------------------------------------
@@ -1035,7 +1029,7 @@ func effect_lines(k: Kingdom, rid: String) -> PackedStringArray:
 	return lines
 
 
-const _ROLE_NAMES := {"combat": "alle Truppen", "worker": "Bewohner", "support": "Heiler",
+const _ROLE_NAMES := {"combat": "alle Truppen ohne Helden", "worker": "Bewohner", "support": "Heiler", "hero": "Helden",
 	"king": "König", "monster": "Monster"}
 
 

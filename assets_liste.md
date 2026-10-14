@@ -4,9 +4,9 @@ Alle Grafiken, die das Spiel braucht, mit Dateinamen und Ablageort.
 Fehlt eine Datei, erzeugt das Spiel automatisch einen Platzhalter.
 Liegt die Datei am richtigen Ort, wird sie beim nächsten Start verwendet – ohne Code-Änderung.
 
-**Status:**
-- ✅ = wird bereits verwendet
-- 🕓 = vorläufig, Name und Umfang werden in der genannten Phase festgelegt
+**Status:** ✅ = das Spiel lädt diese Datei, sobald sie da ist (alle Phasen 1–10 sind fertig; jede Datei,
+die der Code laden kann, steht in dieser Liste). Eine Prüfung: jeder Pfad `res://assets/…` aus `data/*.json`
+und `scripts/` kommt hier vor.
 
 ---
 
@@ -289,18 +289,8 @@ des Volks (wie das Dorfzentrum, aber schlichter):
 **Bote** (`assets/sprites/units/`, 64 × 64): `messenger.png` – leichtfüssiger Läufer mit Schriftrolle und
 Umhängetasche (kämpft nie). Auf der Minikarte blinkt er als weiss umrandetes Quadrat.
 
-**UI-Symbole** (`assets/ui/icons/`, 32 × 32, transparent) – vorgesehen für Diplomatiefenster und Meldungen;
-das Fenster kommt zurzeit ohne sie aus (Text, Volksfarbe, Ruf-Balken):
-
-| Datei | Motiv |
-|---|---|
-| `icon_diplomacy.png` | zwei Hände beim Handschlag |
-| `icon_gift.png` | Geschenktruhe mit Schleife |
-| `icon_trade.png` | Waage mit zwei Säcken |
-| `icon_treaty_protection.png` | Schild über einem kleinen Haus |
-| `icon_treaty_trade.png` | Schriftrolle mit Münze |
-| `icon_treaty_alliance.png` | zwei gekreuzte Banner |
-| `icon_reputation.png` | Herz mit Stern |
+Diplomatiefenster, Verträge und Ruf kommen ohne eigene Symbole aus (Text, Volksfarbe, Ruf-Balken) – dafür
+sind keine Grafiken nötig.
 
 Haussymbol der Dörfer und Ringe (rot = Krieg, gold = Bündnis) auf der Minikarte, Gebietsgrenzen in der
 Volksfarbe und Ruf-Balken zeichnet das Spiel selbst. Händler/Karawane: siehe Phase 9 (`caravan_*.png`).
@@ -400,7 +390,8 @@ Fenster zeichnet das Spiel selbst.
 
 Tönung bei Nacht, Blitze, Seuchenwolken und Ereignisgebiete zeichnet das Spiel selbst.
 
-Völker-Einheiten der Gegenseite (eigene Kämpfer je Volk der KI-Reiche): Liste folgt.
+Die Völker der Königreiche (Spieler und KI) benutzen die Einheiten ihrer Fraktion (Phase 3); eigene Grafiken
+je Volk gibt es nur für Burgen (Phase 7) und Dörfer (Phase 6).
 
 ## ✅ Phase 9 – Belagerung und Handel
 
@@ -420,7 +411,25 @@ rotes ✕) und Karawanen auf der Minikarte (Goldquadrate) zeichnet das Spiel sel
 | `units/caravan_good.png` / `caravan_evil.png` | Ochsenkarren mit Kisten, helle Plane / dunkle Plane | 64 × 64 |
 | `effects/stone.png` | Felsbrocken (Geschoss) | 64 × 64 (wird klein gezeichnet) |
 
-## 🕓 Phase 10 – Völker
+## ✅ Phase 10 – Speichern, Einstellungen, Hilfe
 
-Volkswappen `people_<id>.png` (64 × 64, z. B. `people_humans.png`) für Menü und Reichsübersicht;
-Völker-Einheiten der Gegenseite (aus Phase 7 verschoben, Liste folgt).
+Keine neuen Grafiken: Speichern/Laden, Einstellungen, Hilfe (F1), Meldungsprotokoll (M), Sieg- und
+Niederlage-Bildschirm und Hauptmenü bestehen aus Text und gezeichneten Formen; der Hintergrund des
+Hauptmenüs ist `assets/ui/menu_background.png` (siehe „Menü“).
+
+Ton: Die Busse *Master*, *Music*, *SFX* und *UI* sind angelegt (Lautstärken in den Einstellungen); das Spiel
+spielt zurzeit keine Tondateien ab. Musik und Geräusche gehören später nach `assets/audio/music/` bzw.
+`assets/audio/sfx/` (OGG).
+
+## Übersicht der Ordner
+
+| Ordner | Inhalt (Phase) |
+|---|---|
+| `assets/sprites/terrain/` | Gelände je Biom, 4 Varianten (1) |
+| `assets/sprites/resources/` | Vorkommen auf der Karte (2) |
+| `assets/sprites/buildings/` | Gebäude je Fraktion (2–4, 7–9), Burgen je Volk (7), Dörfer und Hütten je Volk (6) |
+| `assets/sprites/units/` | Bewohner, König, Truppen je Fraktion (2–3), Monster (3, 8), Milizen und Volkskrieger (6), Bote (6), Spione (7), Flüchtlinge/Wanderer (8), Belagerungswaffen und Karawanen (9) |
+| `assets/sprites/heroes/` | Helden und Porträts (5) |
+| `assets/sprites/effects/` | Geschosse (3, 9), Ruinen (7), Ereignisflächen (8) |
+| `assets/ui/icons/` | Ressourcen (2), Zauber (4, 7), Ereignisse, Stimmung, Tageszeit (8) |
+| `assets/ui/` | Menü-Hintergrund |

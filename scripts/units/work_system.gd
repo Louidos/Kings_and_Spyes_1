@@ -17,6 +17,8 @@ signal jobs_changed(kingdom: Kingdom)
 
 ## Höchstens so viele Annahmestellen werden bei der Zielsuche verglichen
 const MAX_DROPOFF_CANDIDATES := 8
+## Gültigkeit einer erfolglosen Vorkommen-Suche für alle Sammler eines Reichs und Berufs (s)
+const FAIL_CACHE_SECONDS := 6.0
 ## Gewicht des einmaligen Anmarschs bei der Zielwahl. Der dauerhafte Arbeitsweg
 ## (Vorkommen <-> Annahmestelle, hin und zurück) zählt voll – so nutzen
 ## Sammler eine Hütte direkt am Vorkommen statt der weit entfernten Burg.
@@ -38,6 +40,8 @@ var _unreachable: Dictionary = {}
 ## Zählt Änderungen an Gebäuden/Reservierungen (zusammen mit
 ## WorldData.deposit_version: "hat sich seit der letzten Suche etwas getan?")
 var _local_version := 0
+## Zählt nur Änderungen an Gebäuden und Gebiet (für _gather_failed)
+var _building_version := 0
 ## Reich, für das gerade gesucht wird (_spiral_find/_cell_ok): fremdes Gebiet
 ## (Dörfer, andere Reiche) ist tabu, 0 = nicht prüfen
 var _search_kingdom_id := 0
@@ -48,6 +52,12 @@ var _wander_radius := 4
 var _max_thinks := 20
 var _tick_count := 0
 var _rng := RandomNumberGenerator.new()
+## "Reich-id:Beruf" -> {"t": Spielzeit, "local": _local_version}: letzte erfolglose Vorkommen-Suche.
+## Die Suche hängt nur von den Annahmestellen des Reichs ab (nicht vom Sammler): solange sich an
+## den Gebäuden nichts geändert hat, sucht innerhalb von FAIL_CACHE_SECONDS kein weiterer Sammler
+## desselben Reichs und Berufs (spart in langen Partien mit erschöpften Vorkommen viel Rechenzeit;
+## deposit_version ändert sich ständig, weil irgendwo immer ein Vorkommen leer wird). Laufzeit.
+var _gather_failed: Dictionary = {}
 ## Reich-id -> true: Bauarbeiter im nächsten Takt wecken (gebündelt, z. B. 60 Mauerstücke)
 var _wake_pending: Dictionary = {}
 
@@ -66,11 +76,15 @@ func setup(p_game: Node) -> void:
 	unit_system.path_failed.connect(_on_path_failed)
 	unit_system.unit_removed.connect(_on_unit_removed)
 	building_system.building_placed.connect(_on_building_placed)
-	building_system.building_completed.connect(func(_b: Building) -> void: _local_version += 1)
+	building_system.building_completed.connect(func(_b: Building) -> void:
+		_local_version += 1
+		_building_version += 1)
 	building_system.building_removed.connect(on_building_removed)
 	building_system.roads_changed.connect(_wake_all_builders)
 	# Gebiet gewechselt (Dorf aufgenommen, neues Gebäude): Sammelplätze neu suchen
-	game.territory.changed.connect(func(_kid: int, _bbox: Rect2i, _dirty: Rect2i) -> void: _local_version += 1)
+	game.territory.changed.connect(func(_kid: int, _bbox: Rect2i, _dirty: Rect2i) -> void:
+		_local_version += 1
+		_building_version += 1)
 
 
 # ---------------------------------------------------------------------------
@@ -246,6 +260,7 @@ func get_delivering_count(b: Building) -> int:
 ## Ein Gebäude wurde entfernt: Arbeiter freistellen, Verweise lösen.
 func on_building_removed(b: Building) -> void:
 	_local_version += 1
+	_building_version += 1
 	for u in b.kingdom.units.duplicate():
 		if u.work_building == b:
 			set_unit_job(u, "idle")
@@ -422,6 +437,12 @@ func _find_gather_work(u: Unit, job: Dictionary) -> void:
 		if u.failed_search_version == _version():
 			_wait(u, u.problem if not u.problem.is_empty() else str(job.get("hint", "")), job)
 			return
+		var fail_key := "%d:%s" % [u.kingdom.id, u.job_id]
+		var failed: Dictionary = _gather_failed.get(fail_key, {})
+		if not failed.is_empty() and int(failed["local"]) == _building_version \
+				and GameClock.game_time - float(failed["t"]) < FAIL_CACHE_SECONDS:
+			_wait(u, str(job.get("hint", "Nichts zu tun")), job)
+			return
 		# Neues Ziel: Arbeitsweg (hin und zurück) plus etwas Anmarsch, geteilt
 		# durch den Bonus der Annahmestelle. Die nächsten Annahmestellen zuerst;
 		# weiter entfernte nur, solange noch nichts gefunden wurde.
@@ -443,8 +464,10 @@ func _find_gather_work(u: Unit, job: Dictionary) -> void:
 		_search_kingdom_id = 0
 		if best_dropoff == null:
 			u.failed_search_version = _version()
+			_gather_failed[fail_key] = {"t": GameClock.game_time, "local": _building_version}
 			_wait(u, str(job.get("hint", "Nichts zu tun")), job)
 			return
+		_gather_failed.erase(fail_key)
 		_reserve(u, best_cell)
 
 	u.failed_search_version = -1
@@ -896,4 +919,5 @@ func rebuild_runtime() -> void:
 	_reservations.clear()
 	_site_workers.clear()
 	_unreachable.clear()
+	_gather_failed.clear()
 	_local_version += 1

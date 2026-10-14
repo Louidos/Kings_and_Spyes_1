@@ -2,9 +2,10 @@
 .godot/
 /android/
 *.translation
-export_presets.cfg
 export_credentials.cfg
 *.tmp
+# Exporte und Balancing-Ausgaben
+/build/
 
 # Betriebssystem
 .DS_Store

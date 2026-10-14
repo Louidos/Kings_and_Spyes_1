@@ -463,11 +463,14 @@ func cancel_or_demolish(b: Building) -> void:
 	remove_building(b, factor)
 
 
-## Der einzige Weg, ein Gebäude zu entfernen (Abriss, später auch Zerstörung).
-func remove_building(b: Building, refund_factor: float = 0.0) -> void:
+## Der einzige Weg, ein Gebäude zu entfernen (Abriss, Abbruch, Zerstörung).
+## destroyed = true: zerstört (Feind, Untergang) – die Beschwörungs-Warteschlange wird
+## dann nicht erstattet (nur bei eigenem Abriss bzw. Abbruch).
+func remove_building(b: Building, refund_factor: float = 0.0, destroyed: bool = false) -> void:
 	if not is_instance_valid(b) or not b.kingdom.buildings.has(b):
 		return
 	var kingdom := b.kingdom
+	b.destroyed = destroyed
 	if refund_factor > 0.0:
 		kingdom.refund(b.def.get("cost", {}), refund_factor)
 	var fp := b.get_footprint()

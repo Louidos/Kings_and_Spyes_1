@@ -50,6 +50,9 @@ var loot_factor := 1.0
 ## (z. B. Monsterhöhle: {"kinds", "size", "respawn", "last_fight"};
 ## Tor: {"locked"}; Turm: {"cd", "think", "target_uid"})
 var extra: Dictionary = {}
+## Wird gerade durch Zerstörung (Kampf, Untergang des Reichs) entfernt – nicht durch
+## eigenen Abriss oder Abbruch; dann gibt es keine Erstattung der Warteschlange (Laufzeit)
+var destroyed := false
 ## Mauerstück oder Tor (def.segment): zählt nicht als richtiges Gebäude (Phase 9)
 var is_segment := false
 ## Befestigung: "wall", "gate", "tower" oder "" (def.fortification)

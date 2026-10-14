@@ -74,6 +74,7 @@ func setup(p_game: Node) -> void:
 	var jump := _button(row, "Hinspringen", "Kamera zur Gruppe")
 	jump.pressed.connect(_on_jump_pressed)
 	get_viewport().size_changed.connect(_place)
+	Settings.changed.connect(_place)
 
 
 func _button(parent: Control, text: String, tip: String) -> Button:
@@ -150,9 +151,7 @@ func _refresh() -> void:
 func _place() -> void:
 	if not visible:
 		return
-	var vp := get_viewport_rect().size
-	size = Vector2(WIDTH, get_combined_minimum_size().y)
-	position = Vector2(floorf((vp.x - WIDTH) * 0.5), TOP)
+	UiStyle.place_window(self, WIDTH, TOP)
 
 
 ## Aufnehmen (auch Rauchtest)

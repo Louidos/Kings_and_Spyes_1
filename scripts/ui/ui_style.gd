@@ -41,6 +41,22 @@ static func _apply_layer(layer: CanvasLayer, s: float) -> void:
 	c.size = vp / s
 
 
+## Zentriertes Fenster (Forschung, Helden, Diplomatie, Spionage, Reich) oben mittig platzieren:
+## Grösse nach der UI-Grösse, bei kleinem Fenster verkleinert, aber nie ausserhalb.
+## top ist der Abstand unter der Leiste oben bei UI-Grösse 100 %.
+static func place_window(panel: Control, design_width: float, top: float) -> void:
+	var vp := panel.get_viewport_rect().size
+	var u := Settings.ui_scale
+	var want := Vector2(design_width, panel.get_combined_minimum_size().y)
+	panel.size = want
+	var top_px := top * u
+	var s := minf(u, minf((vp.x - 16.0) / want.x, (vp.y - top_px - 8.0) / want.y))
+	s = maxf(s, 0.4)
+	panel.scale = Vector2(s, s)
+	var y := clampf(top_px, 8.0, maxf(vp.y - want.y * s - 8.0, 8.0))
+	panel.position = Vector2(floorf((vp.x - want.x * s) * 0.5), floorf(y))
+
+
 ## Fenstertitel mit Schliessen-Knopf "✕" rechts (gleicher Stil in allen neuen Fenstern)
 static func make_title_bar(title: String, on_close: Callable) -> HBoxContainer:
 	var bar := HBoxContainer.new()

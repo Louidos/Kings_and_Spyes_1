@@ -719,7 +719,7 @@ func _destroy_village(v: Kingdom, by: Kingdom) -> void:
 	rec["status"] = "destroyed"
 	game.diplomacy_system.end_all_treaties(v, "destroyed")
 	for b in v.buildings.duplicate():
-		game.building_system.remove_building(b, 0.0)
+		game.building_system.remove_building(b, 0.0, true)
 	for u in get_militia(v):
 		game.unit_system.remove_unit(u)
 	rec["slots"] = {}

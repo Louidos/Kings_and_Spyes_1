@@ -172,10 +172,12 @@ func _spawn_slot(b: Building, base: Vector2, n: int) -> Vector2:
 	return base + right * (col - 1.5) * spacing + dir * (row + 0.5) * spacing
 
 
-## Abriss/Zerstörung: laufende Beschwörungen werden erstattet.
+## Eigener Abriss bzw. Abbruch: laufende Beschwörungen werden erstattet. Zerstört ein
+## Feind das Gebäude (oder fällt das Reich), ist der Einsatz verloren.
 func _on_building_removed(b: Building) -> void:
-	for entry in b.summon_queue:
-		b.kingdom.refund(entry.get("cost", {}))
+	if not b.destroyed:
+		for entry in b.summon_queue:
+			b.kingdom.refund(entry.get("cost", {}))
 	b.summon_queue.clear()
 
 

@@ -199,7 +199,7 @@ func _ruin_kingdom(k: Kingdom) -> void:
 		if not b.is_segment:
 			ruins.append({"cell": b.cell, "size": b.size, "until": until, "castle": b == k.castle,
 					"kingdom_id": k.id, "color": k.color.to_html(false)})
-		game.building_system.remove_building(b, 0.0)
+		game.building_system.remove_building(b, 0.0, true)
 	for c in game.building_system.get_road_sites(k):
 		game.building_system.remove_road(c)
 	var ds: DiplomacySystem = game.diplomacy_system

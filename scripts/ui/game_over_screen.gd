@@ -33,6 +33,8 @@ func _ready() -> void:
 	var root := Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
+	# UI-Grösse (Einstellungen) gilt auch für den Sieg-/Niederlage-Bildschirm
+	UiStyle.register_scaled_layer(self, root)
 	_dim = ColorRect.new()
 	_dim.color = DEFEAT_DIM
 	_dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

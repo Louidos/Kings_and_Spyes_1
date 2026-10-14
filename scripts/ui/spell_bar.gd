@@ -61,6 +61,8 @@ func setup(p_game: Node) -> void:
 	game.research_system.research_completed.connect(_on_research_completed)
 	game.spell_targeting.targeting_changed.connect(_on_targeting_changed)
 	get_viewport().size_changed.connect(_place)
+	# UI-Grösse: erst nachdem das HUD neu skaliert ist (gleiches Signal)
+	Settings.changed.connect(_place, CONNECT_DEFERRED)
 	visible = game.hud.visible
 	_refresh()
 	_place()
@@ -155,26 +157,27 @@ func _process(delta: float) -> void:
 		_refresh()
 
 
-## Rechts über der Minikarte, rechte Kante bündig mit ihr
+## Rechts über der Minikarte, rechte Kante bündig mit ihr. Die Minikarte liegt in der
+## skalierten HUD-Ebene: ihre Lage in Bildschirmpunkten kommt aus der Canvas-Transformation;
+## die Leiste selbst wächst mit der UI-Grösse.
 func _place() -> void:
 	if game == null:
 		return
 	var vp := get_viewport_rect().size
-	var margin := FALLBACK_MARGIN
+	var u := Settings.ui_scale
+	var right := vp.x - FALLBACK_MARGIN.x
+	var bottom := vp.y - FALLBACK_MARGIN.y
 	var mm: Variant = game.hud.get("minimap")
 	if is_instance_valid(mm) and mm is Control:
 		var panel := (mm as Control).get_parent() as Control
 		if panel != null and panel.size.y > 0.0:
-			var r := panel.get_global_rect()
-			margin = Vector2(maxf(vp.x - r.end.x, 0.0), maxf(vp.y - r.position.y, 0.0) + GAP)
-	set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	grow_vertical = Control.GROW_DIRECTION_BEGIN
-	offset_right = -margin.x
-	offset_bottom = -margin.y
-	offset_left = offset_right
-	offset_top = offset_bottom
+			var xf := panel.get_global_transform_with_canvas()
+			right = (xf * panel.size).x
+			bottom = (xf * Vector2.ZERO).y - GAP * u
+	set_anchors_preset(Control.PRESET_TOP_LEFT)
 	reset_size()
+	scale = Vector2(u, u)
+	position = Vector2(right - size.x * u, bottom - size.y * u).floor()
 
 
 func _refresh() -> void:

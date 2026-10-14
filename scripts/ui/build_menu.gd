@@ -24,7 +24,9 @@ const LOCKED_MODULATE := Color(0.62, 0.6, 0.6)
 const COLOR_BAD := Color(1.0, 0.45, 0.38)
 const COLOR_HINT := Color(0.74, 0.71, 0.66)
 ## Reiter des Baumenüs (buildings.json menu) und ihre Beschriftung
-const TABS := [["economy", "Dorf"], ["military", "Militär & Wissen"], ["defense", "Verteidigung"]]
+const TABS := [["economy", "Dorf", "Wohnen, Rohstoffe, Lager, Nahrung, Mana und Strassen"],
+		["military", "Militär & Wissen", "Kaserne, Forschung, Heldenhalle, Spionage und weitere Truppengebäude"],
+		["defense", "Verteidigung", "Mauern, Tore, Türme und Belagerungswerkstatt"]]
 
 
 ## Button des Baumenüs: farbiger Tooltip, bei gesperrten Gebäuden ein Schloss
@@ -79,6 +81,7 @@ func _ready() -> void:
 	for entry in TABS:
 		var t := Button.new()
 		t.text = str(entry[1])
+		t.tooltip_text = "Baumenü: %s" % str(entry[2])
 		t.toggle_mode = true
 		t.button_group = group
 		t.focus_mode = Control.FOCUS_NONE

@@ -89,13 +89,13 @@ func _rebuild(own: Array, foreign: Array, debug: bool) -> void:
 		var buttons := HBoxContainer.new()
 		buttons.add_theme_constant_override("separation", 6)
 		box.add_child(buttons)
-		buttons.add_child(_button("Hinspringen", _on_jump.bind(id)))
-		var reopen := _button("Weg freigeben", _on_reopen.bind(id))
+		buttons.add_child(_button("Hinspringen", _on_jump.bind(id), "Kamera zum Handelsweg bzw. zur Karawane"))
+		var reopen := _button("Weg freigeben", _on_reopen.bind(id), "Blockierten Weg neu suchen lassen")
 		buttons.add_child(reopen)
 		row["reopen"] = reopen
 		if debug:
-			buttons.add_child(_button("Karawane überfallen (Test)", _on_debug_kill.bind(id)))
-			buttons.add_child(_button("Abschneiden (Test)", _on_debug_cut.bind(id)))
+			buttons.add_child(_button("Karawane überfallen (Test)", _on_debug_kill.bind(id), "Debug (F3)"))
+			buttons.add_child(_button("Abschneiden (Test)", _on_debug_cut.bind(id), "Debug (F3)"))
 		_rows[id] = row
 	add_child(_header("Fremde Handelswege (gesichtet)"))
 	if foreign.is_empty():
@@ -108,7 +108,7 @@ func _rebuild(own: Array, foreign: Array, debug: bool) -> void:
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		line.add_child(l)
 		_foreign_labels.append(l)
-		line.add_child(_button("Hinspringen", _on_jump.bind(str(r["id"]))))
+		line.add_child(_button("Hinspringen", _on_jump.bind(str(r["id"])), "Kamera zum gesichteten Handelsweg"))
 	add_child(_label("Überfalle Karawanen für Beute – ihre Lieferungen fallen dann aus.", COLOR_DIM))
 	add_child(_header("Versorgung"))
 	var sl := HBoxContainer.new()
@@ -116,7 +116,7 @@ func _rebuild(own: Array, foreign: Array, debug: bool) -> void:
 	_supply_label = _label("", COLOR_TEXT)
 	_supply_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sl.add_child(_supply_label)
-	_supply_jump = _button("Hinspringen", _on_supply_jump)
+	_supply_jump = _button("Hinspringen", _on_supply_jump, "Kamera zum abgeschnittenen Gebiet")
 	sl.add_child(_supply_jump)
 
 
@@ -209,9 +209,10 @@ func _label(text: String, color: Color) -> Label:
 	return l
 
 
-func _button(text: String, cb: Callable) -> Button:
+func _button(text: String, cb: Callable, tip: String) -> Button:
 	var b := Button.new()
 	b.text = text
+	b.tooltip_text = tip
 	b.focus_mode = Control.FOCUS_NONE
 	b.add_theme_font_size_override("font_size", 14)
 	b.pressed.connect(cb)

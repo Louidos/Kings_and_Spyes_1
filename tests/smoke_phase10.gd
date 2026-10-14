@@ -37,6 +37,8 @@ var _cont_checked := false
 var _cont_base: Dictionary = {}
 var _quick_metrics: Dictionary = {}
 var _quick_until := 0.0
+## Tooltip-Prüfung: Pfad -> Text der Bedienelemente ohne Tooltip
+var _no_tip: Dictionary = {}
 
 
 func _init(p_runner: Node, p_game: Node, args: Dictionary) -> void:
@@ -155,10 +157,92 @@ func _s1() -> void:
 # S2 Oberfläche
 # ---------------------------------------------------------------------------
 
+## Sichtbare Knöpfe, Schieber und Auswahllisten unter root ohne Tooltip sammeln
+## (weder tooltip_text noch eigenes _get_tooltip/_make_custom_tooltip im Skript).
+## Ausnahme: Meldungseinträge (der Text ist die Meldung selbst).
+func _audit_tooltips(root: Node) -> void:
+	if root == null:
+		return
+	var stack: Array = [root]
+	while not stack.is_empty():
+		var n: Node = stack.pop_back()
+		if n is CanvasItem and not (n as CanvasItem).visible:
+			continue
+		if n.name == &"NotificationPanel":
+			continue
+		for c in n.get_children():
+			stack.append(c)
+		if not (n is BaseButton or n is Range) or n is ScrollBar or n is ProgressBar or n is TextureProgressBar:
+			continue
+		var c := n as Control
+		if not c.is_visible_in_tree() or c.mouse_filter == Control.MOUSE_FILTER_IGNORE or not c.tooltip_text.is_empty():
+			continue
+		if _has_custom_tooltip(c):
+			continue
+		var label := ""
+		if c is Button:
+			label = (c as Button).text
+		var scr: Script = c.get_script()
+		_no_tip[str(c.get_path())] = label + ("" if scr == null else " (%s)" % scr.resource_path.get_file())
+
+
+## Warteschlange: Erstattung nur bei eigenem Abriss, nicht bei Zerstörung (Plan §10.8)
+func _refund_test() -> void:
+	var k: Kingdom = game.player
+	# Einfaches Gebäude ohne Voraussetzungen (die Warteschlange gehört dem Gebäude, nicht dem Typ)
+	var def := DataDB.get_building("house")
+	var results: Array = []
+	var saved := k.resources.duplicate()
+	for destroyed in [true, false]:
+		for r in DataDB.resources:
+			k.resources[str(r["id"])] = maxf(k.get_amount(str(r["id"])), 500.0)
+		var b: Building = runner.call("_place_near_castle", def)
+		if b == null:
+			_fail("Erstattungstest: kein Wohnhaus platzierbar")
+			k.resources = saved
+			return
+		b.summon_queue.append({"type_id": "x", "progress": 0.0, "time": 10.0, "cost": {"wood": 7.0}})
+		var before := k.get_amount("wood")
+		game.building_system.remove_building(b, 0.0, destroyed)
+		results.append(k.get_amount("wood") - before)
+	k.resources = saved
+	_check(is_zero_approx(float(results[0])) and is_equal_approx(float(results[1]), 7.0),
+			"Warteschlange: zerstört %+.0f Holz, abgerissen %+.0f Holz" % [float(results[0]), float(results[1])])
+
+
+static func _has_custom_tooltip(c: Control) -> bool:
+	var s: Script = c.get_script()
+	while s != null:
+		for m in s.get_script_method_list():
+			var mname := str(m["name"])
+			if mname == "_get_tooltip" or mname == "_make_custom_tooltip":
+				return true
+		s = s.get_base_script()
+	return false
+
+
 func _s2() -> void:
 	var pm: Node = game.pause_menu
+	_no_tip.clear()
+	_audit_tooltips(game.hud)
+	# Auswahlfenster: Burg, König, alle eigenen Gebäudearten
+	var player: Kingdom = game.player
+	var seen_defs := {}
+	var picks: Array = [[player.king]] if is_instance_valid(player.king) else []
+	for b in player.buildings:
+		var def_id := str((b as Building).def.get("id", ""))
+		if not seen_defs.has(def_id):
+			seen_defs[def_id] = true
+			picks.append([b])
+	for pick in picks:
+		game.selection.select(pick)
+		game.hud.selection_panel._refresh()
+		_audit_tooltips(game.hud)
+	game.selection.clear()
 	game._open_pause_menu()
+	_audit_tooltips(pm)
 	pm.show_page("save")
+	_audit_tooltips(pm)
 	var panel: SaveLoadPanel = pm.get_save_panel()
 	panel.async_save = false
 	panel.set_name_text("Rauchtest Oberfläche")
@@ -177,6 +261,7 @@ func _s2() -> void:
 	_check(count == 1, "Liste enthält „Rauchtest Oberfläche“ genau einmal (%d)" % count)
 	game.save_game("smoke_p10_tmp", "Rauchtest Temp", "manual", false)
 	pm.show_page("load")
+	_audit_tooltips(pm)
 	var lp: SaveLoadPanel = pm.get_load_panel()
 	var rows: Array = lp.get_rows()
 	_check(rows.size() >= 2 and bool(rows[0]["compatible"]), "Ladeliste: %d Einträge, ladbar" % rows.size())
@@ -193,6 +278,7 @@ func _s2() -> void:
 	_check(not SaveManager.exists("smoke_p10_tmp"), "Spielstand gelöscht")
 	# Einstellungen
 	pm.show_page("settings")
+	_audit_tooltips(pm)
 	var form: SettingsForm = pm.get_settings_form()
 	form.set_values(1.25, 5, 0.6)
 	form.save_and_close()
@@ -205,9 +291,49 @@ func _s2() -> void:
 			and absf(AudioServer.get_bus_volume_db(0) - linear_to_db(0.6)) < 0.1, "Audio-Busse vorhanden, Lautstärke wirkt")
 	var hud_layer: CanvasLayer = game.hud
 	_check(is_equal_approx(hud_layer.scale.x, 1.25), "UI-Grösse 1,25 auf das HUD angewendet")
+	# Obere Leiste und Fenster passen bei jeder angebotenen UI-Grösse auf den Bildschirm
+	var vp_w: float = hud_layer.get_viewport().get_visible_rect().size.x
+	var bad: PackedStringArray = []
+	var hud_n: Node = game.hud
+	for ui_scale in [0.75, 1.0, 1.25, 1.5]:
+		Settings.ui_scale = ui_scale
+		Settings.apply()
+		if not hud_n.top_bar_fits():
+			bad.append("Leiste bei %d %%" % roundi(ui_scale * 100.0))
+		for open_name in ["toggle_research", "toggle_heroes", "toggle_diplomacy", "toggle_espionage", "toggle_kingdom"]:
+			if not hud_n.has_method(open_name):
+				continue
+			hud_n.call(open_name)
+			if is_equal_approx(ui_scale, 1.0):
+				_audit_tooltips(hud_n)
+			for win in [hud_n.research_panel, hud_n.hero_panel, hud_n.diplomacy_panel, hud_n.espionage_panel, hud_n.kingdom_panel]:
+				var c := win as Control
+				if c != null and c.visible:
+					var right := c.position.x + c.size.x * c.scale.x
+					if right > vp_w + 1.0 or c.position.x < -1.0 or c.scale.x > ui_scale + 0.01:
+						bad.append("%s bei %d %%" % [c.name, roundi(ui_scale * 100.0)])
+			hud_n.close_top_panel()
+	_check(bad.is_empty(), "Leiste und Fenster passen bei UI-Grösse 75–150 %%%s (Leiste bei 150 %%: ×%.2f, Reichsname %s)" % [
+			"" if bad.is_empty() else " – zu breit: " + ", ".join(bad), (hud_n.top_bar as Control).scale.x,
+			"sichtbar" if hud_n.kingdom_label.visible else "ausgeblendet"])
 	Settings.reset_defaults()
 	Settings.apply()
 	_check(is_equal_approx(hud_layer.scale.x, 1.0), "UI-Grösse zurück auf 1")
+	# Tooltip-Prüfung auch auf den übrigen Reitern der Fenster
+	var tabs := [[hud_n.research_panel, "toggle_research", [ResearchPanel.TAB_TREE, ResearchPanel.TAB_POINTS]],
+			[hud_n.hero_panel, "toggle_heroes", [HeroPanel.TAB_HEROES, HeroPanel.TAB_RECRUIT]],
+			[hud_n.diplomacy_panel, "toggle_diplomacy", [DiplomacyPanel.TAB_VILLAGES, DiplomacyPanel.TAB_REALMS, DiplomacyPanel.TAB_TRADE]],
+			[hud_n.espionage_panel, "toggle_espionage", [EspionagePanel.TAB_OVERVIEW, EspionagePanel.TAB_REALMS, EspionagePanel.TAB_SPIES]],
+			[hud_n.kingdom_panel, "toggle_kingdom", [KingdomPanel.TAB_SATISFACTION, KingdomPanel.TAB_EVENTS, KingdomPanel.TAB_PEOPLE, KingdomPanel.TAB_TRADE]]]
+	for entry in tabs:
+		var win: Node = entry[0]
+		if win == null:
+			continue
+		hud_n.call(str(entry[1]))
+		for tab in entry[2]:
+			win.call("show_tab" if win.has_method("show_tab") else "_show_tab", tab)
+			_audit_tooltips(win)
+		hud_n.close_top_panel()
 	pm.show_page("main")
 	pm.close()
 	# Autospeichern reihum
@@ -226,6 +352,7 @@ func _s2() -> void:
 	var hud: Node = game.hud
 	hud.toggle_help()
 	_check(hud.is_help_open(), "Hilfe (F1) offen")
+	_audit_tooltips(hud.help_panel)
 	var listed := HelpPanel.listed_actions()
 	var missing: Array = []
 	for action in InputMap.get_actions():
@@ -238,10 +365,18 @@ func _s2() -> void:
 	hud.close_top_panel()
 	hud.toggle_log()
 	_check(hud.is_log_open() and hud.message_log.get_shown_count() > 0, "Protokoll (M) zeigt %d Meldungen" % hud.message_log.get_shown_count())
+	_audit_tooltips(hud.message_log)
 	hud.message_log.set_filter("danger")
 	hud.message_log.set_filter("")
 	hud.close_top_panel()
 	_check(not hud.is_log_open(), "Esc schliesst das Protokoll")
+	_refund_test()
+	var tips: PackedStringArray = []
+	for path in _no_tip:
+		tips.append("%s „%s“" % [str(path).replace("/root/Game/", ""), str(_no_tip[path])])
+	for line in tips:
+		print("[smoke] Tooltip fehlt: " + line)
+	_check(tips.is_empty(), "Tooltip-Prüfung: %d Bedienelemente ohne Tooltip" % tips.size())
 
 
 # ---------------------------------------------------------------------------

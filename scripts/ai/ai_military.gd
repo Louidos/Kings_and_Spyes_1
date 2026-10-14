@@ -27,7 +27,8 @@ const HERO_WAVE_HP := 0.6
 # ---------------------------------------------------------------------------
 
 ## Soll-Grösse der Armee: Stützpunkte size_by_minute (linear dazwischen) × Faktor der
-## Schwierigkeit × Faktor der Persönlichkeit; vor economy_first_minutes höchstens early_fighters
+## Schwierigkeit × Faktor der Persönlichkeit (höchstens army.max_units); vor economy_first_minutes
+## höchstens early_fighters
 static func army_target(b: AIBrain, now: float) -> int:
 	var points: Array = DataDB.ai("army.size_by_minute", [[0, 2]])
 	var m := b.minutes(now)
@@ -41,6 +42,8 @@ static func army_target(b: AIBrain, now: float) -> int:
 				var span := maxf(float(q[0]) - float(p[0]), 0.001)
 				value = lerpf(float(p[1]), float(q[1]), clampf((m - float(p[0])) / span, 0.0, 1.0))
 	value *= float(b.diff.get("army_size_mult", 1.0)) * float(b.personality.get("army_mult", 1.0))
+	# Obergrenze je Reich (Leistung in sehr langen Partien)
+	value = minf(value, float(DataDB.ai("army.max_units", 90)))
 	if not b.time_ok(now, float(DataDB.ai("army.economy_first_minutes", 12))):
 		value = minf(value, float(DataDB.ai("army.early_fighters", 2)))
 	return maxi(roundi(value), int(b.st.get("debug_army_min", 0)))

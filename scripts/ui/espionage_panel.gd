@@ -166,6 +166,7 @@ func setup(p_game: Node) -> void:
 	esp.cloak_changed.connect(_on_changed.unbind(2))
 	game.victory_system.kingdom_fallen.connect(_on_changed.unbind(3))
 	get_viewport().size_changed.connect(_place)
+	Settings.changed.connect(_place)
 	minimum_size_changed.connect(_queue_place)
 	_show_tab(TAB_OVERVIEW)
 
@@ -525,6 +526,7 @@ func _build_spies(page: HBoxContainer) -> void:
 	l1.text = "Auftrag"
 	grid.add_child(l1)
 	_mission_option = _option()
+	_mission_option.tooltip_text = "Auftrag des Spions: auskundschaften, Dorf aufhetzen, Rivalen aufhetzen …"
 	for m in SpySystem.MISSIONS:
 		_mission_option.add_item(SpySystem.mission_name(str(m)))
 	_mission_option.item_selected.connect(_on_mission_selected)
@@ -533,11 +535,13 @@ func _build_spies(page: HBoxContainer) -> void:
 	l2.text = "Ziel"
 	grid.add_child(l2)
 	_target_option = _option()
+	_target_option.tooltip_text = "Ziel des Auftrags (Reich bzw. Dorf)"
 	_target_option.item_selected.connect(_on_target_selected)
 	grid.add_child(_target_option)
 	_target2_label = _label(16, COLOR_DIM)
 	grid.add_child(_target2_label)
 	_target2_option = _option()
+	_target2_option.tooltip_text = "Zweites Ziel (z. B. gegen wen aufgehetzt wird)"
 	_target2_option.item_selected.connect(_on_target2_selected)
 	grid.add_child(_target2_option)
 	_preview_label = _wrap_label(15, COLOR_DIM)
@@ -600,14 +604,7 @@ func _queue_place() -> void:
 
 ## Mitte oben; bei kleinem Fenster verkleinert, aber nie ausserhalb
 func _place() -> void:
-	var vp := get_viewport_rect().size
-	var want := Vector2(DESIGN_WIDTH, get_combined_minimum_size().y)
-	size = want
-	var s := minf(1.0, minf((vp.x - 16.0) / want.x, (vp.y - TOP - 8.0) / want.y))
-	s = maxf(s, 0.4)
-	scale = Vector2(s, s)
-	var top := clampf(TOP, 8.0, maxf(vp.y - want.y * s - 8.0, 8.0))
-	position = Vector2(floorf((vp.x - want.x * s) * 0.5), floorf(top))
+	UiStyle.place_window(self, DESIGN_WIDTH, TOP)
 
 
 # ---------------------------------------------------------------------------
@@ -756,6 +753,7 @@ func _rebuild_realm_list(list: Array, key: Array) -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.custom_minimum_size = Vector2(0, ENTRY_HEIGHT)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.tooltip_text = "%s – Klick: Kundschaft und Aufträge" % r.display_name
 		b.pressed.connect(_on_realm_pressed.bind(r.id))
 		_realm_list.add_child(b)
 		var box := VBoxContainer.new()
@@ -937,6 +935,7 @@ func _rebuild_spy_list(list: Array, key: Array) -> void:
 		b.focus_mode = Control.FOCUS_NONE
 		b.custom_minimum_size = Vector2(0, ENTRY_HEIGHT + 14.0)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.tooltip_text = "Spion – Klick: Auftrag wählen"
 		b.pressed.connect(select_spy.bind(u.uid))
 		_spy_list.add_child(b)
 		var box := VBoxContainer.new()

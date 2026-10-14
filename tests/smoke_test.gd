@@ -15,7 +15,8 @@
 ## Aufruf (im Projektordner):
 ##   godot --headless res://tests/smoke_test.tscn -- faction=good seconds=120 size=small seed=12345
 ##   weitere Argumente: ai=<Anzahl KI-Reiche>, p7=natural, p8=natural, passive=1, difficulty=<id>, people=<volk>,
-##   p10=off, p10_after=300
+##   p10=off, p10_after=300, ui_scale=1.25 (Bildschirmfotos mit grösserer Oberfläche)
+## Balancing (Phase 10): balance=1 sample=600 (tests/balance_phase10.gd; setzt p7/p8=natural, passive=1, p10=off)
 extends Node
 
 ## Prüfungen der Phase 6 (Dörfer, Diplomatie, Boten) in eigener Datei
@@ -24,6 +25,7 @@ const SmokePhase7 := preload("res://tests/smoke_phase7.gd")
 const SmokePhase8 := preload("res://tests/smoke_phase8.gd")
 const SmokePhase9 := preload("res://tests/smoke_phase9.gd")
 const SmokePhase10 := preload("res://tests/smoke_phase10.gd")
+const BalancePhase10 := preload("res://tests/balance_phase10.gd")
 
 var _args := {}
 var _game: Node = null
@@ -42,6 +44,7 @@ var _p8: RefCounted = null
 var _p9: RefCounted = null
 var _p10: RefCounted = null
 var _passive := false
+var _balance: RefCounted = null
 
 
 func _ready() -> void:
@@ -49,7 +52,18 @@ func _ready() -> void:
 		var parts := str(a).split("=", true, 1)
 		if parts.size() == 2:
 			_args[parts[0]] = parts[1]
+	if str(_args.get("balance", "0")) == "1":
+		for key in ["p7", "p8"]:
+			if not _args.has(key):
+				_args[key] = "natural"
+		if not _args.has("passive"):
+			_args["passive"] = "1"
+		if not _args.has("p10"):
+			_args["p10"] = "off"
 	_sim_seconds = float(_args.get("seconds", "120"))
+	# UI-Grösse für Bildschirmfotos (ui_scale=1.25); der Phase-10-Test setzt sie später zurück
+	if _args.has("ui_scale"):
+		Settings.ui_scale = clampf(float(_args["ui_scale"]), 0.75, 1.5)
 	_passive = str(_args.get("passive", "0")) == "1"
 	GameSession.ai_count_override = int(_args.get("ai", "-1"))
 	GameSession.setup_new_game(str(_args.get("faction", "good")), str(_args.get("difficulty", "normal")),
@@ -105,12 +119,16 @@ func _process(_delta: float) -> void:
 			_p7 = SmokePhase7.new(_game, _args)
 			_p8 = SmokePhase8.new(_game, _args)
 			_p10 = SmokePhase10.new(self, _game, _args)
+			if str(_args.get("balance", "0")) == "1":
+				_balance = BalancePhase10.new(_game, _args)
 		elif Time.get_ticks_msec() - _started_ms > 120000:
 			push_error("[smoke] Weltgenerierung dauert zu lange")
 			get_tree().quit(2)
 	elif _phase == 1:
 		if _hero_step >= 0 and GameClock.game_time >= _hero_wait_until:
 			_hero_test()
+		if _balance != null:
+			_balance.tick(GameClock.game_time)
 		if _p6 != null:
 			_p6.set("ui_ready", _hero_step < 0)
 			_p6.tick(GameClock.game_time)
@@ -123,6 +141,8 @@ func _process(_delta: float) -> void:
 			_p9.tick(GameClock.game_time)
 		if _p10 != null:
 			_p10.tick(GameClock.game_time, _hero_step < 0)
+		if _balance != null and GameClock.game_time >= _sim_seconds - 50.0:
+			_balance.report(GameClock.game_time)
 		if GameClock.game_time >= _sim_seconds:
 			_phase = 2
 			_report()

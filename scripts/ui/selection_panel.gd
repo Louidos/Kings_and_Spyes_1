@@ -845,7 +845,7 @@ func _refresh_summons(b: Building) -> void:
 				slot.set_meta("type_id", "")
 				icon.clear()
 			slot.disabled = true
-			slot.tooltip_text = ""
+			slot.tooltip_text = "Freier Platz der Warteschlange (Einheit oben anklicken)"
 	# Beide Fassungen haben genau zwei kurze Zeilen (Höhe bleibt gleich)
 	var queue_text := "Warteschlange leer\nEinheit oben anklicken"
 	if not queue.is_empty():

@@ -38,6 +38,10 @@ var max_ticks_per_frame: int = 12
 
 ## Verworfene Simulationsschritte (Rückstand bei zu langsamen Frames; Balancing-Messung)
 var dropped_ticks: int = 0
+## Rechenzeit der Simulationsschritte (Balancing-Messung): Summe, Höchstwert, Anzahl
+var tick_usec_total: int = 0
+var tick_usec_max: int = 0
+var tick_count: int = 0
 
 var _tick_accumulator: float = 0.0
 var _last_total_hours: int = 0
@@ -57,6 +61,9 @@ func _ready() -> void:
 func start_new_game() -> void:
 	game_time = 0.0
 	dropped_ticks = 0
+	tick_usec_total = 0
+	tick_usec_max = 0
+	tick_count = 0
 	_tick_accumulator = 0.0
 	_last_total_hours = _total_hours()
 	speed_index = clampi(int(DataDB.cfg("time.default_speed_index", 1)), 0, speed_steps.size() - 1)
@@ -84,7 +91,12 @@ func _process(delta: float) -> void:
 	while _tick_accumulator >= sim_tick_interval and ticks < max_ticks_per_frame:
 		_tick_accumulator -= sim_tick_interval
 		ticks += 1
+		var t0 := Time.get_ticks_usec()
 		sim_tick.emit(sim_tick_interval)
+		var used := Time.get_ticks_usec() - t0
+		tick_usec_total += used
+		tick_usec_max = maxi(tick_usec_max, used)
+		tick_count += 1
 	if ticks >= max_ticks_per_frame:
 		dropped_ticks += int(_tick_accumulator / sim_tick_interval)
 		_tick_accumulator = 0.0  # Rückstand verwerfen statt hinterherzulaufen

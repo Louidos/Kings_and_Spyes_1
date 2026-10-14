@@ -51,6 +51,7 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Spionage | K oder Button „Spionage · 42“ oben (Zahl und Strich = dein Entdeckungswert, roter Punkt = fremder Spion entdeckt oder ein Reich ist aufmerksamer geworden): Reiter „Übersicht“ (Ursachen, Reichstarnung), „Reiche & Dörfer“ (Kundschaft), „Spione“ (beschwören, Aufträge). Esc oder K schliesst |
 | Spion: Auftrag | Spion auswählen → „Auftrag (K)“ im Auswahlfenster, oder Spionagefenster, Reiter „Spione“: Auftrag, Ziel (und Zweitziel) wählen → „Auftrag erteilen“; „Zurückrufen“ holt ihn heim |
 | Handelswege | N → Reiter „Handelswege“ oder L → Reiter „Handel“: Karawanen, Ladung, Lieferungen, Verluste, „Weg freigeben“, gesichtete fremde Wege, Versorgung |
+| Belagerungswaffen | Forschung „Belagerungskunst“ → Belagerungswerkstatt (Baumenü → Verteidigung) auswählen → Rammbock / Katapult (BÖSE: Sturmbock / Schädelschleuder) beschwören → Rechtsklick auf ein feindliches Gebäude, Tor oder Mauerstück |
 | Krieg gegen ein Dorf | mit eigenen Truppen zweimal Rechtsklick (innerhalb von 3 s) auf eine Einheit oder ein Gebäude des Dorfs – der erste Klick warnt nur – oder „Krieg erklären“ im Diplomatiefenster |
 | Reichsübersicht | L oder Button „Reich“ oben (Zufriedenheit, Ereignisse, Volk und Tageszeit, Handel; Esc oder L schliesst). Gesicht in der Ressourcenleiste und Sonne/Mond neben dem Datum öffnen sie ebenfalls |
 | Flüchtlinge aufnehmen | Meldung, Ereignisleiste (oben Mitte) oder einen Flüchtling anklicken → „Aufnehmen“ / „Abweisen“ |
@@ -61,6 +62,7 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Meldungsprotokoll | M oder Knopf „Protokoll (M)“ über den Meldungen: alle Meldungen der Partie, Filter, Klick springt zur Stelle |
 | Schnellspeichern / Schnellladen | F5 / F8 (vorige Schnellspeicherung bleibt als Sicherung) |
 | Spielmenü | Esc (wenn kein Fenster offen ist und nichts gebaut/ausgewählt wird): Fortsetzen, **Speichern**, **Laden**, **Einstellungen**, Hilfe, Hauptmenü, Beenden |
+| Grösse der Oberfläche | Esc → Einstellungen → „Grösse der Oberfläche“ (75–150 %; wirkt sofort auf HUD, Fenster, Menüs) |
 | Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu, F11 setzt 3 Wölfe an die Maus, Umschalt+F11 einen Übungsgolem, Strg+F11 einen feindlichen Rammbock (marschiert zur Burg), F12 gibt dem ausgewählten Helden eine Stufe (zum Testen); im Spionagefenster erscheinen Debug-Knöpfe (Aufmerksamkeit, Kundschaft, KI-Angriff, KI-Reich besiegen, Rivalen-Krieg), in der Reichsübersicht (L) Knöpfe für Ereignisse, Zufriedenheit und Tageszeit |
 
 Alle Tasten lassen sich im Editor unter *Projekt → Projekteinstellungen → Eingabe-Zuordnung* ändern.
@@ -115,6 +117,11 @@ assets/
   sprites/                 terrain/, units/, buildings/, heroes/, resources/, effects/
   ui/                      Theme (theme.tres), Icons, Menü-Hintergrund
   audio/                   music/, sfx/
+tests/                   Prüfungen ohne Fenster
+  check_scripts.sh         alle Skripte auf Fehler und Warnungen prüfen
+  run_smoke.sh             Rauchtest beider Fraktionen (smoke_test.tscn + smoke_phase6…10.gd)
+  run_balance.sh           Balancing-Läufe (balance_phase10.gd), Ausgabe nach build/balance
+export_presets.cfg       Export-Vorlagen Windows/Linux (ohne Zugangsdaten)
 ```
 
 ## Aufbau (Architektur)
@@ -606,22 +613,103 @@ Tipp: F3 an, F9 = Rohstoffe.
   KI, Nachwuchs der Monsterlager; ab Phase 8 auch Streifzüge und Ereignisse. Beim Laden neu gesetzt.
 - **Einstellungen** (`Settings`, `SettingsForm` im Haupt- und Spielmenü): Lautstärken (Busse Master, Music,
   SFX, UI), Kamera, Vollbild, Grösse der Oberfläche, Tag-Nacht-Abdunklung, automatisch speichern, Kompression.
+- **UI-Grösse** (`UiStyle`): HUD, Spielmenü, Hilfe, Protokoll und Sieg/Niederlage sind als Ebenen angemeldet
+  (`register_scaled_layer`: Ebene skaliert, Wurzel = Viewport / Faktor); die zentrierten Fenster platzieren sich
+  mit `UiStyle.place_window` (Faktor, aber nie grösser als der Bildschirm), die Zauberleiste folgt der
+  skalierten Minikarte. Die obere Leiste passt sich an (`hud._fit_top_bar`: Reichsname ausblenden, sonst
+  verkleinern).
 
-## Phase 10 testen (Entwurf)
+## Phase 10 testen
 
 1. Neues Spiel, ein paar Minuten spielen, **F5**, ein Gebäude abreissen, **F8** → alles wie vorher (Gebäude im
    Bau, Warteschlangen, Sammelpunkte, Helden, Zauberzonen, Monsterlager).
 2. **Esc → Speichern** mit Namen; noch einmal mit gleichem Namen → Rückfrage „überschreiben?“.
 3. **Hauptmenü → Laden**: Liste mit Datum, Spielzeit, Fraktion, Schwierigkeit, Karte, Seed; Löschen mit
-   Rückfrage; „Fortsetzen“ lädt den neuesten Spielstand.
+   Rückfrage; „Fortsetzen“ lädt den neuesten Spielstand. Unten rechts steht „Version 1.0.0“.
 4. **Einstellungen**: Autospeichern 5 min → nach 5 min Hinweis „Automatisch gespeichert“ oben rechts,
    höchstens 3 Autospeicherstände.
-5. Grösse der Oberfläche 125 % → HUD und Menüs grösser.
+5. Grösse der Oberfläche **125 %** und **150 %** → HUD, Zauberleiste, alle Fenster (Forschung, Helden,
+   Diplomatie, Spionage, Reich, Flüchtlinge, Hilfe, Protokoll, Sieg/Niederlage) und Menüs werden grösser,
+   Klicks treffen weiter. Die obere Leiste passt immer auf den Bildschirm: zuerst wird der Reichsname
+   ausgeblendet (steht dann im Tooltip von „Reich“), reicht das nicht, wird die Leiste als Ganzes etwas
+   verkleinert.
 6. **F1** Hilfe (Steuerung, Spielablauf, Schwierigkeit), **M** Protokoll mit Klick zur Stelle.
 7. Schwierigkeit *Leicht*: Monster schwächer (Auswahlfenster einer Höhle), mehr Startvorräte; *Episch*: frühe,
    grosse Wellen.
-8. Rauchtest `tests/run_smoke.sh 900` – enthält den Rundlauf Speichern → Laden in eine frische Szene → Vergleich
-   → Weiterspielen (abschaltbar mit `p10=off`).
+8. Eine Kaserne mit voller Warteschlange abreissen → Kosten zurück; wird sie von Feinden zerstört, ist der
+   Einsatz verloren.
+9. Jeder Knopf hat einen Tooltip (der Rauchtest prüft HUD, alle Fenster mit allen Reitern und das Spielmenü).
+10. Rauchtest `tests/run_smoke.sh 1200` – enthält den Rundlauf Speichern → Laden in eine frische Szene →
+   Vergleich → Weiterspielen (abschaltbar mit `p10=off`), die UI-Grössen-Prüfung und die Tooltip-Prüfung.
+   Balancing: `tests/run_balance.sh` (siehe unten).
+
+## Balancing
+
+Gemessen mit `tests/run_balance.sh` (Modul `tests/balance_phase10.gd`, Aufruf `balance=1`): echte KI, Spieler
+tut nichts (passiv), Karte *medium*, 2 KI-Reiche, 3 Spielstunden (10 800 s = 18 Spieltage) je Fraktion und
+Schwierigkeit, ohne Fenster im Zeitraffer. Alle `sample=` Spielsekunden eine Zeile je Reich, am Ende
+Ergebnis, Leistung und die Grösse aller Listen der Systeme (`[balance] LISTEN …`).
+
+Ergebnisse (Stand 1.0, Seed 12345; „unverwundbar“ = `immortal=1`, Burg und König des passiven Spielers
+werden geheilt, damit der Lauf die vollen 3 Stunden geht):
+
+| Lauf | Erste Welle gegen den Spieler | Wellen in 3 h | Passiver Spieler fällt | Ereignisse beim Spieler (alle Reiche) | KI nach 3 h (Gebäude / Einheiten / Armee) | Ø Zufriedenheit KI |
+|---|---|---|---|---|---|---|
+| Normal, GUT, medium | 72 min | 3 | nach 101 min | 2 (5), erstes nach 29 min | 149 / 200 / 38 | 72–82 |
+| Normal, BÖSE, medium | 71 min | 5–8 | nach 100 min | 2 (5), erstes nach 29 min | 136 / 164 / 38 | 81–83 |
+| Schwer, GUT, medium | 61 min | – | nach 65 min | 1 (2) in 65 min | 61 / 119 / 23 (bei 65 min) | 78 |
+| Schwer, BÖSE, medium | 54 min | – | nach 64 min | 1 (2) in 64 min | 58 / 118 / 23 (bei 64 min) | 88 |
+| Schwer, GUT, large (unverwundbar) | 63 min | 10 (12 → 24 Einheiten) | – | 3 (7), erstes nach 23 min | 51–82 / 140–195 / 50 | 71–76 |
+
+- Die KI wächst über die ganze Zeit (Armee-Soll bis 32 Spielstunden, höchstens 90 je Reich), greift den
+  Spieler frühestens nach `first_attack_minutes` und erst nach Kundschaft an; Wellen kommen danach etwa alle
+  `wave_interval` und werden je Welle um 3 Einheiten grösser.
+- Ereignisse bleiben selten (2–3 beim Spieler in 3 Stunden, frühestens nach 20 min); Monster wachsen bis etwa
+  zum Doppelten des Starts (medium 52 → 98, large 198 → 371) und bleiben dort.
+- Zufriedenheit: KI-Reiche 70–90; ein passiver Spieler ohne Häuser und Nahrung sinkt auf 25–45 (Überläufer 2–9
+  in 3 h) – so gewollt.
+- Leistung (ohne Fenster, eine Partie je Kern): Simulationsschritt Ø 5,1 ms (medium, 580 Einheiten) bzw.
+  6,4 ms (large, 860 Einheiten), bei 10 Schritten je Spielsekunde also 5–6 % eines Kerns bei 1x;
+  KI-Denkzeit Ø 2,8–3,6 ms je Denkvorgang (ein Reich alle paar Sekunden). Grösste Posten: Kampf, Arbeit,
+  Monster.
+- Listen über lange Partien: Meldungsprotokoll höchstens 300, Ereignisverlauf 20, Ruf-Verlauf 8 je Dorf;
+  alle übrigen Laufzeit-Listen hängen an lebenden Einheiten/Gebäuden und werden mit ihnen aufgeräumt
+  (`[balance] LISTEN gewachsen` meldet nur das Protokoll bis zu seiner Grenze).
+- Phase-10-Anpassungen: `ai.json` → `difficulty.*.patience_minutes` (neu, vorher fest 120 min: ein stiller
+  Spieler wurde auf Normal erst nach etwa 140 min angegriffen), `army.size_by_minute` bis 1920 min und
+  `army.max_units`; im Code ein Zwischenspeicher für erfolglose Vorkommen-Suchen (Arbeit 4–6 ms → 1,4 ms je
+  Schritt in späten Partien).
+
+**Selbst nachjustieren** (nur Daten, kein Code):
+
+| Was | Datei → Schlüssel |
+|---|---|
+| Wie früh/hart die KI angreift | `ai.json` → `difficulty.<stufe>`: `first_attack_minutes`, `patience_minutes`, `wave_interval`, `first_wave_max`, `army_size_mult` |
+| Wachstum der KI-Armee über lange Partien | `ai.json` → `army.size_by_minute` (bis 32 h), `army.max_units` |
+| Wie schnell die KI den Spieler bemerkt | `espionage.json` → `awareness` (`rise_per_minute`, `rumour`, `discovered`, `patience_floor`) |
+| Stärke/Ertrag der Gegner, Startvorräte | `difficulties.json` |
+| Häufigkeit der Ereignisse | `events.json` (`chance`, Abstände, Abklingzeiten) |
+| Monsterstreifzüge, Wachstum der Lager | `combat.json` (`raids`, `lair_growth`) |
+| Zufriedenheit, Überläufer | `satisfaction.json` |
+| Wirtschaft (Ertrag, Verbrauch) | `economy.json`, `buildings.json` |
+
+## Exportieren
+
+1. Im Editor **Editor → Export-Vorlagen verwalten** → Vorlagen für die eigene Godot-Version (z. B. 4.4.1)
+   herunterladen.
+2. `export_presets.cfg` liegt im Projekt (ohne Zugangsdaten): „Windows Desktop“ und „Linux“, je 64 Bit,
+   PCK eingebettet, `include_filter="data/*.json"` (die Spieldaten), `exclude_filter="tests/*"`.
+3. Einmal importieren, dann exportieren:
+   ```
+   godot --headless --import
+   godot --headless --export-release "Windows Desktop" build/windows/Koenigreiche.exe
+   godot --headless --export-release "Linux" build/linux/koenigreiche.x86_64
+   ```
+   Ohne Vorlagen lässt sich nur das Datenpaket bauen: `godot --headless --export-pack "Linux" build/koenigreiche.pck`
+   (Start: `godot --main-pack build/koenigreiche.pck`).
+4. Spielstände und Einstellungen liegen ausserhalb des Programmordners: Windows `%APPDATA%\Koenigreiche`,
+   Linux `~/.local/share/Koenigreiche` (siehe „Speichern und Laden“). Eigene Grafiken (`assets/…`, siehe
+   `assets_liste.md`) vor dem Export ins Projekt legen.
 
 ## Grafiken austauschen
 
@@ -640,5 +728,4 @@ beim nächsten Start automatisch verwendet – ohne Code-Änderung.
 - [x] Phase 7 – Gegnerische Königreiche mit KI, Entdeckung, Spionage
 - [x] Phase 8 – Zufriedenheit, Verrat, Flüchtlinge, Ereignisse, Monster, Tag/Nacht
 - [x] Phase 9 – Belagerungen und Handelswege
-- [ ] Phase 10 – Speichern/Laden, Schwierigkeitsgrade, UI-Feinschliff, Balancing (Speichern/Laden,
-  Schwierigkeit, Einstellungen, Hilfe und Protokoll fertig; Balancing folgt)
+- [x] Phase 10 – Speichern/Laden, Schwierigkeitsgrade, UI-Feinschliff, Balancing

@@ -104,6 +104,7 @@ func setup(p_game: Node) -> void:
 	es.offer_resolved.connect(func(_o: Dictionary, _a: bool) -> void: _dirty = true)
 	game.day_night_system.phase_changed.connect(func(_p: String) -> void: _dirty = true)
 	get_viewport().size_changed.connect(_place)
+	Settings.changed.connect(_place)
 	minimum_size_changed.connect(func() -> void:
 		if visible:
 			_place.call_deferred())
@@ -309,12 +310,14 @@ func _build_events(page: VBoxContainer) -> void:
 	page.add_child(_event_debug)
 	_debug_event_option = OptionButton.new()
 	_debug_event_option.focus_mode = Control.FOCUS_NONE
+	_debug_event_option.tooltip_text = "Debug (F3): Ereignis zum Auslösen"
 	for e in DataDB.get_events():
 		_debug_event_option.add_item(str((e as Dictionary).get("name", "")))
 		_debug_event_option.set_item_metadata(_debug_event_option.item_count - 1, str((e as Dictionary)["id"]))
 	_event_debug.add_child(_debug_event_option)
 	_debug_target_option = OptionButton.new()
 	_debug_target_option.focus_mode = Control.FOCUS_NONE
+	_debug_target_option.tooltip_text = "Debug (F3): betroffenes Reich"
 	_event_debug.add_child(_debug_target_option)
 	for entry in [["Auslösen", "trigger"], ["Alle beenden", "end_all"], ["Monsterstreifzug", "raid"]]:
 		var b := _small_button(str(entry[0]), "Debug (F3)")
@@ -736,14 +739,7 @@ func debug_action(action: String) -> void:
 func _place() -> void:
 	if not visible:
 		return
-	var vp := get_viewport_rect().size
-	var want := Vector2(DESIGN_WIDTH, get_combined_minimum_size().y)
-	size = want
-	var s := minf(1.0, minf((vp.x - 16.0) / want.x, (vp.y - TOP - 8.0) / want.y))
-	s = maxf(s, 0.4)
-	scale = Vector2(s, s)
-	var top := clampf(TOP, 8.0, maxf(vp.y - want.y * s - 8.0, 8.0))
-	position = Vector2(floorf((vp.x - want.x * s) * 0.5), floorf(top))
+	UiStyle.place_window(self, DESIGN_WIDTH, TOP)
 
 
 func _panel_style() -> StyleBoxFlat:

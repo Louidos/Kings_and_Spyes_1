@@ -240,6 +240,16 @@ func move_direct(u: Unit, target: Vector2, max_tiles: float = 4.0) -> void:
 	u.has_path_final = false
 	u.path_bounds = Rect2i(world.world_to_cell(u.position), Vector2i.ZERO).expand(world.world_to_cell(target))
 	u.moving = dist > 0.5
+	if not u.moving:
+		# Schon am Ziel: trotzdem "angekommen" melden (verzögert, wie nach einer Bewegung),
+		# sonst warten Empfänger (Arbeit, Befehle) vergeblich
+		u.path = PackedVector2Array()
+		_emit_arrived_deferred.call_deferred(u)
+
+
+func _emit_arrived_deferred(u: Unit) -> void:
+	if is_instance_valid(u) and u.is_alive() and not u.moving and not u.path_pending:
+		arrived.emit(u)
 
 
 ## Führt die gerade Linie von a nach b an keiner blockierten Kachel vorbei? Kein
@@ -272,7 +282,7 @@ func get_unit_at(pos: Vector2, radius: float, kingdom: Kingdom = null) -> Unit:
 	var best: Unit = null
 	var best_d := radius * radius
 	for u in units:
-		if u.inside != null or (kingdom != null and u.kingdom != kingdom):
+		if u.inside != null or not u.is_alive() or (kingdom != null and u.kingdom != kingdom):
 			continue
 		var d: float = u.position.distance_squared_to(pos)
 		if d <= best_d:
