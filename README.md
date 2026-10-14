@@ -41,8 +41,9 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Forschung | R oder Button „Forschung (R)“ oben: Forschungsbaum und Reiter „Kampfpunkte“ (Esc oder R schliesst) |
 | Zaubern | Zauber in der Zauberleiste (unten rechts) anklicken → Kreis an die Stelle führen → Linksklick; Rechtsklick/Esc bricht ab |
 | Heldenfenster | G oder Button „Helden (G)“ oben: eigene Helden (Stufenwahl, Ausbildung, Wiederbelebung) und Anwerben |
-| Helden auswählen | Heldenleiste links (Klick wählt, Doppelklick springt hin) – Helden sind auch Teil von Armeen |
-| Heldenfähigkeiten | C / V / B (oder die Knöpfe im Auswahlfenster) – auch wenn die ganze Armee ausgewählt ist; Tab wechselt den Helden; Rechtsklick auf einen Knopf schaltet „selbst auslösen“ um |
+| Helden auswählen | Heldenleiste unten links über dem Infobereich (Klick wählt, Doppelklick springt hin, Rechtsklick öffnet das Heldenfenster; gefallener Held: Klick belebt wieder, sobald es geht) – Helden sind auch Teil von Armeen |
+| Heldenfähigkeiten | C / V / B (oder die Knöpfe im Auswahlfenster) – auch wenn die ganze Armee ausgewählt ist; Tab wechselt den Helden; Rechtsklick auf einen Knopf schaltet „selbst auslösen“ um (goldener Rahmen). Fähigkeiten mit Ziel: Feind bzw. Stelle anklicken, Rechtsklick/Esc bricht ab |
+| Meldungen | Klick springt zur Stelle; Meldungen zur Stufenwahl oder Wiederbelebung öffnen das Heldenfenster |
 | Arbeitsverteilung ein/aus | J |
 | Spielmenü | Esc (wenn kein Fenster offen ist und nichts gebaut/ausgewählt wird) |
 | Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu, F11 setzt 3 Wölfe an die Maus, Umschalt+F11 einen Übungsgolem, F12 gibt dem ausgewählten Helden eine Stufe (zum Testen) |
@@ -112,6 +113,12 @@ assets/
   `MagicSystem` (Zauber des Königs: Wirkungen, Wettergebiete, Tarnung, Beschwörung),
   `HeroSystem` (Helden: Anwerben über die Beschwörungs-Warteschlange der Heldenhalle, Erfahrung, Stufen mit
   Wahl, Fähigkeiten, Führung, Tod und Wiederbelebung).
+- **Helden-Oberfläche** (`scripts/ui/`): `HeroPanel` (Heldenfenster G, Reiter „Meine Helden“ und „Anwerben“),
+  `HeroBar` (Heldenleiste), `HeroSelectionBox` (Helden-Abschnitt im Auswahlfenster: Fähigkeiten, Burg:
+  Wiederbeleben, Halle: Ausbildung), `AbilityButton` (Fähigkeitsknopf auf Basis des Zauberknopfs),
+  `HeroPortrait`, `HeroUI` (gemeinsame Texte). Fähigkeiten mit Ziel nutzen den Zielmodus von
+  `SpellTargeting` (`start_ability`), der aktive Held einer Auswahl steht im `SelectionController`
+  (`get_focus_hero`, `cycle_hero`). Alles ruft nur die Schnittstelle des `HeroSystem` auf.
 - **Helden** sind Einheiten mit Rolle `hero`; ihr Zustand (Stufe, Erfahrung, Ränge, Talente, Tod) liegt als
   einfacher Eintrag in `Kingdom.heroes`, alles Abgeleitete (Werte, Auren, Mana-Zuschläge) baut
   `HeroSystem.rebuild_runtime()` neu auf. Ein wiederbelebter Held bekommt dieselbe Einheitennummer und bleibt
@@ -252,7 +259,8 @@ Wölfe und Umschalt+F11 einen Übungsgolem (viel Leben, Rüstung) an die Maus. I
 F3-Modus zusätzlich Knöpfe „+1 Stufe“, „Abklingzeiten“, „Sofort wiederbeleben“ und „Held fällt“.
 
 1. Kaserne bauen, dann die **Heldenhalle** (BÖSE: *Halle der Schatten*; braucht eine Kaserne, nur eine pro
-   Reich). **G** oder „Helden (G)“ oben öffnet das Heldenfenster, Reiter „Anwerben“: drei Helden je Fraktion
+   Reich). **G** oder „Helden (G)“ oben öffnet das Heldenfenster, Reiter „Anwerben“ (oder die Halle anklicken
+   → „Helden anwerben“ im Auswahlfenster): drei Helden je Fraktion
    (GUT: Paladin, Sternenmagierin, Waldläuferin – BÖSE: Nekromant, Kriegsherr, Klingentänzerin).
 2. Einen Helden anwerben (Nahrung, Erz, Mana; jeder weitere Held kostet mehr). Nach 30 Sekunden erscheint er
    an der Halle, mit eigenem Namen. Jeden Typ gibt es einmal, höchstens drei Helden.

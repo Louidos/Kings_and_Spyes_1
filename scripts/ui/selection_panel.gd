@@ -79,6 +79,9 @@ var _research_button: Button
 
 # Beschwören
 var _summon_box: VBoxContainer
+var _summon_header: Label
+## Sammelpunkt-Zeile (bei der Heldenhalle aus: Helden erscheinen an der Halle)
+var _rally_row: HBoxContainer
 var _summon_list: VBoxContainer
 ## Je Einheitentyp: {"id", "def", "button", "row", "costs": {res_id: [Label, Menge]}}
 var _summon_entries: Array = []
@@ -386,9 +389,13 @@ func _show_building(b: Building) -> void:
 	_hero_box.show_building(b if own else null)
 
 	# Beschwören (nur eigene, fertige Gebäude)
-	var can_summon := own and b.constructed and not summons.is_empty()
+	# Heldenhalle: Anwerben über dieselben Knöpfe (Angebote vom HeroSystem), ohne Sammelpunkt
+	var hero_hall := bool(b.def.get("hero_hall", false))
+	var can_summon := own and b.constructed and (not summons.is_empty() or hero_hall)
 	_summon_box.visible = can_summon
 	if can_summon:
+		_set_label_text(_summon_header, "Helden anwerben" if hero_hall else "Beschwören")
+		_rally_row.visible = not hero_hall
 		_refresh_summons(b)
 
 	# Arbeiter
@@ -534,8 +541,8 @@ func _build_summon_box(parent: Control) -> void:
 	_summon_box = VBoxContainer.new()
 	_summon_box.add_theme_constant_override("separation", 4)
 	parent.add_child(_summon_box)
-	var header := _make_label(_summon_box, 15, COLOR_TITLE)
-	header.text = "Beschwören"
+	_summon_header = _make_label(_summon_box, 15, COLOR_TITLE)
+	_summon_header.text = "Beschwören"
 	_summon_list = VBoxContainer.new()
 	_summon_list.add_theme_constant_override("separation", 4)
 	_summon_box.add_child(_summon_list)
@@ -570,7 +577,8 @@ func _build_summon_box(parent: Control) -> void:
 
 	# Sammelpunkt: Hinweis und (falls gesetzt) "löschen"; feste Höhe, auch wenn
 	# der Löschen-Button erscheint und der Hinweis dadurch umbricht
-	var rally_row := HBoxContainer.new()
+	_rally_row = HBoxContainer.new()
+	var rally_row := _rally_row
 	rally_row.add_theme_constant_override("separation", 6)
 	rally_row.custom_minimum_size = Vector2(0, 42)
 	_summon_box.add_child(rally_row)

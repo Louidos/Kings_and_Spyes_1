@@ -201,7 +201,8 @@ Zauberleiste zeichnet das Spiel selbst.
 
 **Helden** (`assets/sprites/heroes/`): Figur 64 × 64 (transparent, von oben, Blick nach unten, etwas
 grösser und prächtiger als normale Einheiten) und Porträt 128 × 128 (Brustbild, für Heldenfenster und
-Heldenleiste). Fehlt eine Datei, zeichnet das Spiel einen Kreis in der Heldenfarbe mit Buchstaben.
+Heldenleiste). Fehlt eine Datei, zeichnet das Spiel einen Kreis in der Heldenfarbe mit Buchstaben (als
+Porträt auf dunklem Grund in der Heldenfarbe, gefallene Helden grau).
 
 | Figur | Porträt | Held | Aussehen |
 |---|---|---|---|

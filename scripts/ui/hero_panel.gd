@@ -118,12 +118,16 @@ func setup(p_game: Node) -> void:
 	_accent = ResearchPanel.EVIL_ACCENT if _evil else ResearchPanel.GOOD_ACCENT
 	_light = ResearchPanel.EVIL_LIGHT if _evil else ResearchPanel.GOOD_LIGHT
 	add_theme_stylebox_override("panel", _panel_style())
+	# Feste Breite: umbrechende Texte kennen so ihre Breite (sonst wird das Fenster sehr hoch)
+	custom_minimum_size = Vector2(DESIGN_WIDTH, 0)
 	_build()
 	var hs: HeroSystem = game.hero_system
 	hs.heroes_changed.connect(_on_heroes_changed)
 	hs.xp_gained.connect(_on_xp_gained)
 	game.summon_system.queue_changed.connect(_on_queue_changed)
 	get_viewport().size_changed.connect(_place)
+	# Inhalt ändert die Höhe (Stufenwahl, Debug-Zeile): Lage nachführen
+	minimum_size_changed.connect(_queue_place)
 	_show_tab(TAB_HEROES)
 
 
@@ -503,6 +507,11 @@ func _show_tab(tab: String) -> void:
 	_confirm_hero = 0
 	if visible:
 		_refresh()
+
+
+func _queue_place() -> void:
+	if visible:
+		_place.call_deferred()
 
 
 ## Mitte oben; bei kleinem Fenster verkleinert, aber nie ausserhalb

@@ -7,8 +7,9 @@
 ##   mit Abklingzeit, Rang und goldenem Rahmen für "selbst auslösen"
 ##   (Rechtsklick schaltet um). Fähigkeiten mit Ziel starten den Zielmodus.
 ## - Burg: je gefallenem Helden "Wiederbeleben: <Name>" (Restzeit, Kosten im Tooltip)
-## - Heldenhalle: je lebendem Helden "Ausbilden: <Name>" und "Heldenfenster öffnen (G)"
-##   (Anwerben läuft über die Beschwören-Knöpfe darüber).
+## - Heldenhalle: je lebendem Helden "Ausbilden: <Name>" (Anwerben läuft über
+##   die Knöpfe "Helden anwerben" darüber)
+## Bei Burg und Halle führt ein kleiner Knopf "Fenster (G)" ins Heldenfenster.
 ## Wird vom Auswahlfenster bei jeder Aktualisierung (alle 0.25 s) gefüllt; die
 ## Knöpfe werden nur neu gebaut, wenn sich Heldentyp bzw. Heldenliste ändern.
 class_name HeroSelectionBox
@@ -89,19 +90,27 @@ func _ready() -> void:
 	_building_part.add_theme_constant_override("separation", 4)
 	_building_part.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_building_part)
-	_building_title = _label(_building_part, SMALL_FONT_SIZE, SelectionPanel.COLOR_TITLE)
+	# Kopfzeile mit kleinem Knopf zum Heldenfenster (spart eine eigene Zeile)
+	var title_row := HBoxContainer.new()
+	title_row.add_theme_constant_override("separation", 6)
+	title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_building_part.add_child(title_row)
+	_building_title = _label(title_row, SMALL_FONT_SIZE, SelectionPanel.COLOR_TITLE)
 	_building_title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_building_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_building_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_window_button = Button.new()
+	_window_button.text = "Fenster (G)"
+	_window_button.focus_mode = Control.FOCUS_NONE
+	_window_button.add_theme_font_size_override("font_size", SMALL_FONT_SIZE - 1)
+	_window_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_window_button.tooltip_text = "Heldenfenster öffnen (G): Stufenwahl, Ausbildung, Wiederbelebung, Anwerben"
+	_window_button.pressed.connect(_on_window_pressed)
+	title_row.add_child(_window_button)
 	_rows = VBoxContainer.new()
 	_rows.add_theme_constant_override("separation", 4)
 	_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_building_part.add_child(_rows)
-	_window_button = Button.new()
-	_window_button.text = "Heldenfenster öffnen (G)"
-	_window_button.focus_mode = Control.FOCUS_NONE
-	_window_button.add_theme_font_size_override("font_size", FONT_SIZE)
-	_window_button.tooltip_text = "Alle Helden: Stufenwahl, Ausbildung, Wiederbelebung, Anwerben"
-	_window_button.pressed.connect(_on_window_pressed)
-	_building_part.add_child(_window_button)
 
 
 func setup(p_game: Node) -> void:
@@ -200,9 +209,9 @@ func show_building(b: Building) -> void:
 	if mode == "castle":
 		_set_text(_building_title, "Gefallene Helden")
 	elif ids.is_empty():
-		_set_text(_building_title, "Ausbildung: noch keine Helden – oben anwerben")
+		_set_text(_building_title, "Ausbildung: noch keine Helden")
 	else:
-		_set_text(_building_title, "Ausbildung: +%d EP für %s" % [int(DataDB.hero_cfg("training.xp", 80)),
+		_set_text(_building_title, "Ausbildung: +%d EP je %s" % [int(DataDB.hero_cfg("training.xp", 80)),
 				DataDB.cost_to_text(DataDB.hero_cfg("training.cost", {}))])
 	for e in _row_entries:
 		_refresh_row(e as Dictionary)
@@ -316,7 +325,6 @@ func _build_rows(ids: Array) -> void:
 		info.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		info.custom_minimum_size = Vector2(86, 0)
 		_row_entries.append({"hero_id": int(hid), "button": button, "info": info})
-	_window_button.visible = true
 
 
 func _refresh_row(e: Dictionary) -> void:

@@ -20,6 +20,7 @@ var _hero_step := 0
 var _hero_wait_until := 0.0
 var _hero_id := 0
 var _hero_errors := 0
+var _test_wolf: Unit = null
 
 
 func _ready() -> void:
@@ -168,7 +169,10 @@ func _hero_test() -> void:
 			hud.close_top_panel()
 			hud.hero_bar._refresh()
 			_hero_check(hud.hero_bar.visible, "Heldenleiste unsichtbar")
-			# Gemischte Auswahl: Held mit Truppen
+			# Gemischte Auswahl: Held mit Truppen (zwei Kämpfer dazu)
+			var fighter := str(DataDB.get_unit_for_tier(k.faction_id, "fighter").get("id", ""))
+			for i in 2:
+				g.unit_system.spawn_unit(k, fighter, u.position + Vector2(-40 - 30 * i, 30))
 			var army: Array = [u]
 			for o in k.units:
 				if o != u and (o as Unit).joins_fights and o != k.king and army.size() < 4:
@@ -195,6 +199,7 @@ func _hero_test() -> void:
 			_shot("6_held_auswahl")
 			# Fähigkeit 1 (Feind als Ziel) gegen einen Wolf neben dem Helden: Zielmodus
 			var wolf: Unit = g.unit_system.spawn_unit(g.wild, "wolf", u.position + Vector2(96, 0))
+			_test_wolf = wolf
 			var first := str((hs.get_type(rec).get("abilities", []) as Array)[0])
 			hs.debug_reset_cooldowns(k, _hero_id)
 			g.use_hero_ability(0)
@@ -210,8 +215,12 @@ func _hero_test() -> void:
 			var first := str((hs.get_type(rec).get("abilities", []) as Array)[0])
 			_shot("7_zielmodus")
 			if g.spell_targeting.is_active():
-				g.spell_targeting._try_ability(g.spell_targeting._mouse_world)
-				_hero_check(not g.spell_targeting.is_active(), "Zielmodus nach dem Wirken noch aktiv")
+				if is_instance_valid(_test_wolf) and _test_wolf.is_alive():
+					g.spell_targeting._try_ability(_test_wolf.position)
+					_hero_check(not g.spell_targeting.is_active(), "Zielmodus nach dem Wirken noch aktiv")
+				else:
+					# Der Wolf ist schon tot (z. B. selbst ausgelöster Lichtschlag): nur abbrechen
+					g.spell_targeting.cancel()
 			_hero_check(hs.cooldown_left(rec, first) > 0.0 or (u != null and not u.cast_ability.is_empty()), "Fähigkeit nicht gewirkt")
 			# Alle Fähigkeiten einmal (ohne Ziel sofort, mit Ziel Zielmodus und abbrechen)
 			for aid in hs.get_type(rec).get("abilities", []):
@@ -284,7 +293,8 @@ func _place_near_castle(def: Dictionary) -> Building:
 	return null
 
 
-## Lage der Leisten (logische Grösse 1920×1080; 1600×900 wird gleich skaliert)
+## Lage der Leisten (logische Grösse 1920×1080; 1600×900 wird gleich skaliert). Ohne Fenster
+## (--headless) rechnet die Schrift anders – verlässlich ist die Lage nur mit Fenster (xvfb-run).
 func _layout_report(hud: Node) -> void:
 	var rects := {"Arbeitsverteilung": hud.job_panel.get_global_rect(), "Auswahl": hud.selection_panel.get_global_rect(),
 			"Heldenleiste": hud.hero_bar.get_global_rect(), "Meldungen": hud.notification_panel.get_global_rect(),
@@ -294,7 +304,6 @@ func _layout_report(hud: Node) -> void:
 		var r: Rect2 = rects[key]
 		parts.append("%s %d,%d %dx%d" % [key, r.position.x, r.position.y, r.size.x, r.size.y])
 	print("[smoke] Layout (%s): %s" % [str(hud.get_viewport().get_visible_rect().size), ", ".join(parts)])
-	print("[smoke] Info: %s" % hud.info_label.text.replace("\n", " | "))
 	var bar: Rect2 = rects["Heldenleiste"]
 	for key in ["Arbeitsverteilung", "Auswahl", "Meldungen", "Info"]:
 		if bar.intersects(rects[key] as Rect2):
