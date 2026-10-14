@@ -6,6 +6,8 @@
 ## - Tarnung: eigene Truppen werden unsichtbar, bis sie angreifen (kostet laufend Mana)
 ## - Wetter: Gebiet für eine Weile (Regen: mehr Ertrag, Nebel: Feinde langsam)
 ## - Beschwörung: zeitlich begrenzte Kämpfer
+## - Reichstarnung (realm_cloak, Phase 7): ganzes Reich, an/aus – Entdeckungswert sinkt
+##   (Zustand und laufende Kosten im EspionageSystem: start_cloak/stop_cloak)
 ## Gezaubert wird im eigenen Gebiet oder bis cast_range_outside Kacheln davor
 ## (plus Forschungs-Zuschlag "spell_range").
 ##
@@ -179,6 +181,11 @@ func can_cast_now(k: Kingdom, spell_id: String, caster: Unit = null) -> String:
 		return "Unbekannter Zauber"
 	if not is_known(k, spell_id):
 		return "Noch nicht erforscht: %s" % DataDB.describe_requirement(def["requires"], k.faction_id)
+	# Reichstarnung (Phase 7): läuft sie schon, schaltet ein Klick sie ab (EspionageSystem.toggle_cloak)
+	if bool(def.get("realm_cloak", false)):
+		var esp := _espionage()
+		if esp != null and esp.is_cloaked(k):
+			return "Reichstarnung ist schon aktiv – Klick schaltet sie ab"
 	if _caster_of(k, caster) == null:
 		return "Nur der König kann zaubern"
 	var cd := cooldown_left(k, spell_id)
@@ -236,13 +243,23 @@ func cast(k: Kingdom, spell_id: String, pos: Vector2, caster: Unit = null) -> bo
 	# Beschwörung
 	if def.has("summon"):
 		_summon(k, def["summon"], pos, until)
+	# Reichstarnung (Phase 7): Entdeckungswert sinkt, laufende Kosten trägt das EspionageSystem
+	if bool(def.get("realm_cloak", false)):
+		var esp := _espionage()
+		if esp != null:
+			esp.start_cloak(k, spell_id, float(p["upkeep"]))
 	k.add_stat("spells")
 	spell_cast.emit(k, spell_id, pos, radius)
 	return true
 
 
-## Beendet alle laufenden Gebiete und Tarnungen dieses Zaubers (z. B. zum Abschalten)
+## Beendet alle laufenden Gebiete und Tarnungen dieses Zaubers (z. B. zum Abschalten;
+## bei der Reichstarnung auch diese)
 func end_spell(k: Kingdom, spell_id: String) -> void:
+	if bool(DataDB.get_spell(spell_id).get("realm_cloak", false)):
+		var esp := _espionage()
+		if esp != null:
+			esp.stop_cloak(k, "ended")
 	for z in zones.duplicate():
 		if int(z["kingdom_id"]) == k.id and str(z["spell_id"]) == spell_id:
 			end_zone(int(z["id"]))
@@ -710,6 +727,12 @@ func _caster_of(k: Kingdom, caster: Unit) -> Unit:
 	if is_instance_valid(k.king) and k.king.is_alive():
 		return k.king
 	return null
+
+
+## Das EspionageSystem (Phase 7; null, solange es keins gibt)
+func _espionage() -> EspionageSystem:
+	var esp: Variant = game.get("espionage_system")
+	return esp as EspionageSystem if esp is EspionageSystem else null
 
 
 func _find_effect(u: Unit, effect_id: String) -> Dictionary:

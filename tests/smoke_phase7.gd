@@ -5,6 +5,10 @@
 ## Helden), eine erzwungene Angriffswelle bis zur Burg des Spielers, Rivalität (mit
 ## ai=2), zum Schluss die Niederlage aller KI-Reiche (Ruinen, Gebiet weg) und den
 ## Siegbildschirm mit "Weiterspielen". Dazu alle 300 s eine Zeile je KI-Reich.
+## Spionage (EspionageSystem, SpySystem): Entdeckungswert wächst mit Gebäuden und
+## Aggression, sinkt mit Reichstarnung (die bei Manamangel endet), Aufmerksamkeit der KI
+## steigt (auch durch Boten), Spieler-Spione kundschaften aus (Kundschaft >= 2) und
+## hetzen ein Dorf auf (Ruf sinkt), ein KI-Spion kommt zum Spieler und wird entdeckt.
 ##
 ## Argumente: p7=natural (keine Debug-Stufen: lange Simulation mit echter KI),
 ## ai=<n> (feste Anzahl KI-Reiche, siehe smoke_test.gd).
@@ -32,6 +36,17 @@ var _rival_test := false
 var _player_alive_1800 := true
 var _next_sample := SAMPLE_INTERVAL
 var _done := false
+## Spionage: Spieler-Spione (uids), Dorf für das Aufhetzen, Werte vor den Tests
+var _spy_a := 0
+var _spy_b := 0
+var _incite_village: Kingdom = null
+var _disc_before := {}
+## Spionage mit KI-Spion: -1 = noch nicht, 0 = warten, 1 = KI-Spion unterwegs, 2 = Entdeckung läuft, 3 = fertig
+var _esp_stage := -1
+var _esp_deadline := 0.0
+var _ai_spy_uid := 0
+var _detected_seen := false
+var _cloak_test := false
 
 
 func _init(game: Node, args: Dictionary) -> void:
@@ -66,6 +81,8 @@ func tick(t: float) -> void:
 		_sample(t)
 	if t >= 1800.0 and t < 1810.0:
 		_player_alive_1800 = is_instance_valid(player.castle) and is_instance_valid(player.king)
+	if _stage >= 3 and _stage < 7 and not _natural:
+		_esp_tick(t)
 	match _stage:
 		0:
 			if t >= 1.0:
@@ -164,6 +181,12 @@ func _s1() -> void:
 		_check(working >= 3, "%s: %d Bewohner mit Beruf" % [k.display_name, working])
 		_check(int(k.ai_state.get("think_count", 0)) >= 10, "%s denkt (%d Denkvorgänge)" % [k.display_name,
 				int(k.ai_state.get("think_count", 0))])
+	var esp: EspionageSystem = g.espionage_system
+	var player: Kingdom = g.player
+	_check(esp.get_discovery(player) > 0.0 and esp.get_discovery_parts(player).has("buildings"),
+			"Entdeckungswert des Spielers %.1f (%s)" % [esp.get_discovery(player), _parts_text(esp.get_discovery_parts(player))])
+	_check(esp.get_awareness(_ai0, player) > 0.5, "Aufmerksamkeit von %s auf den Spieler steigt (%.1f, Ziel aus Entdeckung × Nähe %.2f)" % [
+			_ai0.display_name, esp.get_awareness(_ai0, player), esp.get_proximity(_ai0, player)])
 
 
 ## S2: erstes KI-Reich verstärken, schnelles Denken (keine Zeitsperren)
@@ -173,14 +196,210 @@ func _s2() -> void:
 	ai.debug_fast = true
 	_check(_game.hero_system.get_hall(_ai0) != null or _game.building_system.count_buildings(_ai0, "hero_hall", true) > 0,
 			"%s: Heldenhalle nach der Verstärkung" % _ai0.display_name)
+	_esp_setup()
 
 
-## S3: die verstärkte KI hat Truppen beschworen
+## Spionage-Aufbau (S2): Bote, Aggression, Gebäude, Reichstarnung, zwei Spieler-Spione
+func _esp_setup() -> void:
+	var g := _game
+	var esp: EspionageSystem = g.espionage_system
+	var spies: SpySystem = g.spy_system
+	var ds: DiplomacySystem = g.diplomacy_system
+	var vs: VillageSystem = g.village_system
+	var player: Kingdom = g.player
+	# Bote: die KI erfährt von einem Angriff des Spielers
+	var villages := vs.get_villages()
+	var aw0 := esp.get_awareness(_ai0, player)
+	if not villages.is_empty():
+		ds.report_aggression(_ai0, player, villages[0])
+		_check(esp.get_awareness(_ai0, player) >= minf(aw0 + 24.0, 100.0) and esp.get_intel_level(_ai0, player) >= 1,
+				"Bote erhöht die Aufmerksamkeit von %s (%.1f → %.1f, Kundschaft %d)" % [_ai0.display_name, aw0,
+				esp.get_awareness(_ai0, player), esp.get_intel_level(_ai0, player)])
+	# Entdeckungswert: Aggression und ein neues Gebäude
+	_disc_before = esp.get_discovery_parts(player).duplicate()
+	esp.note_aggression(player, 20.0, "smoke")
+	var lib := _place_near(player, DataDB.get_building("library"))
+	_check(lib != null, "Bibliothek des Spielers für den Entdeckungstest")
+	# Reichstarnung: Forschung, Mana, einschalten
+	var cloak_research := "good_realm_veil" if player.faction_id == "good" else "evil_realm_shroud"
+	player.researched[cloak_research] = true
+	g.research_system.apply_effects(player, cloak_research)
+	player.resources["mana"] = maxf(player.get_amount("mana"), 400.0)
+	var reason := esp.toggle_cloak(player)
+	var spell := esp.get_cloak_spell(player)
+	_cloak_test = reason.is_empty() and esp.is_cloaked(player)
+	_check(_cloak_test and player.get_upkeep("mana") > 0.0 and not g.magic_system.can_cast_now(player, spell).is_empty(),
+			"Reichstarnung eingeschaltet (%s, %.2f Mana/s) %s" % [spell, player.get_upkeep("mana"), reason])
+	# Zwei Spione: Auskundschaften (KI-Reich) und Dorf aufhetzen (Dorf nahe der KI gegen sie)
+	var scouting := "good_scouting" if player.faction_id == "good" else "evil_informants"
+	player.researched[scouting] = true
+	g.research_system.apply_effects(player, scouting)
+	var spy_id := str(SpySystem.spy_type(player.faction_id).get("id", ""))
+	var a: Unit = g.summon_system.spawn_summoned(player.castle, spy_id)
+	var b: Unit = g.summon_system.spawn_summoned(player.castle, spy_id)
+	_check(a != null and b != null and spies.get_spies(player).size() >= 2 and a.stealthed and spies.get_level(a) == 1,
+			"Zwei Spione des Spielers (getarnt, Stufe 1, %s)" % (a.get_display_name() if a != null else "-"))
+	if a == null or b == null:
+		return
+	_spy_a = a.uid
+	_spy_b = b.uid
+	var answer := spies.assign_mission(a, "scout", _ai0)
+	_check(answer.is_empty() and a.command == "infiltrate", "Spion A: Auskundschaften von %s %s" % [_ai0.display_name, answer])
+	var castle_pos := _ai0.castle.get_center()
+	var best_d := INF
+	for v in villages:
+		var d := castle_pos.distance_to(vs.get_center(v))
+		if d < best_d:
+			best_d = d
+			_incite_village = v
+	if _incite_village != null:
+		answer = spies.assign_mission(b, "incite_village", _incite_village, _ai0)
+		_check(answer.is_empty(), "Spion B: %s gegen %s aufhetzen %s" % [_incite_village.display_name, _ai0.display_name, answer])
+	_check(not spies.can_assign(a, "scout", player).is_empty(), "Eigenes Reich ist kein Spionageziel")
+
+
+## S3: die verstärkte KI hat Truppen beschworen; Spionage-Ergebnisse der Spieler-Spione
 func _s3() -> void:
 	var brain: AIBrain = _game.ai_system.get_brain(_ai0)
 	var army := brain.army_units().size() if brain != null else 0
 	_check(army >= 2, "%s hat %d Kampfeinheiten (Soll %d)" % [_ai0.display_name, army,
 			AIMilitary.army_target(brain, GameClock.game_time) if brain != null else 0])
+	_esp_results()
+
+
+## Spionage-Ergebnisse (S3): Entdeckungswert, Tarnung, Kundschaft, Aufhetzen; danach
+## Gerüchte bei der KI (sie schickt einen Spion) und Manamangel für die Tarnung
+func _esp_results() -> void:
+	var g := _game
+	var esp: EspionageSystem = g.espionage_system
+	var spies: SpySystem = g.spy_system
+	var ds: DiplomacySystem = g.diplomacy_system
+	var player: Kingdom = g.player
+	var parts := esp.get_discovery_parts(player)
+	_check(float(parts.get("aggression", 0.0)) >= 15.0, "Aggression im Entdeckungswert (%.1f)" % float(parts.get("aggression", 0.0)))
+	_check(float(parts.get("buildings", 0.0)) >= float(_disc_before.get("buildings", 0.0)) + 1.9,
+			"Gebäude im Entdeckungswert (%.1f → %.1f)" % [float(_disc_before.get("buildings", 0.0)), float(parts.get("buildings", 0.0))])
+	if _cloak_test:
+		_check(esp.is_cloaked(player) and float(parts.get("cloak", 0.0)) < 0.0 and esp.get_discovery(player) < esp.get_discovery_raw(player),
+				"Reichstarnung senkt den Entdeckungswert (%.1f statt %.1f)" % [esp.get_discovery(player), esp.get_discovery_raw(player)])
+		# Manamangel: die Tarnung endet von selbst
+		player.resources["mana"] = 0.0
+	var a: Variant = g.find_by_uid(_spy_a)
+	if a is Unit:
+		var rec := spies.get_record(a)
+		var level := esp.get_intel_level(player, _ai0)
+		if level >= 2:
+			_check(true, "Spion A: Kundschaft über %s Stufe %d (%s, %s)" % [_ai0.display_name, level, str(rec["state"]),
+					esp.get_intel_text(player, _ai0)])
+			print("[smoke] Kundschaft: %s" % esp.get_kingdom_summary(_ai0, player).replace("\n", " | "))
+		elif str(rec["state"]) == "travel" or bool(rec.get("revealed", false)):
+			print("[smoke] Hinweis: Spion A %s (%.0f Kacheln vor dem Ziel), Kundschaft %d" % [str(rec["state"]),
+					(a as Unit).position.distance_to(_ai0.castle.get_center()) / float(g.world.tile_size), level])
+		else:
+			_check(false, "Spion A ohne Kundschaft (Zustand %s, Kundschaft %d)" % [str(rec["state"]), level])
+	else:
+		print("[smoke] Hinweis: Spion A ist nicht mehr da (entdeckt und getötet?)")
+	if _incite_village != null:
+		var found := false
+		for e in ds.get_history(_incite_village, _ai0):
+			if str(e.get("reason", "")) == "Aufwiegelung" and float(e.get("delta", 0.0)) < 0.0:
+				found = true
+		var b: Variant = g.find_by_uid(_spy_b)
+		var state := str(spies.get_record(b).get("state", "-")) if b is Unit else "tot"
+		if found or state == "active":
+			_check(found, "Aufwiegelung senkt den Ruf von %s bei %s (%+.0f, Spion B %s)" % [_ai0.display_name,
+					_incite_village.display_name, ds.get_reputation(_incite_village, _ai0), state])
+		else:
+			print("[smoke] Hinweis: Spion B %s, noch kein Aufhetzen" % state)
+	g.espionage_system.debug_set_awareness(_ai0, player, 45.0)
+	_esp_stage = 0
+	_esp_deadline = GameClock.game_time + 200.0
+
+
+## KI-Spion beim Spieler (läuft neben den Stufen S3–S6): er wird angeworben, kommt
+## in die Nähe der Spielerburg und wird mit vielen Spähern und hoher Wachsamkeit entdeckt
+func _esp_tick(t: float) -> void:
+	var g := _game
+	var spies: SpySystem = g.spy_system
+	var esp: EspionageSystem = g.espionage_system
+	var player: Kingdom = g.player
+	if _cloak_test and t >= 300.0:
+		_cloak_test = false
+		_check(not esp.is_cloaked(player) and player.get_upkeep("mana") == 0.0, "Reichstarnung endet bei Manamangel")
+	match _esp_stage:
+		0:
+			for u in spies.get_spies(_ai0):
+				var rec := spies.get_record(u)
+				if str(rec["mission"]) == "scout" and int(rec["target_id"]) == player.id:
+					_ai_spy_uid = u.uid
+					_check(true, "%s schickt einen Spion zum Spieler (%s, Zustand %s)" % [_ai0.display_name,
+							u.get_display_name(), str(rec["state"])])
+					_esp_stage = 1
+					_esp_deadline = t + 240.0
+					return
+			if t >= _esp_deadline:
+				_check(false, "%s schickt keinen Spion (Spione %d, Grund %s)" % [_ai0.display_name,
+						spies.get_spies(_ai0).size(), spies.can_recruit(_ai0)])
+				_esp_stage = 3
+		1:
+			var u: Variant = g.find_by_uid(_ai_spy_uid)
+			if not (u is Unit):
+				print("[smoke] Hinweis: KI-Spion verschwunden")
+				_esp_stage = 3
+				return
+			var spy: Unit = u
+			var tiles := spy.position.distance_to(player.castle.get_center()) / float(g.world.tile_size)
+			if tiles <= 20.0 or str(spies.get_record(spy)["state"]) == "active":
+				_check(not g.can_see(player, spy), "KI-Spion %.0f Kacheln vor der Spielerburg, unsichtbar für den Spieler" % tiles)
+				# Viel Wachsamkeit: zwei Späher daneben, Bonus
+				var scout_id := str(DataDB.get_unit_for_tier(player.faction_id, "scout").get("id", ""))
+				for i in 2:
+					g.unit_system.spawn_unit(player, scout_id, spy.position + Vector2(40 + 30 * i, 20))
+				player.set_bonus("smoke", "vigilance", 50.0)
+				spies.spy_detected.connect(func(s: Unit, _o: Kingdom, obs: Kingdom) -> void:
+					if s.uid == _ai_spy_uid and obs == player:
+						_detected_seen = true)
+				_esp_stage = 2
+				_esp_deadline = t + 80.0
+			elif t >= _esp_deadline:
+				print("[smoke] Hinweis: KI-Spion noch %.0f Kacheln entfernt (%s)" % [tiles, str(spies.get_record(spy)["state"])])
+				_esp_stage = 3
+		2:
+			if _detected_seen:
+				var u: Variant = g.find_by_uid(_ai_spy_uid)
+				var visible: bool = u is Unit and g.can_see(player, u)
+				_check(esp.get_intel_level(player, _ai0) >= 1 and int(spies.stats["detected"]) >= 1 and (visible or not (u is Unit)),
+						"KI-Spion entdeckt: sichtbar %s, Kundschaft %d, Aufmerksamkeit des Spielers auf %s %.0f" % [str(visible),
+						esp.get_intel_level(player, _ai0), _ai0.display_name, esp.get_awareness(player, _ai0)])
+				player.clear_bonuses("smoke")
+				_esp_stage = 3
+			elif t >= _esp_deadline:
+				_check(false, "KI-Spion nicht entdeckt (Chance %.0f %%)" % (spies.detection_chance(g.find_by_uid(_ai_spy_uid)) * 100.0
+						if g.find_by_uid(_ai_spy_uid) is Unit else 0.0))
+				player.clear_bonuses("smoke")
+				_esp_stage = 3
+
+
+## Gebäude sofort fertig in der Nähe der Burg (Spirale)
+func _place_near(k: Kingdom, def: Dictionary) -> Building:
+	var g := _game
+	var center: Vector2i = g.world.world_to_cell(k.castle.get_center())
+	for r in range(4, 18):
+		for dy in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				if absi(dx) != r and absi(dy) != r:
+					continue
+				var cell := center + Vector2i(dx, dy)
+				if g.building_system.can_place(def, cell, k).is_empty():
+					return g.building_system.place_building(def, cell, k, true)
+	return null
+
+
+static func _parts_text(parts: Dictionary) -> String:
+	var list: PackedStringArray = []
+	for key in parts:
+		list.append("%s %.1f" % [str(key), float(parts[key])])
+	return ", ".join(list)
 
 
 ## S4: erzwungene Welle gegen den Spieler
@@ -312,6 +531,14 @@ func _sample(t: float) -> void:
 	print("[smoke] P7 t=%4.0f Spieler: Gebäude %d, Einheiten %d, König %s, Burg %s" % [t, player.buildings.size(),
 			player.units.size(), "lebt" if is_instance_valid(player.king) else "tot",
 			"steht" if is_instance_valid(player.castle) else "zerstört"])
+	var esp: EspionageSystem = g.espionage_system
+	var aw: PackedStringArray = []
+	for k in _ai:
+		if not k.defeated:
+			aw.append("%s %.0f (%s, Spione %d)" % [k.display_name, esp.get_awareness(k, player),
+					EspionageSystem.awareness_tier_name(esp.get_awareness_tier(k, player)), g.spy_system.get_spies(k).size()])
+	print("[smoke] P7 t=%4.0f Entdeckung Spieler %.1f (%s) | Aufmerksamkeit auf den Spieler: %s" % [t, esp.get_discovery(player),
+			_parts_text(esp.get_discovery_parts(player)), ", ".join(aw)])
 
 
 func report() -> void:
@@ -338,6 +565,16 @@ func report() -> void:
 	print("[smoke] KI-Denkzeit je Teil (ms je Denkvorgang): %s" % ", ".join(part_texts))
 	for f in g.victory_system.fallen:
 		print("[smoke] Gefallen: %s (%s) bei %.0f s" % [str(f["name"]), str(f["reason"]), float(f["at"])])
+	var esp: EspionageSystem = g.espionage_system
+	var parties := esp.get_parties()
+	for o in parties:
+		var row: PackedStringArray = []
+		for t in parties:
+			if t != o:
+				row.append("%s: Aufmerksamkeit %.0f, Kundschaft %d" % [t.display_name, esp.get_awareness(o, t), esp.get_intel_level(o, t)])
+		print("[smoke] Spionage %s (Entdeckung %.1f, Höchstwert %.1f): %s" % [o.display_name, esp.get_discovery(o),
+				esp.get_discovery_peak(o), " | ".join(row)])
+	print("[smoke] Spione: %s" % str(g.spy_system.stats))
 	if _stage != 99 and _stage < 9 and GameClock.game_time >= _seconds - 1.0:
 		_check(false, "Phase-7-Test nicht fertig geworden (Stufe %d)" % _stage)
 	print("[smoke] Phase 7: %s" % ("OK" if _errors == 0 else "%d Fehler" % _errors))

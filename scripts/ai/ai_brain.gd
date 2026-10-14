@@ -62,7 +62,8 @@ func _init(p_sys: AISystem, p_kingdom: Kingdom) -> void:
 ## "scouts" {uid: "patrol"|"explore"}, "next_patrol", "village_next", "gift_value_hour", "spy_next",
 ## "upgrade_flip", "debug_army_min", "hero_saving" (Heldentyp, auf den gespart wird, "" = keiner),
 ## "log" {"first_building", "first_barracks", "first_summon", "first_research", "first_spy",
-##   "first_wave", "first_player_wave", "first_lair", "first_hero"} (-1 = noch nicht; Rauchtest, README)
+##   "first_spy_player", "first_rumour_player", "first_discovered_player", "first_wave",
+##   "first_player_wave", "first_lair", "first_hero", "first_cloak"} (-1 = noch nicht; Rauchtest, README)
 static func default_state(personality_id: String) -> Dictionary:
 	return {
 		"personality": personality_id, "next_think": -1.0, "think_count": 0,
@@ -74,7 +75,8 @@ static func default_state(personality_id: String) -> Dictionary:
 		"gift_value_hour": {"hour": -1, "value": 0.0}, "spy_next": -1.0,
 		"upgrade_flip": false, "debug_army_min": 0, "hero_saving": "",
 		"log": {"first_building": -1.0, "first_barracks": -1.0, "first_summon": -1.0, "first_research": -1.0,
-				"first_spy": -1.0, "first_wave": -1.0, "first_player_wave": -1.0, "first_lair": -1.0, "first_hero": -1.0},
+				"first_spy": -1.0, "first_spy_player": -1.0, "first_rumour_player": -1.0, "first_discovered_player": -1.0,
+				"first_wave": -1.0, "first_player_wave": -1.0, "first_lair": -1.0, "first_hero": -1.0, "first_cloak": -1.0},
 	}
 
 

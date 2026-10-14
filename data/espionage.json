@@ -7,7 +7,7 @@
 		"awareness: Aufmerksamkeit eines Reichs auf ein anderes (0–100). Ziel = Entdeckungswert × Nähe × Faktor der Schwierigkeit; steigt mit rise_per_minute, fällt mit fall_per_minute. Nähe: 1 bis near_tiles Kacheln Burgabstand, min_proximity ab far_tiles, + border_bonus, wenn die Gebiete näher als border_tiles sind. rumour/discovered: Schwellen (Gerüchte -> Spione, entdeckt -> Angriffe). Sprünge: attacked, messenger, caught_spy … patience: nach patience_minutes sinkt die Aufmerksamkeit der KI nicht mehr unter patience_floor.",
 		"intel: Kundschaft je Beobachter und Ziel, Stufe 0–3 (names). Pro stale_seconds Alter eine Stufe weniger (nie unter 1, wenn einmal bekannt). Quellen: Späher (scout_level), Spione (spy_levels je Spionstufe), Boten, Verräter (Phase 8), gefangene Spione.",
 		"reports: Meldungen, wenn Feinde nahe oder im eigenen Gebiet gesehen werden (je Gebiet area_tiles und Reich gedrosselt).",
-		"spies: Stufen (xp, skill = Geschick gegen Entdeckung, speed = Tempo bei Aufträgen), Erfahrung je Auftrag, Auftragsdauer, Aufhetzen (Ruf/Spannung je incite_interval). Entdeckung: alle detect_interval Sekunden Wurf mit Chance = detect_base × Wachsamkeit / Geschick (begrenzt). Wachsamkeit = base (im Gebiet; ausserhalb outside_presence) + Späher/Spione des Ziels in der Nähe + Gebäude (vigilance.buildings, Umkreis building_radius) + Bonus des Reichs (Forschung, Schwierigkeit). Enttarnt: reveal_seconds sichtbar, flieht heim.",
+		"spies: Stufen (xp, skill = Geschick gegen Entdeckung, speed = Tempo bei Aufträgen), Erfahrung je Auftrag, Auftragsdauer, Aufhetzen (Ruf/Spannung je incite_interval). Entdeckung: alle detect_interval Sekunden Wurf mit Chance = detect_base × Wachsamkeit / Geschick (begrenzt). Wachsamkeit = base (im Gebiet; ausserhalb outside_presence) + Späher/Spione des Ziels in der Nähe + Gebäude (vigilance.buildings, Umkreis building_radius) + Bonus des Reichs (Forschung, Schwierigkeit). Enttarnt: reveal_seconds sichtbar, flieht heim (Tempo × flee_speed für flee_seconds). Ertappt ein Dorf den Spion, sinkt sein Ruf beim Auftraggeber um caught_reputation.",
 		"Hinweis: Feindliche Wetterzonen (Nebel, Fluch) treffen auch getarnte Spione – die Zonenwirkung prüft die Sichtbarkeit bewusst nicht."
 	],
 	"discovery": {
@@ -40,6 +40,6 @@
 		"detect_interval": 10, "detect_base": 0.03, "detect_min": 0.005, "detect_max": 0.6, "outside_presence": 0.3, "near_tiles": 10,
 		"vigilance": {"base": 1.0, "scout": 0.5, "scout_radius": 8, "spy": 1.0, "spy_radius": 6, "building_radius": 12,
 		              "buildings": {"castle": 1.0, "spy_den": 2.0, "village_hall": 0.5, "tower": 1.5}},
-		"reveal_seconds": 25, "flee_speed": 1.5, "flee_seconds": 8
+		"reveal_seconds": 25, "flee_speed": 1.5, "flee_seconds": 8, "caught_reputation": -8
 	}
 }

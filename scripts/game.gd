@@ -40,7 +40,9 @@ signal formation_changed(formation: String)
 @onready var village_system: VillageSystem = $Systems/VillageSystem
 @onready var diplomacy_system: DiplomacySystem = $Systems/DiplomacySystem
 @onready var messenger_system: MessengerSystem = $Systems/MessengerSystem
-## Gegnerische Königreiche (KI) sowie Niederlage und Sieg (Phase 7)
+## Entdeckung, Kundschaft, Spione, gegnerische Königreiche (KI) sowie Niederlage und Sieg (Phase 7)
+@onready var espionage_system: EspionageSystem = $Systems/EspionageSystem
+@onready var spy_system: SpySystem = $Systems/SpySystem
 @onready var ai_system: AISystem = $Systems/AISystem
 @onready var victory_system: VictorySystem = $Systems/VictorySystem
 @onready var selection: SelectionController = $Selection
@@ -129,6 +131,10 @@ func _start_game() -> void:
 	village_system.setup(self)
 	diplomacy_system.setup(self)
 	messenger_system.setup(self)
+	# Entdeckung und Kundschaft (hört auf Kampf, Diplomatie, Dörfer, Wirtschaft), danach
+	# die Spione (Beschwörung, Befehle, Kampf, Entdeckung)
+	espionage_system.setup(self)
+	spy_system.setup(self)
 	# Nach allen Systemen, die die KI-Gehirne aufrufen; das VictorySystem danach
 	# (hört auf kingdom_defeated und building_destroyed)
 	ai_system.setup(self)

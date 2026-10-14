@@ -1,4 +1,4 @@
-[gd_scene load_steps=30 format=3]
+[gd_scene load_steps=32 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/world/world_map.gd" id="2_worldmap"]
@@ -26,6 +26,8 @@
 [ext_resource type="Script" path="res://scripts/diplomacy/village_system.gd" id="p6_villages"]
 [ext_resource type="Script" path="res://scripts/diplomacy/diplomacy_system.gd" id="p6_diplomacy"]
 [ext_resource type="Script" path="res://scripts/diplomacy/messenger_system.gd" id="p6_messengers"]
+[ext_resource type="Script" path="res://scripts/espionage/espionage_system.gd" id="p7_espionage"]
+[ext_resource type="Script" path="res://scripts/espionage/spy_system.gd" id="p7_spies"]
 [ext_resource type="Script" path="res://scripts/ai/ai_system.gd" id="p7_ai"]
 [ext_resource type="Script" path="res://scripts/kingdoms/victory_system.gd" id="p7_victory"]
 
@@ -104,6 +106,12 @@ script = ExtResource("p6_diplomacy")
 
 [node name="MessengerSystem" type="Node" parent="Systems"]
 script = ExtResource("p6_messengers")
+
+[node name="EspionageSystem" type="Node" parent="Systems"]
+script = ExtResource("p7_espionage")
+
+[node name="SpySystem" type="Node" parent="Systems"]
+script = ExtResource("p7_spies")
 
 [node name="AISystem" type="Node" parent="Systems"]
 script = ExtResource("p7_ai")

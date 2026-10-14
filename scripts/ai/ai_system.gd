@@ -10,8 +10,8 @@
 ## Systeme – dieselben, die die Oberfläche des Spielers benutzt.
 ##
 ## Entdeckung und Kundschaft (Aufmerksamkeit, Intel, geschätzte Stärke) liefert das
-## EspionageSystem, sobald es in game.gd eingetragen ist (game.espionage_system);
-## bis dahin gelten einfache Ersatzwerte (siehe get_awareness, estimate_defense).
+## EspionageSystem (game.espionage_system): die KI greift ein Reich erst an, wenn sie
+## es entdeckt hat (Gerüchte -> Spione, entdeckt -> Angriffe).
 ##
 ## Zustand (gespeichert): order, rivalry, rng_state, debug_fast, stats; je Reich
 ## Kingdom.ai_state. Laufzeit: Gehirne (_brains, entstehen aus den Reichen neu),
@@ -73,8 +73,8 @@ func setup(p_game: Node) -> void:
 	ds.protection_requested.connect(_on_protection_requested)
 	ds.aggression_reported.connect(_on_aggression_reported)
 	var esp := espionage()
-	if esp != null and esp.has_signal("enemy_spotted"):
-		esp.connect("enemy_spotted", _on_enemy_spotted)
+	if esp != null:
+		esp.enemy_spotted.connect(_on_enemy_spotted)
 
 
 # ---------------------------------------------------------------------------
@@ -254,43 +254,38 @@ func rand_range(a: float, b: float) -> float:
 # Entdeckung und Kundschaft (EspionageSystem, sobald vorhanden)
 # ---------------------------------------------------------------------------
 
-## Das EspionageSystem (game.espionage_system) oder null, solange es keins gibt
-func espionage() -> Object:
+## Das EspionageSystem (game.espionage_system; null nur ohne Phase-7-Szene)
+func espionage() -> EspionageSystem:
 	var esp: Variant = game.get("espionage_system")
-	return esp as Object if esp is Object and is_instance_valid(esp) else null
+	return esp as EspionageSystem if is_instance_valid(esp) and esp is EspionageSystem else null
 
 
-## Aufmerksamkeit von observer auf target (0–100). Ohne EspionageSystem: Ersatzwert
-## nach der Spielzeit (Gerüchte ab 75 % der ersten Angriffszeit, entdeckt ab ihr).
+## Das SpySystem (game.spy_system; null nur ohne Phase-7-Szene)
+func spies() -> SpySystem:
+	var sys: Variant = game.get("spy_system")
+	return sys as SpySystem if is_instance_valid(sys) and sys is SpySystem else null
+
+
+## Aufmerksamkeit von observer auf target (0–100, EspionageSystem)
 func get_awareness(observer: Kingdom, target: Kingdom) -> float:
 	var esp := espionage()
-	if esp != null and esp.has_method("get_awareness"):
-		return float(esp.call("get_awareness", observer, target))
-	var minutes := GameClock.game_time / 60.0
-	var first := float(get_difficulty().get("first_attack_minutes", 45))
-	if minutes >= first:
-		return float(DataDB.esp("awareness.discovered", 60)) + 5.0
-	if minutes >= first * 0.75:
-		return float(DataDB.esp("awareness.rumour", 30)) + 5.0
-	return 0.0
+	return esp.get_awareness(observer, target) if esp != null else 0.0
 
 
-## Kundschaft von observer über target (0–3; ohne EspionageSystem 0)
+## Kundschaft von observer über target (0–3, EspionageSystem)
 func get_intel_level(observer: Kingdom, target: Kingdom) -> int:
 	var esp := espionage()
-	if esp != null and esp.has_method("get_intel_level"):
-		return int(esp.call("get_intel_level", observer, target))
-	return 0
+	return esp.get_intel_level(observer, target) if esp != null else 0
 
 
-## Geschätzte Abwehr eines Reichs aus Sicht von viewer (Kampfkraft); ohne Kundschaft
-## waves.unknown_defense
+## Geschätzte Abwehr eines Reichs aus Sicht von viewer (Kampfkraft, ab Kundschaft 2);
+## ohne Kundschaft waves.unknown_defense
 func estimate_defense(viewer: Kingdom, target: Kingdom) -> float:
 	var esp := espionage()
-	if esp != null and esp.has_method("estimate_strength"):
-		var est: Variant = esp.call("estimate_strength", viewer, target)
-		if est is Dictionary and bool((est as Dictionary).get("known", false)):
-			return float((est as Dictionary).get("value", 0.0))
+	if esp != null:
+		var est := esp.estimate_strength(viewer, target)
+		if bool(est.get("known", false)):
+			return float(est.get("value", 0.0))
 	return float(DataDB.ai("waves.unknown_defense", 60))
 
 
