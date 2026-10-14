@@ -23,6 +23,16 @@ const NO_SITE_RETRY := 60.0
 const MAX_CLUSTERS := 4
 ## Höfe: höchstens so viele passende Plätze vergleichen (bester Gelände-Faktor)
 const MAX_FARM_CANDIDATES := 10
+## Je erlaubter can_place-Prüfung dürfen so viele Kacheln vorgeprüft werden
+const SCAN_PER_CHECK := 5
+## Quellen im unveränderten Gebiet höchstens so oft neu suchen (Spielsekunden)
+const SPOT_REFRESH_SECONDS := 120.0
+## Um freie Manaquellen bleiben so viele Kacheln für den Manabrunnen frei
+const SPOT_KEEP_CLEAR := 2
+## Höchstens so lange wird auf ein Gebäude gespart (Spielsekunden)
+const MAX_WAIT_SECONDS := 600.0
+## Sammelhütten: höchstens so viele je Ressource, wenn die Sammler nichts mehr finden
+const MAX_EXTRA_HUTS := 4
 
 
 # ---------------------------------------------------------------------------
@@ -44,22 +54,34 @@ static func tick_build(b: AIBrain, now: float) -> void:
 	var reactive := _reactive_need(b)
 	if not reactive.is_empty() and _try_build(b, reactive, now) != Try.SKIP:
 		return
+	# Gebäude je Typ (auch Baustellen) einmal zählen
+	var counts := {}
+	for bld in k.buildings:
+		var bid := str(bld.def.get("id", ""))
+		counts[bid] = int(counts.get(bid, 0)) + 1
 	for entry in DataDB.ai("build_order", []):
 		var id := str((entry as Dictionary).get("building", ""))
-		if bs.count_buildings(k, id, false) >= int((entry as Dictionary).get("count", 1)):
+		if int(counts.get(id, 0)) >= int((entry as Dictionary).get("count", 1)):
 			continue
 		if _try_build(b, id, now) != Try.SKIP:
 			return
-	if k.buildings.size() < int(DataDB.ai("build.growth.max_buildings", 90)):
-		var pop := float(k.get_population())
-		for pair in [["house", "house_per_pop"], ["farm", "farm_per_pop"], ["storehouse", "storehouse_per_pop"],
-				["lumberyard", "lumberyard_per_pop"]]:
-			var per := float(DataDB.ai("build.growth." + str(pair[1]), 0.0))
-			if per <= 0.0:
-				continue
-			var id := str(pair[0])
-			if bs.count_buildings(k, id, false) < floori(pop / per) and _try_build(b, id, now) != Try.SKIP:
-				return
+	if k.buildings.size() >= int(DataDB.ai("build.growth.max_buildings", 90)):
+		b.st["build_waiting"] = {}
+		return
+	# Sammler finden nichts mehr (Vorkommen erschöpft): neue Hütte an der nächsten Gruppe
+	var hut := _needed_hut(b)
+	if not hut.is_empty() and _try_build(b, hut, now) != Try.SKIP:
+		return
+	# Wachstum mit der Bevölkerung
+	var pop := float(k.get_population())
+	for pair in [["house", "house_per_pop"], ["farm", "farm_per_pop"], ["storehouse", "storehouse_per_pop"],
+			["lumberyard", "lumberyard_per_pop"]]:
+		var per := float(DataDB.ai("build.growth." + str(pair[1]), 0.0))
+		if per <= 0.0:
+			continue
+		var id := str(pair[0])
+		if int(counts.get(id, 0)) < floori(pop / per) and _try_build(b, id, now) != Try.SKIP:
+			return
 	# Nichts mehr geplant: kein Geld zurückhalten
 	b.st["build_waiting"] = {}
 
@@ -79,6 +101,42 @@ static func _reactive_need(b: AIBrain) -> String:
 	return ""
 
 
+## Sammelhütte, die gebaut werden sollte: ein Sammelberuf hat ein Problem (nichts in
+## Reichweite) und die Ressource liegt unter ihrem Ziellager; "" wenn keine
+static func _needed_hut(b: AIBrain) -> String:
+	var ws: WorkSystem = b.game.work_system
+	var bs: BuildingSystem = b.game.building_system
+	var stock: Dictionary = DataDB.ai("jobs.target_stock", {})
+	for job in GATHER_JOBS:
+		var res := str(DataDB.get_job(job).get("resource", ""))
+		if ws.get_job_problem(b.k, job).is_empty() or b.k.get_amount(res) >= float(stock.get(res, 100.0)):
+			continue
+		for def in DataDB.buildings:
+			var dropoff: Array = def.get("dropoff", [])
+			if dropoff.size() == 1 and str(dropoff[0]) == res and float(def.get("gather_bonus", 0.0)) > 0.0 \
+					and bool(def.get("player_buildable", true)) \
+					and bs.count_buildings(b.k, str(def["id"]), false) < MAX_EXTRA_HUTS:
+				return str(def["id"])
+	return ""
+
+
+## Wie lange auf Geld für cost gewartet wird: build.wait_seconds, bei laufendem Ertrag
+## aller fehlenden Ressourcen bis zur geschätzten Zeit × 1,3 (höchstens MAX_WAIT_SECONDS) –
+## sonst kämen teure Gebäude bei knappem Mana nie an die Reihe
+static func wait_limit(k: Kingdom, cost: Dictionary) -> float:
+	var base := float(DataDB.ai("build.wait_seconds", 90))
+	var needed := 0.0
+	for res in cost:
+		var missing := float(cost[res]) - k.get_amount(str(res))
+		if missing <= 0.0:
+			continue
+		var per_min := float(k.income_rate.get(res, 0.0))
+		if per_min <= 0.05:
+			return base
+		needed = maxf(needed, missing / per_min * 60.0)
+	return clampf(needed * 1.3, base, MAX_WAIT_SECONDS)
+
+
 static func _has_site(bs: BuildingSystem, k: Kingdom, id: String) -> bool:
 	return bs.count_buildings(k, id, false) > bs.count_buildings(k, id, true)
 
@@ -96,7 +154,7 @@ static func _try_build(b: AIBrain, id: String, now: float) -> Try:
 		return Try.SKIP
 	var waiting: Dictionary = b.st["build_waiting"]
 	if not k.can_afford(def.get("cost", {})):
-		var wait_s := float(DataDB.ai("build.wait_seconds", 90))
+		var wait_s := wait_limit(k, def.get("cost", {}))
 		if str(waiting.get("building", "")) != id:
 			b.st["build_waiting"] = {"building": id, "since": now}
 			return Try.WAIT
@@ -130,6 +188,7 @@ static func _try_build(b: AIBrain, id: String, now: float) -> Try:
 static func find_site(b: AIBrain, def: Dictionary) -> Vector2i:
 	if not is_instance_valid(b.k.castle):
 		return Vector2i(-1, -1)
+	refresh_deposit_spots(b)
 	var c0 := b.world.world_to_cell(b.k.castle.get_center())
 	var rmax := ceili(b.territory_radius_tiles()) + 1
 	var required := str(def.get("requires_deposit", ""))
@@ -140,22 +199,43 @@ static func find_site(b: AIBrain, def: Dictionary) -> Vector2i:
 		return _site_for_gathering(b, def, str(dropoff[0]), c0)
 	var castle_size: Vector2i = b.k.castle.size
 	var r0 := (maxi(castle_size.x, castle_size.y) >> 1) + 2
+	# Innere Ringe sind meist voll: ab dem Ring des letzten Erfolgs (minus 2) suchen;
+	# schlägt das fehl, beim nächsten Mal wieder von innen (Lücken durch Abriss)
+	var hints: Dictionary = b.st["ring_hint"]
+	var id := str(def.get("id", ""))
+	var start := clampi(int(hints.get(id, r0)) - 2, r0, rmax)
+	var found: Vector2i
 	if not (def.get("biome_efficiency", {}) as Dictionary).is_empty():
-		return _site_by_efficiency(b, def, c0, r0, rmax)
-	return _spiral_fit(b, def, c0, r0, rmax)
+		found = _site_by_efficiency(b, def, c0, start, rmax)
+	else:
+		found = _spiral_fit(b, def, c0, start, rmax)
+	if found.x >= 0:
+		var size: Vector2i = def.get("size", Vector2i(2, 2))
+		var center := found + Vector2i(size.x >> 1, size.y >> 1)
+		hints[id] = maxi(absi(center.x - c0.x), absi(center.y - c0.y))
+	else:
+		hints.erase(id)
+	return found
 
 
 ## Passt das Gebäude hier hin? Billige Vorprüfung (eigenes Gebiet an den Ecken, Rand
-## von placement.margin Kacheln frei, damit Wege offen bleiben), dann can_place.
+## von placement.margin Kacheln frei, damit Wege offen bleiben; freie Manaquellen
+## bleiben für Manabrunnen reserviert), dann can_place.
 static func _fits(b: AIBrain, def: Dictionary, cell: Vector2i) -> bool:
-	if b.checks_left <= 0:
+	if b.checks_left <= 0 or b.scan_left <= 0:
 		return false
+	b.scan_left -= 1
 	var world := b.world
 	var size: Vector2i = def.get("size", Vector2i(2, 2))
 	var last := cell + size - Vector2i.ONE
 	for corner in [cell, last, Vector2i(cell.x, last.y), Vector2i(last.x, cell.y)]:
 		if world.get_owner(corner) != b.k.id:
 			return false
+	if str(def.get("requires_deposit", "")).is_empty():
+		var keep := Rect2i(cell - Vector2i(SPOT_KEEP_CLEAR, SPOT_KEEP_CLEAR), size + Vector2i.ONE * SPOT_KEEP_CLEAR * 2)
+		for spot in b.st["mana_spots"]:
+			if keep.has_point(spot) and not world.occupancy.has(spot):
+				return false
 	var m := int(DataDB.ai("placement.margin", 1))
 	for y in range(cell.y - m, last.y + m + 1):
 		for x in range(cell.x - m, last.x + m + 1):
@@ -172,7 +252,7 @@ static func _spiral_fit(b: AIBrain, def: Dictionary, center: Vector2i, r0: int, 
 	var half := Vector2i(size.x >> 1, size.y >> 1)
 	for r in range(r0, rmax + 1, step):
 		for off in ring(r, step):
-			if b.checks_left <= 0:
+			if b.checks_left <= 0 or b.scan_left <= 0:
 				return Vector2i(-1, -1)
 			var cell: Vector2i = center + off - half
 			if _fits(b, def, cell):
@@ -196,28 +276,44 @@ static func ring(r: int, step: int = 1) -> Array:
 	return list
 
 
-## Manabrunnen: Ecken, deren Grundfläche eine Manaquelle im eigenen Gebiet enthält.
-## Die Quellen werden nur neu gesucht, wenn sich Vorkommen oder Gebiet geändert haben.
+## Kacheln mit Vorkommen, auf die ein Gebäude gehört (requires_deposit, z. B. Manaquellen),
+## im eigenen Gebiet: in ai_state "mana_spots". Neu gesucht nur, wenn sich Vorkommen oder
+## Gebiet geändert haben.
+static func refresh_deposit_spots(b: AIBrain) -> void:
+	var world := b.world
+	var rect := b.territory_rect()
+	var key := str(rect)
+	# Gleiches Gebiet: höchstens alle SPOT_REFRESH_SECONDS neu suchen (Quellen versiegen nicht)
+	var now := GameClock.game_time
+	if str(b.st["mana_spots_key"]) == key and now - float(b.st.get("mana_spots_at", -1.0e9)) < SPOT_REFRESH_SECONDS:
+		return
+	b.st["mana_spots_at"] = now
+	var wanted := {}
+	for def in DataDB.buildings:
+		var dep_id := str(def.get("requires_deposit", ""))
+		if not dep_id.is_empty() and DataDB.deposit_index_by_id.has(dep_id):
+			wanted[int(DataDB.deposit_index_by_id[dep_id])] = true
+	var spots: Array = []
+	if not wanted.is_empty():
+		for y in range(rect.position.y, rect.end.y):
+			for x in range(rect.position.x, rect.end.x):
+				var c := Vector2i(x, y)
+				if wanted.has(world.get_deposit_index(c)) and world.get_owner(c) == b.k.id:
+					spots.append(c)
+	b.st["mana_spots"] = spots
+	b.st["mana_spots_key"] = key
+
+
+## Manabrunnen: Ecken, deren Grundfläche ein passendes Vorkommen im eigenen Gebiet enthält
 static func _site_on_deposit(b: AIBrain, def: Dictionary, deposit_id: String) -> Vector2i:
 	var world := b.world
 	var dep_index := int(DataDB.deposit_index_by_id.get(deposit_id, -1))
 	if dep_index < 0:
 		return Vector2i(-1, -1)
-	var rect := b.territory_rect()
-	var key := "%s:%d:%s" % [deposit_id, world.deposit_version, str(rect)]
-	if str(b.st["mana_spots_key"]) != key:
-		var spots: Array = []
-		for y in range(rect.position.y, rect.end.y):
-			for x in range(rect.position.x, rect.end.x):
-				var c := Vector2i(x, y)
-				if world.get_deposit_index(c) == dep_index and world.get_owner(c) == b.k.id:
-					spots.append(c)
-		b.st["mana_spots"] = spots
-		b.st["mana_spots_key"] = key
 	var size: Vector2i = def.get("size", Vector2i(2, 2))
 	for spot in b.st["mana_spots"]:
 		var s: Vector2i = spot
-		if world.occupancy.has(s):
+		if world.occupancy.has(s) or world.get_deposit_index(s) != dep_index:
 			continue
 		for dy in size.y:
 			for dx in size.x:
@@ -243,28 +339,35 @@ static func _site_for_gathering(b: AIBrain, def: Dictionary, res_id: String, c0:
 	for bld in b.k.buildings:
 		if str(bld.def.get("id", "")) == str(def.get("id", "")):
 			same.append(world.world_to_cell(bld.get_center()))
-	var clusters := 0
-	for r in range(0, search + 1, 2):
-		for off in ring(r, 2):
-			var cell: Vector2i = c0 + off
-			if not world.in_bounds(cell) or world.is_dangerous(cell):
-				continue
-			var owner_id := world.get_owner(cell)
-			if owner_id != 0 and owner_id != b.k.id:
-				continue
-			var covered := false
-			for s in same:
-				if absi((s as Vector2i).x - cell.x) <= reach * 0.6 and absi((s as Vector2i).y - cell.y) <= reach * 0.6:
-					covered = true
-					break
-			if covered or _count_deposits(world, cell, mask) < cluster_min:
-				continue
-			var found := _spiral_fit(b, def, cell, 0, reach - 3)
-			if found.x >= 0:
-				return found
-			clusters += 1
-			if clusters >= MAX_CLUSTERS or b.checks_left <= 0:
-				return Vector2i(-1, -1)
+	# Erst grössere Gruppen, dann auch einzelne Vorkommen (z. B. zwei Erzadern am Start)
+	for need in [cluster_min, 1]:
+		var clusters := 0
+		for r in range(0, search + 1, 2):
+			for off in ring(r, 2):
+				var cell: Vector2i = c0 + off
+				if not world.in_bounds(cell) or world.is_dangerous(cell):
+					continue
+				var owner_id := world.get_owner(cell)
+				if owner_id != 0 and owner_id != b.k.id:
+					continue
+				var covered := false
+				for s in same:
+					if absi((s as Vector2i).x - cell.x) <= reach * 0.6 and absi((s as Vector2i).y - cell.y) <= reach * 0.6:
+						covered = true
+						break
+				b.scan_left -= 2
+				if b.scan_left <= 0:
+					return Vector2i(-1, -1)
+				if covered or _count_deposits(world, cell, mask) < int(need):
+					continue
+				var found := _spiral_fit(b, def, cell, 0, reach - 3)
+				if found.x >= 0:
+					return found
+				clusters += 1
+				if clusters >= MAX_CLUSTERS or b.checks_left <= 0:
+					return Vector2i(-1, -1)
+		if cluster_min <= 1:
+			break
 	return Vector2i(-1, -1)
 
 
@@ -301,7 +404,7 @@ static func _site_by_efficiency(b: AIBrain, def: Dictionary, c0: Vector2i, r0: i
 	var seen := 0
 	for r in range(r0, rmax + 1):
 		for off in ring(r):
-			if b.checks_left <= 0:
+			if b.checks_left <= 0 or b.scan_left <= 0:
 				return best
 			var cell: Vector2i = c0 + off - half
 			if not _fits(b, def, cell):
@@ -323,7 +426,7 @@ static func _site_by_efficiency(b: AIBrain, def: Dictionary, c0: Vector2i, r0: i
 # ---------------------------------------------------------------------------
 
 ## Verteilt die Bewohner (höchstens jobs.max_changes Wechsel): Unbeschäftigte zuerst,
-## dann (jeden dritten Denkvorgang) vom grössten Überschuss zum grössten Mangel.
+## dann (jeden vierten Denkvorgang) vom grössten Überschuss zum grössten Mangel.
 ## Beschworene Kampfeinheiten bekommen keine Berufe.
 static func tick_jobs(b: AIBrain) -> void:
 	var k := b.k
@@ -347,7 +450,7 @@ static func tick_jobs(b: AIBrain) -> void:
 		counts[job] = int(counts.get(job, 0)) + 1
 		counts["idle"] = int(counts.get("idle", 0)) - 1
 		changes += 1
-	if int(b.st["think_count"]) % 3 != 0:
+	if int(b.st["think_count"]) % 4 != 0:
 		return
 	while changes < max_changes:
 		var to := _largest_deficit(targets, counts, "")

@@ -16,6 +16,8 @@ const SAMPLE_INTERVAL := 300.0
 
 var _game: Node
 var _natural := false
+## Der Spieler tut nichts (passive=1): seine Niederlage ist dann ein Ergebnis, kein Fehler
+var _passive := false
 var _seconds := 600.0
 var _stage := 0
 var _errors := 0
@@ -35,6 +37,7 @@ var _done := false
 func _init(game: Node, args: Dictionary) -> void:
 	_game = game
 	_natural = str(args.get("p7", "")) == "natural"
+	_passive = str(args.get("passive", "0")) == "1"
 	_seconds = float(args.get("seconds", "600"))
 
 
@@ -45,10 +48,18 @@ func tick(t: float) -> void:
 	var g := _game
 	var player: Kingdom = g.player
 	if player.defeated:
-		_check(false, "Der Spieler hat verloren (t = %.0f s, %s)" % [t, str(player.flags.get("defeat_reason", "?"))])
+		# Der Niederlage-Bildschirm hält die Zeit an: Bericht und Ende
+		var text := "Der Spieler hat verloren (t = %.0f s, %s)" % [t, str(player.flags.get("defeat_reason", "?"))]
+		if _passive:
+			print("[smoke] Phase 7: %s – passiver Spieler" % text)
+			_check(t >= float(g.ai_system.get_difficulty().get("first_attack_minutes", 45)) * 60.0,
+					"Passiver Spieler fällt nicht vor der ersten Angriffszeit")
+		else:
+			_check(false, text)
 		_done = true
+		_sample(t)
 		report()
-		g.get_tree().quit(1)
+		g.get_tree().quit(1 if _errors > 0 else 0)
 		return
 	if t >= _next_sample:
 		_next_sample += SAMPLE_INTERVAL
@@ -90,7 +101,8 @@ func tick(t: float) -> void:
 				_s6()
 				_stage = 8
 		8:
-			if t >= _seconds - 35.0:
+			# Der Siegbildschirm hält die Spielzeit an: nicht auf die Zeit warten
+			if _game.is_victory_shown() or t >= _seconds - 35.0:
 				_s7()
 				_stage = 9
 
@@ -220,7 +232,8 @@ func _s_growth() -> void:
 		var brain: AIBrain = g.ai_system.get_brain(k)
 		var army := brain.army_units().size() if brain != null else 0
 		var min_buildings := 12 if _natural and _seconds >= 3600.0 else (10 if long_run else int(_start_buildings.get(k.id, 1)) + 3)
-		var min_army := 5 if _natural and _seconds >= 3600.0 else (3 if long_run else 1)
+		# Kurze Läufe: nur die verstärkte KI muss schon Truppen haben (sonst Wirtschaft zuerst)
+		var min_army := 5 if _natural and _seconds >= 3600.0 else (3 if long_run else (1 if k == _ai0 and not _natural else 0))
 		var min_research := 3 if _natural and _seconds >= 3600.0 else (2 if long_run else 0)
 		_check(k.buildings.size() >= min_buildings, "%s: %d Gebäude (mindestens %d)" % [k.display_name, k.buildings.size(), min_buildings])
 		_check(army >= min_army, "%s: %d Kampfeinheiten (mindestens %d)" % [k.display_name, army, min_army])
@@ -240,12 +253,13 @@ func _s_growth() -> void:
 		_check(g.are_hostile(_ai[0], _ai[1]), "Rivalen %s und %s im Krieg" % [_ai[0].display_name, _ai[1].display_name])
 	if _natural and _seconds >= 1800.0:
 		_check(_player_alive_1800, "Burg und König des Spielers stehen bei t = 1800 s")
-	var stats: Dictionary = g.ai_system.stats
-	var thinks := maxi(int(stats["thinks"]), 1)
-	var avg_ms := float(stats["think_usec_total"]) / thinks / 1000.0
-	var max_ms := float(stats["think_usec_max"]) / 1000.0
-	print("[smoke] KI-Denkzeit: %d Denkvorgänge, Ø %.2f ms, max %.2f ms" % [int(stats["thinks"]), avg_ms, max_ms])
-	_check(avg_ms < 3.0, "KI-Denkzeit im Schnitt unter 3 ms (%.2f ms)" % avg_ms)
+	_check(_think_ms() < 3.0, "KI-Denkzeit im Schnitt unter 3 ms (%.2f ms)" % _think_ms())
+
+
+## Mittlere Denkzeit eines KI-Denkvorgangs in Millisekunden
+func _think_ms() -> float:
+	var stats: Dictionary = _game.ai_system.stats
+	return float(stats["think_usec_total"]) / maxi(int(stats["thinks"]), 1) / 1000.0
 
 
 ## S6: alle KI-Reiche besiegen (Burg zerstört, wie eine echte Niederlage)
@@ -283,10 +297,17 @@ func _sample(t: float) -> void:
 			if u.role == "worker":
 				workers += 1
 		var wave: Dictionary = k.ai_state.get("wave", {})
-		print("[smoke] P7 t=%4.0f %s: Gebäude %d, Bewohner %d, Armee %d (Soll %d), Wellen %d (%s), Forschung %d, Helden %d, %s" % [
+		var waiting: Dictionary = k.ai_state.get("build_waiting", {})
+		var skipped: PackedStringArray = []
+		var skip: Dictionary = k.ai_state.get("skip_until", {})
+		for id in skip:
+			if float(skip[id]) > t:
+				skipped.append(str(id))
+		print("[smoke] P7 t=%4.0f %s: Gebäude %d, Bewohner %d, Armee %d (Soll %d), Wellen %d (%s), Forschung %d, Helden %d, %s | spart: %s, übersprungen: %s" % [
 				t, k.display_name, k.buildings.size(), workers, brain.army_units().size() if brain != null else 0,
 				AIMilitary.army_target(brain, t) if brain != null else 0, int(k.ai_state.get("waves_sent", 0)),
-				str(wave.get("state", "-")), k.researched.size(), k.heroes.size(), DataDB.cost_to_text(k.resources)])
+				str(wave.get("state", "-")), k.researched.size(), k.heroes.size(), DataDB.cost_to_text(k.resources),
+				str(waiting.get("building", "-")), ", ".join(skipped)])
 	var player: Kingdom = g.player
 	print("[smoke] P7 t=%4.0f Spieler: Gebäude %d, Einheiten %d, König %s, Burg %s" % [t, player.buildings.size(),
 			player.units.size(), "lebt" if is_instance_valid(player.king) else "tot",
@@ -308,6 +329,13 @@ func report() -> void:
 	for key in ai.rivalry:
 		var pair: Dictionary = ai.rivalry[key]
 		print("[smoke] Rivalität %s: Spannung %.0f, %s" % [str(key), float(pair["tension"]), str(pair["state"])])
+	print("[smoke] KI-Denkzeit: %d Denkvorgänge, Ø %.2f ms, max %.2f ms" % [int(ai.stats["thinks"]), _think_ms(),
+			float(ai.stats["think_usec_max"]) / 1000.0])
+	var part_texts: PackedStringArray = []
+	var by_part: Dictionary = ai.stats.get("parts", {})
+	for part in by_part:
+		part_texts.append("%s %.2f" % [str(part), float(by_part[part]) / maxi(int(ai.stats["thinks"]), 1) / 1000.0])
+	print("[smoke] KI-Denkzeit je Teil (ms je Denkvorgang): %s" % ", ".join(part_texts))
 	for f in g.victory_system.fallen:
 		print("[smoke] Gefallen: %s (%s) bei %.0f s" % [str(f["name"]), str(f["reason"]), float(f["at"])])
 	if _stage != 99 and _stage < 9 and GameClock.game_time >= _seconds - 1.0:

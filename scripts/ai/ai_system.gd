@@ -45,8 +45,8 @@ var rivalry: Dictionary = {}
 var rng_state: int = 0
 ## Rauchtest/Debug: Denkpause 1 s, keine Zeitsperren (Angriffe, Helden, Forschung, Lager)
 var debug_fast := false
-## Messwerte: Anzahl Denkvorgänge und Rechenzeit in Mikrosekunden
-var stats := {"thinks": 0, "think_usec_total": 0, "think_usec_max": 0}
+## Messwerte: Anzahl Denkvorgänge und Rechenzeit in Mikrosekunden (parts: je Teil gesamt)
+var stats := {"thinks": 0, "think_usec_total": 0, "think_usec_max": 0, "parts": {}}
 
 ## Laufzeit: Kingdom.id -> AIBrain
 var _brains: Dictionary = {}
@@ -533,6 +533,7 @@ func debug_boost(k: Kingdom) -> void:
 		if def.is_empty() or bs.count_buildings(k, str(id), true) > 0:
 			continue
 		brain.checks_left = 2000
+		brain.scan_left = 20000
 		var cell := AIEconomy.find_site(brain, def)
 		if cell.x >= 0:
 			bs.place_building(def, cell, k, true)

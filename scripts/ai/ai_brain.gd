@@ -31,8 +31,10 @@ var diff: Dictionary = {}
 ## Laufzeit: nächster Verteidigungs-Scan und letzte Feindstärke im Gebiet (AIMilitary)
 var next_scan := -1.0
 var enemy_power := 0.0
-## Laufzeit: Prüfbudget der Bauplatzsuche im aktuellen Denkvorgang (AIEconomy)
+## Laufzeit: Prüfbudget der Bauplatzsuche im aktuellen Denkvorgang (AIEconomy):
+## can_place-Aufrufe und betrachtete Kacheln (begrenzt die Rechenzeit im schlechtesten Fall)
 var checks_left := 0
+var scan_left := 0
 
 
 func _init(p_sys: AISystem, p_kingdom: Kingdom) -> void:
@@ -49,7 +51,8 @@ func _init(p_sys: AISystem, p_kingdom: Kingdom) -> void:
 ## Vorgaben für Kingdom.ai_state (alles einfache Werte):
 ## "personality", "next_think" (-1 = noch nicht), "think_count",
 ## "build_waiting" {"building", "since"} (wartet auf Geld), "skip_until" {Gebäude-id: Spielzeit},
-## "home_rally" (ZERO = noch nicht), "mana_spots" [Vector2i], "mana_spots_key",
+## "ring_hint" {Gebäude-id: Ring des letzten Bauplatzes um die Burg},
+## "home_rally" (ZERO = noch nicht), "mana_spots" [Vector2i], "mana_spots_key", "mana_spots_at",
 ## "alarm" {"pos", "attacker_id", "until", "last_enemy", "next_order"} ({} = keiner),
 ## "defending" [uids], "help" {"village_id", "pos", "until", "uids"},
 ## "wave" ({} = keine) {"id", "target_id", "target_kind" "kingdom"|"village"|"lair", "target_uid",
@@ -57,19 +60,19 @@ func _init(p_sys: AISystem, p_kingdom: Kingdom) -> void:
 ##   "state_at", "start_power", "next_reissue", "vs_player"},
 ## "waves_sent", "player_waves", "last_wave_end" (-1 = noch keine), "wave_counter",
 ## "scouts" {uid: "patrol"|"explore"}, "next_patrol", "village_next", "gift_value_hour", "spy_next",
-## "upgrade_flip", "debug_army_min",
+## "upgrade_flip", "debug_army_min", "hero_saving" (Heldentyp, auf den gespart wird, "" = keiner),
 ## "log" {"first_building", "first_barracks", "first_summon", "first_research", "first_spy",
 ##   "first_wave", "first_player_wave", "first_lair", "first_hero"} (-1 = noch nicht; Rauchtest, README)
 static func default_state(personality_id: String) -> Dictionary:
 	return {
 		"personality": personality_id, "next_think": -1.0, "think_count": 0,
-		"build_waiting": {}, "skip_until": {},
-		"home_rally": Vector2.ZERO, "mana_spots": [], "mana_spots_key": "",
+		"build_waiting": {}, "skip_until": {}, "ring_hint": {},
+		"home_rally": Vector2.ZERO, "mana_spots": [], "mana_spots_key": "", "mana_spots_at": -1.0,
 		"alarm": {}, "defending": [], "help": {},
 		"wave": {}, "waves_sent": 0, "player_waves": 0, "last_wave_end": -1.0, "wave_counter": 0,
 		"scouts": {}, "next_patrol": -1.0, "village_next": -1.0,
 		"gift_value_hour": {"hour": -1, "value": 0.0}, "spy_next": -1.0,
-		"upgrade_flip": false, "debug_army_min": 0,
+		"upgrade_flip": false, "debug_army_min": 0, "hero_saving": "",
 		"log": {"first_building": -1.0, "first_barracks": -1.0, "first_summon": -1.0, "first_research": -1.0,
 				"first_spy": -1.0, "first_wave": -1.0, "first_player_wave": -1.0, "first_lair": -1.0, "first_hero": -1.0},
 	}
@@ -102,15 +105,24 @@ func think(now: float) -> void:
 	if not is_active():
 		return
 	checks_left = int(DataDB.ai("placement.max_checks", 400))
+	scan_left = checks_left * AIEconomy.SCAN_PER_CHECK
 	var n := int(st["think_count"])
+	var t0 := Time.get_ticks_usec()
 	AIEconomy.tick_build(self, now)
-	AIEconomy.tick_jobs(self)
+	t0 = _measure("build", t0)
+	# Berufe jeden zweiten Denkvorgang, bei Unbeschäftigten sofort
+	if n % 2 == 0 or (game.work_system as WorkSystem).get_idle_count(k) > 0:
+		AIEconomy.tick_jobs(self)
+		t0 = _measure("jobs", t0)
 	if n % 2 == 0:
 		AIEconomy.tick_research(self, now)
 		AIEconomy.tick_upgrades(self)
+		t0 = _measure("research", t0)
 	AIMilitary.tick_summon(self, now)
+	t0 = _measure("summon", t0)
 	if n % 3 == 0:
 		AIMilitary.tick_heroes(self, now)
+		t0 = _measure("heroes", t0)
 	if now >= float(st["spy_next"]):
 		var spy_mult := maxf(float(personality.get("spy_mult", 1.0)), 0.1)
 		st["spy_next"] = now + float(DataDB.ai("spies.interval", 30)) / spy_mult
@@ -119,10 +131,23 @@ func think(now: float) -> void:
 	if now >= float(st["village_next"]):
 		st["village_next"] = now + float(DataDB.ai("villages.interval", 60))
 		AIDiplomacy.tick_villages(self, now)
+	t0 = _measure("diplomacy", t0)
 	if (st["wave"] as Dictionary).is_empty() and (st["alarm"] as Dictionary).is_empty():
 		AIMilitary.plan_wave(self, now)
+	t0 = _measure("waves", t0)
 	AIMilitary.tick_peace_spells(self, now)
 	AIDiplomacy.tick_cloak(self, now)
+	_measure("spells", t0)
+
+
+## Rechenzeit eines Teils des Denkvorgangs in AISystem.stats.parts eintragen
+## (Mikrosekunden gesamt); gibt den neuen Startzeitpunkt zurück
+func _measure(part: String, since: int) -> int:
+	var now_usec := Time.get_ticks_usec()
+	var parts: Dictionary = sys.stats.get("parts", {})
+	parts[part] = int(parts.get(part, 0)) + now_usec - since
+	sys.stats["parts"] = parts
+	return now_usec
 
 
 ## Schnelltakt (jede Spielsekunde): billig, nur Zustandsmaschinen
@@ -313,7 +338,7 @@ func home_rally() -> Vector2:
 
 
 ## Kosten, die nach einer Ausgabe mindestens übrig bleiben müssen: Reserve
-## (army.reserve) plus der Bauplan, auf den gerade gespart wird
+## (army.reserve) plus der Bauplan und der Held, auf die gerade gespart wird
 func reserve_cost() -> Dictionary:
 	var total: Dictionary = (DataDB.ai("army.reserve", {}) as Dictionary).duplicate()
 	var waiting: Dictionary = st["build_waiting"]
@@ -321,14 +346,21 @@ func reserve_cost() -> Dictionary:
 		var cost: Dictionary = DataDB.get_building(str(waiting.get("building", ""))).get("cost", {})
 		for res in cost:
 			total[res] = float(total.get(res, 0.0)) + float(cost[res])
+	var hero := str(st.get("hero_saving", ""))
+	if not hero.is_empty():
+		var hero_cost: Dictionary = game.hero_system.recruit_cost(k, hero)
+		for res in hero_cost:
+			total[res] = float(total.get(res, 0.0)) + float(hero_cost[res])
 	return total
 
 
-## Kann das Reich cost ausgeben und behält dabei die Reserve?
+## Kann das Reich cost ausgeben und behält dabei die Reserve? (Nur die Ressourcen,
+## die cost braucht: ein Sparziel in Erz hält keine Bogenschützen ohne Erz auf.)
 func can_spend(cost: Dictionary, with_reserve: bool = true) -> bool:
 	if not with_reserve:
 		return k.can_afford(cost)
-	var total := reserve_cost()
+	var reserve := reserve_cost()
 	for res in cost:
-		total[res] = float(total.get(res, 0.0)) + float(cost[res])
-	return k.can_afford(total)
+		if float(cost[res]) > 0.0 and k.get_amount(str(res)) + 0.0001 < float(cost[res]) + float(reserve.get(res, 0.0)):
+			return false
+	return true

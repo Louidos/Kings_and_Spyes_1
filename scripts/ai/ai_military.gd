@@ -78,6 +78,7 @@ static func tick_summon(b: AIBrain, now: float) -> void:
 	if total >= target:
 		return
 	var composition: Dictionary = DataDB.ai("army.composition", {})
+	var alarm: Dictionary = b.st["alarm"]
 	var max_queue := int(DataDB.ai("army.max_queue_per_building", 2))
 	for bld in k.buildings:
 		if total >= target:
@@ -108,7 +109,8 @@ static func tick_summon(b: AIBrain, now: float) -> void:
 		for pair in scored:
 			var def: Dictionary = pair[1]
 			var id := str(def.get("id", ""))
-			if not ss.can_summon(bld, id).is_empty() or not b.can_spend(ss.get_cost(k, id)):
+			# Bei Alarm ohne Rücksicht auf Reserve und Sparziele
+			if not ss.can_summon(bld, id).is_empty() or not b.can_spend(ss.get_cost(k, id), alarm.is_empty()):
 				continue
 			if ss.summon(bld, id):
 				var tier := str(def.get("tier", ""))
@@ -150,25 +152,31 @@ static func _count_tier(k: Kingdom, tier: String) -> int:
 static func tick_heroes(b: AIBrain, now: float) -> void:
 	var k := b.k
 	var hs: HeroSystem = b.game.hero_system
-	# Anwerben
+	# Anwerben (bis es bezahlbar ist, wird darauf gespart: AIBrain.reserve_cost)
+	b.st["hero_saving"] = ""
 	if b.time_ok(now, float(DataDB.ai("heroes.min_minute", 40))) and hs.get_hall(k) != null \
 			and hs.count_heroes(k) < int(b.diff.get("max_heroes", 2)):
 		var factor := float(DataDB.ai("heroes.reserve_factor", 1.3))
 		var offers: Array = []
+		var possible := ""
 		for def in hs.get_offers(k):
 			var id := str(def.get("id", ""))
 			if not hs.can_recruit(k, id).is_empty():
 				continue
+			possible = id
 			var cost := hs.recruit_cost(k, id)
 			var scaled := {}
 			for res in cost:
-				scaled[res] = float(cost[res]) * factor
+				# Nie mehr verlangen, als das Lager fassen kann (Mana)
+				scaled[res] = minf(float(cost[res]) * factor, maxf(k.get_capacity(str(res)), float(cost[res])))
 			if k.can_afford(scaled):
 				offers.append(id)
 		if not offers.is_empty():
 			var pick := str(offers[mini(int(b.sys.rand_float() * offers.size()), offers.size() - 1)])
 			if hs.recruit(k, pick):
 				b.log_first("first_hero", now)
+		elif not possible.is_empty():
+			b.st["hero_saving"] = possible
 	var prefer := str(DataDB.ai("heroes.prefer_kind", "ability"))
 	var busy := not (b.st["alarm"] as Dictionary).is_empty() or not (b.st["wave"] as Dictionary).is_empty()
 	for rec in k.heroes.duplicate():
