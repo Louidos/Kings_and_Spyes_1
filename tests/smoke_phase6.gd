@@ -334,6 +334,7 @@ func _s4() -> void:
 	_check(answer.is_empty() and ds.get_treaty_with(_a, player) == "trade", "Handelsvertrag mit %s %s" % [_a.display_name, answer])
 	# Schutzvertrag mit E: Angriff (Monster) -> Schutzpflicht; Aufnahme mit Geschenk möglich
 	if _e != null:
+		_detach_from_ai(_e)
 		ds.debug_set_reputation(_e, player, 40.0)
 		var info := ds.can_annex(player, _e)
 		_check(str(info["mode"]) == "gift" and not (info["gift"] as Dictionary).is_empty(),

@@ -24,7 +24,7 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Zur Burg springen | H, Pos1 |
 | Minikarte | Linksklick oder Ziehen springt zur Stelle |
 | Pause an/aus | Leertaste, P |
-| Spieltempo | + / − (oder die Buttons oben rechts: Pause, 0.5x, 1x, 2x, 3x) |
+| Spieltempo | + / − (oder die Buttons oben rechts: Pause-Symbol ❚❚, 0.5x, 1x, 2x, 3x) |
 | Gebäude bauen | Baumenü unten anklicken → Vorschau (grün = möglich, rot = Grund wird angezeigt) → Linksklick |
 | Mehrere gleiche Gebäude | Umschalttaste beim Klicken gedrückt halten |
 | Baumenü-Reiter | Dorf / Militär & Wissen / Verteidigung (über den Knöpfen des Baumenüs) |
@@ -47,12 +47,12 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Heldenfenster | G oder Button „Helden“ oben: eigene Helden (Stufenwahl, Ausbildung, Wiederbelebung) und Anwerben |
 | Helden auswählen | Heldenleiste unten links über dem Infobereich (Klick wählt, Doppelklick springt hin, Rechtsklick öffnet das Heldenfenster; gefallener Held: Klick belebt wieder, sobald es geht) – Helden sind auch Teil von Armeen |
 | Heldenfähigkeiten | C / V / B (oder die Knöpfe im Auswahlfenster) – auch wenn die ganze Armee ausgewählt ist; Tab wechselt den Helden; Rechtsklick auf einen Knopf schaltet „selbst auslösen“ um (goldener Rahmen). Fähigkeiten mit Ziel: Feind bzw. Stelle anklicken, Rechtsklick/Esc bricht ab |
-| Diplomatie | N oder Button „Diplomatie“ oben: Reiter „Dörfer“ (alle neutralen Dörfer mit Ruf, Vertrag, Entfernung und Stärke; Geschenke, Verträge, Handel, Aufnahme, Drohung, Krieg/Frieden) „Reiche“ (feindliche Königreiche: Volk, Kriege, geschätzte Stärke – nur mit Kundschaft) und „Handelswege“. Esc oder N schliesst. Ein Dorfgebäude, eine Miliz oder ein Bote auswählen → Knopf „Diplomatie (N)“ im Auswahlfenster |
+| Diplomatie | N oder Button „Diplomatie“ oben: Reiter „Dörfer“ (alle neutralen Dörfer mit Ruf, Vertrag, Entfernung und Stärke; Geschenke, Verträge, Handel, Aufnahme, Drohung, Krieg/Frieden), „Reiche“ (feindliche Königreiche: Volk, Kriege, geschätzte Stärke – nur mit Kundschaft) und „Handelswege“. Esc oder N schliesst. Ein Dorfgebäude, eine Miliz oder ein Bote auswählen → Knopf „Diplomatie (N)“ im Auswahlfenster |
 | Spionage | K oder Button „Spionage · 42“ oben (Zahl und Strich = dein Entdeckungswert, roter Punkt = fremder Spion entdeckt oder ein Reich ist aufmerksamer geworden): Reiter „Übersicht“ (Ursachen, Reichstarnung), „Reiche & Dörfer“ (Kundschaft), „Spione“ (beschwören, Aufträge). Esc oder K schliesst |
 | Spion: Auftrag | Spion auswählen → „Auftrag (K)“ im Auswahlfenster, oder Spionagefenster, Reiter „Spione“: Auftrag, Ziel (und Zweitziel) wählen → „Auftrag erteilen“; „Zurückrufen“ holt ihn heim |
 | Handelswege | N → Reiter „Handelswege“ oder L → Reiter „Handel“: Karawanen, Ladung, Lieferungen, Verluste, „Weg freigeben“, gesichtete fremde Wege, Versorgung |
 | Krieg gegen ein Dorf | mit eigenen Truppen zweimal Rechtsklick (innerhalb von 3 s) auf eine Einheit oder ein Gebäude des Dorfs – der erste Klick warnt nur – oder „Krieg erklären“ im Diplomatiefenster |
-| Reichsübersicht | L oder Button „Reich“ oben (Zufriedenheit, Ereignisse, Volk und Tageszeit; Esc oder L schliesst). Gesicht in der Ressourcenleiste und Sonne/Mond neben dem Datum öffnen sie ebenfalls |
+| Reichsübersicht | L oder Button „Reich“ oben (Zufriedenheit, Ereignisse, Volk und Tageszeit, Handel; Esc oder L schliesst). Gesicht in der Ressourcenleiste und Sonne/Mond neben dem Datum öffnen sie ebenfalls |
 | Flüchtlinge aufnehmen | Meldung, Ereignisleiste (oben Mitte) oder einen Flüchtling anklicken → „Aufnehmen“ / „Abweisen“ |
 | Überläufer aufhalten | dem Überläufer einen Befehl geben (z. B. Rechtsklick ins Gelände oder „Halt“) |
 | Meldungen | Klick springt zur Stelle; Meldungen zur Stufenwahl oder Wiederbelebung öffnen das Heldenfenster |
@@ -228,13 +228,16 @@ assets/
   - `SatisfactionSystem` (`scripts/economy/`): `Unit.satisfaction` je Bewohner nähert sich einem Ziel aus
     Reichs- und persönlichen Ursachen; Folgen über `Unit.work_mult` (Arbeitsleistung), Überlaufen (Befehl
     `"defect"`, am Ziel `UnitSystem.transfer_unit`) und Verrat (`EspionageSystem.report_betrayal`); Feste als
-    Quelle `"feast"`. Neue Gebäude Taverne und Tempel (`satisfaction` in buildings.json).
+    Quelle `"feast"`. Neue Gebäude Taverne und Tempel (`satisfaction` in buildings.json). Sicherheit ab Phase 9
+    auch durch Mauerring und Türme (`SiegeSystem.get_safety_bonus`, `siege.json` → `safety`); verlorene
+    Mauerstücke und Tore zählen nicht als „Gebäude verloren“. Das Zielreich greift Überläufer nicht an.
   - `EventSystem` (`scripts/events/`): seltene Zufallsereignisse aus `data/events.json` (Dürre, Seuche,
     Magiesturm, Monsterwelle, Flüchtlinge, Wanderer, Erntedank, Manablüte) für alle Reiche; Quellen
     `"event:<id>#<nr>"`, Einheitenwirkungen `"event:<id>"`. Flüchtlinge und Wanderer gehören dem Reich
     „Wanderer“ (Befehl `"seek_refuge"`), die KI entscheidet selbst. `EventEffects` zeichnet Gebiete und Blitze.
   - `MonsterSystem` (ausgebaut): Streifzüge zu nahen Siedlungen (nachts häufiger), Monsterwellen
-    (`spawn_wave`), wachsende Lager, neue Lager an freien Plätzen, heimatlose Monster schliessen sich an.
+    (`spawn_wave`), wachsende Lager, neue Lager an freien Plätzen, untätige heimatlose Monster schliessen
+    sich an. Schwierigkeit: `monster_growth_mult` (Nachwuchs, Wachstum, neue Lager), `monster_raid_mult`.
   - Daten: `data/events.json`, `data/satisfaction.json`, `data/daynight.json`; Oberfläche `KingdomPanel`,
     `EventBanner`, `RefugeeDialog`, `MoodIcon`. Jedes System hat `to_dict`/`from_dict`/`rebuild_runtime`.
 - **Spielende**: `Game.defeat_kingdom` – stirbt der König des Spielers oder fällt seine Burg, ist das Spiel
@@ -254,6 +257,8 @@ assets/
   - `TradeRouteSystem` (`scripts/economy/`): Handelswege zu Dörfern mit Handelsvertrag oder Bündnis;
     Lieferungen fahren als Karawane (Befehl `"haul"`), Überfälle bringen Beute, Verluste oder Feinde am Weg
     schneiden ihn ab. `TradeRouteView` (`scripts/view/`) zeichnet die Wege gestrichelt, die Minikarte auch.
+    Die Liste (`TradeRouteList`) steht im Diplomatiefenster (Reiter „Handelswege“) und in der
+    Reichsübersicht (Reiter „Handel“).
   - `SupplySystem` (`scripts/economy/`): fern vom eigenen bzw. verbündeten Gebiet und offenen Handelswegen
     erholen sich verletzte Einheiten nicht (Wirkung `supply:regen` über das MagicSystem).
   - KI: `AISiege` (`scripts/ai/`) baut Türme und einen Mauerring bei Bedrohung, bringt Belagerungswaffen

@@ -611,7 +611,10 @@ func _s_growth() -> void:
 			_check(first_player < 0.0 or first_player >= limit, "%s: erste Welle gegen den Spieler %s (frühestens %.0f s)" % [
 					k.display_name, "keine" if first_player < 0.0 else "%.0f s" % first_player, limit])
 	if _rival_test and _ai.size() >= 2:
-		_check(g.are_hostile(_ai[0], _ai[1]), "Rivalen %s und %s im Krieg" % [_ai[0].display_name, _ai[1].display_name])
+		var pair: Dictionary = g.ai_system.get_rivalry(_ai[0], _ai[1])
+		_check(g.are_hostile(_ai[0], _ai[1]), "Rivalen %s und %s im Krieg%s" % [_ai[0].display_name, _ai[1].display_name,
+				"" if g.are_hostile(_ai[0], _ai[1]) else " (Spannung %.0f, Zustand %s seit %.0f s, t = %.0f s)" % [
+				float(pair.get("tension", -1.0)), str(pair.get("state", "?")), float(pair.get("since", -1.0)), GameClock.game_time]])
 	if _natural and _seconds >= 1800.0:
 		_check(_player_alive_1800, "Burg und König des Spielers stehen bei t = 1800 s")
 	_check(_think_ms() < 3.0, "KI-Denkzeit im Schnitt unter 3 ms (%.2f ms)" % _think_ms())
