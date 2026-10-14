@@ -453,12 +453,21 @@ func mag(path: String, default_value: Variant = null) -> Variant:
 	return node
 
 
-## Pfad der Gebäudegrafik für eine Fraktion ("" wenn keine angegeben)
-func get_building_sprite(def: Dictionary, faction_id: String) -> String:
+## Pfad der Gebäudegrafik für eine Fraktion ("" wenn keine angegeben). people_id
+## (optional): zuerst die Grafik dieses Volks (people_sprites, Dorfgebäude), zuletzt
+## sprite_fallback.
+func get_building_sprite(def: Dictionary, faction_id: String, people_id: String = "") -> String:
+	if not people_id.is_empty():
+		var by_people: Dictionary = def.get("people_sprites", {})
+		if by_people.has(people_id):
+			return str(by_people[people_id])
 	if def.has("sprite"):
 		return str(def["sprite"])
 	var sprites: Dictionary = def.get("sprites", {})
-	return str(sprites.get(faction_id, sprites.get("good", "")))
+	var path := str(sprites.get(faction_id, sprites.get("good", "")))
+	if path.is_empty():
+		path = str(def.get("sprite_fallback", ""))
+	return path
 
 
 ## Kosten als lesbarer Text, z. B. "25 Holz, 10 Stein"
@@ -582,6 +591,51 @@ func _load_jobs() -> void:
 		job_by_id[j["id"]] = j
 
 
+## Völker aus peoples.json (Rückfall: Liste "peoples" in factions.json). Farbe als
+## Color, fehlende Listen und Tabellen leer, Zahlen als float.
+func _load_peoples(faction_data: Dictionary) -> void:
+	var data := faction_data
+	if FileAccess.file_exists(DATA_DIR + "peoples.json"):
+		data = _load_json("peoples.json")
+	peoples = data.get("peoples", [])
+	people_by_id.clear()
+	for p in peoples:
+		p["color"] = _parse_color(p.get("color", "#cccccc"))
+		p["letter"] = str(p.get("letter", ""))
+		for key in ["leaning", "affinity", "terrain_bonus", "day_bonus", "night_bonus", "base_bonus", "produces",
+				"tribute", "gift_preferences", "trade_rates", "delivery", "annex_gift"]:
+			if not (p.get(key, null) is Dictionary):
+				p[key] = {}
+		for key in ["preferred_biomes", "strengths", "weaknesses", "village_names"]:
+			if not (p.get(key, null) is Array):
+				p[key] = []
+		for table in [["trade_rates", "sells"], ["trade_rates", "buys"], ["delivery", "give"], ["delivery", "take"]]:
+			var outer: Dictionary = p[table[0]]
+			if not (outer.get(table[1], null) is Dictionary):
+				outer[table[1]] = {}
+		p["trade_bonus"] = float(p.get("trade_bonus", 0.0))
+		p["militia_factor"] = float(p.get("militia_factor", 1.0))
+		people_by_id[str(p.get("id", ""))] = p
+
+
+## Prüft die Dorfdaten der Völker (Milizen und Spezialeinheiten müssen in units.json stehen)
+func _validate_peoples() -> void:
+	for p in peoples:
+		for key in ["militia_unit", "special_unit"]:
+			var unit_id := str(p.get(key, ""))
+			if not unit_id.is_empty() and not unit_by_id.has(unit_id):
+				push_error("peoples.json: Volk '%s' – %s '%s' fehlt in units.json" % [p.get("id"), key, unit_id])
+
+
+## Ruf-Stufen nach Untergrenze sortieren, Farben umwandeln
+func _prepare_diplomacy() -> void:
+	var tiers: Array = diplo("reputation.tiers", [])
+	for tier in tiers:
+		tier["color"] = _parse_color(tier.get("color", "#ffffff"))
+		tier["min"] = float(tier.get("min", -100.0))
+	tiers.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["min"]) < float(b["min"]))
+
+
 func _load_units() -> void:
 	var data := _load_json("units.json")
 	units = data.get("units", [])
@@ -620,7 +674,7 @@ func _normalize_unit(u: Dictionary) -> void:
 	u["joins_fights"] = bool(u.get("joins_fights", role in ["combat", "king", "monster", "hero"]))
 	u["target_priority"] = float(u.get("target_priority", 1.6 if role == "worker" else 1.0))
 	var rank := 0
-	if role == "worker" or role == "support":
+	if role == "worker" or role == "support" or role == "messenger":
 		rank = 2
 	elif u["range"] >= 2.0:
 		rank = 1

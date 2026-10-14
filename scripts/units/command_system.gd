@@ -40,6 +40,8 @@ const COMMANDS := {
 	"return": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "kehrt heim"},
 	# Held läuft in Reichweite einer Fähigkeit (HeroSystem wirkt sie dort, siehe Unit.cast_*)
 	"cast": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "hold", "text": "wirkt eine Fähigkeit"},
+	# Bote (ab Phase 9 auch Karawane): reist zum Ziel, kämpft nie, danach Befehl gelöscht
+	"travel": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "überbringt eine Nachricht"},
 }
 
 ## Einheiten weiter als so viele Kacheln vom Gruppenmittelpunkt marschieren einzeln

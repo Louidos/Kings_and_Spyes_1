@@ -16,6 +16,8 @@ signal unit_removed(unit: Unit)
 signal arrived(unit: Unit)
 ## Für eine Einheit wurde kein Weg gefunden.
 signal path_failed(unit: Unit)
+## Eine Einheit hat den Besitzer gewechselt (Dorfmilizen bei der Aufnahme; ab Phase 8 Überläufer)
+signal unit_transferred(unit: Unit, from_kingdom: Kingdom, to_kingdom: Kingdom)
 
 ## Höchstens so viele Wegberechnungen bzw. so viel Zeit (µs) pro Frame
 const MAX_PATHS_PER_FRAME := 8
@@ -77,6 +79,42 @@ func remove_unit(u: Unit) -> void:
 	u.kingdom.population_changed.emit()
 	unit_removed.emit(u)
 	u.queue_free()
+
+
+## Besitzerwechsel einer Einheit (Dorfmilizen bei der Aufnahme; ab Phase 8 Überläufer).
+## Nicht für Helden und Könige. Die Einheit hält danach ihren Platz.
+func transfer_unit(u: Unit, to: Kingdom) -> void:
+	if not is_instance_valid(u) or not u.is_alive() or to == null or not units.has(u):
+		return
+	var from := u.kingdom
+	if from == to or u.hero_id != 0 or u.role == "king":
+		return
+	if u.inside != null:
+		set_inside(u, null)
+	if u.can_work():
+		# Beruf und Arbeitsplatz gehören zum alten Reich
+		game.work_system.set_unit_job(u, "idle")
+		game.work_system.suspend(u)
+	game.command_system.remove_from_armies(from, u.uid)
+	u.follow_leader = null
+	u.speed_cap = 0.0
+	u.target = null
+	if from.modifiers_changed.is_connected(u.refresh_stats):
+		from.modifiers_changed.disconnect(u.refresh_stats)
+	from.units.erase(u)
+	u.kingdom = to
+	to.units.append(u)
+	to.modifiers_changed.connect(u.refresh_stats)
+	u.refresh_look()
+	u.refresh_stats()
+	u.update_stealth_look()
+	u.command = "hold"
+	u.command_pos = u.position
+	stop(u)
+	game.combat_system.mark_index_dirty()
+	from.population_changed.emit()
+	to.population_changed.emit()
+	unit_transferred.emit(u, from, to)
 
 
 ## Schickt eine Einheit zu einer Weltposition. Der Weg wird in der

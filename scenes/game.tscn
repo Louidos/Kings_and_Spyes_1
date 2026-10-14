@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3]
+[gd_scene load_steps=28 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/world/world_map.gd" id="2_worldmap"]
@@ -23,6 +23,9 @@
 [ext_resource type="Script" path="res://scripts/view/magic_effects.gd" id="21_magicfx"]
 [ext_resource type="Script" path="res://scripts/ui/spell_targeting.gd" id="22_targeting"]
 [ext_resource type="Script" path="res://scripts/heroes/hero_system.gd" id="23_heroes"]
+[ext_resource type="Script" path="res://scripts/diplomacy/village_system.gd" id="p6_villages"]
+[ext_resource type="Script" path="res://scripts/diplomacy/diplomacy_system.gd" id="p6_diplomacy"]
+[ext_resource type="Script" path="res://scripts/diplomacy/messenger_system.gd" id="p6_messengers"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
@@ -90,6 +93,15 @@ script = ExtResource("20_magic")
 
 [node name="HeroSystem" type="Node" parent="Systems"]
 script = ExtResource("23_heroes")
+
+[node name="VillageSystem" type="Node" parent="Systems"]
+script = ExtResource("p6_villages")
+
+[node name="DiplomacySystem" type="Node" parent="Systems"]
+script = ExtResource("p6_diplomacy")
+
+[node name="MessengerSystem" type="Node" parent="Systems"]
+script = ExtResource("p6_messengers")
 
 [node name="Selection" type="Node" parent="."]
 script = ExtResource("12_selection")

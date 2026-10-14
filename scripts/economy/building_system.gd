@@ -13,6 +13,8 @@ signal building_placed(building: Building)
 signal building_completed(building: Building)
 signal building_removed(building: Building)
 signal roads_changed
+## Ein Gebäude hat den Besitzer gewechselt (Aufnahme, Eroberung; ab Phase 8 Verrat)
+signal building_transferred(building: Building, from_kingdom: Kingdom, to_kingdom: Kingdom)
 
 var game: Node
 var world: WorldData
@@ -94,7 +96,15 @@ func place_building(def: Dictionary, cell: Vector2i, kingdom: Kingdom, instant: 
 ## Setzt die Königsburg einer neuen Siedlung: sofort fertig, Untergrund wird
 ## bebaubar gemacht.
 func place_start_castle(kingdom: Kingdom, center_cell: Vector2i) -> Building:
-	var def := DataDB.get_building("castle")
+	var castle := place_settlement_center(DataDB.get_building("castle"), kingdom, center_cell)
+	kingdom.castle = castle
+	return castle
+
+
+## Siedlungsmittelpunkt (Burg, Dorfzentrum): Grundfläche um center_cell freiräumen
+## (Vorkommen weg, unbebaubares Biom wird Ebene) und sofort fertig setzen.
+## Setzt NICHT kingdom.castle.
+func place_settlement_center(def: Dictionary, kingdom: Kingdom, center_cell: Vector2i) -> Building:
 	var size: Vector2i = def.get("size", Vector2i(4, 4))
 	var top_left := center_cell - Vector2i(size.x >> 1, size.y >> 1)
 	top_left = top_left.clamp(Vector2i.ZERO, Vector2i(world.width, world.height) - size)
@@ -106,9 +116,38 @@ func place_start_castle(kingdom: Kingdom, center_cell: Vector2i) -> Building:
 				world.set_deposit(c, -1, 0)
 			if not world.get_biome(c).get("buildable", false):
 				world.set_biome(c, plains)
-	var castle := place_building(def, top_left, kingdom, true)
-	kingdom.castle = castle
-	return castle
+	return place_building(def, top_left, kingdom, true)
+
+
+## Besitzerwechsel eines Gebäudes (Aufnahme, Eroberung; ab Phase 8 Verrat). Arbeiter
+## werden frei, Beschwörungen erstattet (an den alten Besitzer), Leben behält seinen
+## Anteil, Gebiet und Wohnraum gehen mit.
+func transfer_building(b: Building, to: Kingdom) -> void:
+	if not is_instance_valid(b) or to == null:
+		return
+	var from := b.kingdom
+	if from == null or from == to or not from.buildings.has(b):
+		return
+	# Arbeiter freigeben, solange das Gebäude noch dem alten Besitzer gehört
+	game.work_system.on_building_removed(b)
+	while not b.summon_queue.is_empty():
+		game.summon_system.cancel(b, 0)
+	from.buildings.erase(b)
+	if from.castle == b:
+		from.castle = null
+	to.buildings.append(b)
+	b.kingdom = to
+	b.has_rally = false
+	var ratio := clampf(b.hp / maxf(b.max_hp, 1.0), 0.0, 1.0)
+	b.max_hp = maxf(float(b.def.get("hp", 300.0)) * to.mod("building_hp"), 1.0)
+	b.hp = b.max_hp * ratio
+	b.refresh_look()
+	if b.constructed and int(b.def.get("territory_radius", 0)) > 0:
+		game.territory.recompute_area(world, TerritorySystem.claim_rect(b, world), game.kingdoms)
+	if int(b.def.get("housing", 0)) > 0:
+		from.population_changed.emit()
+		to.population_changed.emit()
+	building_transferred.emit(b, from, to)
 
 
 # ---------------------------------------------------------------------------

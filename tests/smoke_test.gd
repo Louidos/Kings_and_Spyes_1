@@ -10,6 +10,9 @@
 ##   godot --headless res://tests/smoke_test.tscn -- faction=good seconds=120 size=small seed=12345
 extends Node
 
+## Prüfungen der Phase 6 (Dörfer, Diplomatie, Boten) in eigener Datei
+const SmokePhase6 := preload("res://tests/smoke_phase6.gd")
+
 var _args := {}
 var _game: Node = null
 var _started_ms := 0
@@ -21,6 +24,7 @@ var _hero_wait_until := 0.0
 var _hero_id := 0
 var _hero_errors := 0
 var _test_wolf: Unit = null
+var _p6: RefCounted = null
 
 
 func _ready() -> void:
@@ -50,12 +54,15 @@ func _process(_delta: float) -> void:
 			Engine.physics_ticks_per_second = 60
 			if _game.has_method("smoke_test_setup"):
 				_game.smoke_test_setup()
+			_p6 = SmokePhase6.new(_game)
 		elif Time.get_ticks_msec() - _started_ms > 120000:
 			push_error("[smoke] Weltgenerierung dauert zu lange")
 			get_tree().quit(2)
 	elif _phase == 1:
 		if _hero_step >= 0 and GameClock.game_time >= _hero_wait_until:
 			_hero_test()
+		if _p6 != null:
+			_p6.tick(GameClock.game_time)
 		if GameClock.game_time >= _sim_seconds:
 			_phase = 2
 			_report()
@@ -76,6 +83,8 @@ func _report() -> void:
 	print("[smoke] Heldentest: %s" % ("OK" if _hero_errors == 0 else "%d Fehler" % _hero_errors))
 	if _game.has_method("smoke_test_report"):
 		_game.smoke_test_report()
+	if _p6 != null:
+		_p6.report()
 
 
 # ---------------------------------------------------------------------------

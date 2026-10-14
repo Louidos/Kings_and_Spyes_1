@@ -69,8 +69,10 @@ var regrowing: Dictionary = {}
 ## Übersichtsbild wurde verändert und muss neu hochgeladen werden
 var overview_dirty := false
 ## Besondere Plätze aus der Generierung: Array von {"kind", "cell", "biome", …}.
-## kind: "start" (Startplatz), "camp" (Monsterlager; ab Phase 6/7 auch
-## "village", "ai_start"). Lager haben optional "kinds" und "size".
+## kind: "start" (Startplatz), "camp" (Monsterlager, cell = obere linke Kachel;
+## optional "kinds" und "size"), "village" (neutrales Dorf, cell = Mitte; "people",
+## "size" = Anzahl Hütten, "index"), "kingdom" (Platz für ein gegnerisches Königreich
+## ab Phase 7, cell = Mitte; "index").
 var sites: Array = []
 ## Gefahrenzonen um Monsterhöhlen: Anzahl Höhlen, deren Umkreis die Kachel
 ## abdeckt (0 = sicher). Bewohner sammeln dort nicht.
@@ -269,7 +271,6 @@ func regrow(hours: int) -> void:
 # Gebiet, Gebäude, Strassen, Bewegung
 # ---------------------------------------------------------------------------
 
-## Besitzer der Kachel (Kingdom.id), 0 = niemand
 ## Liegt die Kachel in der Gefahrenzone einer Monsterhöhle?
 func is_dangerous(cell: Vector2i) -> bool:
 	return not danger.is_empty() and in_bounds(cell) and danger[cell_index(cell)] > 0
@@ -299,6 +300,7 @@ func get_sites(kind: String) -> Array:
 	return list
 
 
+## Besitzer der Kachel (Kingdom.id), 0 = niemand
 func get_owner(cell: Vector2i) -> int:
 	if not in_bounds(cell):
 		return 0

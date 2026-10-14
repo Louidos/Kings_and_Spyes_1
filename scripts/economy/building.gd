@@ -53,6 +53,8 @@ var extra: Dictionary = {}
 var _tile_size := 64
 var _world: WorldData
 var _texture: Texture2D
+## Farbe des Platzhalters (buildings.json "color", Dorfgebäude in der Volksfarbe)
+var _color := Color.GRAY
 
 
 func setup(p_def: Dictionary, p_kingdom: Kingdom, p_cell: Vector2i, world: WorldData, p_uid: int) -> void:
@@ -65,10 +67,21 @@ func setup(p_def: Dictionary, p_kingdom: Kingdom, p_cell: Vector2i, world: World
 	_tile_size = world.tile_size
 	name = "%s_%d_%d" % [def.get("id", "building"), cell.x, cell.y]
 	position = get_center()
-	_texture = Assets.texture(DataDB.get_building_sprite(def, kingdom.faction_id))
 	max_hp = maxf(float(def.get("hp", 300.0)) * kingdom.mod("building_hp"), 1.0)
 	hp = max_hp
 	set_process(false)
+	refresh_look()
+
+
+## Grafik und Platzhalterfarbe neu bestimmen (beim Aufbau und nach einem
+## Besitzerwechsel). Dorfgebäude nutzen das Volk aus extra.people_id.
+func refresh_look() -> void:
+	var people := str(extra.get("people_id", kingdom.people_id if kingdom != null else ""))
+	var faction := kingdom.faction_id if kingdom != null else ""
+	_texture = Assets.texture(DataDB.get_building_sprite(def, faction, people))
+	_color = def.get("color", Color.GRAY)
+	if bool(def.get("people_color", false)) and not DataDB.get_people(people).is_empty():
+		_color = DataDB.get_people(people).get("color", _color)
 	queue_redraw()
 
 
@@ -225,7 +238,7 @@ func _draw() -> void:
 	var px := Vector2(size) * _tile_size
 	var rect := Rect2(-px * 0.5, px)
 	var tint := Color.WHITE if constructed else Color(1, 1, 1, 0.55)
-	SpriteDraw.draw_entity(self, _texture, rect, def.get("color", Color.GRAY), DataDB.get_building_label(def, kingdom.faction_id), "rect", tint)
+	SpriteDraw.draw_entity(self, _texture, rect, _color, DataDB.get_building_label(def, kingdom.faction_id), "rect", tint)
 	if not constructed:
 		# Baugerüst andeuten und Fortschritt zeigen
 		var scaffold := Color(0.45, 0.32, 0.18, 0.9)

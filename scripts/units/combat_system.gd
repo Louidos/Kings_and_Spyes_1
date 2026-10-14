@@ -785,6 +785,10 @@ func _destroy_building(b: Variant, killer: Kingdom) -> void:
 	var k: Kingdom = b.kingdom
 	if not k.buildings.has(b):
 		return
+	# Dorfzentren (capturable) werden erobert statt zerstört (VillageSystem)
+	if killer != null and killer != k and bool(b.def.get("capturable", false)) \
+			and game.village_system.try_capture(b, killer):
+		return
 	if killer != null and killer != k:
 		var loot: Dictionary = b.get_loot()
 		for res_id in loot:

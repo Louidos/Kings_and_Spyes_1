@@ -36,6 +36,10 @@ signal formation_changed(formation: String)
 @onready var research_system: ResearchSystem = $Systems/ResearchSystem
 @onready var magic_system: MagicSystem = $Systems/MagicSystem
 @onready var hero_system: HeroSystem = $Systems/HeroSystem
+## Neutrale Dörfer, Diplomatie und Boten (Phase 6)
+@onready var village_system: VillageSystem = $Systems/VillageSystem
+@onready var diplomacy_system: DiplomacySystem = $Systems/DiplomacySystem
+@onready var messenger_system: MessengerSystem = $Systems/MessengerSystem
 @onready var selection: SelectionController = $Selection
 @onready var hud: CanvasLayer = $HUD
 @onready var pause_menu: CanvasLayer = $PauseMenu
@@ -118,6 +122,10 @@ func _start_game() -> void:
 	magic_system.setup(self)
 	# Nach Kampf und Magie: der Heldentakt läuft nach dem Neuaufbau der Umgebungssuche
 	hero_system.setup(self)
+	# Nach dem Kampf: Dörfer lesen die Umgebungssuche und hören auf Kampfsignale
+	village_system.setup(self)
+	diplomacy_system.setup(self)
+	messenger_system.setup(self)
 	placement.setup(self)
 	selection.setup(self)
 	unit_overlay.setup(self)
@@ -133,6 +141,8 @@ func _start_game() -> void:
 	# Wilde Monster: ein eigenes Reich, mit allen im Krieg
 	wild = create_kingdom({"faction_id": "wild", "controller": "wild", "display_name": "Wilde Monster"})
 	monster_system.setup(self, wild)
+	# Neutrale Dörfer vor den Monsterlagern (das Monster-Reich behält id 2)
+	village_system.found_villages()
 	monster_system.spawn_camps()
 
 	camera.set_map_rect(world.get_pixel_rect())
@@ -147,6 +157,23 @@ func _start_game() -> void:
 			player.castle.get_center())
 	Notify.info("Burg anklicken: Späher beschwören. Monsterlager (orange auf der Minikarte) bringen Beute.",
 			player.castle.get_center())
+	var nearest := _nearest_village()
+	if nearest != null:
+		Notify.info("Neutrale Dörfer in der Nähe – Diplomatie mit N: Geschenke, Handel, Verträge.",
+				village_system.get_center(nearest))
+
+
+## Nächstes selbstständiges Dorf zur Burg des Spielers (null, wenn keins)
+func _nearest_village() -> Kingdom:
+	var best: Kingdom = null
+	var best_d := INF
+	var from := player.castle.get_center() if is_instance_valid(player.castle) else world.cell_to_world(world.start_cell)
+	for v in village_system.get_villages():
+		var d := from.distance_to(village_system.get_center(v))
+		if d < best_d:
+			best_d = d
+			best = v
+	return best
 
 
 ## Nächste eindeutige Nummer für ein Gebäude oder eine Einheit
@@ -307,6 +334,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.toggle_research()
 	elif event.is_action_pressed("toggle_heroes"):
 		hud.toggle_heroes()
+	elif event.is_action_pressed("toggle_diplomacy"):
+		# Das Diplomatiefenster gehört zur Oberfläche (HUD); ohne Fenster nichts tun
+		if hud.has_method("toggle_diplomacy"):
+			hud.call("toggle_diplomacy")
 	elif event.is_action_pressed("hero_ability_1"):
 		use_hero_ability(0)
 	elif event.is_action_pressed("hero_ability_2"):

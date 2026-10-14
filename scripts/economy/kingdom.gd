@@ -21,6 +21,8 @@ signal modifiers_changed
 var id: int = 0
 var faction_id: String = "good"
 var display_name: String = ""
+## Volk (peoples.json), z. B. "dwarves"; Dörfer ab Phase 6, Spieler/KI ab Phase 7/8 (wird gespeichert)
+var people_id: String = ""
 ## Wer steuert das Reich: "player", "ai", "neutral" oder "wild"
 var controller: String = "player"
 var is_player: bool:

@@ -6,7 +6,9 @@
 ##   3. Grenzgebirge am Kartenrand
 ##   4. Biom-Zuordnung nach den Regeln in biomes.json
 ##   5. Übersichtsbild (1 Pixel pro Kachel) mit Relief-Schattierung
-##   6. Startplatz für den Spieler
+##   6. Rohstoffvorkommen und Startplatz für den Spieler
+##   7. Plätze für gegnerische Königreiche (ab Phase 7) und neutrale Dörfer
+##   8. Monsterlager
 ##
 ## Läuft in einem Hintergrund-Thread: hier dürfen KEINE Nodes oder der
 ## Szenenbaum angefasst werden, nur Daten.
@@ -70,11 +72,23 @@ func generate(world_seed: int, size: int) -> WorldData:
 	world.sites.append({"kind": "start", "cell": world.start_cell,
 			"biome": str(world.get_biome(world.start_cell).get("id", ""))})
 
+	# 7a: Plätze für gegnerische Königreiche (ab Phase 7 besiedelt)
+	_report(0.96, "Plane Königreiche …")
+	_place_kingdom_sites(world)
+	if cancelled:
+		return world
+	# 7b: Neutrale Dörfer (gegründet vom VillageSystem beim Spielstart)
+	_report(0.97, "Gründe Dörfer …")
+	_place_villages(world)
+	if cancelled:
+		return world
+
 	# 8: Monsterlager (die Höhlen selbst setzt das MonsterSystem beim Spielstart)
 	_place_camps(world)
 
 	_report(1.0, "Fertig")
-	print("Welt erzeugt: %d×%d Kacheln, Seed %d, %d ms" % [size, size, world_seed, Time.get_ticks_msec() - t_start])
+	print("Welt erzeugt: %d×%d Kacheln, Seed %d, %d ms, %d Reichsplätze, %d Dörfer" % [size, size, world_seed,
+			Time.get_ticks_msec() - t_start, world.get_sites("kingdom").size(), world.get_sites("village").size()])
 	return world
 
 
@@ -365,18 +379,20 @@ func _place_scattered_deposits(world: WorldData) -> void:
 ## Rohstoffe in der Nähe des Startplatzes vorkommen.
 func _prepare_start_area(world: WorldData) -> void:
 	var cfg := DataDB.deposit_cfg
-	var keep := int(cfg.get("start_keep_clear_radius", 4))
-	var start := world.start_cell
-	for dy in range(-keep, keep + 1):
-		for dx in range(-keep, keep + 1):
-			var c := start + Vector2i(dx, dy)
-			var d := world.get_deposit(c)
-			if not d.is_empty() and not d["biome_deposit"]:
-				world.set_deposit(c, -1, 0)
+	_prepare_settlement_area(world, world.start_cell, 4243, cfg.get("start_guarantees", []),
+			int(cfg.get("start_keep_clear_radius", 4)))
+
+
+## Siedlungsplatz vorbereiten (Spielerstart, ab Phase 7 die Königreiche): Umkreis keep
+## frei von verstreuten Vorkommen, gesicherte Rohstoffe (guarantees) in der Nähe.
+## salt: Zufalls-Salz (Spieler 4243 – damit bleibt seine Welt wie bisher).
+func _prepare_settlement_area(world: WorldData, center: Vector2i, salt: int, guarantees: Array, keep: int) -> void:
+	var start := center
+	_clear_deposits_around(world, start, keep)
 
 	var rng := RandomNumberGenerator.new()
-	rng.seed = hash(world.world_seed + 4243)
-	for g in cfg.get("start_guarantees", []):
+	rng.seed = hash(world.world_seed + salt)
+	for g in guarantees:
 		var d := DataDB.get_deposit_by_id(str(g.get("deposit", "")))
 		if d.is_empty():
 			continue
@@ -476,6 +492,211 @@ func _put_deposit(world: WorldData, c: Vector2i, d: Dictionary, rng: RandomNumbe
 
 
 # ---------------------------------------------------------------------------
+# Königreichsplätze und neutrale Dörfer (Phase 6)
+# ---------------------------------------------------------------------------
+
+## Plätze für gegnerische Königreiche (ab Phase 7 besiedelt): in mittlerer Entfernung
+## zum Spieler, auf viel bebaubarem Land, mit gesicherten Rohstoffen wie beim Start.
+## Ergebnis in world.sites als {"kind": "kingdom", "cell": Mitte, "biome": Biom-ID, "index": i}.
+func _place_kingdom_sites(world: WorldData) -> void:
+	var cfg: Dictionary = DataDB.worldgen.get("kingdom_sites", {})
+	var count := int(cfg.get("count", 0))
+	if count <= 0:
+		return
+	var w := world.width
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(world.world_seed + 7211)
+	var border := int(DataDB.worldgen.get("border", {}).get("width", 0))
+	var margin := int(w * float(cfg.get("edge_margin", 0.08))) + border
+	var radius := int(cfg.get("check_radius", 6))
+	var min_ratio := float(cfg.get("min_buildable_ratio", 0.8))
+	var attempts := int(cfg.get("attempts", 800))
+	var min_between := float(cfg.get("min_between", 0.25)) * w
+	var d_min := maxf(float(cfg.get("min_dist", 0.35)) * w, float(cfg.get("min_dist_tiles", 70)))
+	var d_max := maxf(float(cfg.get("max_dist", 0.6)) * w, d_min + 1.0)
+	var center_ids: Array = cfg.get("center_biomes", [])
+	var center_ok := _biome_mask(center_ids)
+	var buildable := _buildable_mask()
+	var start := Vector2(world.start_cell)
+	var guarantees: Array = DataDB.deposit_cfg.get("start_guarantees", [])
+	var keep := int(DataDB.deposit_cfg.get("start_keep_clear_radius", 4))
+	for i in count:
+		var lower := d_min
+		var placed := false
+		for _step in int(cfg.get("relax_steps", 3)) + 1:
+			var best := Vector2i(-1, -1)
+			var best_ratio := -1.0
+			for _a in attempts:
+				var dist := rng.randf_range(lower, d_max)
+				var c := Vector2i((start + Vector2.from_angle(rng.randf() * TAU) * dist).round())
+				if c.x < margin or c.y < margin or c.x >= w - margin or c.y >= world.height - margin:
+					continue
+				if not center_ids.is_empty() and center_ok[world.biomes[world.cell_index(c)]] == 0:
+					continue
+				if not _far_from_sites(world, Vector2(c), ["kingdom"], min_between):
+					continue
+				var ratio := _buildable_ratio(world, c, radius, buildable)
+				if ratio > best_ratio:
+					best_ratio = ratio
+					best = c
+				if ratio >= min_ratio:
+					break
+			if best.x >= 0:
+				world.sites.append({"kind": "kingdom", "cell": best, "biome": str(world.get_biome(best).get("id", "")),
+						"index": i})
+				_prepare_settlement_area(world, best, 4243 + 97 * (i + 1), guarantees, keep)
+				placed = true
+				break
+			# Nichts gefunden: Mindestabstand lockern
+			lower *= 0.8
+		if not placed:
+			print("Weltgenerierung: kein Platz für Königreich %d gefunden" % (i + 1))
+
+
+## Neutrale Dörfer: Anzahl je Kartengrösse, Volk reihum (gemischt), Platz im Ring um den
+## Start mit viel bebaubarem Land und möglichst viel bevorzugtem Gelände des Volks.
+## Ergebnis in world.sites als {"kind": "village", "cell": Mitte, "biome", "people", "size", "index"}.
+func _place_villages(world: WorldData) -> void:
+	var cfg: Dictionary = DataDB.worldgen.get("villages", {})
+	var w := world.width
+	var table: Array = cfg.get("count_by_size", [])
+	var count := 0
+	for entry in table:
+		if int(entry[0]) <= w:
+			count = int(entry[1])
+	if count == 0 and not table.is_empty():
+		count = int(table[0][1])
+	var village_peoples: Array = DataDB.get_village_peoples().duplicate()
+	if count <= 0 or village_peoples.is_empty():
+		return
+	village_peoples.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return str(a["id"]) < str(b["id"]))
+	# Reihenfolge der Völker mischen (eigener Zufall, unabhängig von der Platzsuche)
+	var mix := RandomNumberGenerator.new()
+	mix.seed = hash(world.world_seed + 7334)
+	for i in range(village_peoples.size() - 1, 0, -1):
+		var j := mix.randi_range(0, i)
+		var tmp: Variant = village_peoples[i]
+		village_peoples[i] = village_peoples[j]
+		village_peoples[j] = tmp
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(world.world_seed + 7333)
+	var border := int(DataDB.worldgen.get("border", {}).get("width", 0))
+	var margin := int(w * float(cfg.get("edge_margin", 0.06))) + border
+	var min_start := float(cfg.get("min_dist_start", 50))
+	var max_start := maxf(float(cfg.get("max_dist_ratio", 0.75)) * w, min_start + 1.0)
+	var min_between := maxf(float(cfg.get("min_between", 30)), float(cfg.get("min_between_ratio", 0.05)) * w)
+	var min_kingdom := float(cfg.get("min_dist_kingdom", 40))
+	var check_radius := int(cfg.get("check_radius", 4))
+	var min_ratio := float(cfg.get("min_buildable_ratio", 0.75))
+	var pref_radius := int(cfg.get("preferred_radius", 10))
+	var attempts := int(cfg.get("attempts_per_village", 150))
+	var size_range: Array = cfg.get("size", [2, 4])
+	var keep := int(cfg.get("keep_clear_radius", 4))
+	var buildable := _buildable_mask()
+	var start := Vector2(world.start_cell)
+	var placed := 0
+	for i in count:
+		if cancelled:
+			return
+		var people: Dictionary = village_peoples[i % village_peoples.size()]
+		var preferred := _biome_mask(people.get("preferred_biomes", []))
+		var best := Vector2i(-1, -1)
+		var best_score := -1.0
+		for _a in attempts:
+			var dist := rng.randf_range(min_start, max_start)
+			var c := Vector2i((start + Vector2.from_angle(rng.randf() * TAU) * dist).round())
+			if c.x < margin or c.y < margin or c.x >= w - margin or c.y >= world.height - margin:
+				continue
+			if not _center_buildable(world, c, buildable):
+				continue
+			var cf := Vector2(c)
+			if not _far_from_sites(world, cf, ["village"], min_between) \
+					or not _far_from_sites(world, cf, ["kingdom"], min_kingdom) \
+					or not _far_from_sites(world, cf, ["start"], min_start):
+				continue
+			var ratio := _buildable_ratio(world, c, check_radius, buildable)
+			if ratio < min_ratio:
+				continue
+			var score := _preferred_ratio(world, c, pref_radius, preferred) + 0.25 * ratio
+			if score > best_score:
+				best_score = score
+				best = c
+		if best.x < 0:
+			print("Weltgenerierung: kein Platz für Dorf %d (%s)" % [i + 1, str(people.get("id", ""))])
+			continue
+		var village_size := rng.randi_range(int(size_range[0]), int(size_range[size_range.size() - 1]))
+		world.sites.append({"kind": "village", "cell": best, "biome": str(world.get_biome(best).get("id", "")),
+				"people": str(people.get("id", "")), "size": village_size, "index": placed})
+		placed += 1
+		_clear_deposits_around(world, best, keep)
+
+
+## Maske über alle Biom-Indizes: 1 = bebaubar
+func _buildable_mask() -> PackedByteArray:
+	var mask := PackedByteArray()
+	mask.resize(DataDB.biomes.size())
+	for r in DataDB.biomes.size():
+		mask[r] = 1 if DataDB.biomes[r].get("buildable", true) else 0
+	return mask
+
+
+## Anteil bebaubarer Kacheln im Quadrat (2·radius+1) um c (nur Kacheln auf der Karte)
+func _buildable_ratio(world: WorldData, c: Vector2i, radius: int, buildable: PackedByteArray) -> float:
+	var ok := 0
+	var total := 0
+	for y in range(maxi(c.y - radius, 0), mini(c.y + radius, world.height - 1) + 1):
+		var row := y * world.width
+		for x in range(maxi(c.x - radius, 0), mini(c.x + radius, world.width - 1) + 1):
+			total += 1
+			ok += buildable[world.biomes[row + x]]
+	return float(ok) / maxi(total, 1)
+
+
+## Anteil der Kacheln mit einem Biom aus mask im Umkreis (Schrittweite 2, schnell)
+func _preferred_ratio(world: WorldData, c: Vector2i, radius: int, mask: PackedByteArray) -> float:
+	var hit := 0
+	var total := 0
+	for y in range(c.y - radius, c.y + radius + 1, 2):
+		if y < 0 or y >= world.height:
+			continue
+		var row := y * world.width
+		for x in range(c.x - radius, c.x + radius + 1, 2):
+			if x < 0 or x >= world.width:
+				continue
+			total += 1
+			hit += mask[world.biomes[row + x]]
+	return float(hit) / maxi(total, 1)
+
+
+## Die 3×3 Kacheln um c sind bebaubar (Platz für das Dorfzentrum)?
+func _center_buildable(world: WorldData, c: Vector2i, buildable: PackedByteArray) -> bool:
+	for dy in range(-1, 2):
+		for dx in range(-1, 2):
+			var cell := c + Vector2i(dx, dy)
+			if not world.in_bounds(cell) or buildable[world.biomes[world.cell_index(cell)]] == 0:
+				return false
+	return true
+
+
+## Mindestens min_dist (Kacheln) von allen Plätzen der Arten kinds entfernt?
+func _far_from_sites(world: WorldData, c: Vector2, kinds: Array, min_dist: float) -> bool:
+	for site in world.sites:
+		if kinds.has(site.get("kind", "")) and c.distance_to(Vector2(site["cell"])) < min_dist:
+			return false
+	return true
+
+
+## Entfernt verstreute Vorkommen (nicht Wald o. Ä.) im Quadrat keep um center
+func _clear_deposits_around(world: WorldData, center: Vector2i, keep: int) -> void:
+	for dy in range(-keep, keep + 1):
+		for dx in range(-keep, keep + 1):
+			var c := center + Vector2i(dx, dy)
+			var d := world.get_deposit(c)
+			if not d.is_empty() and not d["biome_deposit"]:
+				world.set_deposit(c, -1, 0)
+
+
+# ---------------------------------------------------------------------------
 # Monsterlager
 # ---------------------------------------------------------------------------
 
@@ -506,12 +727,15 @@ func _place_camps(world: WorldData) -> void:
 	var near: Dictionary = cfg.get("near_start", {})
 	var near_biomes: Array = near.get("biomes", [])
 	var near_placed := 0
+	var near_site_dist := float(near.get("min_site_distance", 20))
 	for _a in int(near.get("count", 0)) * 300:
 		if near_placed >= int(near.get("count", 0)):
 			break
 		var dist := rng.randf_range(float(near.get("min", 30)), float(near.get("max", 45)))
 		var c := Vector2i((start + Vector2.from_angle(rng.randf() * TAU) * dist).round()) - Vector2i.ONE
 		if not bounds.has_point(c) or not _camp_spot_ok(world, c, min_between):
+			continue
+		if not _far_from_sites(world, Vector2(c) + Vector2.ONE, ["village", "kingdom"], near_site_dist):
 			continue
 		var biome_id := str(world.get_biome(c).get("id", ""))
 		if not near_biomes.is_empty() and not near_biomes.has(biome_id):

@@ -188,13 +188,20 @@ func setup(p_type_def: Dictionary, p_kingdom: Kingdom, p_uid: int) -> void:
 	joins_fights = bool(type_def.get("joins_fights", false))
 	target_priority = float(type_def.get("target_priority", 1.0))
 	formation_rank = int(type_def.get("formation_rank", 0))
-	_texture = Assets.texture(DataDB.get_unit_sprite(type_def, kingdom.faction_id))
-	if _texture == null:
-		var color: Color = type_def.get("color", kingdom.color)
-		_token = Assets.unit_token(color, "diamond" if role == "monster" else "circle")
+	refresh_look()
 	refresh_stats()
 	hp = max_hp
 	set_process(false)
+	queue_redraw()
+
+
+## Grafik bzw. Platzhalter neu bestimmen (beim Aufbau und nach einem Besitzerwechsel)
+func refresh_look() -> void:
+	_texture = Assets.texture(DataDB.get_unit_sprite(type_def, kingdom.faction_id))
+	_token = null
+	if _texture == null:
+		var color: Color = type_def.get("color", kingdom.color)
+		_token = Assets.unit_token(color, "diamond" if role == "monster" else "circle")
 	queue_redraw()
 
 
