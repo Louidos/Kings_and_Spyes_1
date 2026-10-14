@@ -17,8 +17,6 @@ signal jobs_changed(kingdom: Kingdom)
 
 ## Höchstens so viele Annahmestellen werden bei der Zielsuche verglichen
 const MAX_DROPOFF_CANDIDATES := 8
-## Höchstens so viele zeitgesteuerte Entscheidungen pro Simulationstakt
-const MAX_THINKS_PER_TICK := 12
 ## Gewicht des einmaligen Anmarschs bei der Zielwahl. Der dauerhafte Arbeitsweg
 ## (Vorkommen <-> Annahmestelle, hin und zurück) zählt voll – so nutzen
 ## Sammler eine Hütte direkt am Vorkommen statt der weit entfernten Burg.
@@ -45,6 +43,9 @@ var _local_version := 0
 var _search_kingdom_id := 0
 var _retry_seconds := 3.0
 var _wander_radius := 4
+## Höchstens so viele zeitgesteuerte Entscheidungen pro Simulationstakt (alle Reiche
+## zusammen; economy.json work.max_thinks_per_tick)
+var _max_thinks := 20
 var _tick_count := 0
 var _rng := RandomNumberGenerator.new()
 
@@ -56,6 +57,7 @@ func setup(p_game: Node) -> void:
 	building_system = game.building_system
 	_retry_seconds = float(DataDB.eco("work.retry_seconds", 3.0))
 	_wander_radius = int(DataDB.eco("work.idle_wander_radius", 4))
+	_max_thinks = maxi(int(DataDB.eco("work.max_thinks_per_tick", 20)), 1)
 	_rng.seed = hash(world.world_seed + 31337)
 	GameClock.sim_tick.connect(_on_sim_tick)
 	unit_system.arrived.connect(_on_arrived)
@@ -279,7 +281,7 @@ func _on_sim_tick(dt: float) -> void:
 				_tick_build(u, dt)
 			Unit.State.IDLE, Unit.State.WAITING:
 				u.timer -= dt
-				if u.timer <= 0.0 and thinks < MAX_THINKS_PER_TICK:
+				if u.timer <= 0.0 and thinks < _max_thinks:
 					thinks += 1
 					_think(u)
 	if _tick_count % 10 == 0:

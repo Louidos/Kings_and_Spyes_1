@@ -42,6 +42,10 @@ const COMMANDS := {
 	"cast": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "hold", "text": "wirkt eine Fähigkeit"},
 	# Bote (ab Phase 9 auch Karawane): reist zum Ziel, kämpft nie, danach Befehl gelöscht
 	"travel": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "überbringt eine Nachricht"},
+	# Spion (Phase 7): schleicht zum Ziel, kämpft nie, danach Befehl gelöscht
+	"infiltrate": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "schleicht sich ans Ziel"},
+	# Spion am Ziel: bleibt, kämpft nie
+	"spy": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "", "text": "spioniert"},
 }
 
 ## Einheiten weiter als so viele Kacheln vom Gruppenmittelpunkt marschieren einzeln
@@ -143,7 +147,18 @@ func order_attack(units: Array, target: Object) -> void:
 		order_move(followers, target.position)
 
 
-## Halt: stehen bleiben und den Platz verteidigen.
+## Einzelreise ohne Kampf (Spione, Boten, ab Phase 9 Karawanen): Befehl cmd ("travel",
+## "infiltrate", "return"), Ziel dest. command_finished(u, cmd, ok) meldet die Ankunft.
+func order_travel(u: Unit, dest: Vector2, cmd: String = "travel") -> void:
+	if not is_instance_valid(u) or not u.is_alive():
+		return
+	_prepare(u)
+	u.command = cmd
+	u.command_pos = dest
+	u.target = null
+	unit_system.move_to(u, dest)
+
+
 ## Held läuft zu approach_pos, um eine Fähigkeit zu wirken. Was gewirkt wird,
 ## steht in u.cast_ability / cast_target_uid / cast_pos (setzt das HeroSystem);
 ## es wirkt sie, sobald der Held in Reichweite ist.
@@ -169,6 +184,7 @@ func remove_from_armies(k: Kingdom, uid: int) -> void:
 		armies_changed.emit(k)
 
 
+## Halt: stehen bleiben und den Platz verteidigen.
 func order_stop(units: Array) -> void:
 	for u in _commandable(units):
 		_prepare(u)

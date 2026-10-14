@@ -63,6 +63,10 @@ var abilities: Array = []
 var ability_by_id: Dictionary = {}
 ## Diplomatie mit neutralen Dörfern (diplomacy.json): Ruf, Verträge, Handel, Dörfer, Boten
 var diplomacy: Dictionary = {}
+## Gegner-KI (ai.json): Völker, Persönlichkeiten, Schwierigkeit, Bauliste, Armee, Wellen, Rivalität
+var ai_cfg: Dictionary = {}
+## Entdeckung, Aufmerksamkeit, Kundschaft und Spione (espionage.json)
+var espionage: Dictionary = {}
 
 
 func _ready() -> void:
@@ -93,6 +97,8 @@ func reload() -> void:
 	_load_research()
 	_load_spells()
 	_load_heroes()
+	ai_cfg = _load_json("ai.json")
+	espionage = _load_json("espionage.json")
 	_validate_peoples()
 
 
@@ -148,18 +154,39 @@ func get_village_peoples() -> Array:
 
 ## Liest einen Wert aus diplomacy.json über einen Punkt-Pfad, z. B. "treaties.alliance.min_reputation".
 func diplo(path: String, default_value: Variant = null) -> Variant:
-	var node: Variant = diplomacy
-	for key in path.split("."):
-		if node is Dictionary and node.has(key):
-			node = node[key]
-		else:
-			return default_value
-	return node
+	return _dig(diplomacy, path, default_value)
 
 
 ## Ruf-Stufen aus diplomacy.json (sortiert nach min aufsteigend, color als Color)
 func get_reputation_tiers() -> Array:
 	return diplo("reputation.tiers", [])
+
+
+## Wert aus ai.json über einen Punkt-Pfad, z. B. "waves.gather_seconds"
+func ai(path: String, default_value: Variant = null) -> Variant:
+	return _dig(ai_cfg, path, default_value)
+
+
+## Wert aus espionage.json über einen Punkt-Pfad, z. B. "awareness.rumour"
+func esp(path: String, default_value: Variant = null) -> Variant:
+	return _dig(espionage, path, default_value)
+
+
+## Schwierigkeit für die KI: Eintrag aus difficulties.json, ergänzt um ai.json →
+## difficulty[id] (eine Kopie; Rückfall auf "normal", wenn die id unbekannt ist)
+func get_ai_difficulty(id: String) -> Dictionary:
+	var base := get_difficulty(id)
+	if base.is_empty():
+		base = get_difficulty("normal")
+	var result: Dictionary = base.duplicate(true)
+	var extra: Variant = ai("difficulty." + id, null)
+	if not (extra is Dictionary):
+		extra = ai("difficulty.normal", {})
+	var extra_dict: Dictionary = extra
+	for key in extra_dict:
+		var value: Variant = extra_dict[key]
+		result[key] = (value as Dictionary).duplicate(true) if value is Dictionary else value
+	return result
 
 
 ## Liest einen Wert aus economy.json über einen Punkt-Pfad, z. B. "villager.speed".
@@ -294,9 +321,11 @@ func describe_unlock(unlock_id: String, faction_id: String) -> String:
 		"spell":
 			return "Zauber „%s“" % str(get_spell(parts[1]).get("name", parts[1]))
 		"summon":
-			# "summon:<gebäude>:<einheit>" (Bündnis oder Aufnahme eines Dorfs)
+			# "summon:<gebäude>:<einheit>" (Forschung, Bündnis oder Aufnahme eines Dorfs)
+			var building_id := parts[1].get_slice(":", 0)
 			var unit_id := parts[1].get_slice(":", 1)
-			return str(get_unit_type(unit_id).get("name", unit_id))
+			return "Beschwörung in %s: %s" % [get_building_name(get_building(building_id), faction_id),
+					str(get_unit_type(unit_id).get("name", unit_id))]
 	return unlock_id
 
 
@@ -317,7 +346,7 @@ func describe_requirement(unlock_ids: Array, faction_id: String) -> String:
 ## Name einer Wirkungsquelle: "spell:<id>" -> Zaubername, "research:<id>" -> Forschung,
 ## "upgrade:<id>" -> Kampfpunkt-Verbesserung (für Tooltips und das Auswahlfenster);
 ## ab Phase 6 auch "alliance:<dorf>", "annex:<dorf>", "treaty:<dorf>", "people:<volk>",
-## "daynight", "difficulty" und "event:<id>"
+## "daynight", "difficulty" und "event:<id>"; ab Phase 7 "espionage:<wirkung>" (Spione)
 func describe_effect_source(source: String) -> String:
 	match source:
 		"daynight":
@@ -359,6 +388,8 @@ func describe_effect_source(source: String) -> String:
 			return "Schwierigkeit"
 		"event":
 			return "Ereignis"
+		"espionage":
+			return "Spionage"
 	return parts[1]
 
 
@@ -375,6 +406,8 @@ func get_effect_source_color(source: String) -> Color:
 		return Color(0.95, 0.82, 0.4)
 	if source.begins_with("people:"):
 		return get_people(source.substr(7)).get("color", Color.WHITE)
+	if source.begins_with("espionage:"):
+		return Color(0.7, 0.75, 1.0)
 	return Color.WHITE
 
 
@@ -392,6 +425,12 @@ func describe_bonus(key: String, add: float) -> String:
 			return "Ausbildung der Helden bis Stufe %d (%+d)" % [int(hero_cfg("training.max_level", 5)) + roundi(add), roundi(add)]
 		"hero_slots":
 			return "%+d Heldenplatz" % roundi(add)
+		"spy_skill":
+			return "%+d %% Geschick der Spione" % roundi(add * 100.0)
+		"vigilance":
+			return "%s Wachsamkeit gegen fremde Spione" % ("%+.1f" % add).replace(".", ",")
+		"spy_slots":
+			return "%+d Spion" % roundi(add)
 	if key.begins_with("cap."):
 		return "%+d Lager (%s)" % [roundi(add), str(get_resource(key.substr(4)).get("name", key.substr(4)))]
 	return "%+g %s" % [add, key]
@@ -408,9 +447,9 @@ const _MOD_NAMES := {"attack": "Angriff", "armor": "Rüstung", "hp": "Leben", "s
 	"damage_taken": "erlittener Schaden"}
 const _TIER_NAMES := {"fighter": "Kämpfer", "archer": "Schützen", "elite": "Elite", "scout": "Späher",
 	"medic": "Heiler", "king": "König", "villager": "Bewohner", "summon": "Beschworene", "hero": "Helden",
-	"militia": "Miliz", "special": "Volkskrieger", "messenger": "Boten"}
+	"militia": "Miliz", "special": "Volkskrieger", "messenger": "Boten", "spy": "Spione"}
 const _ROLE_NAMES := {"combat": "alle Truppen ohne Helden", "worker": "Bewohner", "support": "Heiler",
-	"king": "König", "monster": "Monster", "hero": "Helden", "messenger": "Boten"}
+	"king": "König", "monster": "Monster", "hero": "Helden", "messenger": "Boten", "spy": "Spione"}
 
 
 ## Lesbare Wirkung eines Modifikators, z. B. "+10 % Angriff (Kämpfer)".
@@ -454,13 +493,17 @@ func mag(path: String, default_value: Variant = null) -> Variant:
 
 
 ## Pfad der Gebäudegrafik für eine Fraktion ("" wenn keine angegeben). people_id
-## (optional): zuerst die Grafik dieses Volks (people_sprites, Dorfgebäude), zuletzt
+## (optional): zuerst die Grafik dieses Volks (people_sprites, Dorfgebäude; bei
+## Gebäuden mit Fraktionsgrafik wie der Burg nur, wenn die Datei existiert), zuletzt
 ## sprite_fallback.
 func get_building_sprite(def: Dictionary, faction_id: String, people_id: String = "") -> String:
 	if not people_id.is_empty():
 		var by_people: Dictionary = def.get("people_sprites", {})
 		if by_people.has(people_id):
-			return str(by_people[people_id])
+			var people_path := str(by_people[people_id])
+			# Sonst ersetzte ein Platzhalter die vorhandene Fraktionsgrafik (Burg)
+			if not def.has("sprites") or ResourceLoader.exists(people_path):
+				return people_path
 	if def.has("sprite"):
 		return str(def["sprite"])
 	var sprites: Dictionary = def.get("sprites", {})
@@ -674,7 +717,7 @@ func _normalize_unit(u: Dictionary) -> void:
 	u["joins_fights"] = bool(u.get("joins_fights", role in ["combat", "king", "monster", "hero"]))
 	u["target_priority"] = float(u.get("target_priority", 1.6 if role == "worker" else 1.0))
 	var rank := 0
-	if role == "worker" or role == "support" or role == "messenger":
+	if role == "worker" or role == "support" or role == "messenger" or role == "spy":
 		rank = 2
 	elif u["range"] >= 2.0:
 		rank = 1
@@ -807,6 +850,17 @@ func _load_spells() -> void:
 		for key in ["mana_cost", "cooldown", "radius", "duration", "upkeep"]:
 			sp[key] = float(sp.get(key, 0.0))
 		spell_by_id[sp["id"]] = sp
+
+
+## Wert in einem verschachtelten Dictionary über einen Punkt-Pfad ("a.b.c")
+func _dig(root: Dictionary, path: String, default_value: Variant) -> Variant:
+	var node: Variant = root
+	for key in path.split("."):
+		if node is Dictionary and node.has(key):
+			node = node[key]
+		else:
+			return default_value
+	return node
 
 
 func _load_json(file_name: String) -> Dictionary:

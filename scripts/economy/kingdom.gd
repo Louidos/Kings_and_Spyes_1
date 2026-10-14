@@ -44,7 +44,7 @@ var king: Unit = null
 var kill_points: int = 0
 ## Alle je verdienten Kampfpunkte (Statistik)
 var kill_points_total: int = 0
-## Hat dieses Reich verloren (König tot, ab Phase 7 auch anders)?
+## Hat dieses Reich verloren (König tot oder Burg zerstört)?
 var defeated: bool = false
 ## Beziehungen zu anderen Reichen: Kingdom.id -> "war" | "peace" | "alliance".
 ## Nicht eingetragen = Frieden. Wird über Game.set_relation gesetzt.
@@ -65,8 +65,11 @@ var bonus_sources: Dictionary = {}
 ## Laufende Kosten, nach Quelle: Quelle ("spell:<id>" …) -> {Ressource -> pro Sekunde}.
 ## Das EconomySystem zieht sie jeden Takt ab.
 var upkeep: Dictionary = {}
-## Statistik für den Spielende-Bildschirm: Name -> Zahl
+## Statistik für den Spielende-Bildschirm: Name -> Zahl ("summoned", "kills", "losses",
+## "spells", ab Phase 7 "buildings_built", "kingdoms_defeated", "spies_caught", "spy_missions")
 var stats: Dictionary = {}
+## KI-Zustand (nur controller "ai"): einfache Werte, Bedeutung siehe AIBrain (wird gespeichert)
+var ai_state: Dictionary = {}
 # --- Forschung und Magie (Phase 4) ---
 ## Abgeschlossene Forschungen: ID -> true
 var researched: Dictionary = {}

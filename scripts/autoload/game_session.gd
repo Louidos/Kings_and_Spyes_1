@@ -13,6 +13,8 @@ var map_size_id: String = "large"
 var seed_text: String = ""
 ## Daraus berechneter Zahlen-Seed für die Generatoren
 var world_seed: int = 0
+## Rauchtest/Debug: feste Anzahl KI-Reiche (−1 = aus Daten)
+var ai_count_override := -1
 
 
 func _ready() -> void:

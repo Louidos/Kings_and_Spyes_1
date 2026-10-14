@@ -115,7 +115,8 @@ var dormant := false
 var regroup_pending := false
 ## Getarnt: für fremde Reiche unsichtbar (Tarnzauber, ab Phase 7 Spione).
 ## Nur lesen – abgeleitet in refresh_stats aus type_def.stealth oder einer
-## Wirkung mit key "stealth".
+## Wirkung mit key "stealth"; eine Wirkung mit key "revealed" (enttarnter Spion,
+## zeitlich begrenzt über MagicSystem.add_unit_effect) hebt die Tarnung auf.
 var stealthed := false
 ## Beschworene Zaubereinheit: verschwindet zu dieser Spielzeit (-1 = nie)
 var expires_at := -1.0
@@ -225,7 +226,8 @@ func refresh_stats() -> void:
 	lifesteal = maxf(_stat("lifesteal"), 0.0)
 	damage_taken = maxf(_stat_from(1.0, "damage_taken"), 0.05)
 	hp = clampf(ratio, 0.0, 1.0) * max_hp
-	var now_stealthed := bool(type_def.get("stealth", false)) or _has_effect_key("stealth")
+	var now_stealthed := (bool(type_def.get("stealth", false)) or _has_effect_key("stealth")) \
+			and not _has_effect_key("revealed")
 	if now_stealthed != stealthed:
 		stealthed = now_stealthed
 		update_stealth_look()

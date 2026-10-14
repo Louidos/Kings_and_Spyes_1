@@ -331,6 +331,7 @@ func _on_building_finished(b: Building) -> void:
 	if int(b.def.get("housing", 0)) > 0:
 		kingdom.population_changed.emit()
 	if float(b.def.get("build_time", 0.0)) > 0.0:
+		kingdom.add_stat("buildings_built")
 		var text := "%s fertiggestellt" % b.get_display_name()
 		if b.get_worker_slots() > 0:
 			text += " – weise in der Arbeitsverteilung (J) Arbeiter zu"
@@ -349,6 +350,12 @@ func _clear_biome_deposit(c: Vector2i) -> void:
 	var after := str(d.get("depleted_biome", ""))
 	if not after.is_empty() and DataDB.biome_index_by_id.has(after):
 		world.set_biome(c, DataDB.biome_index_by_id[after])
+
+
+## Geschätzter Gelände-Faktor (biome_efficiency) eines Gebäudes an dieser Stelle,
+## bevor es gebaut wird (Bauplatzsuche der KI, Vorschau). 1.0 ohne Tabelle.
+func estimate_efficiency(def: Dictionary, cell: Vector2i) -> float:
+	return _biome_efficiency(def, Rect2i(cell, def.get("size", Vector2i(2, 2))))
 
 
 ## Durchschnittlicher Gelände-Faktor der Grundfläche (für Produktion)
