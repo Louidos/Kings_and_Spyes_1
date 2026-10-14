@@ -7,6 +7,7 @@ GODOT="${GODOT:-godot}"
 cd "$(dirname "$0")/.."
 cleanup() { rm -f override.cfg; }
 trap cleanup EXIT
+write_override() {
 cat > override.cfg <<'CFG'
 [debug]
 
@@ -44,6 +45,18 @@ gdscript/warnings/deprecated_keyword=2
 gdscript/warnings/missing_tool=2
 gdscript/warnings/empty_file=2
 CFG
+}
+write_override
+# Neue Skripte ohne .uid-Datei: einmal den Editor laufen lassen (erzeugt .uid und Import-Cache)
+missing_uid=0
+for f in $(find scripts tests -name '*.gd'); do
+	[ -f "$f.uid" ] || missing_uid=1
+done
+if [ $missing_uid -eq 1 ] || [ ! -d .godot ]; then
+	rm -f override.cfg
+	"$GODOT" --headless --editor --quit >/dev/null 2>&1
+	write_override
+fi
 out=$("$GODOT" --headless res://tests/load_all.tscn 2>&1)
 echo "$out" | grep -E "SCRIPT ERROR|ERROR:|at: |\[load_all\]"
 if echo "$out" | grep -qE "SCRIPT ERROR|\[load_all\] FEHLER"; then
