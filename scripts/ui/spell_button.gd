@@ -7,6 +7,7 @@
 ## - noch nicht erforscht: abgedunkelt mit Schloss
 ## - zu wenig Mana: roter Schimmer
 ## - Zielmodus für diesen Zauber: heller, pulsierender Rahmen
+## - aktiv (an/aus-Zauber wie die Reichstarnung ist an): goldener Rahmen
 ## Der Tooltip ist farbig (RichTextLabel) und wird erst beim Zeigen gebaut
 ## (tip_source liefert BBCode mit den aktuellen Werten).
 class_name SpellButton
@@ -17,6 +18,8 @@ const COLOR_BACK := Color(0.07, 0.065, 0.1, 1.0)
 const COLOR_LOCKED := Color(0.42, 0.4, 0.44)
 const COLOR_BAD := Color(1.0, 0.36, 0.3)
 const COOLDOWN_SHADE := Color(0.0, 0.0, 0.0, 0.64)
+## Rahmen eines aktiven an/aus-Zaubers (Reichstarnung)
+const COLOR_ACTIVE := Color("#f3d36b")
 ## Breite, ab der Tooltip-Text umbricht (Pixel)
 const TIP_WIDTH := 360.0
 const TIP_FONT_SIZE := 16
@@ -38,6 +41,7 @@ var _cd_seconds := 0
 var _no_mana := false
 var _targeting := false
 var _is_ready := false
+var _active := false
 var _flash := 0.0
 var _pulse := 0.0
 var _style := StyleBoxFlat.new()
@@ -90,6 +94,17 @@ func set_state(known: bool, cd_ratio: float, cd_seconds: int, no_mana: bool, tar
 
 func is_targeting() -> bool:
 	return _targeting
+
+
+## An/aus-Zauber (Reichstarnung): aktiv = goldener Rahmen
+func set_active(on: bool) -> void:
+	if on != _active:
+		_active = on
+		queue_redraw()
+
+
+func is_active() -> bool:
+	return _active
 
 
 func _process(delta: float) -> void:
@@ -149,6 +164,9 @@ func _draw() -> void:
 	if hovered:
 		border = border.lightened(0.35)
 		width = 2
+	if _active:
+		border = COLOR_ACTIVE
+		width = 3
 	if _targeting:
 		# Pulsierender Lichtschein um den Knopf
 		var glow := 0.5 + 0.5 * sin(_pulse * 5.0)

@@ -1,8 +1,9 @@
 ## CombatEffects
 ##
 ## Kampfeffekte in der Spielwelt (reine Darstellung, verändert keinen
-## Spielzustand): Geschosse, Treffer, Gefallene, Befehlsmarkierungen und die
-## Sammelpunkt-Fahne ausgewählter Gebäude.
+## Spielzustand): Geschosse, Treffer, Gefallene, Befehlsmarkierungen, die
+## Sammelpunkt-Fahne ausgewählter Gebäude und (ab Phase 7) die Ruinen gefallener
+## Reiche (Zustand in VictorySystem.ruins; blockieren nichts).
 ##
 ## Eine einzige Node zeichnet alle Effekte (keine Node je Effekt): das spart
 ## Zeichenaufrufe auch bei grossen Schlachten. Nur Gefallene und die
@@ -35,12 +36,26 @@ const ARC_FACTOR := 0.15
 const ARC_MAX := 48.0
 const ARROW_TEXTURE := "res://assets/sprites/effects/arrow.png"
 const BOLT_TEXTURE := "res://assets/sprites/effects/bolt.png"
+const STONE_TEXTURE := "res://assets/sprites/effects/stone.png"
+## Steine (Katapulte, Phase 9) fliegen in einem hohen Bogen
+const STONE_ARC_FACTOR := 0.35
+const STONE_ARC_MAX := 140.0
+## Art eines Geschosses
+const KIND_ARROW := 0
+const KIND_BOLT := 1
+const KIND_STONE := 2
+const RUIN_TEXTURE := "res://assets/sprites/effects/ruin.png"
+const RUIN_FRAME := Color(0.42, 0.36, 0.3)
+const RUIN_FILL := Color(0.3, 0.27, 0.24, 0.55)
+## Ruinen verblassen in diesem letzten Anteil ihrer Lebensdauer
+const RUIN_FADE_SHARE := 0.1
 
 const MARKER_COLORS := {
 	"move": Color(0.35, 0.95, 0.4),
 	"attack_move": Color(1.0, 0.6, 0.15),
 	"attack": Color(1.0, 0.25, 0.2),
 	"rally": Color(1.0, 0.88, 0.25),
+	"patrol": Color(0.4, 0.75, 1.0),
 }
 const SPARK_UNIT_COLOR := Color(1.0, 0.22, 0.15)
 const SPARK_BUILDING_COLOR := Color(1.0, 0.6, 0.15)
@@ -56,7 +71,8 @@ const BOLT_SHINE := Color(0.82, 0.62, 1.0)
 class Projectile:
 	var from := Vector2.ZERO
 	var to := Vector2.ZERO
-	var bolt := false
+	## 0 Pfeil, 1 Bolzen, 2 Stein
+	var kind := 0
 	var t := 0.0
 	var dur := 0.1
 	## Scheitelhöhe des Bogens (0 = gerade)
@@ -122,6 +138,10 @@ var _drawn_any := false
 var _rng := RandomNumberGenerator.new()
 var _arrow_tex: Texture2D
 var _bolt_tex: Texture2D
+var _stone_tex: Texture2D
+var _ruin_tex: Texture2D
+## Ruinen sind zu sehen (dann wird die Bodenebene bei Kamerabewegung neu gezeichnet)
+var _has_ruins := false
 ## Bodenebene unter den Einheiten (Gefallene, Sammelpunkt-Linie)
 var _ground: Node2D
 
@@ -131,6 +151,8 @@ func setup(p_game: Node) -> void:
 	_corpse_seconds = maxf(float(DataDB.cmb("corpse_seconds", 4.0)), 0.1)
 	_arrow_tex = Assets.texture(ARROW_TEXTURE)
 	_bolt_tex = Assets.texture(BOLT_TEXTURE)
+	_stone_tex = Assets.texture(STONE_TEXTURE)
+	_ruin_tex = Assets.texture(RUIN_TEXTURE)
 	_rng.seed = 7341
 	_ground = Node2D.new()
 	_ground.name = "GroundEffects"
@@ -146,6 +168,15 @@ func setup(p_game: Node) -> void:
 	if sel.has_signal("command_issued"):
 		sel.connect("command_issued", _on_command_issued)
 	sel.connect("selection_changed", _on_selection_changed)
+	var victory: Variant = game.get("victory_system")
+	if victory is Object and (victory as Object).has_signal("ruins_changed"):
+		(victory as Object).connect("ruins_changed", _on_ruins_changed)
+
+
+func _on_ruins_changed() -> void:
+	var victory: Variant = game.get("victory_system")
+	_has_ruins = victory is Object and not ((victory as Object).get("ruins") as Array).is_empty()
+	_dirty = true
 
 
 ## Anzahl laufender Effekte (für Tests und die Debug-Anzeige)
@@ -162,10 +193,13 @@ func _on_projectile_fired(from_pos: Vector2, to_pos: Vector2, kind: String, flig
 	var p := Projectile.new()
 	p.from = from_pos
 	p.to = to_pos
-	p.bolt = kind == "bolt"
+	p.kind = KIND_BOLT if kind == "bolt" else (KIND_STONE if kind == "stone" else KIND_ARROW)
 	p.dur = maxf(flight_time, 0.05)
-	if not p.bolt:
+	if p.kind == KIND_ARROW:
 		p.arc = minf(from_pos.distance_to(to_pos) * ARC_FACTOR, ARC_MAX)
+	elif p.kind == KIND_STONE:
+		p.arc = minf(from_pos.distance_to(to_pos) * STONE_ARC_FACTOR, STONE_ARC_MAX)
+		p.dur = maxf(p.dur * 1.6, 0.3)
 	if _projectiles.size() >= MAX_PROJECTILES:
 		_projectiles.remove_at(0)
 	_projectiles.append(p)
@@ -262,7 +296,7 @@ func _process(delta: float) -> void:
 	if gd > 0.0 and not _markers.is_empty():
 		_advance_markers(delta)
 	_update_flags(gd > 0.0)
-	var has_any := not (_projectiles.is_empty() and _sparks.is_empty() and _corpses.is_empty()
+	var has_any := _has_ruins or not (_projectiles.is_empty() and _sparks.is_empty() and _corpses.is_empty()
 			and _markers.is_empty() and _flags.is_empty())
 	var view: Rect2 = game.camera.get_view_rect().grow(VIEW_MARGIN)
 	var zoom: float = maxf(game.camera.zoom.x, 0.02)
@@ -293,7 +327,8 @@ func _advance(gd: float) -> void:
 				if p.t < p.dur:
 					keep.append(p)
 				elif p.hit != 0:
-					_add_spark(p.to, p.hit == 2, p.hit_size)
+					# Steine schlagen doppelt so gross ein
+					_add_spark(p.to, p.hit == 2, p.hit_size * (2.0 if p.kind == KIND_STONE else 1.0))
 			_projectiles = keep
 	if not _sparks.is_empty():
 		_dirty = true
@@ -347,10 +382,12 @@ func _draw() -> void:
 	_draw_flags()
 
 
-## Bodenebene: Gefallene und gestrichelte Linie zum Sammelpunkt
+## Bodenebene: Ruinen, Gefallene und gestrichelte Linie zum Sammelpunkt
 func _draw_ground() -> void:
 	if game == null or game.world == null:
 		return
+	if _has_ruins:
+		_draw_ruins()
 	for c in _corpses:
 		if not _view.has_point(c.pos):
 			continue
@@ -373,6 +410,37 @@ func _draw_ground() -> void:
 		var kc: Color = b.kingdom.color
 		_ground.draw_dashed_line(from, to, Color(0, 0, 0, 0.45), 4.0 * k, 12.0 * k)
 		_ground.draw_dashed_line(from, to, Color(kc.lightened(0.35), 0.9), 2.0 * k, 12.0 * k)
+
+
+## Ruinen im Sichtbereich: Grafik auf die Grundfläche gestreckt, sonst ein Platzhalter
+## (graubrauner Rahmen mit Bruchlinien, "Ruine" ab Zoom 0,5); verblassen am Ende
+func _draw_ruins() -> void:
+	var victory: Object = game.get("victory_system")
+	var ts := float(game.world.tile_size)
+	var now := GameClock.game_time
+	var life := maxf(float(DataDB.ai("defeat.ruin_seconds", 1800)), 1.0)
+	for ruin in victory.get("ruins"):
+		var cell: Vector2i = ruin["cell"]
+		var ruin_size: Vector2i = ruin["size"]
+		var rect := Rect2(Vector2(cell) * ts, Vector2(ruin_size) * ts)
+		if not _view.intersects(rect):
+			continue
+		var left := float(ruin["until"]) - now
+		var alpha := clampf(left / (life * RUIN_FADE_SHARE), 0.0, 1.0)
+		if _ruin_tex != null:
+			_ground.draw_texture_rect(_ruin_tex, rect, false, Color(1, 1, 1, alpha))
+			continue
+		var inner := rect.grow(-ts * 0.15)
+		_ground.draw_rect(inner, Color(RUIN_FILL, RUIN_FILL.a * alpha), true)
+		_ground.draw_rect(inner, Color(RUIN_FRAME, alpha), false, 4.0)
+		var c := inner.get_center()
+		var crack := Color(RUIN_FRAME.darkened(0.3), alpha)
+		_ground.draw_line(inner.position + Vector2(inner.size.x * 0.2, 0), c + Vector2(-ts * 0.2, ts * 0.1), crack, 3.0)
+		_ground.draw_line(c + Vector2(-ts * 0.2, ts * 0.1), Vector2(inner.end.x - inner.size.x * 0.3, inner.end.y), crack, 3.0)
+		_ground.draw_line(Vector2(inner.end.x, inner.position.y + inner.size.y * 0.35), c + Vector2(ts * 0.25, -ts * 0.05), crack, 3.0)
+		if _zoom >= 0.5:
+			_ground.draw_string(ThemeDB.fallback_font, c + Vector2(-ts * 0.45, ts * 0.12), "Ruine", HORIZONTAL_ALIGNMENT_CENTER,
+					ts * 0.9, 18, Color(0.92, 0.88, 0.8, alpha))
 
 
 func _draw_projectiles() -> void:
@@ -403,12 +471,19 @@ func _draw_projectiles() -> void:
 		var vel := (p.to - p.from) - Vector2(0, p.arc * 4.0 * (1.0 - 2.0 * s))
 		var angle := vel.angle() if vel.length_squared() > 0.01 else 0.0
 		draw_set_transform(pos, angle, Vector2(k, k))
-		var tex := _bolt_tex if p.bolt else _arrow_tex
+		if p.kind == KIND_STONE:
+			if _stone_tex != null:
+				draw_texture_rect(_stone_tex, Rect2(-8.0, -8.0, 16.0, 16.0), false)
+			else:
+				draw_circle(Vector2.ZERO, 8.5, Color(0.15, 0.13, 0.12))
+				draw_circle(Vector2.ZERO, 7.0, Color(0.55, 0.53, 0.5))
+			continue
+		var tex := _bolt_tex if p.kind == KIND_BOLT else _arrow_tex
 		if tex != null:
 			# Grafik zeigt nach rechts, die Spitze liegt am rechten Rand
 			var ts := tex.get_size()
 			draw_texture(tex, Vector2(-ts.x, -ts.y * 0.5))
-		elif p.bolt:
+		elif p.kind == KIND_BOLT:
 			_draw_bolt()
 		else:
 			_draw_arrow()

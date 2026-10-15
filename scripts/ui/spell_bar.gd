@@ -6,7 +6,9 @@
 ## Zustand und Tooltip kommen aus MagicSystem.can_cast_now und get_cast_params
 ## (echte Werte nach Forschung, z. B. Manafokus).
 ## Klick auf einen bereiten Zauber startet den Zielmodus (SpellTargeting),
-## ein zweiter Klick (oder Rechtsklick) bricht ihn ab.
+## ein zweiter Klick (oder Rechtsklick) bricht ihn ab. Die Reichstarnung (realm_cloak)
+## hat kein Ziel: ein Klick schaltet sie an bzw. aus (EspionageSystem.toggle_cloak),
+## aktiv hat der Knopf einen goldenen Rahmen.
 ## Wird von SpellTargeting angelegt (eigene CanvasLayer wie das HUD), damit
 ## das HUD-Skript nicht angefasst werden muss.
 ## Aktualisiert alle 0.25 s sowie bei Mana-, Forschungs- und Zielmodus-Änderungen.
@@ -59,6 +61,8 @@ func setup(p_game: Node) -> void:
 	game.research_system.research_completed.connect(_on_research_completed)
 	game.spell_targeting.targeting_changed.connect(_on_targeting_changed)
 	get_viewport().size_changed.connect(_place)
+	# UI-Grösse: erst nachdem das HUD neu skaliert ist (gleiches Signal)
+	Settings.changed.connect(_place, CONNECT_DEFERRED)
 	visible = game.hud.visible
 	_refresh()
 	_place()
@@ -153,26 +157,27 @@ func _process(delta: float) -> void:
 		_refresh()
 
 
-## Rechts über der Minikarte, rechte Kante bündig mit ihr
+## Rechts über der Minikarte, rechte Kante bündig mit ihr. Die Minikarte liegt in der
+## skalierten HUD-Ebene: ihre Lage in Bildschirmpunkten kommt aus der Canvas-Transformation;
+## die Leiste selbst wächst mit der UI-Grösse.
 func _place() -> void:
 	if game == null:
 		return
 	var vp := get_viewport_rect().size
-	var margin := FALLBACK_MARGIN
+	var u := Settings.ui_scale
+	var right := vp.x - FALLBACK_MARGIN.x
+	var bottom := vp.y - FALLBACK_MARGIN.y
 	var mm: Variant = game.hud.get("minimap")
 	if is_instance_valid(mm) and mm is Control:
 		var panel := (mm as Control).get_parent() as Control
 		if panel != null and panel.size.y > 0.0:
-			var r := panel.get_global_rect()
-			margin = Vector2(maxf(vp.x - r.end.x, 0.0), maxf(vp.y - r.position.y, 0.0) + GAP)
-	set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	grow_vertical = Control.GROW_DIRECTION_BEGIN
-	offset_right = -margin.x
-	offset_bottom = -margin.y
-	offset_left = offset_right
-	offset_top = offset_bottom
+			var xf := panel.get_global_transform_with_canvas()
+			right = (xf * panel.size).x
+			bottom = (xf * Vector2.ZERO).y - GAP * u
+	set_anchors_preset(Control.PRESET_TOP_LEFT)
 	reset_size()
+	scale = Vector2(u, u)
+	position = Vector2(right - size.x * u, bottom - size.y * u).floor()
 
 
 func _refresh() -> void:
@@ -194,7 +199,9 @@ func _refresh() -> void:
 		var total := maxf(float(params["cooldown"]), 0.01)
 		var no_mana := mana + 0.0001 < cost
 		var castable := ms.can_cast_now(k, id).is_empty()
-		button.set_state(known, cd / total, ceili(cd), no_mana, active_id == id, castable)
+		var cloaked := _is_cloak(id) and _cloak_active()
+		button.set_state(known, cd / total, ceili(cd), no_mana and not cloaked, active_id == id, castable or cloaked)
+		button.set_active(cloaked)
 		var cost_color := COLOR_DIM
 		if known:
 			cost_color = COLOR_BAD if no_mana else COLOR_MANA
@@ -209,6 +216,18 @@ func _on_spell_pressed(spell_id: String) -> void:
 		return
 	var k: Kingdom = game.player
 	var spell_name := str(DataDB.get_spell(spell_id).get("name", ""))
+	# Reichstarnung: kein Zielmodus, ein Klick schaltet an bzw. aus
+	if _is_cloak(spell_id):
+		if st.is_active():
+			st.cancel()
+		var esp := _espionage()
+		var why := "Nicht verfügbar" if esp == null else esp.toggle_cloak(k)
+		if not why.is_empty():
+			if not game.magic_system.is_known(k, spell_id):
+				why = "Noch nicht erforscht – %s" % _research_hint(k, spell_id)
+			Notify.warning("%s: %s" % [spell_name, why])
+		_refresh()
+		return
 	var reason: String = game.magic_system.can_cast_now(k, spell_id)
 	if not reason.is_empty():
 		if not game.magic_system.is_known(k, spell_id):
@@ -229,6 +248,22 @@ func _on_button_gui_input(event: InputEvent) -> void:
 
 func _on_changed() -> void:
 	_dirty = true
+
+
+## Ist der Zauber eine Reichstarnung (an/aus, ohne Ziel)?
+func _is_cloak(spell_id: String) -> bool:
+	return bool(DataDB.get_spell(spell_id).get("realm_cloak", false))
+
+
+## Das EspionageSystem (null, solange es keins gibt)
+func _espionage() -> EspionageSystem:
+	var esp: Variant = game.get("espionage_system")
+	return esp as EspionageSystem if esp is EspionageSystem else null
+
+
+func _cloak_active() -> bool:
+	var esp := _espionage()
+	return esp != null and esp.is_cloaked(game.player)
 
 
 func _on_research_completed(k: Kingdom, _id: String) -> void:
@@ -273,20 +308,27 @@ func _tooltip(spell_id: String) -> String:
 		mana_text = "Mana: [color=#%s]%s[/color] (du hast %d)" % [COLOR_BAD.to_html(false), _num(cost), floori(mana)]
 	mana_text += _base_note(cost, float(def.get("mana_cost", 0.0)), "")
 	var upkeep := float(p["upkeep"])
-	if upkeep > 0.0:
+	var cloak := _is_cloak(spell_id)
+	if upkeep > 0.0 and not cloak:
 		mana_text += ", laufend %s Mana/s je Zauber" % _num(upkeep)
 	lines.append(mana_text)
 	var cooldown := float(p["cooldown"])
 	lines.append("Abklingzeit: %s s%s" % [_num(cooldown), _base_note(cooldown, float(def.get("cooldown", 0.0)), " s")])
-	var radius := float(p["radius"])
-	lines.append("Wirkungskreis: %s %s" % [_num(radius), "Feld" if is_equal_approx(radius, 1.0) else "Felder"])
-	var duration := float(p["duration"])
-	if duration < 0.0:
-		lines.append("Dauer: bis zum Ende")
-	elif duration > 0.0:
-		var prefix := "höchstens " if bool(def.get("stealth", false)) else ""
-		lines.append("Dauer: %s%s s" % [prefix, _num(duration)])
-	lines.append("Reichweite: eigenes Gebiet und %d Felder davor" % int(p["range"]))
+	if cloak:
+		# Reichstarnung: ganzes Reich, an/aus, Kosten wachsen mit dem Entdeckungswert
+		var esp := _espionage()
+		var per_min := esp.cloak_upkeep(k) * 60.0 if esp != null else upkeep * 60.0
+		lines.append("An/aus per Klick · jetzt: %s · laufend %s Mana/min" % ["an" if _cloak_active() else "aus", _num(per_min)])
+	else:
+		var radius := float(p["radius"])
+		lines.append("Wirkungskreis: %s %s" % [_num(radius), "Feld" if is_equal_approx(radius, 1.0) else "Felder"])
+		var duration := float(p["duration"])
+		if duration < 0.0:
+			lines.append("Dauer: bis zum Ende")
+		elif duration > 0.0:
+			var prefix := "höchstens " if bool(def.get("stealth", false)) else ""
+			lines.append("Dauer: %s%s s" % [prefix, _num(duration)])
+		lines.append("Reichweite: eigenes Gebiet und %d Felder davor" % int(p["range"]))
 
 	# Zustand (unabhängig vom Zielort)
 	lines.append("")
@@ -296,7 +338,14 @@ func _tooltip(spell_id: String) -> String:
 		lines.append(SpellButton.wrap_text(_research_hint(k, spell_id)))
 	else:
 		var reason := ms.can_cast_now(k, spell_id)
-		if not reason.is_empty():
+		if cloak:
+			if _cloak_active():
+				lines.append("[color=#%s]Klick: Reichstarnung abschalten[/color]" % COLOR_DIM.to_html(false))
+			elif not reason.is_empty():
+				lines.append(bad % [COLOR_BAD.to_html(false), SpellButton.wrap_text(reason)])
+			else:
+				lines.append("[color=#%s]Klick: Reichstarnung einschalten[/color]" % COLOR_DIM.to_html(false))
+		elif not reason.is_empty():
 			lines.append(bad % [COLOR_BAD.to_html(false), SpellButton.wrap_text(reason)])
 		elif game.spell_targeting.spell_id == spell_id:
 			lines.append("[color=#%s]Zielort wählen · Rechtsklick oder Esc: abbrechen[/color]" % COLOR_DIM.to_html(false))
@@ -369,6 +418,8 @@ func _effect_text(def: Dictionary, power: float) -> String:
 				roundi(float(unit_def.get("hp", 0.0))), roundi(float(unit_def.get("attack", 0.0)))])
 	if bool(def.get("stealth", false)):
 		parts.append("Eigene Truppen unsichtbar bis zum ersten Angriff")
+	if bool(def.get("realm_cloak", false)):
+		parts.append("Entdeckungswert des Reichs %s" % _percent(-float(DataDB.esp("cloak.reduction", 0.4))))
 	return " · ".join(parts)
 
 

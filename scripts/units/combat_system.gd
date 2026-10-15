@@ -5,6 +5,10 @@
 ##
 ## Was eine Einheit im Kampf tut, hängt von ihrem Befehl ab – die Bedeutung
 ## jedes Befehls steht in CommandSystem.COMMANDS (engage, retaliate, leash).
+## Die Haltung der Einheit (Unit.stance, Armeefenster) ändert das: "passiv" sucht
+## keine Feinde, wehrt sich nicht und hilft nicht (stance_allows_engage), "aggressiv"
+## verfolgt auch vom Posten weg und länger (leash_for), "verteidigend" ist der Standard.
+## Befehl "rest" (Rückzug zur Burg) erholt schneller (combat.json → rest).
 ## Einheiten mit Befehl "" werden hier nur bewegt, wenn sie nicht arbeiten
 ## können (Monster, König): arbeitende Einheiten steuert allein das WorkSystem.
 ## Werden sie angegriffen, fliehen sie (flee_on_hit) oder wehren sich mit dem
@@ -65,6 +69,9 @@ var _leash := 12.0
 var _camp_radius := 3.0
 var _worker_flee := true
 var _king_flee_ratio := 0.35
+## Erholung an der Burg (Befehl "rest"): Faktor auf regen und Anteil des Höchstlebens je Sekunde
+var _rest_mult := 3.0
+var _rest_share := 0.01
 var _rng := RandomNumberGenerator.new()
 var _tick_count := 0
 ## In diesem Takt gestorbene Einheiten / zerstörte Gebäude: [Opfer, Sieger-Reich]
@@ -99,6 +106,8 @@ func setup(p_game: Node) -> void:
 	_camp_radius = float(DataDB.cmb("camp_radius", 3.0))
 	_worker_flee = bool(DataDB.cmb("worker_flee", true))
 	_king_flee_ratio = float(DataDB.cmb("king_flee_ratio", 0.35))
+	_rest_mult = float(DataDB.cmb("rest.regen_mult", 3.0))
+	_rest_share = float(DataDB.cmb("rest.max_hp_per_sec", 0.01))
 	_rng.seed = hash(world.world_seed + 4711)
 	GameClock.sim_tick.connect(_on_sim_tick)
 	game.relation_changed.connect(func(_a: Kingdom, _b: Kingdom, _s: String) -> void: _hostile_cache.clear())
@@ -121,10 +130,17 @@ func is_valid_target(k: Kingdom, t: Variant) -> bool:
 		return false
 	if t is Unit:
 		return t.hp > 0.0 and t.inside == null and _hostile(k, t.kingdom) \
-				and (not t.stealthed or game.are_allied(k, t.kingdom))
+				and (not t.stealthed or game.are_allied(k, t.kingdom)) \
+				and (t.command != "defect" or not _defects_to(t, k))
 	if t is Building:
 		return t.hp > 0.0 and _hostile(k, t.kingdom)
 	return false
+
+
+## Überläufer auf dem Weg zu k (Phase 8): k nimmt ihn auf, statt ihn anzugreifen
+func _defects_to(u: Unit, k: Kingdom) -> bool:
+	var ss: Variant = game.get("satisfaction_system")
+	return ss != null and bool(ss.defects_to(u, k))
 
 
 ## Einheiten des Reichs k und seiner Verbündeten im Umkreis
@@ -134,6 +150,26 @@ func _query_allies(k: Kingdom, pos: Vector2, radius: float) -> Array:
 		if k.relations[other_id] == "alliance":
 			result.append_array(index.query_kingdom(pos, radius, int(other_id)))
 	return result
+
+
+## Sind die Reiche verfeindet? (zwischengespeichert, für SiegeSystem und Handelswege)
+func hostile(a: Kingdom, b: Kingdom) -> bool:
+	return _hostile(a, b)
+
+
+## Beste feindliche Einheit im Umkreis radius_px um u (null = keine); wie die
+## automatische Zielwahl, aber ohne Gebäude (Katapulte)
+func find_unit_target(u: Unit, radius_px: float) -> Unit:
+	var foes: Array = []
+	for kid in index.kingdom_ids():
+		if kid == u.kingdom.id:
+			continue
+		var k: Kingdom = game.get_kingdom(kid)
+		if k != null and _hostile(u.kingdom, k) and index.any_of_kingdom(u.position, radius_px + QUERY_PAD_TILES * _ts, kid):
+			foes.append(kid)
+	if foes.is_empty():
+		return null
+	return _best_unit_in(u, radius_px, foes)
 
 
 ## Wie Game.are_hostile, aber zwischengespeichert
@@ -233,10 +269,18 @@ func _on_sim_tick(dt: float) -> void:
 		# is_same: ein gelöschtes Objekt gilt bei "!= null" als null – so wird
 		# auch ein getötetes (bereits freigegebenes) Ziel bemerkt
 		if not is_same(u.target, null) and not is_valid_target(u.kingdom, u.target):
-			# Ziel weg: nicht alle Angreifer im selben Takt neu suchen lassen
 			u.target = null
-			u.regroup_pending = true
-			u.think_timer = minf(u.think_timer, _rng.randf_range(0.0, 0.3))
+			# Bresche geschlagen: zurück zum ursprünglichen Ziel (Phase 9)
+			if u.resume_target_uid != 0:
+				var back: Variant = game.find_by_uid(u.resume_target_uid)
+				u.resume_target_uid = 0
+				if is_valid_target(u.kingdom, back):
+					u.target = back
+					u.repath_timer = 0.0
+			if u.target == null:
+				# Ziel weg: nicht alle Angreifer im selben Takt neu suchen lassen
+				u.regroup_pending = true
+				u.think_timer = minf(u.think_timer, _rng.randf_range(0.0, 0.3))
 		if u.target == null:
 			if u.think_timer <= 0.0:
 				u.think_timer = _retarget
@@ -272,6 +316,9 @@ func _may_auto_acquire(u: Unit) -> bool:
 	# Angriffsmarsch lässt sie zuschlagen (und hebt die Tarnung auf)
 	if u.stealthed and u.command != "attack_move":
 		return false
+	# Haltung "passiv": nie von selbst angreifen (CommandSystem.STANCES)
+	if not CommandSystem.stance_allows_engage(u):
+		return false
 	if u.command.is_empty():
 		# Arbeitende Einheiten suchen keinen Streit, Monster und Wachen schon
 		return not u.can_work()
@@ -285,6 +332,9 @@ func _may_auto_acquire(u: Unit) -> bool:
 ## dort fast immer ein Gegner), nur ohne Treffer im ganzen Sichtbereich.
 func _find_target(u: Unit) -> Object:
 	var aggro := u.aggro_range * _ts
+	# Belagerungswaffen: Befestigungen und Gebäude (SiegeSystem)
+	if u.target_mode != "":
+		return game.siege_system.find_siege_target(u, aggro)
 	var buildings := bool(CommandSystem.flag(u.command, "buildings"))
 	# Feindliche Reiche mit Einheiten in der Nähe (meist keins oder eins)
 	var foes: Array = []
@@ -306,6 +356,9 @@ func _find_target(u: Unit) -> Object:
 			if k == u.kingdom or not game.are_hostile(u.kingdom, k):
 				continue
 			for b in k.buildings:
+				# Mauerstücke nur über Bresche, Befehl oder Belagerungswaffen
+				if b.is_segment:
+					continue
 				var d: float = u.position.distance_to(b.position) - b.get_radius()
 				if d <= aggro and d < best_score:
 					best_score = d
@@ -345,11 +398,11 @@ func _engage(u: Unit) -> void:
 			u.attack_cooldown = u.attack_interval
 			_attack(u, t)
 		return
-	# Aufgeben? Je nach Befehl: Monster an der Leine, Wachen nicht zu weit vom
-	# Posten, selbst gesuchte Ziele, die davonlaufen.
+	# Aufgeben? Je nach Befehl und Haltung: Monster an der Leine, Wachen nicht zu weit
+	# vom Posten (aggressive verfolgen weiter), selbst gesuchte Ziele, die davonlaufen.
 	var t_pos: Vector2 = t.position
 	var aggro_px := maxf(u.aggro_range, u.attack_range) * _ts
-	match str(CommandSystem.flag(u.command, "leash")):
+	match CommandSystem.leash_for(u):
 		"home":
 			if u.has_home and u.position.distance_to(u.home_pos) > _leash * _ts:
 				_after_fight(u)
@@ -358,7 +411,10 @@ func _engage(u: Unit) -> void:
 			if u.position.distance_to(u.command_pos) > aggro_px + GUARD_EXTRA * _ts:
 				_after_fight(u)
 				return
-	if u.command != "attack" and u.position.distance_to(t_pos) > maxf(aggro_px, 4.0 * _ts) * 2.0:
+	var give_up := maxf(aggro_px, 4.0 * _ts) * 2.0
+	if u.stance == "aggressive":
+		give_up *= CommandSystem.AGGRESSIVE_CHASE_FACTOR
+	if u.command != "attack" and u.position.distance_to(t_pos) > give_up:
 		_after_fight(u)
 		return
 	# Verfolgen: neu planen, wenn der Weg fehlt oder das Ziel weitergezogen ist.
@@ -415,19 +471,66 @@ func _attack(u: Unit, t: Object) -> void:
 		var to_pos: Vector2 = t.position
 		projectile_fired.emit(u.position, to_pos, kind, u.position.distance_to(to_pos) / (PROJECTILE_SPEED * _ts))
 	apply_damage(t, dmg, u, u.kingdom, "melee" if kind.is_empty() else "ranged")
+	if u.splash_radius > 0.0 and is_instance_valid(t):
+		_splash(u, t, u.attack)
 
 
-## Schaden = Angriff × Streuung × (1 + Gebietsbonus des Angreifers)
+## Flächenschaden (Katapulte): feindliche Gebäude und Einheiten im Umkreis des Ziels
+## bekommen splash_factor des Grundschadens (Gebäude × building_damage, Einheiten × unit_damage)
+func _splash(u: Unit, t: Object, raw: float) -> void:
+	var center: Vector2 = t.position
+	var radius := u.splash_radius * _ts
+	var c0 := world.world_to_cell(center)
+	var r := ceili(u.splash_radius) + 1
+	var done := {}
+	for y in range(c0.y - r, c0.y + r + 1):
+		for x in range(c0.x - r, c0.x + r + 1):
+			var b: Variant = world.occupancy.get(Vector2i(x, y), null)
+			if b == null or not is_instance_valid(b) or b == t or done.has(b) or not (b is Building):
+				continue
+			done[b] = true
+			var bld: Building = b
+			if not is_valid_target(u.kingdom, bld) or bld.get_center().distance_to(center) > radius + bld.get_radius():
+				continue
+			apply_damage(bld, maxf(mitigate(bld, raw * u.building_damage * u.splash_factor), _min_damage), u, u.kingdom, "splash")
+	for v in index.query(center, radius):
+		if v == t or not is_valid_target(u.kingdom, v):
+			continue
+		apply_damage(v, maxf(mitigate(v, raw * u.unit_damage * u.splash_factor * TroopRules.counter_factor(u, v as Unit)),
+				_min_damage), u, u.kingdom, "splash")
+
+
+## Schuss eines Turms (SiegeSystem): Schaden = tower.attack × Streuung × Modifikator tower_attack,
+## Rüstung des Opfers; sichtbarer Pfeil; Sieg/Punkte für das Reich des Turms. Gibt true zurück, wenn das Opfer fällt.
+func tower_attack(tower: Building, victim: Unit) -> bool:
+	if not is_instance_valid(tower) or not is_instance_valid(victim) or victim.hp <= 0.0:
+		return false
+	var tw: Dictionary = tower.def.get("tower", {})
+	var raw := float(tw.get("attack", 10.0)) * _rng.randf_range(1.0 - _variance, 1.0 + _variance) \
+			* tower.kingdom.mod("tower_attack")
+	var dmg := maxf(mitigate(victim, raw), _min_damage)
+	var speed := float(DataDB.siege("towers.projectile_speed", 16)) * _ts
+	projectile_fired.emit(tower.position, victim.position, str(tw.get("projectile", "arrow")),
+			tower.position.distance_to(victim.position) / maxf(speed, 1.0))
+	apply_damage(victim, dmg, tower, tower.kingdom, "ranged")
+	return victim.hp <= 0.0
+
+
+## Schaden = Angriff × Streuung × (1 + Gebietsbonus des Angreifers) × Konter
 ##          × (1 − Verteidigung) × (1 − Gebietsbonus des Verteidigers).
-## Verteidigung = Rüstung + Geländebonus (biomes.json), begrenzt.
+## Verteidigung = Rüstung (abzüglich Rüstungsdurchschlag des Angreifers) + Geländebonus
+## (biomes.json), begrenzt. Konter: Klasse des Angreifers gegen Klasse des Opfers
+## (troops.json counters + bonus_vs der Einheit).
 ## Gegen Gebäude zählt building_damage des Angreifers und die Gebäuderüstung.
 func _damage_value(u: Unit, victim: Object, spread: float) -> float:
 	var dmg := u.attack * spread
 	if world.get_owner(world.world_to_cell(u.position)) == u.kingdom.id:
 		dmg *= 1.0 + _territory_bonus
-	if not (victim is Unit):
+	if victim is Unit:
+		dmg *= u.unit_damage * TroopRules.counter_factor(u, victim as Unit)
+	else:
 		dmg *= u.building_damage
-	return maxf(mitigate(victim, dmg), _min_damage)
+	return maxf(mitigate(victim, dmg, 1.0 - u.armor_pierce), _min_damage)
 
 
 ## Verteidigung des Opfers auf rohen Schaden anwenden: Rüstung (mal armor_factor)
@@ -483,6 +586,30 @@ func _damage_unit(v: Unit, dmg: float, source: Object, source_kingdom: Kingdom) 
 		_warn_attacked(v.kingdom, v.position, "Bewohner werden angegriffen!" if v.flee_on_hit else "Deine Einheiten werden angegriffen!")
 	if source is Unit and is_instance_valid(source):
 		_react_to_hit(v, source)
+	elif source is Building and is_instance_valid(source):
+		_react_to_building_hit(v, source)
+
+
+## Von einem Turm getroffen: Arbeiter fliehen, untätige Kämpfer greifen den Turm an
+func _react_to_building_hit(v: Unit, tower: Building) -> void:
+	if not CommandSystem.flag(v.command, "retaliate"):
+		return
+	if v.flee_on_hit:
+		if _worker_flee:
+			_flee(v, tower)
+		return
+	if not v.joins_fights or v.attack <= 0.0 or not CommandSystem.stance_allows_engage(v):
+		return
+	if v.target != null and is_instance_valid(v.target):
+		return
+	if not _hostile(v.kingdom, tower.kingdom):
+		return
+	if v.command.is_empty() and v.can_work():
+		work_system.suspend(v)
+		v.command = "defend"
+		v.command_pos = v.position
+	v.target = tower
+	v.repath_timer = 0.0
 
 
 func _damage_building(b: Building, dmg: float, source: Object, source_kingdom: Kingdom) -> void:
@@ -502,11 +629,15 @@ func _damage_building(b: Building, dmg: float, source: Object, source_kingdom: K
 func _react_to_hit(v: Unit, attacker: Unit) -> void:
 	if not CommandSystem.flag(v.command, "retaliate"):
 		return
+	# Rammböcke lassen sich nicht in Nahkämpfe ziehen
+	if v.target_mode == "buildings":
+		return
 	if v.flee_on_hit:
 		if _worker_flee:
 			_flee(v, attacker)
 		return
-	if not v.joins_fights or v.attack <= 0.0:
+	# Haltung "passiv": wehrt sich nicht (und ruft keine Hilfe)
+	if not v.joins_fights or v.attack <= 0.0 or not CommandSystem.stance_allows_engage(v):
 		return
 	if v.target != null and is_instance_valid(v.target):
 		return
@@ -525,12 +656,15 @@ func _call_for_help(k: Kingdom, pos: Vector2, radius_tiles: float, attacker: Uni
 	if not is_instance_valid(attacker) or not attacker.is_alive():
 		return
 	for w in _query_allies(k, pos, (radius_tiles + QUERY_PAD_TILES) * _ts):
-		if w.target != null or not w.joins_fights or w.attack <= 0.0:
+		if w.target != null or not w.joins_fights or w.attack <= 0.0 or w.target_mode == "buildings":
 			continue
 		# Getarnte bleiben verborgen (nur Angriffsmarsch oder Angriffsbefehl)
 		if w.stealthed and w.command != "attack_move":
 			continue
-		if w.command == "hold" or w.command == "attack_move" or (w.command.is_empty() and not w.can_work()):
+		if not CommandSystem.stance_allows_engage(w):
+			continue
+		if w.command == "hold" or w.command == "attack_move" or w.command == "patrol" or w.command == "rest" \
+				or (w.command.is_empty() and not w.can_work()):
 			w.target = attacker
 			w.repath_timer = 0.0
 			w.dormant = false
@@ -603,12 +737,12 @@ func _after_fight(u: Unit) -> void:
 ## weiterarbeiten oder heim zur Höhle.
 func _regroup(u: Unit) -> void:
 	match u.command:
-		"hold":
+		"hold", "rest":
 			if u.position.distance_to(u.command_pos) > _ts * 0.6:
 				unit_system.move_to(u, u.command_pos)
 			else:
 				unit_system.stop(u)
-		"attack_move":
+		"attack_move", "patrol":
 			# Im Gruppenmarsch übernimmt das Folgen, sonst selbst weiter
 			if u.follow_leader == null:
 				unit_system.move_to(u, u.command_pos)
@@ -626,10 +760,20 @@ func _regroup(u: Unit) -> void:
 				unit_system.stop(u)
 
 
-## Verfolgung ohne Weg: Ziel fallen lassen und eine Weile nicht neu suchen
+## Verfolgung ohne Weg: versperrt eine feindliche Mauer den Weg, wird sie angegriffen
+## (Bresche, Phase 9; das ursprüngliche Ziel merkt sich resume_target_uid), sonst Ziel
+## fallen lassen und eine Weile nicht neu suchen
 func _on_path_failed(u: Unit) -> void:
 	if u.target == null or not is_instance_valid(u.target):
 		return
+	if u.path_fail != "" and CommandSystem.flag(u.command, "engage"):
+		var wall: Building = game.siege_system.find_breach_target(u)
+		if wall != null and wall != u.target:
+			if u.command == "attack" and u.resume_target_uid == 0:
+				u.resume_target_uid = u.target.uid
+			u.target = wall
+			u.repath_timer = 0.0
+			return
 	u.target = null
 	u.think_timer = 3.0
 
@@ -640,6 +784,13 @@ func _on_path_failed(u: Unit) -> void:
 
 func _tick_regen(u: Unit, dt: float, now: float) -> void:
 	var amount := u.regen
+	if u.command == "rest" and not u.mechanical:
+		# Rückzug zur Burg (Armeefenster): Erholung × rest_regen_mult plus ein Anteil
+		# des Höchstlebens je Sekunde, sobald eine Weile kein Schaden kam
+		if now - u.last_damaged_at < _regen_delay:
+			return
+		heal_unit(u, (amount * _rest_mult + u.max_hp * _rest_share) * dt)
+		return
 	if amount <= 0.0:
 		return
 	if u.command == "return":
@@ -660,7 +811,7 @@ func heal_unit(u: Unit, amount: float) -> void:
 ## Heiler: heilt die am stärksten verletzte verbündete Einheit in Reichweite.
 ## Ist niemand in Reichweite, aber jemand in der Nähe verletzt, geht er hin.
 func _tick_healer(u: Unit, dt: float) -> void:
-	if u.command == "move" or u.command == "flee":
+	if u.command == "move" or u.command == "flee" or u.command == "retreat":
 		return
 	var heal_range := u.heal_range * _ts
 	# Den aktuellen Patienten weiter heilen, solange er verletzt und in Reichweite ist;
@@ -681,7 +832,7 @@ func _tick_healer(u: Unit, dt: float) -> void:
 	var far: Unit = null
 	var far_ratio := 1.0
 	for v in _query_allies(u.kingdom, u.position, heal_range + (4.0 + QUERY_PAD_TILES) * _ts):
-		if v == u or v.hp >= v.max_hp or v.hp <= 0.0:
+		if v == u or v.hp >= v.max_hp or v.hp <= 0.0 or v.mechanical:
 			continue
 		var ratio: float = v.hp / v.max_hp
 		if u.position.distance_to(v.position) <= heal_range + v.get_radius():
@@ -697,7 +848,7 @@ func _tick_healer(u: Unit, dt: float) -> void:
 		if u.moving or u.path_pending:
 			unit_system.stop(u)
 		return
-	if far != null and u.follow_leader == null and u.command != "attack_move" \
+	if far != null and u.follow_leader == null and u.command != "attack_move" and u.command != "patrol" \
 			and u.position.distance_to(u.command_pos) < 8.0 * _ts:
 		unit_system.move_direct(u, far.position, DIRECT_CHASE_TILES)
 		return
@@ -708,7 +859,8 @@ func _tick_healer(u: Unit, dt: float) -> void:
 func _healer_idle(u: Unit) -> void:
 	if u.moving or u.path_pending or u.follow_leader != null:
 		return
-	if (u.command == "hold" or u.command == "attack_move") and u.position.distance_to(u.command_pos) > _ts:
+	if (u.command == "hold" or u.command == "attack_move" or u.command == "patrol" or u.command == "rest") \
+			and u.position.distance_to(u.command_pos) > _ts:
 		unit_system.move_to(u, u.command_pos)
 
 
@@ -731,7 +883,7 @@ func _tick_heal_auras(dt: float) -> void:
 			var aura: Dictionary = b.def["heal_aura"]
 			var amount := float(aura.get("hp_per_sec", 0.0)) * dt
 			for v in _query_allies(k, b.position, float(aura.get("radius", 4.0)) * _ts):
-				if v.hp < v.max_hp:
+				if v.hp < v.max_hp and not v.mechanical:
 					heal_unit(v, amount)
 
 
@@ -785,6 +937,16 @@ func _destroy_building(b: Variant, killer: Kingdom) -> void:
 	var k: Kingdom = b.kingdom
 	if not k.buildings.has(b):
 		return
+	# Dorfzentren (capturable) werden erobert statt zerstört (VillageSystem)
+	if killer != null and killer != k and bool(b.def.get("capturable", false)) \
+			and game.village_system.try_capture(b, killer):
+		return
+	# Mauerstücke: keine Meldung je Stück, gebündelt im SiegeSystem
+	if b.is_segment:
+		game.siege_system.on_segment_destroyed(b, killer)
+		building_destroyed.emit(b, killer)
+		game.building_system.remove_building(b, 0.0, true)
+		return
 	if killer != null and killer != k:
 		var loot: Dictionary = b.get_loot()
 		for res_id in loot:
@@ -801,7 +963,7 @@ func _destroy_building(b: Variant, killer: Kingdom) -> void:
 	if k.is_player:
 		k.notify("%s wurde zerstört!" % b.get_display_name(), "danger", b.position)
 	building_destroyed.emit(b, killer)
-	game.building_system.remove_building(b, 0.0)
+	game.building_system.remove_building(b, 0.0, true)
 
 
 ## Todesfälle des Spielers sammeln und gebündelt melden
@@ -867,3 +1029,28 @@ func _separate() -> void:
 		if world.in_bounds(c) and not game.nav.is_solid(c):
 			u.position = new_pos
 	_separate_cursor = (_separate_cursor + i) % n
+
+
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10)
+# ---------------------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {"rng": _rng.state, "tick_count": _tick_count}
+
+
+func from_dict(d: Dictionary) -> void:
+	_rng.state = int(d.get("rng", _rng.state))
+	_tick_count = int(d.get("tick_count", 0))
+
+
+## Laufzeit leeren, Umgebungssuche im nächsten Takt neu aufbauen
+func rebuild_runtime() -> void:
+	_dead_units.clear()
+	_dead_buildings.clear()
+	_death_log.clear()
+	_death_flush_at = -1.0
+	_attack_events.clear()
+	_hostile_cache.clear()
+	_index_dirty = true
+	_separate_cursor = 0

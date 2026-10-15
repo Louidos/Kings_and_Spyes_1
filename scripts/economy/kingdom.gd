@@ -21,6 +21,8 @@ signal modifiers_changed
 var id: int = 0
 var faction_id: String = "good"
 var display_name: String = ""
+## Volk (peoples.json), z. B. "dwarves"; Dörfer ab Phase 6, Spieler/KI ab Phase 7/8 (wird gespeichert)
+var people_id: String = ""
 ## Wer steuert das Reich: "player", "ai", "neutral" oder "wild"
 var controller: String = "player"
 var is_player: bool:
@@ -42,7 +44,7 @@ var king: Unit = null
 var kill_points: int = 0
 ## Alle je verdienten Kampfpunkte (Statistik)
 var kill_points_total: int = 0
-## Hat dieses Reich verloren (König tot, ab Phase 7 auch anders)?
+## Hat dieses Reich verloren (König tot oder Burg zerstört)?
 var defeated: bool = false
 ## Beziehungen zu anderen Reichen: Kingdom.id -> "war" | "peace" | "alliance".
 ## Nicht eingetragen = Frieden. Wird über Game.set_relation gesetzt.
@@ -63,8 +65,12 @@ var bonus_sources: Dictionary = {}
 ## Laufende Kosten, nach Quelle: Quelle ("spell:<id>" …) -> {Ressource -> pro Sekunde}.
 ## Das EconomySystem zieht sie jeden Takt ab.
 var upkeep: Dictionary = {}
-## Statistik für den Spielende-Bildschirm: Name -> Zahl
+## Statistik für den Spielende-Bildschirm: Name -> Zahl ("summoned", "kills", "losses",
+## "spells", ab Phase 7 "buildings_built", "kingdoms_defeated", "spies_caught", "spy_missions",
+## ab Phase 8 "defected", "defectors_received", "betrayals", "refugees_accepted", "feasts")
 var stats: Dictionary = {}
+## KI-Zustand (nur controller "ai"): einfache Werte, Bedeutung siehe AIBrain (wird gespeichert)
+var ai_state: Dictionary = {}
 # --- Forschung und Magie (Phase 4) ---
 ## Abgeschlossene Forschungen: ID -> true
 var researched: Dictionary = {}
@@ -94,6 +100,13 @@ var starving: bool = false
 var growth_timer := 0.0
 ## Merker für einmalige Meldungen u. Ä. (Name -> Wert)
 var flags: Dictionary = {}
+# --- Truppen (troops.json, TroopSystem) ---
+## Schmiede: Verbesserungs-ID -> gekaufte Stufe (Wirkung als Quelle "upgrade:<id>")
+var forge_levels: Dictionary = {}
+## Aussehen je Einheitentyp: Typ-ID -> Skin-ID (nicht eingetragen = "standard")
+var unit_skins: Dictionary = {}
+## Wertepunkte der Truppen beim Aufstieg selbst verteilen (KI und Dörfer: an, Spieler: aus)
+var auto_stat_points: bool = false
 ## Faktoren für Forschung, Schwierigkeit, Helden usw., nach Quelle getrennt:
 ## Quelle -> {Schlüssel -> Faktor}. mod(key) liefert das Produkt aller Quellen.
 ## Schlüssel (nicht gesetzt = 1.0):
@@ -101,8 +114,10 @@ var flags: Dictionary = {}
 ##   "production", "production.<res>", "cap.<res>"
 ## Einheiten: "hp", "attack", "attack_interval", "range", "armor", "aggro_range",
 ##   "sight", "speed", "regen", "heal", "heal_range" – jeweils auch
-##   "<wert>.<stufe>" (z. B. "attack.archer"); dazu "defense" (erlittener
+##   "<wert>.<stufe>" (z. B. "attack.archer"), "<wert>@<rolle>" und "<wert>#<klasse>"
+##   (Truppenklasse aus troops.json, z. B. "attack#cavalry" – Schmiede); dazu "defense" (erlittener
 ##   Schaden wird geteilt), "summon" (Beschwörungstempo), "building_hp".
+## Quellen ab Phase 8: "daynight" (Tageszeit), "people:<id>" (Volk), "event:<id>#<nr>" (Ereignis).
 var modifier_sources: Dictionary = {}
 ## Produkt je Schlüssel (aus modifier_sources berechnet)
 var modifiers: Dictionary = {}
@@ -119,6 +134,7 @@ func setup(p_id: int, p_faction_id: String, p_controller: String = "player") -> 
 	color = faction.get("color", Color.WHITE)
 	has_economy = bool(faction.get("economy", true))
 	display_name = "Dein Königreich" if is_player else "Reich %d" % id
+	auto_stat_points = not is_player
 	for r in DataDB.resources:
 		resources[r["id"]] = 0.0
 		income_rate[r["id"]] = 0.0
@@ -144,6 +160,18 @@ func set_modifiers(source: String, factors: Dictionary) -> void:
 	for key in factors:
 		entry[key] = float(factors[key])
 	modifier_sources[source] = entry
+	_recompute_modifiers()
+
+
+## Ersetzt alle Faktoren einer Quelle auf einmal (leer = entfernen). Einheiten rechnen nur einmal neu;
+## unverändert = gar nicht (Tag/Nacht, Ereignisse, Volk).
+func replace_modifiers(source: String, factors: Dictionary) -> void:
+	if factors.is_empty():
+		clear_modifiers(source)
+		return
+	if modifier_sources.get(source, {}) == factors:
+		return
+	modifier_sources[source] = factors.duplicate()
 	_recompute_modifiers()
 
 
@@ -174,6 +202,11 @@ func grant_unlock(source: String, unlock_id: String) -> void:
 func revoke_unlocks(source: String) -> void:
 	if not unlock_sources.erase(source):
 		return
+	_rebuild_unlocks()
+
+
+## Zwischenspeicher unlocks aus unlock_sources neu aufbauen
+func _rebuild_unlocks() -> void:
 	unlocks.clear()
 	for src in unlock_sources:
 		for unlock_id in unlock_sources[src]:
@@ -243,6 +276,7 @@ func add_stat(key: String, amount: int = 1) -> void:
 
 
 ## Meldung an den Spieler – nur wenn dieses Reich vom Spieler gesteuert wird.
+## world_pos: Vector2 (Klick springt hin), null oder ein Verweis (siehe Notify.post).
 func notify(text: String, kind: String = "info", world_pos: Variant = null) -> void:
 	if is_player:
 		Notify.post(text, kind, world_pos)
@@ -336,3 +370,60 @@ func take_income_sample() -> Dictionary:
 	for res_id in sample:
 		_income_acc[res_id] = 0.0
 	return sample
+
+
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10)
+# ---------------------------------------------------------------------------
+
+## Nicht gespeicherte Felder: abgeleitet (unlocks, modifiers), Nodes (über uid) oder
+## nur lesbar. Felder mit "_" am Anfang sind Laufzeit und werden nie gespeichert.
+## Alle anderen Felder (auch neue späterer Phasen) speichert to_dict automatisch.
+const SAVE_SKIP := ["buildings", "units", "castle", "king", "unlocks", "modifiers", "is_player",
+		"mana_cap_bonus", "mana_regen"]
+
+
+## Gespeicherter Zustand (Kopien; Burg und König als uid)
+func to_dict() -> Dictionary:
+	var d := {}
+	for p in get_property_list():
+		if not (int(p["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE):
+			continue
+		var prop := str(p["name"])
+		if prop.begins_with("_") or SAVE_SKIP.has(prop):
+			continue
+		var value: Variant = get(prop)
+		if value is Object:
+			continue
+		d[prop] = value.duplicate(true) if (value is Dictionary or value is Array) else value
+	d["castle_uid"] = castle.uid if is_instance_valid(castle) else 0
+	d["king_uid"] = king.uid if is_instance_valid(king) else 0
+	return d
+
+
+## Zustand übernehmen (nur Daten; Burg und König löst SaveGame im zweiten Durchgang auf).
+## Fehlende Schlüssel behalten ihren Wert aus setup().
+func from_dict(d: Dictionary) -> void:
+	for p in get_property_list():
+		if not (int(p["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE):
+			continue
+		var prop := str(p["name"])
+		if prop.begins_with("_") or SAVE_SKIP.has(prop) or not d.has(prop):
+			continue
+		var value: Variant = d[prop]
+		var current: Variant = get(prop)
+		if current is Array and value is Array:
+			(current as Array).clear()
+			(current as Array).append_array((value as Array).duplicate(true))
+		elif current is Dictionary and value is Dictionary:
+			set(prop, (value as Dictionary).duplicate(true))
+		elif current is float and (value is int or value is float):
+			set(prop, float(value))
+		elif current is int and (value is int or value is float):
+			set(prop, int(value))
+		elif typeof(current) == typeof(value):
+			set(prop, value)
+	for res_id in resources:
+		_income_acc[res_id] = 0.0
+	_rebuild_unlocks()
+	_recompute_modifiers()

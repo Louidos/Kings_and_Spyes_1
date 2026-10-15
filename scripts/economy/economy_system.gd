@@ -145,3 +145,19 @@ func _grow(kingdom: Kingdom, dt: float) -> void:
 	if u != null:
 		game.work_system.set_unit_job(u, "idle")
 		kingdom.notify("Ein neuer Bewohner ist angekommen – gib ihm Arbeit (J).", "good", pos)
+
+
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10)
+# ---------------------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {"rate_timer": _rate_timer}
+
+
+func from_dict(d: Dictionary) -> void:
+	_rate_timer = float(d.get("rate_timer", 0.0))
+
+
+func rebuild_runtime() -> void:
+	pass

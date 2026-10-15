@@ -47,12 +47,22 @@ var hit_flash := 0.0
 ## Faktor auf die Beute (Monsterhöhlen: stärkere Lager geben mehr)
 var loot_factor := 1.0
 ## Zusätzlicher Zustand einzelner Systeme, der gespeichert werden muss
-## (z. B. Monsterhöhle: {"kinds", "size", "respawn", "last_fight"})
+## (z. B. Monsterhöhle: {"kinds", "size", "respawn", "last_fight"};
+## Tor: {"locked"}; Turm: {"cd", "think", "target_uid"})
 var extra: Dictionary = {}
+## Wird gerade durch Zerstörung (Kampf, Untergang des Reichs) entfernt – nicht durch
+## eigenen Abriss oder Abbruch; dann gibt es keine Erstattung der Warteschlange (Laufzeit)
+var destroyed := false
+## Mauerstück oder Tor (def.segment): zählt nicht als richtiges Gebäude (Phase 9)
+var is_segment := false
+## Befestigung: "wall", "gate", "tower" oder "" (def.fortification)
+var fort_kind := ""
 
 var _tile_size := 64
 var _world: WorldData
 var _texture: Texture2D
+## Farbe des Platzhalters (buildings.json "color", Dorfgebäude in der Volksfarbe)
+var _color := Color.GRAY
 
 
 func setup(p_def: Dictionary, p_kingdom: Kingdom, p_cell: Vector2i, world: WorldData, p_uid: int) -> void:
@@ -65,10 +75,32 @@ func setup(p_def: Dictionary, p_kingdom: Kingdom, p_cell: Vector2i, world: World
 	_tile_size = world.tile_size
 	name = "%s_%d_%d" % [def.get("id", "building"), cell.x, cell.y]
 	position = get_center()
-	_texture = Assets.texture(DataDB.get_building_sprite(def, kingdom.faction_id))
-	max_hp = maxf(float(def.get("hp", 300.0)) * kingdom.mod("building_hp"), 1.0)
+	is_segment = bool(def.get("segment", false))
+	fort_kind = str(def.get("fortification", ""))
+	max_hp = compute_max_hp(kingdom)
 	hp = max_hp
 	set_process(false)
+	refresh_look()
+
+
+## Höchstes Leben für dieses Reich: hp × Modifikator building_hp (Befestigungen
+## zusätzlich × fort_hp, Forschung "Steinmauern")
+func compute_max_hp(k: Kingdom) -> float:
+	var mult := k.mod("building_hp") if k != null else 1.0
+	if fort_kind != "" and k != null:
+		mult *= k.mod("fort_hp")
+	return maxf(float(def.get("hp", 300.0)) * mult, 1.0)
+
+
+## Grafik und Platzhalterfarbe neu bestimmen (beim Aufbau und nach einem
+## Besitzerwechsel). Dorfgebäude nutzen das Volk aus extra.people_id.
+func refresh_look() -> void:
+	var people := str(extra.get("people_id", kingdom.people_id if kingdom != null else ""))
+	var faction := kingdom.faction_id if kingdom != null else ""
+	_texture = Assets.texture(DataDB.get_building_sprite(def, faction, people))
+	_color = def.get("color", Color.GRAY)
+	if bool(def.get("people_color", false)) and not DataDB.get_people(people).is_empty():
+		_color = DataDB.get_people(people).get("color", _color)
 	queue_redraw()
 
 
@@ -81,7 +113,8 @@ func get_center() -> Vector2:
 	return (Vector2(cell) + Vector2(size) * 0.5) * _tile_size
 
 
-## Blockiert das Gebäude die Bewegung? (Strassen nicht, ab Phase 9 Tore)
+## Blockiert das Gebäude die Bewegung? (Strassen nicht.) Tore blockieren im
+## Grundzustand (Durchlass regelt NavGrid je Reich).
 func blocks_movement() -> bool:
 	return bool(def.get("blocks_movement", true))
 
@@ -214,6 +247,10 @@ func get_status_text() -> String:
 	if not constructed:
 		return "Im Bau: %d %%" % roundi(get_progress_ratio() * 100.0)
 	var parts: PackedStringArray = []
+	if fort_kind == "gate":
+		parts.append("verriegelt" if bool(extra.get("locked", false)) else "offen")
+	elif fort_kind == "tower":
+		parts.append("Reichweite %s Felder" % String.num(get_tower_range(), 1).replace(".", ","))
 	if get_worker_slots() > 0:
 		parts.append("Arbeiter: %d/%d" % [workers.size(), get_worker_slots()])
 	if int(def.get("housing", 0)) > 0:
@@ -221,11 +258,26 @@ func get_status_text() -> String:
 	return "Fertig" if parts.is_empty() else "  ·  ".join(parts)
 
 
+## Turmreichweite in Feldern (tower.range + Zuschlag tower_range des Reichs; 0 ohne Turm)
+func get_tower_range() -> float:
+	var tw: Dictionary = def.get("tower", {})
+	if tw.is_empty():
+		return 0.0
+	return float(tw.get("range", 0.0)) + (kingdom.bonus("tower_range") if kingdom != null else 0.0)
+
+
 func _draw() -> void:
 	var px := Vector2(size) * _tile_size
 	var rect := Rect2(-px * 0.5, px)
 	var tint := Color.WHITE if constructed else Color(1, 1, 1, 0.55)
-	SpriteDraw.draw_entity(self, _texture, rect, def.get("color", Color.GRAY), DataDB.get_building_label(def, kingdom.faction_id), "rect", tint)
+	if fort_kind == "wall" or fort_kind == "gate":
+		_draw_segment(rect, tint)
+	else:
+		SpriteDraw.draw_entity(self, _texture, rect, _color, DataDB.get_building_label(def, kingdom.faction_id), "rect", tint)
+	if fort_kind == "tower" and selected:
+		var range_px := get_tower_range() * _tile_size
+		draw_arc(Vector2.ZERO, range_px, 0.0, TAU, 64, Color(0, 0, 0, 0.5), 4.0, true)
+		draw_arc(Vector2.ZERO, range_px, 0.0, TAU, 64, Color(1, 1, 1, 0.85), 2.0, true)
 	if not constructed:
 		# Baugerüst andeuten und Fortschritt zeigen
 		var scaffold := Color(0.45, 0.32, 0.18, 0.9)
@@ -250,6 +302,81 @@ func _draw() -> void:
 		SpriteDraw.draw_bar(self, Rect2(rect.position.x + 6, rect.end.y - 12, px.x - 12, 6), r, Color(0.6, 0.5, 1.0))
 	if selected:
 		draw_rect(rect.grow(3.0), Color(1, 1, 0.6, 0.95), false, 3.0)
+
+
+## Mauerstück oder Tor: Pfeiler mit Bändern zu benachbarten Befestigungen desselben
+## Reichs; Tor als Holztür (verriegelt mit rotem Riegel). Mit Grafik: Textur auf der
+## Kachel, um 90° gedreht, wenn nur senkrechte Nachbarn da sind.
+func _draw_segment(rect: Rect2, tint: Color) -> void:
+	var ts := float(_tile_size)
+	var n_e := _fort_neighbor(Vector2i(1, 0))
+	var n_w := _fort_neighbor(Vector2i(-1, 0))
+	var n_s := _fort_neighbor(Vector2i(0, 1))
+	var n_n := _fort_neighbor(Vector2i(0, -1))
+	if _texture != null:
+		if (n_n or n_s) and not (n_e or n_w):
+			draw_set_transform(Vector2.ZERO, PI * 0.5, Vector2.ONE)
+			draw_texture_rect(_texture, rect, false, tint)
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		else:
+			draw_texture_rect(_texture, rect, false, tint)
+		return
+	var base := Color(_color, tint.a)
+	var dark := Color(_color.darkened(0.45), tint.a)
+	var band := 22.0 * ts / 64.0
+	var half := ts * 0.5
+	for d in [[n_e, Vector2(1, 0)], [n_w, Vector2(-1, 0)], [n_s, Vector2(0, 1)], [n_n, Vector2(0, -1)]]:
+		if not bool(d[0]):
+			continue
+		var dir: Vector2 = d[1]
+		var r := Rect2(Vector2(minf(0.0, dir.x * half), minf(0.0, dir.y * half)), Vector2.ZERO)
+		r.size = Vector2(half if dir.x != 0.0 else band, half if dir.y != 0.0 else band)
+		if dir.x != 0.0:
+			r.position.y = -band * 0.5
+		else:
+			r.position.x = -band * 0.5
+		draw_rect(r.grow(1.5), dark, true)
+		draw_rect(r, base, true)
+	var pillar := 28.0 * ts / 64.0
+	var pr := Rect2(-Vector2(pillar, pillar) * 0.5, Vector2(pillar, pillar))
+	draw_rect(pr.grow(2.0), dark, true)
+	draw_rect(pr, base, true)
+	if fort_kind == "gate":
+		var door_size := 40.0 * ts / 64.0
+		var door := Rect2(-Vector2(door_size, door_size) * 0.5, Vector2(door_size, door_size))
+		var locked := bool(extra.get("locked", false))
+		var wood := Color(0.5, 0.33, 0.18, tint.a) if locked else Color(0.68, 0.47, 0.26, tint.a)
+		draw_rect(door.grow(2.0), Color(0.12, 0.08, 0.05, tint.a), true)
+		draw_rect(door, wood, true)
+		var iron := Color(0.25, 0.25, 0.27, tint.a)
+		draw_rect(Rect2(door.position + Vector2(0, door_size * 0.22), Vector2(door_size, 3.0)), iron, true)
+		draw_rect(Rect2(door.position + Vector2(0, door_size * 0.72), Vector2(door_size, 3.0)), iron, true)
+		if locked:
+			draw_rect(Rect2(Vector2(-door_size * 0.5 - 4.0, -3.0), Vector2(door_size + 8.0, 6.0)), Color(0.85, 0.15, 0.12, tint.a), true)
+
+
+## Steht auf der Nachbarkachel eine Befestigung desselben Reichs?
+func _fort_neighbor(dir: Vector2i) -> bool:
+	if _world == null:
+		return false
+	var other: Object = _world.get_building_at(cell + dir)
+	return other != null and other is Building and (other as Building).kingdom == kingdom \
+			and (other as Building).fort_kind != ""
+
+
+## Gespeicherter Zustand (Phase 10; Kopien, Arbeiter als uids). Wiederhergestellt
+## wird über BuildingSystem.restore_building.
+func to_dict() -> Dictionary:
+	var worker_uids: Array = []
+	for u in workers:
+		if is_instance_valid(u):
+			worker_uids.append(u.uid)
+	return {"uid": uid, "def_id": str(def.get("id", "")), "kingdom_id": kingdom.id if kingdom != null else 0,
+			"cell": cell, "constructed": constructed, "progress": progress, "hp": hp, "max_hp": max_hp,
+			"last_damaged_at": last_damaged_at, "summon_queue": summon_queue.duplicate(true),
+			"rally_point": rally_point, "has_rally": has_rally, "summon_count": summon_count,
+			"loot_factor": loot_factor, "biome_efficiency": biome_efficiency, "extra": extra.duplicate(true),
+			"worker_uids": worker_uids}
 
 
 ## Kurz aufblitzen lassen (nach einem Treffer)

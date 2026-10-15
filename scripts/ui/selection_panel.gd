@@ -6,13 +6,28 @@
 ##   Beruf (wenn sie arbeiten kann) und Befehle (Halt, Zur Arbeit,
 ##   Angriff-Vorrücken); beim König zusätzlich, dass er im Reich bleibt.
 ## - mehrere eigene Einheiten: Anzahl je Typ, gesamtes Leben, Befehle, Formation.
+## - eigene Krieger (eine oder mehrere): Zeile "Haltung" aggressiv / verteidigend / passiv.
 ## - ein eigenes Gebäude: Bauzustand, Wohnraum, Annahme, Produktion, Leben,
-##   Arbeiter (−/+), Beschwören mit Warteschlange und Sammelpunkt, Abreissen.
-## - Fremdes (Monsterhöhle, Monster, ab Phase 7 Gegner): nur Anzeige – Reich,
-##   Leben, Kampfwerte bzw. was im Lager wartet.
+##   Arbeiter (−/+), Beschwören (ab drei Typen in zwei Spalten, Bild im gewählten
+##   Aussehen) mit Warteschlange und Sammelpunkt, Abreissen.
+## - Fremdes (Monsterhöhle, Monster, Gegner): nur Anzeige – Reich, Leben,
+##   Kampfwerte bzw. was im Lager wartet. Feindliche Königreiche (Phase 7) je nach
+##   Kundschaft: ohne Bericht "?" statt Werten, Wirkungen erst bei genauer
+##   Kundschaft; ihre Burg zeigt die Zusammenfassung des Reichs. Enttarnte fremde
+##   Spione tragen "(enttarnt)" im Titel.
+## - Eigene Spione: Stufe, Erfahrung, Auftrag, Fortschritt, Entdeckungsgefahr und
+##   der Knopf "Auftrag (K)" (öffnet das Spionagefenster beim Spion).
+## - Helden (auch der aktive Held einer gemischten Auswahl): Stufe, Erfahrung,
+##   Stufenwahl und die Fähigkeitsknöpfe C / V / B (HeroSelectionBox); Burg:
+##   gefallene Helden wiederbeleben; Heldenhalle: Ausbildung.
+## - Truppen (TroopSelectionBox): Rang, Erfahrung, Wertepunkte, Aussehen; mehrere
+##   Einheiten: "Punkte automatisch verteilen"; Schmiede: Waffen- und Rüstungsstufen.
 ## - Magie: bei einer Einheit laufende Zauberwirkungen (Restzeit, in der
 ##   Zauberfarbe), "Getarnt" und bei beschworenen Wächtern die Restzeit;
 ##   bei der Forschungsstätte die laufende Forschung und "Forschung öffnen (R)".
+## - Neutrale Dörfer (Dorfgebäude, Milizen, Boten): Volk, Ruf zum Spieler mit
+##   Stufe, Vertrag, Produktion, Miliz und der Knopf "Diplomatie (N)"; Boten:
+##   von wem zu wem. Eigene aufgenommene Dorfzentren: Ertrag des Dorfs.
 ## Aktualisiert wird bei Auswahlwechsel, bei Signalen (Warteschlange,
 ## Ressourcen, Formation) und alle 0.25 s, solange das Fenster sichtbar ist.
 ## Bedienelemente stehen unten und behalten ihre Höhe, damit sie nicht unter
@@ -36,8 +51,8 @@ const QUEUE_SLOTS := 5
 const QUEUE_SLOT_SIZE := 40.0
 ## Unter dieser Reichweite (Kacheln) heisst es "Nahkampf"
 const MELEE_RANGE := 1.5
-## Feste Zeilenumbrüche: sonst bricht die Zeile mitten in "F: Formation"
-const MULTI_HINT := "Rechtsklick: bewegen/angreifen\nStrg+Rechtsklick: angreifend vorrücken\nStrg+1–9: Armee speichern · F: Formation"
+## Kurzer Hinweis bei Mehrfachauswahl (alle Tasten in der Hilfe F1)
+const MULTI_HINT := "Strg+Rechtsklick: vorrücken · Strg+1–9: Armee"
 const KING_NOTE := "Der König verlässt sein Reich nicht."
 const NO_JOB_TIP := "Kein Beruf – wähle oben einen Beruf"
 const ATTACK_MOVE_TIP := "Nächster Rechtsklick: angreifend vorrücken (auch Strg+Rechtsklick)"
@@ -76,7 +91,10 @@ var _research_button: Button
 
 # Beschwören
 var _summon_box: VBoxContainer
-var _summon_list: VBoxContainer
+var _summon_header: Label
+## Sammelpunkt-Zeile (bei der Heldenhalle aus: Helden erscheinen an der Halle)
+var _rally_row: HBoxContainer
+var _summon_list: GridContainer
 ## Je Einheitentyp: {"id", "def", "button", "row", "costs": {res_id: [Label, Menge]}}
 var _summon_entries: Array = []
 ## Gebäude, für das die Beschwörungs-Buttons gebaut wurden
@@ -103,8 +121,34 @@ var _halt_button: Button
 var _work_button: Button
 var _attack_move_button: Button
 var _formation_button: Button
+## Haltung eigener Krieger (aggressiv / verteidigend / passiv, wie im Armeefenster)
+var _stance_row: HBoxContainer
+## Haltung -> Button
+var _stance_buttons: Dictionary = {}
+
+## Helden-Abschnitt (Stufe, Fähigkeiten; Burg: Wiederbeleben; Halle: Ausbildung)
+var _hero_box: HeroSelectionBox
+## Truppen-Abschnitt (Rang, Wertepunkte, Aussehen; Schmiede)
+var _troop_box: TroopSelectionBox
+## Dorf-Zeile: Knopf "Diplomatie (N)" für Dorfgebäude, Milizen und Boten
+var _village_row: HBoxContainer
+var _diplo_button: Button
+## Eigener Spion: Knopf "Auftrag (K)"
+var _spy_row: HBoxContainer
+var _spy_button: Button
+## Dorf des angezeigten Objekts (für den Knopf; 0 = keins)
+var _village_id := 0
+## Eigenes Tor: Knopf "Verriegeln"/"Öffnen" (Phase 9)
+var _gate_row: HBoxContainer
+var _gate_button: Button
 
 var _demolish_button: Button
+## Zufriedenheit eines Bewohners bzw. Ø der Auswahl (Phase 8) und Flüchtlinge aufnehmen
+var _mood_row: ResourceBar.TipBox
+var _mood_icon: MoodIcon
+var _mood_label: Label
+var _refugee_row: HBoxContainer
+var _refugee_offer_id := 0
 ## Restzeit der Abriss-Bestätigung (Echtzeit, 0 = keine Bestätigung offen)
 var _confirm_left := 0.0
 var _timer := 0.0
@@ -141,6 +185,7 @@ func _ready() -> void:
 	_research_bar.visible = false
 	vbox.add_child(_research_bar)
 	_bonus = _make_label(vbox, SMALL_FONT_SIZE, COLOR_GREY)
+	_build_mood_row(vbox)
 	_magic_box = VBoxContainer.new()
 	_magic_box.add_theme_constant_override("separation", 0)
 	_magic_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -190,6 +235,52 @@ func _ready() -> void:
 	_job_option.item_selected.connect(_on_job_selected)
 	_job_row.add_child(_job_option)
 
+	_hero_box = HeroSelectionBox.new()
+	vbox.add_child(_hero_box)
+
+	_troop_box = TroopSelectionBox.new()
+	vbox.add_child(_troop_box)
+
+	_village_row = HBoxContainer.new()
+	_village_row.add_theme_constant_override("separation", 6)
+	_village_row.visible = false
+	vbox.add_child(_village_row)
+	_diplo_button = Button.new()
+	_diplo_button.text = "Diplomatie (N)"
+	_diplo_button.focus_mode = Control.FOCUS_NONE
+	_diplo_button.add_theme_font_size_override("font_size", FONT_SIZE)
+	_diplo_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_diplo_button.tooltip_text = "Diplomatiefenster bei diesem Dorf öffnen: Geschenke, Handel, Verträge, Aufnahme"
+	_diplo_button.pressed.connect(_on_diplo_pressed)
+	_village_row.add_child(_diplo_button)
+
+	_spy_row = HBoxContainer.new()
+	_spy_row.add_theme_constant_override("separation", 6)
+	_spy_row.visible = false
+	vbox.add_child(_spy_row)
+	_spy_button = Button.new()
+	_spy_button.text = "Auftrag (K)"
+	_spy_button.focus_mode = Control.FOCUS_NONE
+	_spy_button.add_theme_font_size_override("font_size", FONT_SIZE)
+	_spy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_spy_button.tooltip_text = "Spionagefenster bei diesem Spion öffnen: Auskundschaften, Dorf oder Rivalen aufhetzen"
+	_spy_button.pressed.connect(_on_spy_pressed)
+	_spy_row.add_child(_spy_button)
+
+	_build_refugee_row(vbox)
+
+	_gate_row = HBoxContainer.new()
+	_gate_row.visible = false
+	vbox.add_child(_gate_row)
+	_gate_button = Button.new()
+	_gate_button.focus_mode = Control.FOCUS_NONE
+	_gate_button.add_theme_font_size_override("font_size", FONT_SIZE)
+	_gate_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_gate_button.tooltip_text = "Verriegelt: nur eigene und verbündete Einheiten. Feinde kommen nie hindurch."
+	_gate_button.pressed.connect(_on_gate_pressed)
+	_gate_row.add_child(_gate_button)
+
+	_build_stance_row(vbox)
 	_build_actions(vbox)
 
 	_research_button = Button.new()
@@ -226,6 +317,11 @@ func setup(p_game: Node) -> void:
 	game.player.resources_changed.connect(_on_resources_changed)
 	game.work_system.jobs_changed.connect(_on_jobs_changed)
 	game.command_system.armies_changed.connect(_on_armies_changed)
+	_hero_box.setup(game)
+	_troop_box.setup(game)
+	game.troop_system.troops_changed.connect(_on_troops_changed)
+	game.selection.focus_hero_changed.connect(_on_focus_hero_changed)
+	game.hero_system.heroes_changed.connect(_on_heroes_changed)
 	_on_selection_changed(game.selection.selected)
 
 
@@ -286,6 +382,24 @@ func _on_armies_changed(k: Kingdom) -> void:
 		_dirty = true
 
 
+## Tab: anderer aktiver Held der Auswahl
+func _on_focus_hero_changed(_u: Unit) -> void:
+	if _mode != "":
+		_dirty = true
+
+
+## Helden geändert (Stufe, Wahl, Tod, Wiederbelebung …)
+func _on_heroes_changed(k: Kingdom) -> void:
+	if k == game.player and _mode != "":
+		_dirty = true
+
+
+## Schmiede, Wertepunkte, Aussehen oder Rang geändert
+func _on_troops_changed(k: Kingdom) -> void:
+	if k == game.player and _mode != "":
+		_dirty = true
+
+
 func _on_formation_changed(_formation: String) -> void:
 	_update_formation_button()
 
@@ -298,6 +412,7 @@ func _refresh() -> void:
 	# Zuerst prüfen, ob das Objekt noch existiert – erst dann den Typ
 	if not is_instance_valid(_target) or not _target.is_alive():
 		_target = null
+	_gate_row.visible = false
 	# Mehrfachauswahl nur prüfen, wenn mehr als ein Objekt gewählt ist
 	var sel: Array = game.selection.selected
 	var own_units: Array = _own_units(sel) if sel.size() > 1 else []
@@ -316,6 +431,14 @@ func _refresh() -> void:
 	else:
 		_mode = ""
 		visible = false
+		_hero_box.hide_box()
+		_troop_box.hide_box()
+	if _mode != "unit" and _mode != "units":
+		_stance_row.visible = false
+	if _mode != "unit" and _mode != "building":
+		_show_village_row(null)
+	if _mode != "unit" and _spy_row.visible:
+		_spy_row.visible = false
 
 
 # ---------------------------------------------------------------------------
@@ -336,10 +459,13 @@ func _show_building(b: Building) -> void:
 	_set_text(_note, "")
 	_job_row.visible = false
 	_actions.visible = false
+	_mood_row.visible = false
+	_refugee_row.visible = false
 
-	# Leben: fremde Gebäude, beschädigte und solche, die Einheiten beschwören
+	# Leben: fremde Gebäude, beschädigte und solche, die Einheiten beschwören (Befestigungen immer)
 	var summons: Array = b.get_summon_tiers()
-	_hp_bar.visible = b.constructed and (not own or b.hp < b.max_hp or not summons.is_empty() or b == k.castle)
+	_hp_bar.visible = b.constructed and (not own or b.hp < b.max_hp or not summons.is_empty() or b == k.castle
+			or b.fort_kind != "")
 	if _hp_bar.visible:
 		_hp_bar.set_value(b.hp, b.max_hp)
 
@@ -352,17 +478,46 @@ func _show_building(b: Building) -> void:
 	_set_text(_status, status)
 	_set_text(_warn, warn)
 
+	var vs: VillageSystem = game.village_system
 	if game.monster_system.lairs.has(b):
 		_set_text(_facts, _lair_text(b))
+	elif vs.is_village(b.kingdom):
+		_set_text(_facts, vs.get_summary_text(b.kingdom, k))
+	elif b.fort_kind != "":
+		_set_text(_facts, game.siege_system.get_building_facts(b))
+		# Eigenes Tor: verriegeln oder öffnen
+		if own and b.fort_kind == "gate":
+			_gate_row.visible = true
+			_set_button_text(_gate_button, "Öffnen" if game.siege_system.is_gate_locked(b) else "Verriegeln")
+	elif b.kingdom.controller == "ai":
+		# Feindliches Königreich: öffentlich sind nur Name und Leben; die Burg zeigt,
+		# was die Kundschaft über das Reich weiss
+		# (ohne die erste Zeile "Kundschaft: …" – die steht schon beim Reich)
+		var summary := ""
+		if b == b.kingdom.castle:
+			summary = game.espionage_system.get_kingdom_summary(b.kingdom, k)
+			summary = summary.substr(summary.find("\n") + 1) if summary.contains("\n") else ""
+		_set_text(_facts, summary)
 	else:
-		_set_text(_facts, _building_facts(b))
+		var facts := _building_facts(b)
+		var annexed := vs.get_annexed_text(b) if own else ""
+		if not annexed.is_empty():
+			facts = annexed if facts.is_empty() else facts + "\n" + annexed
+		_set_text(_facts, facts)
+	_show_village_row(b.kingdom if vs.is_village(b.kingdom) else null)
 	_magic_box.visible = false
 	_show_research(b, own)
+	_hero_box.show_building(b if own else null)
+	_troop_box.show_building(b if own else null)
 
 	# Beschwören (nur eigene, fertige Gebäude)
-	var can_summon := own and b.constructed and not summons.is_empty()
+	# Heldenhalle: Anwerben über dieselben Knöpfe (Angebote vom HeroSystem), ohne Sammelpunkt
+	var hero_hall := bool(b.def.get("hero_hall", false))
+	var can_summon := own and b.constructed and (not summons.is_empty() or hero_hall)
 	_summon_box.visible = can_summon
 	if can_summon:
+		_set_label_text(_summon_header, "Helden anwerben" if hero_hall else "Beschwören")
+		_rally_row.visible = not hero_hall
 		_refresh_summons(b)
 
 	# Arbeiter
@@ -422,6 +577,16 @@ func _building_facts(b: Building) -> String:
 	var slots := b.get_worker_slots()
 	if slots > 0 and not b.constructed:
 		facts.append("Arbeitsplätze: %d (wenn fertig)" % slots)
+	var sat: Dictionary = def.get("satisfaction", {})
+	if not sat.is_empty():
+		var line := "Versorgt bis zu %d Bewohner: %+d Zufriedenheit" % [int(sat.get("capacity", 0)), roundi(float(sat.get("bonus", 0)))]
+		if b.constructed and b.kingdom != null:
+			var n := 0
+			for u in b.kingdom.units:
+				if bool(u.type_def.get("needs_housing", false)):
+					n += 1
+			line += " (Abdeckung %d %%)" % roundi(minf(1.0, float(sat.get("capacity", 0)) / maxf(float(n), 1.0)) * 100.0)
+		facts.append(line)
 	var aura: Dictionary = def.get("heal_aura", {})
 	if b.constructed and not aura.is_empty():
 		facts.append("Heilt eigene Einheiten im Umkreis von %d Feldern (%s Leben/s)" % [
@@ -488,6 +653,14 @@ func _on_worker_minus() -> void:
 	_refresh()
 
 
+## Tor verriegeln bzw. öffnen
+func _on_gate_pressed() -> void:
+	var b: Variant = _target
+	if b is Building and is_instance_valid(b) and (b as Building).kingdom == game.player:
+		game.siege_system.set_gate_locked(b, not game.siege_system.is_gate_locked(b))
+		_dirty = true
+
+
 func _on_demolish_pressed() -> void:
 	var b := _valid_building()
 	if b == null:
@@ -508,10 +681,13 @@ func _build_summon_box(parent: Control) -> void:
 	_summon_box = VBoxContainer.new()
 	_summon_box.add_theme_constant_override("separation", 4)
 	parent.add_child(_summon_box)
-	var header := _make_label(_summon_box, 15, COLOR_TITLE)
-	header.text = "Beschwören"
-	_summon_list = VBoxContainer.new()
-	_summon_list.add_theme_constant_override("separation", 4)
+	_summon_header = _make_label(_summon_box, 15, COLOR_TITLE)
+	_summon_header.text = "Beschwören"
+	# Raster: ab drei Einheitentypen zwei Spalten (Kaserne mit sechs, sieben Knöpfen)
+	_summon_list = GridContainer.new()
+	_summon_list.columns = 1
+	_summon_list.add_theme_constant_override("h_separation", 4)
+	_summon_list.add_theme_constant_override("v_separation", 4)
 	_summon_box.add_child(_summon_list)
 
 	# Warteschlange: immer fünf Plätze, damit die Höhe gleich bleibt
@@ -544,7 +720,8 @@ func _build_summon_box(parent: Control) -> void:
 
 	# Sammelpunkt: Hinweis und (falls gesetzt) "löschen"; feste Höhe, auch wenn
 	# der Löschen-Button erscheint und der Hinweis dadurch umbricht
-	var rally_row := HBoxContainer.new()
+	_rally_row = HBoxContainer.new()
+	var rally_row := _rally_row
 	rally_row.add_theme_constant_override("separation", 6)
 	rally_row.custom_minimum_size = Vector2(0, 42)
 	_summon_box.add_child(rally_row)
@@ -568,7 +745,8 @@ func _ensure_summon_buttons(b: Building) -> void:
 	var options: Array = game.summon_system.get_options(b)
 	var ids := PackedStringArray()
 	for o in options:
-		ids.append(str((o as Dictionary).get("id", "")))
+		# Mit dem Aussehen des Typs: ein neuer Skin baut die Bilder neu
+		ids.append("%s:%s" % [str((o as Dictionary).get("id", "")), TroopRules.type_skin(b.kingdom, o as Dictionary)])
 	if is_instance_valid(_summon_building) and _summon_building == b and ids == _summon_ids:
 		return
 	_summon_building = b
@@ -578,61 +756,80 @@ func _ensure_summon_buttons(b: Building) -> void:
 		_summon_list.remove_child(child)
 		child.queue_free()
 	_summon_entries.clear()
+	_summon_list.columns = 2 if options.size() > 2 else 1
 	for o in options:
 		_summon_entries.append(_make_summon_button(o as Dictionary, b.kingdom))
 
 
-## Ein Button je Einheitentyp: Bild, Name, Kosten (Symbol + Zahl), Dauer
+## Ein Button je Einheitentyp: Bild (im gewählten Aussehen) links, rechts oben der Name
+## (in einer Spalte mit Dauer), darunter die Kosten (Symbol + Zahl). Zwei Zeilen, damit
+## zwei Spalten passen.
 func _make_summon_button(def: Dictionary, k: Kingdom) -> Dictionary:
 	var id := str(def.get("id", ""))
 	var button := Button.new()
 	button.focus_mode = Control.FOCUS_NONE
-	button.custom_minimum_size = Vector2(0, 38)
+	button.custom_minimum_size = Vector2(0, 50)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(_on_summon_pressed.bind(id))
 	_summon_list.add_child(button)
 	var row := HBoxContainer.new()
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	row.offset_left = 6.0
-	row.offset_right = -10.0
-	row.add_theme_constant_override("separation", 8)
+	row.offset_left = 5.0
+	row.offset_right = -6.0
+	row.add_theme_constant_override("separation", 6)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	button.add_child(row)
 	var icon := UnitIcon.new()
-	icon.custom_minimum_size = Vector2(28, 28)
+	icon.custom_minimum_size = Vector2(30, 30)
 	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	icon.setup(def, k)
 	row.add_child(icon)
-	var name_label := _make_label(row, FONT_SIZE, COLOR_TEXT)
+	var lines := VBoxContainer.new()
+	lines.add_theme_constant_override("separation", 0)
+	lines.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lines.alignment = BoxContainer.ALIGNMENT_CENTER
+	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(lines)
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 4)
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lines.add_child(top)
+	var name_label := _make_label(top, SMALL_FONT_SIZE, COLOR_TEXT)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_label.clip_text = true
 	name_label.text = str(def.get("name", id))
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# Dauer nur in einer Spalte (zwei Spalten: im Tooltip, der Name braucht den Platz)
+	var time_label := _make_label(top, 13, COLOR_DIM)
+	time_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	time_label.text = "%d s" % ceili(_summon_seconds(def, k))
+	time_label.visible = _summon_list.columns == 1
+	var cost_row := HBoxContainer.new()
+	cost_row.add_theme_constant_override("separation", 5)
+	cost_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lines.add_child(cost_row)
 	var costs := {}
-	var cost: Dictionary = def.get("cost", {})
+	# Helden: wirkliche Kosten (jeder weitere Held kostet mehr)
+	var cost: Dictionary = game.summon_system.get_cost(k, id)
 	for r in DataDB.resources:
 		var res_id := str(r["id"])
 		var amount := float(cost.get(res_id, 0.0))
 		if amount <= 0.0:
 			continue
 		var pair := HBoxContainer.new()
-		pair.add_theme_constant_override("separation", 2)
+		pair.add_theme_constant_override("separation", 1)
 		pair.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row.add_child(pair)
+		cost_row.add_child(pair)
 		var res_icon := ResourceIcon.new()
-		res_icon.setup(res_id, 16.0)
+		res_icon.setup(res_id, 14.0)
 		pair.add_child(res_icon)
-		var amount_label := _make_label(pair, SMALL_FONT_SIZE, COLOR_TEXT)
+		var amount_label := _make_label(pair, 13, COLOR_TEXT)
 		amount_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		amount_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		amount_label.text = str(ceili(amount))
 		costs[res_id] = [amount_label, amount]
-	var time_label := _make_label(row, SMALL_FONT_SIZE, COLOR_DIM)
-	time_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	time_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	time_label.custom_minimum_size = Vector2(34, 0)
-	time_label.text = "%d s" % ceili(_summon_seconds(def, k))
 	return {"id": id, "def": def, "button": button, "row": row, "costs": costs, "time": time_label}
 
 
@@ -654,9 +851,13 @@ func _refresh_summons(b: Building) -> void:
 			row.modulate = tint
 		# Fehlende Ressourcen rot
 		var costs: Dictionary = entry["costs"]
+		var cost: Dictionary = ss.get_cost(k, str(entry["id"]))
 		for res_id in costs:
 			var pair: Array = costs[res_id]
 			var label: Label = pair[0]
+			# Heldenkosten steigen mit jedem Helden: Zahl nachführen
+			pair[1] = float(cost.get(res_id, 0.0))
+			_set_label_text(label, str(ceili(float(pair[1]))))
 			_set_color(label, COLOR_BAD if k.get_amount(str(res_id)) + 0.0001 < float(pair[1]) else COLOR_TEXT)
 		var time_label: Label = entry["time"]
 		_set_label_text(time_label, "%d s" % ceili(_summon_seconds(def, k)))
@@ -692,7 +893,7 @@ func _refresh_summons(b: Building) -> void:
 				slot.set_meta("type_id", "")
 				icon.clear()
 			slot.disabled = true
-			slot.tooltip_text = ""
+			slot.tooltip_text = "Freier Platz der Warteschlange (Einheit oben anklicken)"
 	# Beide Fassungen haben genau zwei kurze Zeilen (Höhe bleibt gleich)
 	var queue_text := "Warteschlange leer\nEinheit oben anklicken"
 	if not queue.is_empty():
@@ -714,15 +915,16 @@ func _summon_seconds(def: Dictionary, k: Kingdom) -> float:
 	return float(def.get("summon_time", 10.0)) / maxf(k.mod("summon"), 0.01)
 
 
-## Grundwert eines Einheitentyps mit den Faktoren des Reichs (wie Unit._stat)
+## Grundwert eines Einheitentyps mit den Faktoren des Reichs (wie Unit._stat; auch je Klasse – Schmiede)
 func _type_stat(def: Dictionary, k: Kingdom, key: String) -> float:
-	return float(def.get(key, 0.0)) * k.mod(key) * k.mod(key + "." + str(def.get("tier", "")))
+	return float(def.get(key, 0.0)) * k.mod(key) * k.mod(key + "." + str(def.get("tier", ""))) \
+			* k.mod(key + "#" + str(def.get("class", "")))
 
 
 func _summon_tooltip(def: Dictionary, k: Kingdom) -> String:
 	var lines: PackedStringArray = []
 	lines.append(str(def.get("name", "?")))
-	lines.append("Kosten: " + DataDB.cost_to_text(def.get("cost", {})))
+	lines.append("Kosten: " + DataDB.cost_to_text(game.summon_system.get_cost(k, str(def.get("id", "")))))
 	lines.append("Dauer: %d s" % ceili(_summon_seconds(def, k)))
 	var stats: PackedStringArray = []
 	stats.append("Leben %d" % roundi(_type_stat(def, k, "hp")))
@@ -736,6 +938,10 @@ func _summon_tooltip(def: Dictionary, k: Kingdom) -> String:
 		stats.append("Reichweite %s" % _range_text(_type_stat(def, k, "range")))
 	stats.append("Tempo %s" % ResourceBar.format_number(_type_stat(def, k, "speed")))
 	lines.append(" · ".join(stats))
+	if str(def.get("role", "")) != "hero":
+		lines.append(TroopRules.class_line(def))
+	if not str(def.get("description", "")).is_empty():
+		lines.append(str(def["description"]))
 	if bool(def.get("can_work", false)):
 		lines.append("Kann auch einen Beruf ausüben (braucht dann Wohnraum)")
 	return "\n".join(lines)
@@ -777,13 +983,35 @@ func _show_unit(u: Unit) -> void:
 		var army: int = game.command_system.get_army_number(u)
 		if army > 0:
 			title += " · Armee %d" % army
+	var esp: EspionageSystem = game.espionage_system
+	var spies: SpySystem = game.spy_system
+	if not own and spies.is_spy(u) and not u.stealthed:
+		title += " (enttarnt)"
 	_set_text(_title, title)
 	_show_owner(u.kingdom)
+	# Kundschaft über feindliche Königreiche: ohne Bericht (Stufe 2) keine Werte, Wirkungen
+	# erst genau (3); Monster, Dörfer und eigene Einheiten immer
+	var intel := 3
+	if u.kingdom.controller == "ai" and not esp.details_visible(game.player, u.kingdom, 2):
+		intel = esp.get_intel_level(game.player, u.kingdom)
 	_hp_bar.visible = true
-	_hp_bar.set_value(u.hp, u.max_hp)
+	_hp_bar.set_value(u.hp, u.max_hp, "" if intel >= 2 else "?")
 	_fill_stats(u)
 	_set_text(_warn, "")
-	_set_text(_facts, "")
+	var caravan: bool = game.trade_route_system.is_caravan(u)
+	var facts := _village_unit_text(u)
+	if intel < 2:
+		_stats_grid.visible = false
+		facts = "Werte unbekannt – schicke Späher oder Spione in die Nähe"
+	elif own and spies.is_spy(u):
+		facts = spies.get_spy_text(u)
+	elif caravan:
+		facts = game.trade_route_system.get_caravan_text(u)
+	_set_text(_facts, facts)
+	var spy_row := own and spies.is_spy(u)
+	if _spy_row.visible != spy_row:
+		_spy_row.visible = spy_row
+	_show_village_row(u.kingdom if game.village_system.is_village(u.kingdom) else null)
 	_summon_box.visible = false
 	_worker_row.visible = false
 	_demolish_button.visible = false
@@ -791,25 +1019,39 @@ func _show_unit(u: Unit) -> void:
 		# Das Warnzeichen fehlt in manchen Schriften – "(!)" ist überall lesbar.
 		# Befehlstexte beginnen klein ("hält die Stellung"), als Zeile gross.
 		_set_text(_status, _capitalize(u.get_status_text().replace("⚠", "(!)")))
-		_set_text(_bonus, game.combat_system.get_bonus_text(u))
+		_set_text(_bonus, _join_bonus(game.combat_system.get_bonus_text(u), _terrain_text(u)))
 		_set_text(_note, KING_NOTE if u.role == "king" else "")
 	else:
 		_set_text(_status, "")
-		_set_text(_bonus, "")
+		_set_text(_bonus, _terrain_text(u))
 		_set_text(_note, "")
-	_show_magic(u)
+	_show_unit_phase8(u, own)
+	if intel >= 3:
+		_show_magic(u)
+	else:
+		_magic_box.visible = false
 	_hide_research()
+	if own and u.hero_id != 0:
+		_hero_box.show_hero(u, false)
+	else:
+		_hero_box.hide_box()
+	if intel >= 2 and not caravan:
+		_troop_box.show_unit(u, own)
+	else:
+		_troop_box.hide_box()
 	_job_row.visible = own and u.can_work()
 	if _job_row.visible:
 		_update_job_options(u)
 
-	_actions.visible = own
-	if not own:
+	_actions.visible = own and not caravan
+	_show_stance([u] if own and not caravan else [])
+	if not own or caravan:
+		_job_row.visible = false
 		return
 	_halt_button.visible = true
 	_halt_button.tooltip_text = "Stehen bleiben und den Platz verteidigen"
-	_work_button.visible = u.can_work()
-	if u.can_work():
+	_work_button.visible = u.can_work() and not spy_row
+	if _work_button.visible:
 		var no_job := u.job_id == "idle"
 		_work_button.disabled = no_job
 		_work_button.tooltip_text = NO_JOB_TIP if no_job else "Befehl aufheben – arbeitet weiter als %s" % u.get_job_name()
@@ -855,17 +1097,28 @@ func _show_units(units: Array) -> void:
 	_stats_grid.visible = false
 	_set_text(_status, "")
 	_set_text(_warn, "")
-	_set_text(_facts, _multi_counts)
+	var unsupplied := 0
+	for o in units:
+		for e in (o as Unit).effects:
+			if str(e.get("id", "")) == SupplySystem.EFFECT_ID:
+				unsupplied += 1
+				break
+	_set_text(_facts, _multi_counts if unsupplied == 0 else _multi_counts + "\n%d ohne Versorgung (keine Erholung)" % unsupplied)
 	_set_text(_bonus, "")
 	_set_text(_note, MULTI_HINT)
+	_show_units_mood(units)
 	_magic_box.visible = false
 	_hide_research()
+	# Aktiver Held der Auswahl (Tab wechselt): Fähigkeiten auch mit der ganzen Armee
+	_hero_box.show_hero(game.selection.get_focus_hero(), true)
+	_troop_box.show_units(units)
 	_summon_box.visible = false
 	_worker_row.visible = false
 	_job_row.visible = false
 	_demolish_button.visible = false
 
 	_actions.visible = true
+	_show_stance(units)
 	_halt_button.visible = true
 	_halt_button.tooltip_text = "Alle bleiben stehen und verteidigen ihren Platz"
 	# Immer sichtbar (2×2-Raster bleibt gleich), ohne Beruf gesperrt
@@ -979,12 +1232,29 @@ func _stat_source_line(u: Unit, key: String, label: String, value: float, as_per
 	var parts: PackedStringArray = []
 	var k := u.kingdom
 	if k != null:
-		var keys: PackedStringArray = [key, key + "." + u.tier, key + "@" + u.role]
+		var keys: PackedStringArray = [key, key + "." + u.tier, key + "@" + u.role, key + "#" + u.unit_class]
 		for source in k.modifier_sources:
 			var entry: Dictionary = k.modifier_sources[source]
 			for mod_key in keys:
 				if entry.has(mod_key):
 					parts.append("%s %s" % [_source_name(str(source)), _factor_text(float(entry[mod_key]), key)])
+	# Gelände des Volks (Phase 8): erlittener Schaden als Verteidigung
+	var terrain_key := key
+	if not u.terrain_mods.is_empty() and u.terrain_mods.has(terrain_key):
+		var biome_name := str(DataDB.get_biome(u.terrain_biome).get("name", "")) if u.terrain_biome >= 0 else ""
+		parts.append("Gelände %s %s" % [biome_name, _factor_text(float(u.terrain_mods[terrain_key]), key)])
+	# Helden: Stufe, Talente und passive Fähigkeiten (Unit.hero_mods); Truppen: Rang und
+	# Wertepunkte (Unit.vet_mods, gleicher Aufbau)
+	for mods: Dictionary in [u.hero_mods, u.vet_mods]:
+		if not mods.has(key):
+			continue
+		for part in (mods[key] as Dictionary).get("parts", []):
+			var p: Array = part
+			if not is_equal_approx(float(p[2]), 1.0):
+				parts.append("%s %s" % [str(p[0]), _factor_text(float(p[2]), key)])
+			if absf(float(p[1])) > 0.0001:
+				var hero_add := ("%+d %%" % roundi(float(p[1]) * 100.0)) if as_percent else ("%s%s" % ["+" if float(p[1]) > 0.0 else "−", _num(absf(float(p[1])))])
+				parts.append("%s %s" % [str(p[0]), hero_add.replace("-", "−")])
 	for e in u.effects:
 		var eff: Dictionary = e
 		if str(eff.get("key", "")) != key:
@@ -1092,6 +1362,53 @@ func _build_actions(parent: Control) -> void:
 	_formation_button = _make_action_button("Formation: Block")
 	_formation_button.tooltip_text = "Formation für die nächsten Marschbefehle wechseln (F)"
 	_formation_button.pressed.connect(_on_formation_pressed)
+
+
+## Zeile "Haltung" mit drei Umschaltern (CommandSystem.set_stance)
+func _build_stance_row(parent: Control) -> void:
+	_stance_row = HBoxContainer.new()
+	_stance_row.add_theme_constant_override("separation", 4)
+	_stance_row.visible = false
+	parent.add_child(_stance_row)
+	var label := Label.new()
+	label.text = "Haltung"
+	label.add_theme_font_size_override("font_size", SMALL_FONT_SIZE)
+	label.add_theme_color_override("font_color", COLOR_DIM)
+	label.custom_minimum_size = Vector2(62, 0)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stance_row.add_child(label)
+	for stance in CommandSystem.STANCES:
+		var b := _make_compact_button(CommandSystem.get_stance_name(stance), SMALL_FONT_SIZE)
+		b.toggle_mode = true
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.tooltip_text = "Haltung %s: %s" % [CommandSystem.get_stance_name(stance), str(CommandSystem.STANCE_TIPS.get(stance, ""))]
+		b.pressed.connect(_on_stance_pressed.bind(str(stance)))
+		_stance_row.add_child(b)
+		_stance_buttons[stance] = b
+
+
+## Haltung der eigenen Krieger zeigen (gedrückt = alle gleich); ohne Krieger ausblenden
+func _show_stance(units: Array) -> void:
+	var stances := {}
+	for o in units:
+		var u: Unit = o
+		if is_instance_valid(u) and u.is_alive() and u.kingdom == game.player and CommandSystem.is_warrior(u):
+			stances[u.stance] = true
+	_stance_row.visible = not stances.is_empty()
+	for stance in _stance_buttons:
+		var b: Button = _stance_buttons[stance]
+		var on := stances.size() == 1 and stances.has(stance)
+		if b.button_pressed != on:
+			b.set_pressed_no_signal(on)
+
+
+func _on_stance_pressed(stance: String) -> void:
+	var units: Array = []
+	for u in _command_units():
+		if CommandSystem.is_warrior(u):
+			units.append(u)
+	game.command_system.set_stance(units, stance)
+	_refresh()
 
 
 func _make_action_button(text: String) -> Button:
@@ -1278,16 +1595,68 @@ func _army_of(units: Array) -> int:
 	return n
 
 
-## Reich des Objekts (nur bei fremden): Name in Reichsfarbe, ggf. "feindlich"
+## Reich des Objekts (nur bei fremden): Name in Reichsfarbe, ggf. "feindlich".
+## Dörfer: "Zwergendorf Eisenhall · Freundlich (+42)" in der Stufenfarbe, dazu Krieg/Bündnis.
 func _show_owner(k: Kingdom) -> void:
 	if k == null or k == game.player:
 		_owner.visible = false
 		return
 	var text := k.display_name
-	if game.are_hostile(game.player, k):
+	var color := k.color.lightened(0.25)
+	if game.village_system.is_village(k):
+		var rep: float = game.diplomacy_system.get_reputation(k, game.player)
+		var tier := DiplomacySystem.tier_for(rep)
+		text += "  ·  %s (%s)" % [DiplomacySystem.tier_name(tier), ResourceBar.format_signed(roundf(rep))]
+		color = DiplomacySystem.tier_color(tier).lightened(0.15)
+		if game.are_hostile(game.player, k):
+			text += "  ·  Krieg"
+		elif game.are_allied(game.player, k):
+			text += "  ·  Bündnis"
+	elif k.controller == "ai":
+		text += "  ·  %s  ·  %s" % ["feindlich" if game.are_hostile(game.player, k) else "Frieden",
+				game.espionage_system.get_intel_text(game.player, k)]
+	elif game.are_hostile(game.player, k):
 		text += "  ·  feindlich"
 	_set_text(_owner, text)
-	_set_color(_owner, k.color.lightened(0.25))
+	_set_color(_owner, color)
+
+
+## Dorf-Zeile zeigen (Dorf-Reich) oder verstecken (null)
+func _show_village_row(v: Kingdom) -> void:
+	_village_id = v.id if v != null else 0
+	if _village_row.visible != (v != null):
+		_village_row.visible = v != null
+
+
+## Zeile für Einheiten eines Dorfs: Bote "Bote von … nach …", Miliz "Dorfwache"
+func _village_unit_text(u: Unit) -> String:
+	var vs: VillageSystem = game.village_system
+	if u.role == "messenger":
+		var rec: Dictionary = game.messenger_system.get_record(u)
+		if rec.is_empty():
+			return ""
+		var sender: Kingdom = game.get_kingdom(int(rec["sender_id"]))
+		var receiver: Kingdom = game.get_kingdom(int(rec["receiver_id"]))
+		var text := "Bote von %s nach %s" % [sender.display_name if sender != null else "?",
+				"dir" if receiver == game.player else (receiver.display_name if receiver != null else "?")]
+		var about: Kingdom = game.get_kingdom(int(rec["about_id"]))
+		if about == game.player:
+			text += "\nMeldet deinen Angriff – fange ihn ab!"
+		return text
+	if vs.is_village(u.kingdom):
+		return "Dorfwache von %s (%s)" % [u.kingdom.display_name, str(vs.get_people(u.kingdom).get("name", "?"))]
+	return ""
+
+
+## "Auftrag (K)": Spionagefenster beim gewählten Spion
+func _on_spy_pressed() -> void:
+	if is_instance_valid(_target) and _target is Unit and game.hud != null and game.hud.has_method("open_espionage"):
+		game.hud.call("open_espionage", EspionagePanel.TAB_SPIES, 0, (_target as Unit).uid)
+
+
+func _on_diplo_pressed() -> void:
+	if _village_id != 0 and game.hud != null and game.hud.has_method("open_diplomacy"):
+		game.hud.call("open_diplomacy", _village_id)
 
 
 ## "3× Schwertkämpfer, 2× Bogenschütze" (häufigste zuerst)
@@ -1299,7 +1668,8 @@ func _count_text(counts: Dictionary) -> String:
 		return ca > cb if ca != cb else str(a) < str(b))
 	var parts: PackedStringArray = []
 	for n in names:
-		parts.append("%d× %s" % [int(counts[n]), str(n)])
+		# Geschütztes Leerzeichen: "3×" bricht nicht vom Namen weg
+		parts.append("%d×\u00a0%s" % [int(counts[n]), str(n)])
 	return ", ".join(parts)
 
 
@@ -1387,3 +1757,137 @@ func _set_button_text(b: Button, text: String) -> void:
 func _set_color(label: Label, color: Color) -> void:
 	if label.get_theme_color("font_color") != color:
 		label.add_theme_color_override("font_color", color)
+
+
+# ---------------------------------------------------------------------------
+# Zufriedenheit, Gelände, Überläufer und Flüchtlinge (Phase 8)
+# ---------------------------------------------------------------------------
+
+func _build_mood_row(parent: Control) -> void:
+	_mood_row = ResourceBar.TipBox.new()
+	_mood_row.add_theme_constant_override("separation", 6)
+	_mood_row.mouse_filter = Control.MOUSE_FILTER_STOP
+	_mood_row.rich = true
+	_mood_row.visible = false
+	parent.add_child(_mood_row)
+	_mood_icon = MoodIcon.new()
+	_mood_icon.custom_minimum_size = Vector2(18, 18)
+	_mood_row.add_child(_mood_icon)
+	_mood_label = Label.new()
+	_mood_label.add_theme_font_size_override("font_size", SMALL_FONT_SIZE)
+	_mood_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mood_row.add_child(_mood_label)
+
+
+func _build_refugee_row(parent: Control) -> void:
+	_refugee_row = HBoxContainer.new()
+	_refugee_row.add_theme_constant_override("separation", 6)
+	_refugee_row.visible = false
+	parent.add_child(_refugee_row)
+	var label := Label.new()
+	label.text = "Bitten um Aufnahme:"
+	label.add_theme_font_size_override("font_size", FONT_SIZE)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_refugee_row.add_child(label)
+	var accept := _make_compact_button("Aufnehmen", FONT_SIZE)
+	accept.tooltip_text = "Die Gruppe wird Teil deines Reichs (Bewohner)"
+	accept.pressed.connect(_on_refugee_accept)
+	_refugee_row.add_child(accept)
+	var reject := _make_compact_button("Abweisen", FONT_SIZE)
+	reject.tooltip_text = "Die Gruppe zieht weiter"
+	reject.pressed.connect(_on_refugee_reject)
+	_refugee_row.add_child(reject)
+
+
+## "Wald (Hochelfen): +10 % Angriff" (Geländebonus des Volks) oder ""
+func _terrain_text(u: Unit) -> String:
+	var ps: Variant = game.get("people_system")
+	return str(ps.get_terrain_text(u)) if ps != null else ""
+
+
+static func _join_bonus(a: String, b: String) -> String:
+	if a.is_empty():
+		return b
+	if b.is_empty():
+		return a
+	return a + " · " + b
+
+
+## Eigener Bewohner: Zufriedenheit; Überläufer: Status; Gruppe mit Angebot: Aufnehmen/Abweisen
+func _show_unit_phase8(u: Unit, own: bool) -> void:
+	var ss: Variant = game.get("satisfaction_system")
+	var es: Variant = game.get("event_system")
+	_mood_row.visible = false
+	_refugee_row.visible = false
+	_refugee_offer_id = 0
+	if ss == null:
+		return
+	if own and bool(u.type_def.get("needs_housing", false)) and u.satisfaction >= 0.0:
+		var tier := SatisfactionSystem.tier_for(u.satisfaction)
+		var work := roundi((u.work_mult - 1.0) * 100.0)
+		var text := "Zufriedenheit %d · %s" % [roundi(u.satisfaction), str(tier["name"])]
+		if work != 0:
+			text += (" · Arbeit %+d %%" % work).replace("-", "−")
+		_mood_icon.set_value(u.satisfaction)
+		_set_label_text(_mood_label, text)
+		_set_color(_mood_label, tier["color"])
+		_mood_row.source = _unit_mood_tip.bind(u)
+		_mood_row.visible = true
+		if ss.is_defector(u):
+			_set_text(_status, str(ss.get_defector_text(u)))
+	if es != null and not own:
+		var offer: Dictionary = es.get_offer_of_unit(u)
+		if not offer.is_empty() and int(offer["target_id"]) == game.player.id and str(offer["state"]) != "leaving":
+			_refugee_offer_id = int(offer["id"])
+			_refugee_row.visible = true
+			_set_text(_facts, str(es.get_offer_text(offer, game.player)))
+
+
+## Mehrere Einheiten: Ø-Zufriedenheit der Bewohner darunter
+func _show_units_mood(units: Array) -> void:
+	_refugee_row.visible = false
+	var total := 0.0
+	var n := 0
+	for o in units:
+		var u: Unit = o
+		if bool(u.type_def.get("needs_housing", false)) and u.satisfaction >= 0.0:
+			total += u.satisfaction
+			n += 1
+	_mood_row.visible = n > 0
+	if n == 0:
+		return
+	var avg := total / n
+	_mood_icon.set_value(avg)
+	_set_label_text(_mood_label, "Zufriedenheit Ø %d" % roundi(avg))
+	_set_color(_mood_label, SatisfactionSystem.tier_for(avg)["color"])
+	_mood_row.source = Callable()
+	_mood_row.tooltip_text = "Durchschnitt der %d ausgewählten Bewohner" % n
+
+
+func _unit_mood_tip(u: Unit) -> String:
+	if not is_instance_valid(u):
+		return ""
+	var ss: SatisfactionSystem = game.satisfaction_system
+	var tip := ResearchTipButton
+	var lines: PackedStringArray = ["[b]Zufriedenheit %d[/b] (Ziel %d)" % [roundi(u.satisfaction), roundi(ss.get_target(u))]]
+	for p in ss.get_unit_breakdown(u):
+		var v := float(p["value"])
+		if absf(v) < 0.5:
+			continue
+		lines.append(tip.colored(("%+d %s" % [roundi(v), str(p["cause"])]).replace("-", "−"), COLOR_UP if v > 0.0 else COLOR_BAD))
+	lines.append("Arbeitsleistung ×%s" % String.num(u.work_mult, 2).replace(".", ","))
+	return "\n".join(lines)
+
+
+func _on_refugee_accept() -> void:
+	var reason: String = game.event_system.accept_offer(game.player, _refugee_offer_id)
+	if not reason.is_empty():
+		Notify.warning(reason)
+	_dirty = true
+
+
+func _on_refugee_reject() -> void:
+	var reason: String = game.event_system.reject_offer(game.player, _refugee_offer_id)
+	if not reason.is_empty():
+		Notify.warning(reason)
+	_dirty = true

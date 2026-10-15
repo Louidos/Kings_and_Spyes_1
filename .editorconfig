@@ -1,0 +1,36 @@
+# Einheitliche Einstellungen für Editoren (https://editorconfig.org)
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# GDScript: Tabs wie im Godot-Editor
+[*.gd]
+indent_style = tab
+indent_size = 4
+
+# Godot-Dateien schreibt der Editor selbst
+[*.{tscn,tres,godot,cfg,import,uid}]
+indent_style = tab
+trim_trailing_whitespace = false
+
+[*.sh]
+indent_style = tab
+indent_size = 4
+
+[*.py]
+indent_style = space
+indent_size = 4
+
+[*.json]
+indent_style = space
+indent_size = 2
+
+# Markdown: zwei Leerzeichen am Zeilenende sind ein Zeilenumbruch
+[*.md]
+trim_trailing_whitespace = false

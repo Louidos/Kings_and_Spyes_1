@@ -6,6 +6,9 @@
 ## Findet ein Beruf nichts zu tun, erscheint ein orangefarbenes "(!)" mit dem
 ## Grund als Tooltip. Haben Arbeiter eines Berufs gerade einen Befehl (Marsch,
 ## Halt …), steht hinter der Anzahl "(n pausiert)". Ein-/Ausblenden mit J (toggle()).
+## Der Pfeil in der Titelzeile klappt die Liste ein (dann nur "Arbeit · 2 frei"); das HUD
+## klappt sie zusätzlich von selbst ein, solange das Auswahlfenster darunter sonst
+## überdeckt würde (set_auto_collapsed).
 class_name JobPanel
 extends PanelContainer
 
@@ -23,6 +26,12 @@ const COLOR_PAUSED := Color(0.85, 0.75, 0.55)
 var game: Node
 
 var _grid: GridContainer
+var _title: Label
+var _summary: Label
+var _collapse_button: Button
+## Vom Spieler eingeklappt (Pfeil) bzw. vom HUD (Platz fehlt)
+var _user_collapsed := false
+var _auto_collapsed := false
 ## Eine Zeile je Beruf: {id, type, name, name_box, warn, count, paused, minus, plus}
 var _rows: Array = []
 var _timer := 0.0
@@ -33,16 +42,32 @@ func _ready() -> void:
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 6)
 	add_child(vbox)
-	var title := Label.new()
-	title.text = "Arbeitsverteilung (J)"
-	title.add_theme_color_override("font_color", COLOR_TITLE)
-	title.add_theme_font_size_override("font_size", 17)
-	vbox.add_child(title)
+	var title_row := HBoxContainer.new()
+	title_row.add_theme_constant_override("separation", 6)
+	vbox.add_child(title_row)
+	_collapse_button = Button.new()
+	_collapse_button.flat = true
+	_collapse_button.focus_mode = Control.FOCUS_NONE
+	_collapse_button.custom_minimum_size = Vector2(24, 24)
+	_collapse_button.add_theme_font_size_override("font_size", 14)
+	_collapse_button.pressed.connect(func() -> void: set_collapsed(not _user_collapsed))
+	title_row.add_child(_collapse_button)
+	_title = Label.new()
+	_title.text = "Arbeitsverteilung (J)"
+	_title.add_theme_color_override("font_color", COLOR_TITLE)
+	_title.add_theme_font_size_override("font_size", 17)
+	_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title_row.add_child(_title)
+	_summary = _make_label("")
+	_summary.mouse_filter = Control.MOUSE_FILTER_STOP
+	_summary.tooltip_text = IDLE_TIP
+	title_row.add_child(_summary)
 	_grid = GridContainer.new()
 	_grid.columns = 4
 	_grid.add_theme_constant_override("h_separation", 6)
 	_grid.add_theme_constant_override("v_separation", 4)
 	vbox.add_child(_grid)
+	_apply_collapse()
 
 
 func setup(p_game: Node) -> void:
@@ -63,6 +88,45 @@ func setup(p_game: Node) -> void:
 func toggle() -> void:
 	visible = not visible
 	if visible:
+		_refresh()
+
+
+## Liste ein-/ausklappen (Pfeil in der Titelzeile)
+func set_collapsed(on: bool) -> void:
+	_user_collapsed = on
+	_apply_collapse()
+
+
+## Vom HUD: einklappen, solange sonst das Auswahlfenster überdeckt würde
+func set_auto_collapsed(on: bool) -> void:
+	if _auto_collapsed != on:
+		_auto_collapsed = on
+		_apply_collapse()
+
+
+func is_collapsed() -> bool:
+	return _user_collapsed or _auto_collapsed
+
+
+## Höhe mit ausgeklappter Liste (das HUD prüft damit, ob Platz ist)
+func get_expanded_height() -> float:
+	var title_h := _title.get_combined_minimum_size().y
+	var style := get_theme_stylebox("panel")
+	var margins := style.get_minimum_size().y if style != null else 0.0
+	return margins + title_h + 6.0 + _grid.get_combined_minimum_size().y
+
+
+func _apply_collapse() -> void:
+	var collapsed := is_collapsed()
+	_grid.visible = not collapsed
+	_collapse_button.text = "+" if collapsed else "−"
+	_collapse_button.tooltip_text = ("Arbeitsverteilung ausklappen" if _user_collapsed or not _auto_collapsed
+			else "Eingeklappt, solange das Auswahlfenster den Platz braucht – Klick klappt dauerhaft ein/aus") \
+			if collapsed else "Arbeitsverteilung einklappen (nur die Zahl der Unbeschäftigten zeigen)"
+	_title.text = "Arbeit (J)" if collapsed else "Arbeitsverteilung (J)"
+	_summary.visible = collapsed
+	reset_size()
+	if not collapsed and game != null:
 		_refresh()
 
 
@@ -151,6 +215,10 @@ func _refresh() -> void:
 		return
 	var ws: WorkSystem = game.work_system
 	var idle := ws.get_idle_count(k)
+	_set_text(_summary, "%d frei" % idle)
+	_set_color(_summary, COLOR_WARN if idle > 0 else COLOR_NORMAL)
+	if is_collapsed():
+		return
 	# Ein Durchlauf für alle Zeilen statt einer Suche je Beruf (viele Einheiten):
 	# Anzahl, Einheiten mit Befehl ("pausiert") und erstes Problem je Beruf
 	var count_by_job := {}

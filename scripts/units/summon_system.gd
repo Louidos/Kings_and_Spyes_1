@@ -152,8 +152,9 @@ func spawn_summoned(b: Building, type_id: String) -> Unit:
 		var slot := _spawn_slot(b, pos, b.summon_count - 1)
 		u.command_pos = slot
 		unit_system.move_direct(u, slot)
-	# Angeworbene Helden meldet das HeroSystem (mit Namen)
-	if u.role != "hero":
+	# Angeworbene Helden meldet das HeroSystem (mit Namen), Spione das SpySystem
+	# ("bereit – Auftrag im Spionagefenster", mit Verweis)
+	if u.role != "hero" and u.tier != "spy":
 		b.kingdom.notify("%s beschworen" % u.get_display_name(), "good", pos)
 	unit_summoned.emit(u, b)
 	return u
@@ -171,8 +172,26 @@ func _spawn_slot(b: Building, base: Vector2, n: int) -> Vector2:
 	return base + right * (col - 1.5) * spacing + dir * (row + 0.5) * spacing
 
 
-## Abriss/Zerstörung: laufende Beschwörungen werden erstattet.
+## Eigener Abriss bzw. Abbruch: laufende Beschwörungen werden erstattet. Zerstört ein
+## Feind das Gebäude (oder fällt das Reich), ist der Einsatz verloren.
 func _on_building_removed(b: Building) -> void:
-	for entry in b.summon_queue:
-		b.kingdom.refund(entry.get("cost", {}))
+	if not b.destroyed:
+		for entry in b.summon_queue:
+			b.kingdom.refund(entry.get("cost", {}))
 	b.summon_queue.clear()
+
+
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10): die Warteschlangen stehen in den Gebäuden
+# ---------------------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {}
+
+
+func from_dict(_d: Dictionary) -> void:
+	pass
+
+
+func rebuild_runtime() -> void:
+	pass

@@ -10,9 +10,16 @@
 ##   man beim Auswählen einer Armee keine Bewohner mit.
 ## - Rechtsklick: eigene Einheiten bewegen bzw. einen Feind angreifen (mit
 ##   Strg oder "Angriff-Vorrücken": kampfbereit marschieren); bei einem
-##   eigenen Beschwörungsgebäude den Sammelpunkt setzen.
+##   eigenen Beschwörungsgebäude den Sammelpunkt setzen. Rechtsklick auf
+##   eine Einheit oder ein Gebäude eines friedlichen Dorfs: erst Hinweis (die
+##   Truppen gehen nur hin), ein zweiter Rechtsklick auf dasselbe Dorf
+##   innerhalb von 3 s erklärt den Krieg und greift an.
 ## - 1–9: Armee wählen (zweimal schnell: Kamera hin), Strg+Zahl: speichern,
-##   Umschalt+Zahl: hinzufügen.
+##   Umschalt+Zahl: hinzufügen. Strg+A: alle Krieger (select_all_warriors).
+## - Zielmodus (arm_order): der nächste Klick gibt "angreifend vorrücken"
+##   (Strg+Rechtsklick, Knopf), "bewegen" oder "Patrouille" (Armeefenster).
+## - Helden: der "aktive Held" der Auswahl (erster Held, Tab wechselt) bekommt
+##   die Fähigkeitstasten C / V / B – auch in einer gemischten Auswahl (Armee).
 ## Der König lässt sich nur durch direktes Anklicken auswählen (nicht per
 ## Rahmen, Doppelklick oder Armee). Fremde Einheiten und Gebäude kann man nur
 ## ansehen, nicht befehligen.
@@ -25,8 +32,12 @@ extends Node
 signal selection_changed(objs: Array)
 ## Angriff-Vorrücken für den nächsten Rechtsklick an/aus
 signal attack_move_armed_changed(armed: bool)
+## Zielmodus gewechselt: "attack_move", "move", "patrol" oder "" (aus)
+signal order_armed_changed(mode: String)
 ## Ein Befehl wurde gegeben (für Markierungen): kind "move", "attack_move", "attack", "rally"
 signal command_issued(pos: Vector2, kind: String)
+## Der aktive Held der Auswahl hat gewechselt (Tab, neue Auswahl); null = keiner
+signal focus_hero_changed(u: Unit)
 
 ## Klickradius für Einheiten in Bildschirmpixeln
 const UNIT_PICK_RADIUS := 20.0
@@ -36,11 +47,15 @@ const DRAG_THRESHOLD := 6.0
 const ARMY_DOUBLE_TAP_MSEC := 350
 ## Ebene des Auswahlrahmens: über der Welt, unter dem HUD (Ebene 10)
 const BOX_LAYER := 5
+## Zweiter Rechtsklick auf ein friedliches Dorf innerhalb dieser Zeit: Krieg
+const WAR_CONFIRM_MSEC := 3000
 
 var game: Node
 var selected: Array = []
 
 var _armed := false
+## Befehl des Zielmodus: "attack_move", "move" oder "patrol"
+var _arm_mode := "attack_move"
 ## Linke Taste in der Welt gedrückt (Klick oder Rahmen läuft)
 var _pressing := false
 ## Maus weit genug bewegt: Rahmen wird gezeigt
@@ -52,8 +67,13 @@ var _press_world := Vector2.ZERO
 var _cur_screen := Vector2.ZERO
 var _press_shift := false
 var _box: SelectionBox
+## uid des aktiven Helden der Auswahl (0 = keiner; nur Laufzeit)
+var _focus_hero_uid := 0
 var _last_army := 0
 var _last_army_msec := -100000
+## Kriegsbestätigung: Dorf (Kingdom.id) und Zeitpunkt des ersten Rechtsklicks
+var _war_confirm_id := 0
+var _war_confirm_msec := 0
 ## Entfernte Objekte: Signal einmal pro Frame statt einmal pro Einheit
 ## (in grossen Schlachten sterben viele ausgewählte Einheiten auf einmal)
 var _removal_pending := false
@@ -108,6 +128,7 @@ func select(objs: Array, additive: bool = false) -> void:
 	selected = new_list
 	if _armed and get_own_units().is_empty():
 		cancel_arm()
+	_update_focus_hero()
 	selection_changed.emit(selected)
 
 
@@ -137,14 +158,77 @@ func get_own_units() -> Array:
 	return list
 
 
+## Eigene lebende Helden der Auswahl (in Auswahlreihenfolge)
+func get_selected_heroes() -> Array:
+	var list: Array = []
+	for u in get_own_units():
+		if (u as Unit).hero_id != 0:
+			list.append(u)
+	return list
+
+
+## Aktiver Held der Auswahl (bekommt C / V / B) oder null
+func get_focus_hero() -> Unit:
+	if _focus_hero_uid == 0:
+		return null
+	for u in get_selected_heroes():
+		if (u as Unit).uid == _focus_hero_uid:
+			return u
+	return null
+
+
+## Tab: nächster Held der Auswahl wird aktiv
+func cycle_hero() -> void:
+	var heroes := get_selected_heroes()
+	if heroes.is_empty():
+		return
+	var index := 0
+	for i in heroes.size():
+		if (heroes[i] as Unit).uid == _focus_hero_uid:
+			index = (i + 1) % heroes.size()
+			break
+	_set_focus_hero(heroes[index])
+
+
+## Aktiven Helden prüfen: bleibt er ausgewählt, bleibt er aktiv, sonst der erste Held
+func _update_focus_hero() -> void:
+	var heroes := get_selected_heroes()
+	for u in heroes:
+		if (u as Unit).uid == _focus_hero_uid:
+			return
+	_set_focus_hero(heroes[0] if not heroes.is_empty() else null)
+
+
+func _set_focus_hero(u: Unit) -> void:
+	var uid := u.uid if u != null else 0
+	if uid == _focus_hero_uid:
+		return
+	_focus_hero_uid = uid
+	# Ein laufender Zielmodus gehört zum bisherigen Helden
+	if game != null and not game.spell_targeting.ability_id.is_empty():
+		game.spell_targeting.cancel()
+	focus_hero_changed.emit(u)
+
+
 ## Nächster Rechtsklick (oder Linksklick) gibt "angreifend vorrücken"
 func arm_attack_move() -> void:
-	if _armed or get_own_units().is_empty():
+	arm_order("attack_move")
+
+
+## Zielmodus: der nächste Klick in die Welt gibt den Befehl mode an die eigenen
+## ausgewählten Einheiten – "attack_move" (angreifend vorrücken), "move" (bewegen,
+## ohne Feinde anzugreifen) oder "patrol" (Patrouille zwischen Gruppe und Ziel)
+func arm_order(mode: String) -> void:
+	if get_own_units().is_empty() or (_armed and _arm_mode == mode):
 		return
+	var was_attack := is_attack_move_armed()
 	game.spell_targeting.cancel()
 	_armed = true
+	_arm_mode = mode
 	Input.set_default_cursor_shape(Input.CURSOR_CROSS)
-	attack_move_armed_changed.emit(true)
+	if was_attack != is_attack_move_armed():
+		attack_move_armed_changed.emit(is_attack_move_armed())
+	order_armed_changed.emit(mode)
 
 
 func cancel_arm() -> void:
@@ -153,10 +237,25 @@ func cancel_arm() -> void:
 	_armed = false
 	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
 	attack_move_armed_changed.emit(false)
+	order_armed_changed.emit("")
 
 
 func is_attack_move_armed() -> bool:
-	return _armed
+	return _armed and _arm_mode == "attack_move"
+
+
+## Laufender Zielmodus ("attack_move", "move", "patrol") oder "" (keiner)
+func get_armed_order() -> String:
+	return _arm_mode if _armed else ""
+
+
+## Alle eigenen Krieger auswählen (Strg+A, Armeefenster) – ohne Bewohner und König
+func select_all_warriors() -> void:
+	var list: Array = game.command_system.get_warriors(game.player)
+	if list.is_empty():
+		Notify.info("Keine Krieger – in der Kaserne Kämpfer beschwören")
+		return
+	select(list)
 
 
 ## Armee n (1–9) des Spielers auswählen
@@ -278,8 +377,8 @@ func _finish_press(additive: bool) -> void:
 		return
 	var own := get_own_units()
 	if _armed and not own.is_empty():
-		# Angriff-Vorrücken ist scharf: auch ein Linksklick gibt den Befehl
-		_issue_order(own, _press_world, true)
+		# Zielmodus ist scharf: auch ein Linksklick gibt den Befehl
+		_issue_armed_order(own, _press_world)
 	else:
 		_click(_press_world, additive)
 
@@ -298,7 +397,10 @@ func _on_right_press(mb: InputEventMouseButton) -> void:
 	var world := _screen_to_world(mb.position)
 	var own := get_own_units()
 	if not own.is_empty():
-		_issue_order(own, world, _armed or mb.ctrl_pressed)
+		if _armed:
+			_issue_armed_order(own, world)
+		else:
+			_issue_order(own, world, mb.ctrl_pressed)
 		get_viewport().set_input_as_handled()
 		return
 	var b := _get_rally_building()
@@ -475,6 +577,21 @@ func _issue_order(units: Array, world: Vector2, attack_move: bool) -> void:
 		if b != null and b.is_alive() and game.are_hostile(game.player, b.kingdom):
 			target = b
 	var before := _order_ids(units)
+	if target == null:
+		# Friedliches Dorf unter der Maus: zweiter Rechtsklick erklärt den Krieg
+		var peaceful := _pick_village_target(world)
+		if peaceful != null:
+			var v: Kingdom = peaceful.get("kingdom")
+			var now := Time.get_ticks_msec()
+			if v.id == _war_confirm_id and now - _war_confirm_msec <= WAR_CONFIRM_MSEC:
+				_war_confirm_id = 0
+				game.diplomacy_system.declare_war(game.player, v)
+				target = peaceful
+			else:
+				_war_confirm_id = v.id
+				_war_confirm_msec = now
+				Notify.warning("%s ist friedlich. Nochmals Rechtsklick: Krieg erklären (Ruf sinkt stark, Verträge enden)." %
+						v.display_name, peaceful.position)
 	if target != null:
 		game.command_system.order_attack(units, target)
 		if _any_order_taken(units, before):
@@ -484,6 +601,36 @@ func _issue_order(units: Array, world: Vector2, attack_move: bool) -> void:
 		if _any_order_taken(units, before):
 			command_issued.emit(world, "attack_move" if attack_move else "move")
 	cancel_arm()
+
+
+## Befehl des Zielmodus an der Stelle world geben (arm_order), danach Zielmodus aus.
+## "attack_move" verhält sich wie Strg+Rechtsklick (Feind unter der Maus: Angriff).
+func _issue_armed_order(units: Array, world: Vector2) -> void:
+	var before := _order_ids(units)
+	match _arm_mode:
+		"move":
+			game.command_system.order_move(units, world, false)
+		"patrol":
+			game.command_system.order_patrol(units, world)
+		_:
+			_issue_order(units, world, true)
+			return
+	if _any_order_taken(units, before):
+		command_issued.emit(world, _arm_mode)
+	cancel_arm()
+
+
+## Einheit oder Gebäude eines selbstständigen, nicht verfeindeten Dorfs an der
+## Stelle (null, wenn keins)
+func _pick_village_target(world: Vector2) -> Node2D:
+	var vs: VillageSystem = game.village_system
+	var u := _pick_unit(world, false)
+	if u != null and vs.is_village(u.kingdom) and not game.are_hostile(game.player, u.kingdom):
+		return u
+	var b := _pick_building(world)
+	if b != null and b.is_alive() and vs.is_village(b.kingdom) and not game.are_hostile(game.player, b.kingdom):
+		return b
+	return null
 
 
 ## order_id je Einheit vor einem Befehl (CommandSystem zählt ihn bei jedem
@@ -580,4 +727,5 @@ func _emit_after_removal() -> void:
 	_removal_pending = false
 	if _armed and get_own_units().is_empty():
 		cancel_arm()
+	_update_focus_hero()
 	selection_changed.emit(selected)

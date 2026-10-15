@@ -1,0 +1,20 @@
+{
+	"_hinweis": [
+		"Handelswege (Phase 9): zwischen einem Reich (Burg oder Lager mit Annahme) und einem Dorf mit Handelsvertrag (Lieferungen aus peoples.json delivery) bzw. Bündnis (goods_factor × delivery.give, kostenlos, alle interval × interval_mult s).",
+		"Eine Karawane (caravan_unit) pendelt: holt in der Burg die Bezahlung (take), bringt sie ins Dorf, lädt dort die Ware (give) und bringt sie heim. Lieferungen werden fällig wie in Phase 6 (diplomacy.json delivery_interval); höchstens pending_max warten.",
+		"Stirbt die Karawane: Ladung verloren, der Täter erbeutet loot_share davon (nur Reiche, keine Monster), Dorf-Ruf des Täters raid_reputation; neue Karawane nach respawn_seconds für caravan_cost.",
+		"cut: abgeschnitten nach losses Überfällen in loss_window s oder wenn feindliche Kämpfer (auch Monster) danger_seconds lang näher als danger_radius Felder am Weg stehen (geprüft alle scan_seconds an Punkten alle sample_tiles Felder). Wieder offen nach mindestens min_cut_seconds und clear_seconds ohne Feinde. no_path_retry: neuer Versuch bei 'kein Weg'. max_travel_seconds: länger unterwegs = steckt fest.",
+		"supply: Versorgung – Einheiten (Spieler, KI) erholen sich nur im eigenen oder verbündeten Gebiet, bis radius_tiles Felder davon entfernt oder bis corridor_tiles Felder neben einem offenen eigenen Handelsweg (Raster chunk Felder).",
+		"display: Darstellung der gestrichelten Linie (Weltpixel bei Zoom 1).",
+		"debug_fast: Zeiten für Rauchtest und F3 (überschreiben die Werte oben)."
+	],
+	"enabled": true, "tick_seconds": 1.0, "caravan_unit": "caravan", "caravan_cost": {"wood": 20, "food": 10},
+	"respawn_seconds": 60, "load_seconds": 4, "pending_max": 2, "arrival_radius": 3, "loot_share": 0.6, "raid_reputation": -2,
+	"route_repath_seconds": 120,
+	"routes": {"trade": {"enabled": true}, "alliance": {"enabled": true, "goods_factor": 0.4, "interval_mult": 1.5}},
+	"cut": {"losses": 2, "loss_window": 900, "danger_seconds": 30, "danger_radius": 4, "sample_tiles": 4, "scan_seconds": 5,
+	        "min_cut_seconds": 180, "clear_seconds": 45, "max_travel_seconds": 900, "no_path_retry": 120},
+	"supply": {"enabled": true, "radius_tiles": 12, "chunk": 8, "corridor_tiles": 6, "scan_seconds": 2, "notify_interval": 300},
+	"display": {"dash": 18, "width": 3, "colors": {"open": "#f2d16b", "cut": "#e0503c", "blocked": "#e0803c", "paused": "#a0a0a0", "foreign": "#c08040"}},
+	"debug_fast": {"load_seconds": 0, "respawn_seconds": 3, "scan_seconds": 1, "danger_seconds": 3, "min_cut_seconds": 5, "clear_seconds": 3}
+}

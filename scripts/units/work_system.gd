@@ -17,8 +17,8 @@ signal jobs_changed(kingdom: Kingdom)
 
 ## Höchstens so viele Annahmestellen werden bei der Zielsuche verglichen
 const MAX_DROPOFF_CANDIDATES := 8
-## Höchstens so viele zeitgesteuerte Entscheidungen pro Simulationstakt
-const MAX_THINKS_PER_TICK := 12
+## Gültigkeit einer erfolglosen Vorkommen-Suche für alle Sammler eines Reichs und Berufs (s)
+const FAIL_CACHE_SECONDS := 6.0
 ## Gewicht des einmaligen Anmarschs bei der Zielwahl. Der dauerhafte Arbeitsweg
 ## (Vorkommen <-> Annahmestelle, hin und zurück) zählt voll – so nutzen
 ## Sammler eine Hütte direkt am Vorkommen statt der weit entfernten Burg.
@@ -40,10 +40,26 @@ var _unreachable: Dictionary = {}
 ## Zählt Änderungen an Gebäuden/Reservierungen (zusammen mit
 ## WorldData.deposit_version: "hat sich seit der letzten Suche etwas getan?")
 var _local_version := 0
+## Zählt nur Änderungen an Gebäuden und Gebiet (für _gather_failed)
+var _building_version := 0
+## Reich, für das gerade gesucht wird (_spiral_find/_cell_ok): fremdes Gebiet
+## (Dörfer, andere Reiche) ist tabu, 0 = nicht prüfen
+var _search_kingdom_id := 0
 var _retry_seconds := 3.0
 var _wander_radius := 4
+## Höchstens so viele zeitgesteuerte Entscheidungen pro Simulationstakt (alle Reiche
+## zusammen; economy.json work.max_thinks_per_tick)
+var _max_thinks := 20
 var _tick_count := 0
 var _rng := RandomNumberGenerator.new()
+## "Reich-id:Beruf" -> {"t": Spielzeit, "local": _local_version}: letzte erfolglose Vorkommen-Suche.
+## Die Suche hängt nur von den Annahmestellen des Reichs ab (nicht vom Sammler): solange sich an
+## den Gebäuden nichts geändert hat, sucht innerhalb von FAIL_CACHE_SECONDS kein weiterer Sammler
+## desselben Reichs und Berufs (spart in langen Partien mit erschöpften Vorkommen viel Rechenzeit;
+## deposit_version ändert sich ständig, weil irgendwo immer ein Vorkommen leer wird). Laufzeit.
+var _gather_failed: Dictionary = {}
+## Reich-id -> true: Bauarbeiter im nächsten Takt wecken (gebündelt, z. B. 60 Mauerstücke)
+var _wake_pending: Dictionary = {}
 
 
 func setup(p_game: Node) -> void:
@@ -53,15 +69,22 @@ func setup(p_game: Node) -> void:
 	building_system = game.building_system
 	_retry_seconds = float(DataDB.eco("work.retry_seconds", 3.0))
 	_wander_radius = int(DataDB.eco("work.idle_wander_radius", 4))
+	_max_thinks = maxi(int(DataDB.eco("work.max_thinks_per_tick", 20)), 1)
 	_rng.seed = hash(world.world_seed + 31337)
 	GameClock.sim_tick.connect(_on_sim_tick)
 	unit_system.arrived.connect(_on_arrived)
 	unit_system.path_failed.connect(_on_path_failed)
 	unit_system.unit_removed.connect(_on_unit_removed)
 	building_system.building_placed.connect(_on_building_placed)
-	building_system.building_completed.connect(func(_b: Building) -> void: _local_version += 1)
+	building_system.building_completed.connect(func(_b: Building) -> void:
+		_local_version += 1
+		_building_version += 1)
 	building_system.building_removed.connect(on_building_removed)
 	building_system.roads_changed.connect(_wake_all_builders)
+	# Gebiet gewechselt (Dorf aufgenommen, neues Gebäude): Sammelplätze neu suchen
+	game.territory.changed.connect(func(_kid: int, _bbox: Rect2i, _dirty: Rect2i) -> void:
+		_local_version += 1
+		_building_version += 1)
 
 
 # ---------------------------------------------------------------------------
@@ -237,6 +260,7 @@ func get_delivering_count(b: Building) -> int:
 ## Ein Gebäude wurde entfernt: Arbeiter freistellen, Verweise lösen.
 func on_building_removed(b: Building) -> void:
 	_local_version += 1
+	_building_version += 1
 	for u in b.kingdom.units.duplicate():
 		if u.work_building == b:
 			set_unit_job(u, "idle")
@@ -250,11 +274,13 @@ func on_building_removed(b: Building) -> void:
 	_site_workers.erase(b)
 
 
-## Arbeitstempo: bei Hungersnot langsamer (ausser für Nahrungsberufe)
-func work_factor(kingdom: Kingdom, job: Dictionary) -> float:
+## Arbeitstempo: bei Hungersnot langsamer (ausser Nahrungsberufe), dazu die
+## Arbeitsleistung des Bewohners (Zufriedenheit, Seuche – Unit.work_mult)
+func work_factor(kingdom: Kingdom, job: Dictionary, u: Unit = null) -> float:
+	var f := 1.0
 	if kingdom.starving and not job.get("food_job", false):
-		return float(DataDB.eco("starvation.work_factor", 0.5))
-	return 1.0
+		f = float(DataDB.eco("starvation.work_factor", 0.5))
+	return f * (u.work_mult if u != null else 1.0)
 
 
 # ---------------------------------------------------------------------------
@@ -263,6 +289,13 @@ func work_factor(kingdom: Kingdom, job: Dictionary) -> float:
 
 func _on_sim_tick(dt: float) -> void:
 	_tick_count += 1
+	if not _wake_pending.is_empty():
+		var ids := _wake_pending.keys()
+		_wake_pending.clear()
+		for kid in ids:
+			var k: Kingdom = game.get_kingdom(int(kid))
+			if k != null:
+				_wake_builders(k)
 	var thinks := 0
 	for u in unit_system.units:
 		if not u.can_work() or not u.command.is_empty():
@@ -274,7 +307,7 @@ func _on_sim_tick(dt: float) -> void:
 				_tick_build(u, dt)
 			Unit.State.IDLE, Unit.State.WAITING:
 				u.timer -= dt
-				if u.timer <= 0.0 and thinks < MAX_THINKS_PER_TICK:
+				if u.timer <= 0.0 and thinks < _max_thinks:
 					thinks += 1
 					_think(u)
 	if _tick_count % 10 == 0:
@@ -317,7 +350,10 @@ func _on_arrived(u: Unit) -> void:
 		"build":
 			if _site_valid(u):
 				u.state = Unit.State.BUILDING
-				u.activity = "%s: %s" % [DataDB.get_job(u.job_id).get("activity", "baut"), _site_name(u)]
+				if u.target_building != null and u.target_building.constructed:
+					u.activity = "repariert: %s" % _site_name(u)
+				else:
+					u.activity = "%s: %s" % [DataDB.get_job(u.job_id).get("activity", "baut"), _site_name(u)]
 			else:
 				_release_site(u)
 				_think(u)
@@ -351,7 +387,18 @@ func _on_unit_removed(u: Unit) -> void:
 
 
 func _on_building_placed(b: Building) -> void:
-	_wake_builders(b.kingdom)
+	_wake_pending[b.kingdom.id] = true
+
+
+## Bauarbeiter des Reichs im nächsten Takt nach Arbeit suchen lassen (gebündelt)
+func request_wake(k: Kingdom) -> void:
+	if k != null:
+		_wake_pending[k.id] = true
+
+
+## Anzahl beschädigter Gebäude, die Bauarbeiter reparieren würden (KI)
+func get_repair_site_count(k: Kingdom) -> int:
+	return building_system.get_repair_sites(k).size()
 
 
 # ---------------------------------------------------------------------------
@@ -372,8 +419,9 @@ func _find_gather_work(u: Unit, job: Dictionary) -> void:
 	var best_cell := Vector2i(-1, -1)
 	var best_dropoff: Building = null
 	var best_score := INF
-	# Bisheriges Vorkommen weiter nutzen, solange es etwas hergibt
-	if u.target_cell.x >= 0 and world.is_gatherable(u.target_cell, indices):
+	# Bisheriges Vorkommen weiter nutzen, solange es etwas hergibt (und nicht in fremdem Gebiet liegt)
+	if u.target_cell.x >= 0 and world.is_gatherable(u.target_cell, indices) \
+			and not _is_foreign(u.target_cell, u.kingdom.id):
 		var cw := world.cell_to_world(u.target_cell)
 		for d in candidates:
 			if _in_reach(d, u.target_cell, 1):
@@ -389,9 +437,16 @@ func _find_gather_work(u: Unit, job: Dictionary) -> void:
 		if u.failed_search_version == _version():
 			_wait(u, u.problem if not u.problem.is_empty() else str(job.get("hint", "")), job)
 			return
+		var fail_key := "%d:%s" % [u.kingdom.id, u.job_id]
+		var failed: Dictionary = _gather_failed.get(fail_key, {})
+		if not failed.is_empty() and int(failed["local"]) == _building_version \
+				and GameClock.game_time - float(failed["t"]) < FAIL_CACHE_SECONDS:
+			_wait(u, str(job.get("hint", "Nichts zu tun")), job)
+			return
 		# Neues Ziel: Arbeitsweg (hin und zurück) plus etwas Anmarsch, geteilt
 		# durch den Bonus der Annahmestelle. Die nächsten Annahmestellen zuerst;
 		# weiter entfernte nur, solange noch nichts gefunden wurde.
+		_search_kingdom_id = u.kingdom.id
 		for n in candidates.size():
 			if n >= MAX_DROPOFF_CANDIDATES and best_dropoff != null:
 				break
@@ -406,10 +461,13 @@ func _find_gather_work(u: Unit, job: Dictionary) -> void:
 				best_score = score
 				best_cell = cell
 				best_dropoff = d
+		_search_kingdom_id = 0
 		if best_dropoff == null:
 			u.failed_search_version = _version()
+			_gather_failed[fail_key] = {"t": GameClock.game_time, "local": _building_version}
 			_wait(u, str(job.get("hint", "Nichts zu tun")), job)
 			return
+		_gather_failed.erase(fail_key)
 		_reserve(u, best_cell)
 
 	u.failed_search_version = -1
@@ -428,7 +486,7 @@ func _tick_gather(u: Unit, dt: float) -> void:
 	var capacity := _carry_capacity(u)
 	var res_id := str(job.get("resource", ""))
 	var bonus := u.dropoff.get_gather_bonus() if is_instance_valid(u.dropoff) else 0.0
-	var mult: float = u.kingdom.mod("gather") * u.kingdom.mod("gather." + res_id) * work_factor(u.kingdom, job) \
+	var mult: float = u.kingdom.mod("gather") * u.kingdom.mod("gather." + res_id) * work_factor(u.kingdom, job, u) \
 			* game.magic_system.get_production_factor(u.kingdom, u.position, res_id)
 	u.work_acc += float(job.get("gather_rate", 1.0)) * (1.0 + bonus) * mult * dt
 	while u.work_acc >= 1.0 and u.carry_amount < capacity:
@@ -511,9 +569,19 @@ func _find_build_work(u: Unit, job: Dictionary) -> void:
 	var any_site := false
 	for b in building_system.get_building_sites(u.kingdom):
 		any_site = true
-		if int(_site_workers.get(b, 0)) >= max_per_site:
+		if int(_site_workers.get(b, 0)) >= _max_builders(b, max_per_site):
 			continue
 		var d: float = u.position.distance_squared_to(b.get_center())
+		if d < best_d:
+			best_d = d
+			best_building = b
+	# Reparaturen (Phase 9): zählen etwas weiter weg als Baustellen
+	var weight := float(DataDB.siege("repair.repair_weight", 1.5))
+	for b in building_system.get_repair_sites(u.kingdom):
+		any_site = true
+		if int(_site_workers.get(b, 0)) >= _max_builders(b, max_per_site):
+			continue
+		var d: float = u.position.distance_squared_to(b.get_center()) * weight * weight
 		if d < best_d:
 			best_d = d
 			best_building = b
@@ -553,10 +621,19 @@ func _tick_build(u: Unit, dt: float) -> void:
 		_think(u)
 		return
 	var job := DataDB.get_job(u.job_id)
-	var amount := float(job.get("work_rate", 1.0)) * u.kingdom.mod("build") * work_factor(u.kingdom, job) * dt
+	var amount := float(job.get("work_rate", 1.0)) * u.kingdom.mod("build") * work_factor(u.kingdom, job, u) * dt
 	var finished := false
 	if u.target_road.x >= 0:
 		finished = building_system.add_road_work(u.target_road, amount)
+	elif u.target_building.constructed:
+		# Reparatur (Phase 9): kostet Rohstoffe
+		var res := building_system.add_repair_work(u.target_building, amount)
+		if res == "done":
+			finished = true
+		elif not res.is_empty():
+			_release_site(u)
+			_wait(u, "Reparatur: " + res, job)
+			return
 	else:
 		finished = u.target_building.add_work(amount)
 	if finished:
@@ -568,7 +645,16 @@ func _site_valid(u: Unit) -> bool:
 	if u.target_road.x >= 0:
 		return building_system.is_road_site(u.target_road)
 	var b := u.target_building
-	return b != null and is_instance_valid(b) and not b.constructed and b.is_inside_tree()
+	if b == null or not is_instance_valid(b) or not b.is_inside_tree():
+		return false
+	# Baustelle oder Reparatur (fertig, aber beschädigt)
+	return not b.constructed or b.hp < b.max_hp - 0.01
+
+
+## Höchstzahl Bauarbeiter je Baustelle (Beruf, kleiner bei def.max_builders)
+func _max_builders(b: Building, max_per_site: int) -> int:
+	var m := int(b.def.get("max_builders", 0))
+	return mini(max_per_site, m) if m > 0 else max_per_site
 
 
 func _site_name(u: Unit) -> String:
@@ -746,12 +832,21 @@ func _cell_ok(c: Vector2i, mask: PackedByteArray) -> bool:
 	# Nicht bei Monsterhöhlen sammeln (bis das Lager besiegt ist)
 	if not world.danger.is_empty() and world.danger[i] > 0:
 		return false
+	# Nicht im Gebiet eines anderen Reichs (z. B. eines neutralen Dorfs)
+	if _search_kingdom_id != 0 and world.territory[i] != 0 and world.territory[i] != _search_kingdom_id:
+		return false
 	if _unreachable.has(c):
 		if int(_unreachable[c]) == game.nav.solid_version:
 			return false
 		_unreachable.erase(c)
 	var max_g: int = DataDB.deposits[t - 1]["max_gatherers"]
 	return int(_reservations.get(c, 0)) < max_g
+
+
+## Gehört die Kachel einem anderen Reich als kingdom_id?
+func _is_foreign(c: Vector2i, kingdom_id: int) -> bool:
+	var owner_id := world.get_owner(c)
+	return owner_id != 0 and owner_id != kingdom_id
 
 
 ## Liegt die Kachel im Sammelradius der Annahmestelle (plus Toleranz)?
@@ -804,3 +899,25 @@ func _pick_unit(kingdom: Kingdom, job_id: String, pos: Vector2, prefer_empty_han
 
 func _carry_capacity(u: Unit) -> float:
 	return maxf(float(u.type_def.get("carry", 10)), 1.0)
+
+
+# ---------------------------------------------------------------------------
+# Speichern (Phase 10)
+# ---------------------------------------------------------------------------
+
+func to_dict() -> Dictionary:
+	return {"rng": _rng.state, "tick_count": _tick_count}
+
+
+func from_dict(d: Dictionary) -> void:
+	_rng.state = int(d.get("rng", _rng.state))
+	_tick_count = int(d.get("tick_count", 0))
+
+
+## Zwischenspeicher leeren: Arbeiter suchen ihren Arbeitsschritt neu (Reservierungen entstehen dabei)
+func rebuild_runtime() -> void:
+	_reservations.clear()
+	_site_workers.clear()
+	_unreachable.clear()
+	_gather_failed.clear()
+	_local_version += 1

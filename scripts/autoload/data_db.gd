@@ -18,7 +18,10 @@ var biome_index_by_id: Dictionary = {}
 ## Index des Standard-Bioms (wenn keine Regel zutrifft)
 var default_biome_index: int = 0
 var factions: Array = []
+## Völker aller Fraktionen (peoples.json) in Datei-Reihenfolge
 var peoples: Array = []
+## Volk-ID ("dwarves") -> Volk
+var people_by_id: Dictionary = {}
 var difficulties: Array = []
 var default_difficulty: String = "normal"
 
@@ -58,6 +61,34 @@ var hero_types: Array = []
 var hero_type_by_id: Dictionary = {}
 var abilities: Array = []
 var ability_by_id: Dictionary = {}
+## Diplomatie mit neutralen Dörfern (diplomacy.json): Ruf, Verträge, Handel, Dörfer, Boten
+var diplomacy: Dictionary = {}
+## Gegner-KI (ai.json): Völker, Persönlichkeiten, Schwierigkeit, Bauliste, Armee, Wellen, Rivalität
+var ai_cfg: Dictionary = {}
+## Entdeckung, Aufmerksamkeit, Kundschaft und Spione (espionage.json)
+var espionage: Dictionary = {}
+## Zufallsereignisse (events.json): Einstellungen und Ereignisse (Phase 8)
+var events_cfg: Dictionary = {}
+var event_by_id: Dictionary = {}
+## Zufriedenheit der Bewohner (satisfaction.json) und Tag/Nacht (daynight.json)
+var satisfaction_cfg: Dictionary = {}
+var daynight_cfg: Dictionary = {}
+## Belagerung: Ringe, Bresche, Reparatur, Türme (siege.json, Phase 9)
+var siege_cfg: Dictionary = {}
+## Handelswege, Karawanen, Versorgung (trade.json, Phase 9)
+var trade_cfg: Dictionary = {}
+## Hilfefenster F1 (help.json): Tasten-Abschnitte, Spielablauf-Themen
+var help_cfg: Dictionary = {}
+## Tutorial (tutorial.json): Partie, Einstellungen, Schritte
+var tutorial_cfg: Dictionary = {}
+## Truppen (troops.json): Klassen und Konter, Schmiede, Erfahrung und Ränge, Aussehen
+var troops_cfg: Dictionary = {}
+## Schmiede-Verbesserung (troops.json → forge.upgrades) nach ID
+var forge_upgrade_by_id: Dictionary = {}
+## Aussehen (troops.json → skins.variants) nach ID
+var skin_by_id: Dictionary = {}
+## md5 über alle Texte in data/*.json (Spielstände merken sich, mit welchen Daten sie entstanden)
+var data_fingerprint: String = ""
 
 
 func _ready() -> void:
@@ -71,9 +102,9 @@ func reload() -> void:
 	_load_biomes()
 	var faction_data := _load_json("factions.json")
 	factions = faction_data.get("factions", [])
-	peoples = faction_data.get("peoples", [])
 	for f in factions:
 		f["color"] = _parse_color(f.get("color", "#ffffff"))
+	_load_peoples(faction_data)
 	var diff_data := _load_json("difficulties.json")
 	difficulties = diff_data.get("difficulties", [])
 	default_difficulty = diff_data.get("default", "normal")
@@ -81,11 +112,26 @@ func reload() -> void:
 	_load_buildings()
 	_load_jobs()
 	economy = _load_json("economy.json")
+	# Truppenklassen vor den Einheiten (Klasse und Konter werden beim Normalisieren gesetzt)
+	_load_troops()
 	_load_units()
+	diplomacy = _load_json("diplomacy.json")
+	_prepare_diplomacy()
 	combat = _load_json("combat.json")
+	siege_cfg = _load_json("siege.json")
+	trade_cfg = _load_json("trade.json")
 	_load_research()
 	_load_spells()
 	_load_heroes()
+	ai_cfg = _load_json("ai.json")
+	espionage = _load_json("espionage.json")
+	_load_events()
+	satisfaction_cfg = _load_json("satisfaction.json")
+	daynight_cfg = _load_json("daynight.json")
+	help_cfg = _load_json("help.json")
+	tutorial_cfg = _load_json("tutorial.json")
+	_validate_peoples()
+	data_fingerprint = _compute_fingerprint()
 
 
 ## Liest einen Wert aus game_config.json über einen Punkt-Pfad, z. B. "camera.zoom_max".
@@ -117,6 +163,102 @@ func get_map_size(id: String) -> Dictionary:
 
 func get_peoples_of_faction(faction_id: String) -> Array:
 	return peoples.filter(func(p): return p.get("faction") == faction_id)
+
+
+## Volk nach ID ({} wenn unbekannt)
+func get_people(id: String) -> Dictionary:
+	return people_by_id.get(id, {})
+
+
+## Name eines Volks ("Zwerge"), sonst die ID
+func get_people_name(id: String) -> String:
+	return str(get_people(id).get("name", id))
+
+
+## Völker, die Dörfer bilden (faction neutral und militia_unit gesetzt), in Datei-Reihenfolge
+func get_village_peoples() -> Array:
+	var list: Array = []
+	for p in peoples:
+		if str(p.get("faction", "")) == "neutral" and not str(p.get("militia_unit", "")).is_empty():
+			list.append(p)
+	return list
+
+
+## Liest einen Wert aus diplomacy.json über einen Punkt-Pfad, z. B. "treaties.alliance.min_reputation".
+func diplo(path: String, default_value: Variant = null) -> Variant:
+	return _dig(diplomacy, path, default_value)
+
+
+## Ruf-Stufen aus diplomacy.json (sortiert nach min aufsteigend, color als Color)
+func get_reputation_tiers() -> Array:
+	return diplo("reputation.tiers", [])
+
+
+## Wert aus ai.json über einen Punkt-Pfad, z. B. "waves.gather_seconds"
+func ai(path: String, default_value: Variant = null) -> Variant:
+	return _dig(ai_cfg, path, default_value)
+
+
+## Wert aus espionage.json über einen Punkt-Pfad, z. B. "awareness.rumour"
+func esp(path: String, default_value: Variant = null) -> Variant:
+	return _dig(espionage, path, default_value)
+
+
+## Wert aus events.json (Abschnitt settings) über Punkt-Pfad, z. B. "difficulty.normal.frequency"
+func evt(path: String, default_value: Variant = null) -> Variant:
+	return _dig(events_cfg.get("settings", {}), path, default_value)
+
+
+## Ereignis nach ID ({} wenn unbekannt)
+func get_event(id: String) -> Dictionary:
+	return event_by_id.get(id, {})
+
+
+## Alle Ereignisse in Datei-Reihenfolge
+func get_events() -> Array:
+	return events_cfg.get("events", [])
+
+
+## Wert aus satisfaction.json über Punkt-Pfad, z. B. "defection.below"
+func sat(path: String, default_value: Variant = null) -> Variant:
+	return _dig(satisfaction_cfg, path, default_value)
+
+
+## Wert aus daynight.json über Punkt-Pfad, z. B. "phases.night"
+func dn(path: String, default_value: Variant = null) -> Variant:
+	return _dig(daynight_cfg, path, default_value)
+
+
+## Wert aus siege.json über Punkt-Pfad, z. B. "repair.hp_per_work"
+func siege(path: String, default_value: Variant = null) -> Variant:
+	return _dig(siege_cfg, path, default_value)
+
+
+## Wert aus trade.json über Punkt-Pfad, z. B. "cut.losses"
+func trade(path: String, default_value: Variant = null) -> Variant:
+	return _dig(trade_cfg, path, default_value)
+
+
+## Wert aus tutorial.json über Punkt-Pfad, z. B. "settings.grace_minutes"
+func tut(path: String, default_value: Variant = null) -> Variant:
+	return _dig(tutorial_cfg, path, default_value)
+
+
+## Schwierigkeit für die KI: Eintrag aus difficulties.json, ergänzt um ai.json →
+## difficulty[id] (eine Kopie; Rückfall auf "normal", wenn die id unbekannt ist)
+func get_ai_difficulty(id: String) -> Dictionary:
+	var base := get_difficulty(id)
+	if base.is_empty():
+		base = get_difficulty("normal")
+	var result: Dictionary = base.duplicate(true)
+	var extra: Variant = ai("difficulty." + id, null)
+	if not (extra is Dictionary):
+		extra = ai("difficulty.normal", {})
+	var extra_dict: Dictionary = extra
+	for key in extra_dict:
+		var value: Variant = extra_dict[key]
+		result[key] = (value as Dictionary).duplicate(true) if value is Dictionary else value
+	return result
 
 
 ## Liest einen Wert aus economy.json über einen Punkt-Pfad, z. B. "villager.speed".
@@ -177,6 +319,21 @@ func get_unit_sprite(def: Dictionary, faction_id: String) -> String:
 		return str(def["sprite"])
 	var sprites: Dictionary = def.get("sprites", {})
 	return str(sprites.get(faction_id, sprites.get("good", "")))
+
+
+## Liest einen Wert aus troops.json über einen Punkt-Pfad, z. B. "veterancy.max_per_stat".
+func trp(path: String, default_value: Variant = null) -> Variant:
+	return _dig(troops_cfg, path, default_value)
+
+
+## Schmiede-Verbesserung nach ID ({} wenn unbekannt)
+func get_forge_upgrade(id: String) -> Dictionary:
+	return forge_upgrade_by_id.get(id, {})
+
+
+## Name einer Truppenklasse ("cavalry" -> "Reiterei")
+func get_class_name(class_id: String) -> String:
+	return str((trp("classes", {}) as Dictionary).get(class_id, {}).get("name", class_id))
 
 
 ## Liest einen Wert aus combat.json über einen Punkt-Pfad, z. B. "camps.size".
@@ -250,6 +407,12 @@ func describe_unlock(unlock_id: String, faction_id: String) -> String:
 			return get_building_name(get_building(parts[1]), faction_id)
 		"spell":
 			return "Zauber „%s“" % str(get_spell(parts[1]).get("name", parts[1]))
+		"summon":
+			# "summon:<gebäude>:<einheit>" (Forschung, Bündnis oder Aufnahme eines Dorfs)
+			var building_id := parts[1].get_slice(":", 0)
+			var unit_id := parts[1].get_slice(":", 1)
+			return "Beschwörung in %s: %s" % [get_building_name(get_building(building_id), faction_id),
+					str(get_unit_type(unit_id).get("name", unit_id))]
 	return unlock_id
 
 
@@ -268,8 +431,19 @@ func describe_requirement(unlock_ids: Array, faction_id: String) -> String:
 
 
 ## Name einer Wirkungsquelle: "spell:<id>" -> Zaubername, "research:<id>" -> Forschung,
-## "upgrade:<id>" -> Kampfpunkt-Verbesserung (für Tooltips und das Auswahlfenster)
+## "upgrade:<id>" -> Kampfpunkt-Verbesserung (für Tooltips und das Auswahlfenster);
+## ab Phase 6 auch "alliance:<dorf>", "annex:<dorf>", "treaty:<dorf>", "people:<volk>",
+## "daynight", "difficulty" und "event:<id>"; ab Phase 7 "espionage:<wirkung>" (Spione)
 func describe_effect_source(source: String) -> String:
+	match source:
+		"supply":
+			return "Ohne Versorgung"
+		"daynight":
+			return "Tageszeit"
+		"difficulty":
+			return "Schwierigkeit"
+		"feast":
+			return "Fest"
 	var parts := source.split(":", true, 1)
 	if parts.size() < 2:
 		return source
@@ -282,6 +456,9 @@ func describe_effect_source(source: String) -> String:
 			for up in mag("upgrades", []):
 				if str(up.get("id", "")) == parts[1]:
 					return str(up.get("name", parts[1]))
+			# Schmiede (troops.json): "Schmiede: Waffen der Fusstruppen"
+			if forge_upgrade_by_id.has(parts[1]):
+				return "Schmiede: %s" % str(get_forge_upgrade(parts[1]).get("name", parts[1]))
 		"ability":
 			# "ability:<id>" bzw. "ability:<id>#<held>"; Führung: "ability:leadership[_<heldentyp>]"
 			var aid := parts[1].get_slice("#", 0)
@@ -291,6 +468,26 @@ func describe_effect_source(source: String) -> String:
 			return str(get_ability(aid).get("name", aid))
 		"hero":
 			return "Heldenstufe"
+		"alliance":
+			return "Bündnis"
+		"annex":
+			return "Aufgenommenes Dorf"
+		"treaty":
+			return "Vertrag"
+		"people":
+			return get_people_name(parts[1])
+		"daynight":
+			return "Tageszeit"
+		"difficulty":
+			return "Schwierigkeit"
+		"event":
+			# "event:<id>#<nr>" (Reich) bzw. "event:<id>" (Einheit)
+			var event_id := parts[1].get_slice("#", 0).get_slice(":", 0)
+			return str(get_event(event_id).get("name", "Ereignis"))
+		"feast":
+			return "Fest"
+		"espionage":
+			return "Spionage"
 	return parts[1]
 
 
@@ -303,6 +500,22 @@ func get_effect_source_color(source: String) -> Color:
 		if aid.begins_with("leadership"):
 			return Color(1.0, 0.85, 0.35)
 		return get_ability(aid).get("color", Color.WHITE)
+	if source.begins_with("alliance:") or source.begins_with("annex:") or source.begins_with("treaty:"):
+		return Color(0.95, 0.82, 0.4)
+	if source.begins_with("people:"):
+		return get_people(source.substr(7)).get("color", Color.WHITE)
+	if source.begins_with("espionage:"):
+		return Color(0.7, 0.75, 1.0)
+	if source.begins_with("event:"):
+		return get_event(source.substr(6).get_slice("#", 0).get_slice(":", 0)).get("color", Color.WHITE)
+	if source == "daynight":
+		return Color(0.62, 0.7, 1.0)
+	if source == "feast" or source.begins_with("feast:"):
+		return Color(0.95, 0.82, 0.4)
+	if source == "supply":
+		return Color(0.95, 0.45, 0.35)
+	if source.begins_with("upgrade:forge"):
+		return Color(0.95, 0.68, 0.42)
 	return Color.WHITE
 
 
@@ -320,6 +533,18 @@ func describe_bonus(key: String, add: float) -> String:
 			return "Ausbildung der Helden bis Stufe %d (%+d)" % [int(hero_cfg("training.max_level", 5)) + roundi(add), roundi(add)]
 		"hero_slots":
 			return "%+d Heldenplatz" % roundi(add)
+		"spy_skill":
+			return "%+d %% Geschick der Spione" % roundi(add * 100.0)
+		"vigilance":
+			return "%s Wachsamkeit gegen fremde Spione" % ("%+.1f" % add).replace(".", ",")
+		"spy_slots":
+			return "%+d Spion" % roundi(add)
+		"satisfaction":
+			return "%+d Zufriedenheit aller Bewohner" % roundi(add)
+		"loyalty":
+			return "−%d %% Überlaufen und Verrat" % roundi(add * 100.0)
+		"tower_range":
+			return "%s Felder Turmreichweite" % ("%+.1f" % add).replace(".", ",")
 	if key.begins_with("cap."):
 		return "%+d Lager (%s)" % [roundi(add), str(get_resource(key.substr(4)).get("name", key.substr(4)))]
 	return "%+g %s" % [add, key]
@@ -333,11 +558,17 @@ const _MOD_NAMES := {"attack": "Angriff", "armor": "Rüstung", "hp": "Leben", "s
 	"spell_cost": "Zauberkosten", "spell_cooldown": "Abklingzeit der Zauber",
 	"spell_radius": "Zauberradius", "spell_duration": "Zauberdauer", "spell_power": "Zauberstärke",
 	"hero_xp": "Erfahrung der Helden", "ability_power": "Stärke der Heldenfähigkeiten", "lifesteal": "Lebensraub",
-	"damage_taken": "erlittener Schaden"}
+	"damage_taken": "erlittener Schaden", "defense": "Verteidigung", "feast_cost": "Kosten für Feste",
+	"fort_hp": "Leben von Mauern, Toren und Türmen", "tower_attack": "Turmschaden"}
 const _TIER_NAMES := {"fighter": "Kämpfer", "archer": "Schützen", "elite": "Elite", "scout": "Späher",
-	"medic": "Heiler", "king": "König", "villager": "Bewohner", "summon": "Beschworene", "hero": "Helden"}
+	"spearman": "Speerträger", "crossbow": "Armbrustschützen", "heavy": "Schwere Fusstruppen", "cavalry": "Reiter",
+	"battlemage": "Kampfmagier",
+	"medic": "Heiler", "king": "König", "villager": "Bewohner", "summon": "Beschworene", "hero": "Helden",
+	"militia": "Miliz", "special": "Volkskrieger", "messenger": "Boten", "spy": "Spione", "refugee": "Flüchtlinge",
+	"ram": "Rammböcke", "catapult": "Katapulte", "caravan": "Karawanen"}
 const _ROLE_NAMES := {"combat": "alle Truppen ohne Helden", "worker": "Bewohner", "support": "Heiler",
-	"king": "König", "monster": "Monster", "hero": "Helden"}
+	"king": "König", "monster": "Monster", "hero": "Helden", "messenger": "Boten", "spy": "Spione",
+	"caravan": "Karawanen"}
 
 
 ## Lesbare Wirkung eines Modifikators, z. B. "+10 % Angriff (Kämpfer)".
@@ -346,7 +577,12 @@ func describe_modifier(key: String, factor: float) -> String:
 	var stat := key
 	var qualifier := ""
 	var role_parts := key.split("@", true, 1)
-	if role_parts.size() > 1:
+	var class_parts := key.split("#", true, 1)
+	if class_parts.size() > 1:
+		# Truppenklasse (Schmiede): "attack#cavalry" -> "(Reiterei)"
+		stat = class_parts[0]
+		qualifier = get_class_name(class_parts[1])
+	elif role_parts.size() > 1:
 		stat = role_parts[0]
 		qualifier = str(_ROLE_NAMES.get(role_parts[1], role_parts[1]))
 	else:
@@ -380,12 +616,25 @@ func mag(path: String, default_value: Variant = null) -> Variant:
 	return node
 
 
-## Pfad der Gebäudegrafik für eine Fraktion ("" wenn keine angegeben)
-func get_building_sprite(def: Dictionary, faction_id: String) -> String:
+## Pfad der Gebäudegrafik für eine Fraktion ("" wenn keine angegeben). people_id
+## (optional): zuerst die Grafik dieses Volks (people_sprites, Dorfgebäude; bei
+## Gebäuden mit Fraktionsgrafik wie der Burg nur, wenn die Datei existiert), zuletzt
+## sprite_fallback.
+func get_building_sprite(def: Dictionary, faction_id: String, people_id: String = "") -> String:
+	if not people_id.is_empty():
+		var by_people: Dictionary = def.get("people_sprites", {})
+		if by_people.has(people_id):
+			var people_path := str(by_people[people_id])
+			# Sonst ersetzte ein Platzhalter die vorhandene Fraktionsgrafik (Burg)
+			if not def.has("sprites") or ResourceLoader.exists(people_path):
+				return people_path
 	if def.has("sprite"):
 		return str(def["sprite"])
 	var sprites: Dictionary = def.get("sprites", {})
-	return str(sprites.get(faction_id, sprites.get("good", "")))
+	var path := str(sprites.get(faction_id, sprites.get("good", "")))
+	if path.is_empty():
+		path = str(def.get("sprite_fallback", ""))
+	return path
 
 
 ## Kosten als lesbarer Text, z. B. "25 Holz, 10 Stein"
@@ -479,6 +728,22 @@ func _load_buildings() -> void:
 		b["hp"] = float(b.get("hp", 300.0))
 		b["armor"] = float(b.get("armor", 0.0))
 		b["sight"] = float(b.get("sight", 5.0))
+		# Phase 9: Befestigungen, Baumenü-Reiter, Reparatur
+		b["segment"] = bool(b.get("segment", false))
+		b["fortification"] = str(b.get("fortification", ""))
+		b["replaces"] = b.get("replaces", []) if b.get("replaces", []) is Array else []
+		b["allow_on_road"] = bool(b.get("allow_on_road", false))
+		b["menu"] = str(b.get("menu", "economy"))
+		b["max_builders"] = int(b.get("max_builders", 0))
+		b["repairable"] = bool(b.get("repairable", b["player_buildable"] or str(b.get("id", "")) == "castle"))
+		if b.get("tower", null) is Dictionary:
+			var tw: Dictionary = b["tower"]
+			tw["attack"] = float(tw.get("attack", 10.0))
+			tw["interval"] = maxf(float(tw.get("interval", 1.5)), 0.1)
+			tw["range"] = float(tw.get("range", 6.0))
+			tw["projectile"] = str(tw.get("projectile", "arrow"))
+			if not (tw.get("priority", null) is Dictionary):
+				tw["priority"] = {}
 		if not b.has("summons"):
 			b["summons"] = []
 		if not b.has("dropoff"):
@@ -507,6 +772,51 @@ func _load_jobs() -> void:
 		if not j.has("buildings"):
 			j["buildings"] = []
 		job_by_id[j["id"]] = j
+
+
+## Völker aus peoples.json (Rückfall: Liste "peoples" in factions.json). Farbe als
+## Color, fehlende Listen und Tabellen leer, Zahlen als float.
+func _load_peoples(faction_data: Dictionary) -> void:
+	var data := faction_data
+	if FileAccess.file_exists(DATA_DIR + "peoples.json"):
+		data = _load_json("peoples.json")
+	peoples = data.get("peoples", [])
+	people_by_id.clear()
+	for p in peoples:
+		p["color"] = _parse_color(p.get("color", "#cccccc"))
+		p["letter"] = str(p.get("letter", ""))
+		for key in ["leaning", "affinity", "terrain_bonus", "day_bonus", "night_bonus", "base_bonus", "produces",
+				"tribute", "gift_preferences", "trade_rates", "delivery", "annex_gift"]:
+			if not (p.get(key, null) is Dictionary):
+				p[key] = {}
+		for key in ["preferred_biomes", "strengths", "weaknesses", "village_names"]:
+			if not (p.get(key, null) is Array):
+				p[key] = []
+		for table in [["trade_rates", "sells"], ["trade_rates", "buys"], ["delivery", "give"], ["delivery", "take"]]:
+			var outer: Dictionary = p[table[0]]
+			if not (outer.get(table[1], null) is Dictionary):
+				outer[table[1]] = {}
+		p["trade_bonus"] = float(p.get("trade_bonus", 0.0))
+		p["militia_factor"] = float(p.get("militia_factor", 1.0))
+		people_by_id[str(p.get("id", ""))] = p
+
+
+## Prüft die Dorfdaten der Völker (Milizen und Spezialeinheiten müssen in units.json stehen)
+func _validate_peoples() -> void:
+	for p in peoples:
+		for key in ["militia_unit", "special_unit"]:
+			var unit_id := str(p.get(key, ""))
+			if not unit_id.is_empty() and not unit_by_id.has(unit_id):
+				push_error("peoples.json: Volk '%s' – %s '%s' fehlt in units.json" % [p.get("id"), key, unit_id])
+
+
+## Ruf-Stufen nach Untergrenze sortieren, Farben umwandeln
+func _prepare_diplomacy() -> void:
+	var tiers: Array = diplo("reputation.tiers", [])
+	for tier in tiers:
+		tier["color"] = _parse_color(tier.get("color", "#ffffff"))
+		tier["min"] = float(tier.get("min", -100.0))
+	tiers.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return float(a["min"]) < float(b["min"]))
 
 
 func _load_units() -> void:
@@ -547,7 +857,7 @@ func _normalize_unit(u: Dictionary) -> void:
 	u["joins_fights"] = bool(u.get("joins_fights", role in ["combat", "king", "monster", "hero"]))
 	u["target_priority"] = float(u.get("target_priority", 1.6 if role == "worker" else 1.0))
 	var rank := 0
-	if role == "worker" or role == "support":
+	if role == "worker" or role == "support" or role == "messenger" or role == "spy" or role == "caravan":
 		rank = 2
 	elif u["range"] >= 2.0:
 		rank = 1
@@ -559,6 +869,69 @@ func _normalize_unit(u: Dictionary) -> void:
 		cost[k] = float(u["cost"][k])
 	u["cost"] = cost
 	u["projectile"] = str(u.get("projectile", ""))
+	# Phase 9: Belagerungswaffen und Karawanen
+	u["unit_damage"] = float(u.get("unit_damage", 1.0))
+	u["targets"] = str(u.get("targets", ""))
+	u["splash_radius"] = float(u.get("splash_radius", 0.0))
+	u["splash_factor"] = float(u.get("splash_factor", 0.0))
+	u["mechanical"] = bool(u.get("mechanical", false))
+	u["commandable"] = bool(u.get("commandable", true))
+	# Truppen (troops.json): Klasse, Konter (Klassen-Tabelle + bonus_vs der Einheit), Rüstungsdurchschlag
+	if str(u.get("class", "")).is_empty():
+		u["class"] = _default_unit_class(u)
+	u["class"] = str(u["class"])
+	var counter: Dictionary = (_dig(troops_cfg, "counters." + str(u["class"]), {}) as Dictionary).duplicate()
+	var bonus_vs: Variant = u.get("bonus_vs", {})
+	if bonus_vs is Dictionary:
+		for c in bonus_vs:
+			counter[str(c)] = float(counter.get(str(c), 0.0)) + float(bonus_vs[c])
+	for c in counter:
+		counter[c] = float(counter[c])
+	u["counter_vs"] = counter
+	u["armor_pierce"] = clampf(float(u.get("armor_pierce", 0.0)), 0.0, 1.0)
+
+
+## Klasse eines Einheitentyps ohne "class": troops.json → classes_default (Stufe, dann Rolle),
+## sonst Fernkämpfer ab Reichweite 2, sonst Fusstruppen
+func _default_unit_class(u: Dictionary) -> String:
+	var by_tier: Dictionary = _dig(troops_cfg, "classes_default.by_tier", {})
+	if by_tier.has(str(u.get("tier", ""))):
+		return str(by_tier[str(u["tier"])])
+	var by_role: Dictionary = _dig(troops_cfg, "classes_default.by_role", {})
+	if by_role.has(str(u.get("role", ""))):
+		return str(by_role[str(u["role"])])
+	return "ranged" if float(u.get("range", 0.0)) >= 2.0 else "infantry"
+
+
+## troops.json: Schmiede-Verbesserungen (Kosten als Liste von Dictionaries mit Zahlen) und Skins nach ID
+func _load_troops() -> void:
+	troops_cfg = _load_json("troops.json")
+	forge_upgrade_by_id.clear()
+	for up in _dig(troops_cfg, "forge.upgrades", []):
+		var entry: Dictionary = up
+		var costs: Array = []
+		for c in entry.get("cost", []):
+			var cost := {}
+			for res in (c as Dictionary):
+				cost[str(res)] = float(c[res])
+			costs.append(cost)
+		entry["cost"] = costs
+		entry["max_level"] = costs.size()
+		entry["class"] = str(entry.get("class", "infantry"))
+		if not (entry.get("per_level", null) is Dictionary):
+			entry["per_level"] = {}
+		forge_upgrade_by_id[str(entry.get("id", ""))] = entry
+	skin_by_id.clear()
+	for v in _dig(troops_cfg, "skins.variants", []):
+		var skin: Dictionary = v
+		skin["faction"] = str(skin.get("faction", "any"))
+		skin["min_rank"] = int(skin.get("min_rank", 0))
+		skin["emblem"] = str(skin.get("emblem", ""))
+		if skin.has("tint"):
+			skin["tint"] = _parse_color(skin["tint"])
+		if skin.has("trim"):
+			skin["trim"] = _parse_color(skin["trim"])
+		skin_by_id[str(skin.get("id", ""))] = skin
 
 
 func _load_heroes() -> void:
@@ -680,6 +1053,49 @@ func _load_spells() -> void:
 		for key in ["mana_cost", "cooldown", "radius", "duration", "upkeep"]:
 			sp[key] = float(sp.get(key, 0.0))
 		spell_by_id[sp["id"]] = sp
+
+
+## Wert in einem verschachtelten Dictionary über einen Punkt-Pfad ("a.b.c")
+## Ereignisse aus events.json: Farbe parsen, duration/group als [min, max] (Floats)
+func _load_events() -> void:
+	events_cfg = _load_json("events.json")
+	event_by_id.clear()
+	for e in events_cfg.get("events", []):
+		var ev: Dictionary = e
+		ev["color"] = _parse_color(ev.get("color", "#ffffff"))
+		for key in ["duration", "group", "region_radius", "spawn_distance", "start_infected"]:
+			if ev.has(key):
+				var range_list: Array = ev[key]
+				ev[key] = [float(range_list[0]), float(range_list[range_list.size() - 1])]
+		ev["kind"] = str(ev.get("kind", ev.get("id", "")))
+		ev["positive"] = bool(ev.get("positive", false))
+		if not ev.has("targets"):
+			ev["targets"] = ["player", "ai"]
+		event_by_id[str(ev.get("id", ""))] = ev
+
+
+func _dig(root: Dictionary, path: String, default_value: Variant) -> Variant:
+	var node: Variant = root
+	for key in path.split("."):
+		if node is Dictionary and node.has(key):
+			node = node[key]
+		else:
+			return default_value
+	return node
+
+
+## md5 über alle Datendateien (alphabetisch), für den Kopf der Spielstände
+func _compute_fingerprint() -> String:
+	var names: Array = []
+	for f in DirAccess.get_files_at(DATA_DIR):
+		if f.ends_with(".json"):
+			names.append(f)
+	names.sort()
+	var ctx := HashingContext.new()
+	ctx.start(HashingContext.HASH_MD5)
+	for f in names:
+		ctx.update(FileAccess.get_file_as_bytes(DATA_DIR + str(f)))
+	return ctx.finish().hex_encode()
 
 
 func _load_json(file_name: String) -> Dictionary:

@@ -85,7 +85,9 @@ func _process(delta: float) -> void:
 	if not input_enabled:
 		_dragging = false
 		return
-	var dir := Input.get_vector("camera_left", "camera_right", "camera_up", "camera_down")
+	# Mit Strg gehören die Tasten Befehlen (Strg+A: alle Krieger), nicht der Kamera
+	var dir := Vector2.ZERO if Input.is_key_pressed(KEY_CTRL) \
+			else Input.get_vector("camera_left", "camera_right", "camera_up", "camera_down")
 	if Settings.edge_scroll and not _dragging:
 		dir += _edge_scroll_direction()
 	if dir != Vector2.ZERO:

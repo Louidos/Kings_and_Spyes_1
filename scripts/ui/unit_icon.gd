@@ -2,8 +2,9 @@
 ##
 ## Kleines Bild eines Einheitentyps für Fenster (Beschwören, Warteschlange):
 ## die Grafik aus units.json, sonst dieselbe Spielfigur wie auf der Karte
-## (Scheibe in Reichsfarbe mit Buchstabe). Optional ein Fortschrittsbalken
-## am unteren Rand (laufende Beschwörung).
+## (Scheibe in Reichsfarbe mit Buchstabe) – im gewählten Aussehen des Typs
+## (Skin: eigene Grafik, sonst getönte Scheibe mit Zeichen wie auf der Karte).
+## Optional ein Fortschrittsbalken am unteren Rand (laufende Beschwörung).
 class_name UnitIcon
 extends Control
 
@@ -14,6 +15,8 @@ var progress := -1.0
 
 var _texture: Texture2D
 var _token: Texture2D
+var _emblem: Texture2D
+var _tint := Color.WHITE
 var _letter := ""
 
 
@@ -21,15 +24,36 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
-## Einheitentyp (Dictionary aus units.json) für ein Reich
-func setup(type_def: Dictionary, kingdom: Kingdom) -> void:
+## Einheitentyp (Dictionary aus units.json) für ein Reich; skin_id leer = Aussehen,
+## das der Typ im Reich trägt (TroopRules.type_skin)
+func setup(type_def: Dictionary, kingdom: Kingdom, skin_id: String = "") -> void:
 	var faction := kingdom.faction_id if kingdom != null else "good"
-	_texture = Assets.texture(DataDB.get_unit_sprite(type_def, faction))
-	_token = null
+	if skin_id.is_empty():
+		skin_id = TroopRules.type_skin(kingdom, type_def)
+	var skin_data := {} if skin_id == "standard" else TroopRules.skin_def(skin_id)
+	_tint = Color.WHITE
+	_emblem = null
+	_texture = null
+	if not skin_data.is_empty():
+		_texture = Assets.texture(TroopRules.skin_sprite(str(type_def.get("id", "")), skin_id))
+	var own_skin_file := _texture != null
 	if _texture == null:
-		var fallback: Color = kingdom.color if kingdom != null else Color.GRAY
-		var color: Color = type_def.get("color", fallback)
-		_token = Assets.unit_token(color, "diamond" if str(type_def.get("role", "")) == "monster" else "circle")
+		_texture = Assets.texture(DataDB.get_unit_sprite(type_def, faction))
+	_token = null
+	var shape := "diamond" if str(type_def.get("role", "")) == "monster" else "circle"
+	var fallback: Color = kingdom.color if kingdom != null else Color.GRAY
+	var color: Color = type_def.get("color", fallback)
+	# Wie Unit.refresh_look: Skin ohne eigene Grafik = getönte Scheibe bzw. Tönung, dazu das Zeichen
+	if not skin_data.is_empty() and not own_skin_file:
+		var mix := float(DataDB.trp("skins.tint_mix", 0.55))
+		var tint: Color = skin_data.get("tint", color)
+		_emblem = Assets.emblem(str(skin_data.get("emblem", "")), skin_data.get("trim", Color.WHITE))
+		if _texture != null:
+			_tint = Color.WHITE.lerp(tint, mix * 0.6)
+		else:
+			_token = Assets.unit_skin_token(color.lerp(tint, mix), shape, skin_data.get("trim", Color.WHITE))
+	if _texture == null and _token == null:
+		_token = Assets.unit_token(color, shape)
 	_letter = str(type_def.get("letter", ""))
 	queue_redraw()
 
@@ -38,6 +62,7 @@ func setup(type_def: Dictionary, kingdom: Kingdom) -> void:
 func clear() -> void:
 	_texture = null
 	_token = null
+	_emblem = null
 	_letter = ""
 	progress = -1.0
 	queue_redraw()
@@ -53,11 +78,14 @@ func _draw() -> void:
 	var side := minf(size.x, size.y)
 	var rect := Rect2((size - Vector2(side, side)) * 0.5, Vector2(side, side))
 	if _texture != null:
-		draw_texture_rect(_texture, rect, false)
+		draw_texture_rect(_texture, rect, false, _tint)
 	elif _token != null:
 		draw_texture_rect(_token, rect, false)
 		if not _letter.is_empty():
 			SpriteDraw.draw_label(self, _letter, rect.get_center(), maxi(int(side * 0.42), 9))
+	if _emblem != null:
+		# Zeichen des Skins oben links (wie über der Figur auf der Karte)
+		draw_texture_rect(_emblem, Rect2(rect.position, rect.size * 0.42), false)
 	if progress >= 0.0:
 		var bar := Rect2(rect.position.x + 1.0, rect.end.y - 5.0, rect.size.x - 2.0, 5.0)
 		SpriteDraw.draw_bar(self, bar, progress, COLOR_PROGRESS)

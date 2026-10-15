@@ -1,4 +1,4 @@
-[gd_scene load_steps=25 format=3]
+[gd_scene load_steps=43 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/world/world_map.gd" id="2_worldmap"]
@@ -23,6 +23,25 @@
 [ext_resource type="Script" path="res://scripts/view/magic_effects.gd" id="21_magicfx"]
 [ext_resource type="Script" path="res://scripts/ui/spell_targeting.gd" id="22_targeting"]
 [ext_resource type="Script" path="res://scripts/heroes/hero_system.gd" id="23_heroes"]
+[ext_resource type="Script" path="res://scripts/diplomacy/village_system.gd" id="p6_villages"]
+[ext_resource type="Script" path="res://scripts/diplomacy/diplomacy_system.gd" id="p6_diplomacy"]
+[ext_resource type="Script" path="res://scripts/diplomacy/messenger_system.gd" id="p6_messengers"]
+[ext_resource type="Script" path="res://scripts/espionage/espionage_system.gd" id="p7_espionage"]
+[ext_resource type="Script" path="res://scripts/espionage/spy_system.gd" id="p7_spies"]
+[ext_resource type="Script" path="res://scripts/ai/ai_system.gd" id="p7_ai"]
+[ext_resource type="Script" path="res://scripts/kingdoms/victory_system.gd" id="p7_victory"]
+[ext_resource type="Script" path="res://scripts/world/people_system.gd" id="p8_people"]
+[ext_resource type="Script" path="res://scripts/world/day_night_system.gd" id="p8_daynight"]
+[ext_resource type="Script" path="res://scripts/economy/satisfaction_system.gd" id="p8_satisfaction"]
+[ext_resource type="Script" path="res://scripts/events/event_system.gd" id="p8_events"]
+[ext_resource type="Script" path="res://scripts/view/day_night_view.gd" id="p8_daynight_view"]
+[ext_resource type="Script" path="res://scripts/view/event_effects.gd" id="p8_event_fx"]
+[ext_resource type="Script" path="res://scripts/units/siege_system.gd" id="p9_siege"]
+[ext_resource type="Script" path="res://scripts/economy/trade_route_system.gd" id="p9_trade"]
+[ext_resource type="Script" path="res://scripts/economy/supply_system.gd" id="p9_supply"]
+[ext_resource type="Script" path="res://scripts/view/trade_route_view.gd" id="p9_route_view"]
+[ext_resource type="Script" path="res://scripts/units/troop_system.gd" id="tr_troops"]
+[ext_resource type="Script" path="res://scripts/tutorial/tutorial_system.gd" id="tut_system"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
@@ -45,6 +64,14 @@ script = ExtResource("17_overlay")
 z_index = 4
 script = ExtResource("21_magicfx")
 
+[node name="EventEffects" type="Node2D" parent="."]
+z_index = 4
+script = ExtResource("p8_event_fx")
+
+[node name="TradeRoutes" type="Node2D" parent="."]
+z_index = 3
+script = ExtResource("p9_route_view")
+
 [node name="CombatEffects" type="Node2D" parent="."]
 z_index = 25
 script = ExtResource("18_effects")
@@ -55,6 +82,9 @@ script = ExtResource("7_placement")
 
 [node name="Camera" type="Camera2D" parent="."]
 script = ExtResource("3_camera")
+
+[node name="DayNight" type="CanvasModulate" parent="."]
+script = ExtResource("p8_daynight_view")
 
 [node name="Systems" type="Node" parent="."]
 
@@ -90,6 +120,54 @@ script = ExtResource("20_magic")
 
 [node name="HeroSystem" type="Node" parent="Systems"]
 script = ExtResource("23_heroes")
+
+[node name="VillageSystem" type="Node" parent="Systems"]
+script = ExtResource("p6_villages")
+
+[node name="DiplomacySystem" type="Node" parent="Systems"]
+script = ExtResource("p6_diplomacy")
+
+[node name="MessengerSystem" type="Node" parent="Systems"]
+script = ExtResource("p6_messengers")
+
+[node name="EspionageSystem" type="Node" parent="Systems"]
+script = ExtResource("p7_espionage")
+
+[node name="SpySystem" type="Node" parent="Systems"]
+script = ExtResource("p7_spies")
+
+[node name="AISystem" type="Node" parent="Systems"]
+script = ExtResource("p7_ai")
+
+[node name="VictorySystem" type="Node" parent="Systems"]
+script = ExtResource("p7_victory")
+
+[node name="PeopleSystem" type="Node" parent="Systems"]
+script = ExtResource("p8_people")
+
+[node name="DayNightSystem" type="Node" parent="Systems"]
+script = ExtResource("p8_daynight")
+
+[node name="SatisfactionSystem" type="Node" parent="Systems"]
+script = ExtResource("p8_satisfaction")
+
+[node name="EventSystem" type="Node" parent="Systems"]
+script = ExtResource("p8_events")
+
+[node name="SiegeSystem" type="Node" parent="Systems"]
+script = ExtResource("p9_siege")
+
+[node name="TradeRouteSystem" type="Node" parent="Systems"]
+script = ExtResource("p9_trade")
+
+[node name="SupplySystem" type="Node" parent="Systems"]
+script = ExtResource("p9_supply")
+
+[node name="TroopSystem" type="Node" parent="Systems"]
+script = ExtResource("tr_troops")
+
+[node name="TutorialSystem" type="Node" parent="Systems"]
+script = ExtResource("tut_system")
 
 [node name="Selection" type="Node" parent="."]
 script = ExtResource("12_selection")

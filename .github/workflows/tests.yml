@@ -1,0 +1,61 @@
+# Prüfungen bei jedem Push und Pull Request:
+# Godot 4.4.1 (Linux, ohne Fenster) laden, Projekt importieren, alle Skripte auf Fehler und
+# Warnungen prüfen und den Rauchtest für beide Fraktionen laufen lassen.
+# Lokal dasselbe: siehe docs/testen.md
+name: Tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.4.1"
+  GODOT_URL: https://github.com/godotengine/godot/releases/download/4.4.1-stable/Godot_v4.4.1-stable_linux.x86_64.zip
+
+jobs:
+  tests:
+    name: Skriptprüfung und Rauchtest
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Projekt auschecken
+        uses: actions/checkout@v4
+
+      - name: Godot aus dem Zwischenspeicher
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/godot
+          key: godot-${{ env.GODOT_VERSION }}-linux-x86_64
+
+      - name: Godot herunterladen
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot
+          curl -fsSL --retry 3 -o /tmp/godot.zip "$GODOT_URL"
+          unzip -q /tmp/godot.zip -d /tmp/godot-zip
+          mv /tmp/godot-zip/Godot_v${GODOT_VERSION}-stable_linux.x86_64 ~/godot/godot
+          chmod +x ~/godot/godot
+
+      - name: Umgebung setzen
+        run: |
+          echo "GODOT=$HOME/godot/godot" >> "$GITHUB_ENV"
+          mkdir -p "${{ runner.temp }}/godot-data"
+          echo "XDG_DATA_HOME=${{ runner.temp }}/godot-data" >> "$GITHUB_ENV"
+
+      - name: Godot-Version
+        run: $GODOT --headless --version
+
+      - name: Projekt importieren
+        run: $GODOT --headless --editor --quit
+
+      - name: Skripte prüfen (Fehler und Warnungen)
+        run: bash tests/check_scripts.sh
+
+      - name: Rauchtest beider Fraktionen (600 Spielsekunden)
+        run: bash tests/run_smoke.sh 600

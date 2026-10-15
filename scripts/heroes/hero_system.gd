@@ -97,6 +97,16 @@ func get_type(rec: Dictionary) -> Dictionary:
 	return DataDB.get_hero_type(str(rec.get("type_id", "")))
 
 
+## Talente des Helden als Definitionen (für Anzeigen; allgemeine können mehrfach vorkommen)
+func get_talents(rec: Dictionary) -> Array:
+	return _talents_of(rec)
+
+
+## "Aldric (Paladin)"
+func get_title(rec: Dictionary) -> String:
+	return _title(rec)
+
+
 ## Fertige Heldenhalle des Reichs (oder null)
 func get_hall(k: Kingdom) -> Building:
 	for b in k.buildings:
@@ -593,6 +603,17 @@ func dismiss(k: Kingdom, hero_id: int) -> void:
 	k.notify("%s hat dein Reich verlassen" % _title(rec), "info")
 
 
+## Gespeicherter Zustand (Phase 10); die Helden selbst stehen in Kingdom.heroes
+func to_dict() -> Dictionary:
+	return {"rng": _rng.state, "aura_timer": _aura_timer, "autocast_timer": _autocast_timer}
+
+
+func from_dict(d: Dictionary) -> void:
+	_rng.state = int(d.get("rng", _rng.state))
+	_aura_timer = float(d.get("aura_timer", 0.0))
+	_autocast_timer = float(d.get("autocast_timer", 0.0))
+
+
 ## Nach dem Laden (Phase 10): abgeleitete Werte neu aufbauen (beliebig oft aufrufbar)
 func rebuild_runtime() -> void:
 	_cast_repath_at.clear()
@@ -748,10 +769,9 @@ func _tick_revive_notes() -> void:
 		for rec in k.heroes:
 			if bool(rec["dead"]) and not bool(rec.get("revive_notified", false)) and revive_ready_in(rec) <= 0.0:
 				rec["revive_notified"] = true
-				var at: Variant = null
-				if is_instance_valid(k.castle):
-					at = k.castle.get_center()
-				k.notify("%s kann in der Burg wiederbelebt werden (Heldenfenster G)" % _title(rec), "info", at)
+				# Klick auf die Meldung öffnet das Heldenfenster bei diesem Helden
+				k.notify("%s kann in der Burg wiederbelebt werden (Klick oder G)" % _title(rec), "info",
+						{"window": "heroes", "hero_id": int(rec["id"])})
 				heroes_changed.emit(k)
 
 
@@ -855,10 +875,9 @@ func _on_level_up(k: Kingdom, rec: Dictionary) -> void:
 		game.combat_system.heal_unit(u, u.max_hp * float(DataDB.hero_cfg("level_heal", 0.3)))
 	hero_leveled.emit(k, int(rec["id"]), int(rec["level"]))
 	heroes_changed.emit(k)
-	var at: Variant = null
-	if u != null:
-		at = u.position
-	k.notify("%s erreicht Stufe %d – wähle eine Verbesserung (G)" % [_title(rec), int(rec["level"])], "good", at)
+	# Klick auf die Meldung öffnet das Heldenfenster mit der Stufenwahl
+	k.notify("%s erreicht Stufe %d – wähle eine Verbesserung (Klick oder G)" % [_title(rec), int(rec["level"])],
+			"good", {"window": "heroes", "hero_id": int(rec["id"])})
 
 
 ## Abgeleitete Werte eines Helden setzen: Stufenwachstum, Talente und passive
@@ -1047,7 +1066,7 @@ func _jump_cell(u: Unit, pos: Vector2, beside: bool) -> Vector2i:
 		var dir := (u.position - pos)
 		spot = pos + (dir.normalized() if dir.length() > 1.0 else Vector2.RIGHT) * _ts * 0.9
 	var c: Vector2i = game.nav.nearest_free(world.world_to_cell(spot), 2)
-	if c.x < 0 or not game.nav.same_area(world.world_to_cell(u.position), c):
+	if c.x < 0 or not game.nav.same_area(world.world_to_cell(u.position), c, u.kingdom.id):
 		return Vector2i(-1, -1)
 	return c
 

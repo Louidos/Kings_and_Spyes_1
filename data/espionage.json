@@ -1,0 +1,47 @@
+{
+	"_hinweis": [
+		"Entdeckung, Aufmerksamkeit, Kundschaft (Intel) und Spione. Zeiten in Spielsekunden.",
+		"discovery: Entdeckungswert je Reich = Gebäude (building_weights, Baustellen × construction_factor) + Bevölkerung × per_population + Armee-Stärke × per_army_power (Stärke je Einheit = Leben × Angriff / Pause / 100) + Heldenstufen × per_hero_level + Aggression; mit Reichstarnung × (1 − cloak.reduction). tiers: Stufen für die Anzeige.",
+		"aggression: Punkte für aggressive Taten (je Paar höchstens alle pair_cooldown Sekunden), halbiert sich alle half_life Sekunden, höchstens max.",
+		"cloak: Reichstarnung (Zauber mit realm_cloak). Laufende Kosten Mana/s = Grundwert des Zaubers + upkeep_per_point × Entdeckungswert ohne Tarnung.",
+		"awareness: Aufmerksamkeit eines Reichs auf ein anderes (0–100). Ziel = Entdeckungswert × Nähe × Faktor der Schwierigkeit; steigt mit rise_per_minute, fällt mit fall_per_minute. Nähe: 1 bis near_tiles Kacheln Burgabstand, min_proximity ab far_tiles, + border_bonus, wenn die Gebiete näher als border_tiles sind. rumour/discovered: Schwellen (Gerüchte -> Spione, entdeckt -> Angriffe). Sprünge: attacked, messenger, caught_spy … patience: nach patience_minutes sinkt die Aufmerksamkeit der KI nicht mehr unter patience_floor.",
+		"intel: Kundschaft je Beobachter und Ziel, Stufe 0–3 (names). Pro stale_seconds Alter eine Stufe weniger (nie unter 1, wenn einmal bekannt). Quellen: Späher (scout_level), Spione (spy_levels je Spionstufe), Boten, Verräter (Phase 8), gefangene Spione.",
+		"reports: Meldungen, wenn Feinde nahe oder im eigenen Gebiet gesehen werden (je Gebiet area_tiles und Reich gedrosselt).",
+		"spies: Stufen (xp, skill = Geschick gegen Entdeckung, speed = Tempo bei Aufträgen), Erfahrung je Auftrag, Auftragsdauer, Aufhetzen (Ruf/Spannung je incite_interval). Entdeckung: alle detect_interval Sekunden Wurf mit Chance = detect_base × Wachsamkeit / Geschick (begrenzt). Wachsamkeit = base (im Gebiet; ausserhalb outside_presence) + Späher/Spione des Ziels in der Nähe + Gebäude (vigilance.buildings, Umkreis building_radius) + Bonus des Reichs (Forschung, Schwierigkeit). Enttarnt: reveal_seconds sichtbar, flieht heim (Tempo × flee_speed für flee_seconds). Ertappt ein Dorf den Spion, sinkt sein Ruf beim Auftraggeber um caught_reputation.",
+		"Hinweis: Feindliche Wetterzonen (Nebel, Fluch) treffen auch getarnte Spione – die Zonenwirkung prüft die Sichtbarkeit bewusst nicht.",
+		"Phase 9: Mauern (wall) zählen beim Entdeckungswert kaum, Türme und Belagerungswerkstätten mehr; kill_caravan = Aggression für eine überfallene Karawane."
+	],
+	"discovery": {
+		"tick_seconds": 5,
+		"building_weights": {"default": 1.0, "castle": 8, "house": 0.4, "storehouse": 0.8, "barracks": 2.5, "library": 2.0, "hero_hall": 3.0,
+		                     "mana_well": 1.5, "infirmary": 1.5, "spy_den": 0.5, "village_hall": 3.0, "village_hut": 0.3,
+		                     "wall": 0.05, "gate": 0.3, "tower": 1.0, "siege_workshop": 2.0},
+		"construction_factor": 0.5, "per_population": 0.4, "per_army_power": 0.12, "per_hero_level": 1.0, "smoothing": 0.25,
+		"max_display": 150,
+		"tiers": [{"min": 0, "name": "Unauffällig", "color": "#7cc86a"}, {"min": 30, "name": "Bekannt", "color": "#e8c03c"},
+		          {"min": 60, "name": "Auffällig", "color": "#e8803c"}, {"min": 100, "name": "Weithin sichtbar", "color": "#e0503c"}]
+	},
+	"aggression": {"attack_village": 6, "attack_kingdom": 4, "destroy_building": 3, "conquest": 15, "kill_messenger": 2, "threat": 3, "kill_caravan": 2,
+	               "pair_cooldown": 60, "half_life": 900, "max": 60},
+	"cloak": {"reduction": 0.4, "upkeep_per_point": 0.002},
+	"awareness": {"tick_seconds": 5, "rise_per_minute": 3.0, "fall_per_minute": 1.0, "near_tiles": 80, "far_tiles": 450,
+	              "min_proximity": 0.35, "border_tiles": 30, "border_bonus": 0.2, "rumour": 30, "discovered": 60, "hysteresis": 5,
+	              "attacked": 100, "messenger": 25, "caught_spy": 15, "spy_killed_extra": 10, "scout_sighting": 0.5, "scout_inside": 2.0,
+	              "sighting_cooldown": 10, "spy_confirm_seconds": 60, "patience_minutes": 120, "patience_floor": 35},
+	"intel": {"stale_seconds": 900, "names": ["Unbekannt", "Gerüchte", "Bericht", "Genau"], "scout_level": 2, "spy_levels": [2, 3, 3],
+	          "messenger_level": 1, "traitor_level": 2, "caught_spy_level": 1, "village_default": 1, "estimate_spread": 0.25},
+	"reports": {"interval": 2, "inside_interval": 45, "near_interval": 90, "area_tiles": 20, "near_tiles": 12, "report_monsters": false,
+	            "max_observers": 16},
+	"spies": {
+		"max_base": 2, "den_extra": 1,
+		"levels": [{"xp": 0, "skill": 1.0, "speed": 1.0}, {"xp": 3, "skill": 1.6, "speed": 1.15}, {"xp": 8, "skill": 2.4, "speed": 1.3}],
+		"xp": {"scout_done": 2, "incite_tick": 0.25, "incite_done": 2, "escape": 1},
+		"tick_seconds": 2, "arrive_radius": 2, "target_offset": [6, 10],
+		"scout_duration": 180, "incite_duration": 240, "incite_interval": 30, "incite_reputation": -4, "incite_owner_bonus": 1,
+		"incite_rumour": -1, "incite_tension": 5,
+		"detect_interval": 10, "detect_base": 0.03, "detect_min": 0.005, "detect_max": 0.6, "outside_presence": 0.3, "near_tiles": 10,
+		"vigilance": {"base": 1.0, "scout": 0.5, "scout_radius": 8, "spy": 1.0, "spy_radius": 6, "building_radius": 12,
+		              "buildings": {"castle": 1.0, "spy_den": 2.0, "village_hall": 0.5, "tower": 1.5}},
+		"reveal_seconds": 25, "flee_speed": 1.5, "flee_seconds": 8, "caught_reputation": -8
+	}
+}

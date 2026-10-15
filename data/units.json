@@ -11,7 +11,17 @@
 		"sight: Sichtweite in Kacheln (ab Phase 7 für Entdeckung). building_damage: Faktor gegen Gebäude (Schützen 0.5).",
 		"Optional: requires (Freischaltungen aus der Forschung, z. B. unit:elite_good), people (Volk), flee_on_hit, joins_fights, target_priority, formation_rank – sonst aus role abgeleitet.",
 		"temporary: beschworen durch einen Zauber, verschwindet nach Ablauf (tier summon).",
-		"sprites: Grafik je Fraktion (64x64 PNG); sprite: eine Grafik für alle. Fehlt sie, wird ein Kreis mit dem Buchstaben gezeichnet."
+		"sprites: Grafik je Fraktion (64x64 PNG); sprite: eine Grafik für alle. Fehlt sie, wird ein Kreis mit dem Buchstaben gezeichnet.",
+		"tier militia = Dorfwache eines Volks (faction neutral, ersetzt das Dorf aus dem eigenen Vorrat, cost = Kosten für das Dorf).",
+		"tier special = Volkskrieger, wird bei Bündnis oder Aufnahme in der Kaserne freigeschaltet (summon:barracks:<id>).",
+		"tier messenger / role messenger = Bote: kämpft nie, flieht durch Sprinten, Befehl travel.",
+		"people = Volk aus peoples.json.",
+		"tier spy / role spy = Spion: immer getarnt (stealth true), kämpft nie, Aufträge im Spionagefenster (K). stealth = immer getarnt (ausser kurz nach einer Entdeckung).",
+		"tier refugee = Flüchtling/Wanderer (Reich „Wanderer“, kämpft nie, wird bei Aufnahme zum Bewohner). Die Wyvern erscheint nur in Monsterwellen und in gewachsenen Lagern (nicht in camps.by_biome).",
+		"unit_damage: Faktor gegen Einheiten (Belagerungswaffen schwach). targets: buildings = greift nur Gebäude an, buildings_first = Gebäude bevorzugt. splash_radius/splash_factor: Flächenschaden (Felder, Anteil). mechanical: wird nicht geheilt (Heiler, Krankenstation).",
+		"tier ram/catapult = Belagerungswaffen (Belagerungswerkstatt). role caravan = Karawane eines Handelswegs: kämpft nie, keine Befehle (commandable false).",
+		"Truppen (troops.json): class = Truppenklasse (infantry, cavalry, ranged, mage, siege, support) für Konter, Schmiede, Wertepunkte und Aussehen; bonus_vs = Schadenszuschlag gegen Klassen ({\"cavalry\": 1.0} = +100 %); armor_pierce = Anteil der gegnerischen Rüstung, der ignoriert wird.",
+		"Neue Truppen: spearman (Speerträger/Pfähler, Kaserne, gegen Reiterei), crossbow (Armbrust, Kaserne, durchschlägt Rüstung), heavy (schwere Fusstruppen, Kaserne), cavalry (Lanzenreiter/Wolfsreiter, Reitstall), battlemage (Kampfmagier/Hexer, Magierturm, Flächenschaden). Freischaltung über die Forschung (requires)."
 	],
 
 	"units": [
@@ -40,63 +50,63 @@
 		},
 
 		{
-			"id": "scout_good", "name": "Späher", "faction": "good", "tier": "scout", "role": "combat", "letter": "S",
+			"id": "scout_good", "name": "Späher", "faction": "good", "tier": "scout", "role": "combat", "class": "infantry", "letter": "S",
 			"speed": 3.5, "radius": 14, "sight": 10, "food_per_day": 4, "can_work": true, "carry": 6,
-			"hp": 50, "attack": 4, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
+			"hp": 55, "attack": 4, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
 			"cost": { "food": 20, "mana": 3 }, "summon_time": 8, "kill_points": 1,
 			"sprite": "res://assets/sprites/units/scout_good.png"
 		},
 		{
-			"id": "scout_evil", "name": "Kobold", "faction": "evil", "tier": "scout", "role": "combat", "letter": "S",
+			"id": "scout_evil", "name": "Kobold", "faction": "evil", "tier": "scout", "role": "combat", "class": "infantry", "letter": "S",
 			"speed": 3.8, "radius": 13, "sight": 10, "food_per_day": 3, "can_work": true, "carry": 6,
-			"hp": 40, "attack": 5, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
+			"hp": 45, "attack": 5, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
 			"cost": { "food": 20, "mana": 3 }, "summon_time": 8, "kill_points": 1,
 			"sprite": "res://assets/sprites/units/scout_evil.png"
 		},
 
 		{
-			"id": "fighter_good", "name": "Schwertkämpfer", "faction": "good", "tier": "fighter", "role": "combat", "letter": "F",
+			"id": "fighter_good", "name": "Schwertkämpfer", "faction": "good", "tier": "fighter", "role": "combat", "class": "infantry", "letter": "F",
 			"speed": 2.0, "radius": 16, "sight": 6, "food_per_day": 8, "can_work": true, "carry": 10,
-			"hp": 120, "attack": 12, "attack_interval": 1.2, "range": 0.8, "armor": 0.2, "aggro_range": 5, "regen": 0.5,
+			"hp": 135, "attack": 13, "attack_interval": 1.2, "range": 0.8, "armor": 0.22, "aggro_range": 5, "regen": 0.6,
 			"cost": { "wood": 30, "ore": 15, "food": 10, "mana": 5 }, "summon_time": 15, "kill_points": 2,
 			"sprite": "res://assets/sprites/units/fighter_good.png"
 		},
 		{
-			"id": "fighter_evil", "name": "Schattenkrieger", "faction": "evil", "tier": "fighter", "role": "combat", "letter": "F",
+			"id": "fighter_evil", "name": "Schattenkrieger", "faction": "evil", "tier": "fighter", "role": "combat", "class": "infantry", "letter": "F",
 			"speed": 2.0, "radius": 16, "sight": 6, "food_per_day": 8, "can_work": true, "carry": 10,
-			"hp": 110, "attack": 14, "attack_interval": 1.2, "range": 0.8, "armor": 0.2, "aggro_range": 5, "regen": 0.5,
+			"hp": 122, "attack": 15, "attack_interval": 1.2, "range": 0.8, "armor": 0.22, "aggro_range": 5, "regen": 0.6,
 			"cost": { "wood": 30, "ore": 15, "food": 10, "mana": 5 }, "summon_time": 15, "kill_points": 2,
 			"sprite": "res://assets/sprites/units/fighter_evil.png"
 		},
 
 		{
-			"id": "archer_good", "name": "Bogenschütze", "faction": "good", "tier": "archer", "role": "combat", "letter": "B",
+			"id": "archer_good", "name": "Bogenschütze", "faction": "good", "tier": "archer", "role": "combat", "class": "ranged", "letter": "B",
 			"speed": 2.1, "radius": 15, "sight": 7, "food_per_day": 8, "can_work": true, "carry": 10,
-			"hp": 70, "attack": 9, "attack_interval": 1.5, "range": 5.0, "armor": 0.05, "aggro_range": 6, "regen": 0.5,
+			"hp": 78, "attack": 10, "attack_interval": 1.5, "range": 5.0, "armor": 0.06, "aggro_range": 6, "regen": 0.6,
 			"projectile": "arrow", "building_damage": 0.5,
 			"cost": { "wood": 40, "food": 10, "mana": 5 }, "summon_time": 15, "kill_points": 2,
 			"sprite": "res://assets/sprites/units/archer_good.png"
 		},
 		{
-			"id": "archer_evil", "name": "Dunkelschütze", "faction": "evil", "tier": "archer", "role": "combat", "letter": "B",
+			"id": "archer_evil", "name": "Dunkelschütze", "faction": "evil", "tier": "archer", "role": "combat", "class": "ranged", "letter": "B",
 			"speed": 2.1, "radius": 15, "sight": 7, "food_per_day": 8, "can_work": true, "carry": 10,
-			"hp": 65, "attack": 10, "attack_interval": 1.5, "range": 5.0, "armor": 0.05, "aggro_range": 6, "regen": 0.5,
+			"hp": 72, "attack": 11, "attack_interval": 1.5, "range": 5.0, "armor": 0.06, "aggro_range": 6, "regen": 0.6,
 			"projectile": "bolt", "building_damage": 0.5,
 			"cost": { "wood": 40, "food": 10, "mana": 5 }, "summon_time": 15, "kill_points": 2,
 			"sprite": "res://assets/sprites/units/archer_evil.png"
 		},
 
 		{
-			"id": "elite_good", "name": "Ritter", "faction": "good", "tier": "elite", "role": "combat", "letter": "R", "requires": ["unit:elite_good"],
+			"id": "elite_good", "name": "Ritter", "faction": "good", "tier": "elite", "role": "combat", "class": "infantry", "letter": "R", "requires": ["unit:elite_good"],
 			"speed": 2.4, "radius": 18, "sight": 6, "food_per_day": 12,
-			"hp": 260, "attack": 24, "attack_interval": 1.3, "range": 0.9, "armor": 0.35, "aggro_range": 5, "regen": 1.0,
+			"hp": 285, "attack": 26, "attack_interval": 1.3, "range": 0.9, "armor": 0.36, "aggro_range": 5, "regen": 1.0,
 			"cost": { "ore": 40, "food": 30, "mana": 20 }, "summon_time": 28, "kill_points": 5,
 			"sprite": "res://assets/sprites/units/elite_good.png"
 		},
 		{
-			"id": "elite_evil", "name": "Schreckensritter", "faction": "evil", "tier": "elite", "role": "combat", "letter": "R", "requires": ["unit:elite_evil"],
+			"id": "elite_evil", "name": "Schreckensritter", "faction": "evil", "tier": "elite", "role": "combat", "class": "infantry", "letter": "R", "requires": ["unit:elite_evil"],
 			"speed": 2.4, "radius": 18, "sight": 6, "food_per_day": 12,
-			"hp": 240, "attack": 27, "attack_interval": 1.3, "range": 0.9, "armor": 0.35, "aggro_range": 5, "regen": 1.0,
+			"hp": 265, "attack": 29, "attack_interval": 1.3, "range": 0.9, "armor": 0.36, "aggro_range": 5, "regen": 1.0,
 			"cost": { "ore": 40, "food": 30, "mana": 20 }, "summon_time": 28, "kill_points": 5,
 			"sprite": "res://assets/sprites/units/elite_evil.png"
 		},
@@ -104,16 +114,111 @@
 		{
 			"id": "medic_good", "name": "Heiler", "faction": "good", "tier": "medic", "role": "support", "letter": "H",
 			"speed": 2.0, "radius": 15, "sight": 6, "food_per_day": 6,
-			"hp": 60, "attack": 0, "heal": 6, "heal_range": 3, "armor": 0.0, "aggro_range": 0, "regen": 1.0,
+			"hp": 66, "attack": 0, "heal": 7, "heal_range": 3, "armor": 0.0, "aggro_range": 0, "regen": 1.0,
 			"cost": { "food": 30, "mana": 12 }, "summon_time": 18, "kill_points": 2,
 			"sprite": "res://assets/sprites/units/medic_good.png"
 		},
 		{
 			"id": "medic_evil", "name": "Blutpriester", "faction": "evil", "tier": "medic", "role": "support", "letter": "H",
 			"speed": 2.0, "radius": 15, "sight": 6, "food_per_day": 6,
-			"hp": 60, "attack": 0, "heal": 6, "heal_range": 3, "armor": 0.0, "aggro_range": 0, "regen": 1.0,
+			"hp": 66, "attack": 0, "heal": 7, "heal_range": 3, "armor": 0.0, "aggro_range": 0, "regen": 1.0,
 			"cost": { "food": 30, "mana": 12 }, "summon_time": 18, "kill_points": 2,
 			"sprite": "res://assets/sprites/units/medic_evil.png"
+		},
+
+		{
+			"id": "spearman_good", "name": "Speerträger", "faction": "good", "tier": "spearman", "role": "combat", "class": "infantry", "letter": "Sp",
+			"description": "Langer Speer und Schild: hält Reiter auf (doppelter Schaden gegen Reiterei). Günstig, aber gegen Schützen und Magier verwundbar.",
+			"requires": ["unit:spearman_good"], "bonus_vs": { "cavalry": 1.0 },
+			"speed": 2.0, "radius": 16, "sight": 6, "food_per_day": 8, "can_work": true, "carry": 10,
+			"hp": 130, "attack": 11, "attack_interval": 1.3, "range": 1.2, "armor": 0.2, "aggro_range": 5, "regen": 0.6,
+			"cost": { "wood": 35, "ore": 10, "food": 10, "mana": 5 }, "summon_time": 16, "kill_points": 2,
+			"sprite": "res://assets/sprites/units/spearman_good.png"
+		},
+		{
+			"id": "spearman_evil", "name": "Pfähler", "faction": "evil", "tier": "spearman", "role": "combat", "class": "infantry", "letter": "Sp",
+			"description": "Mit Hakenspiessen gegen jeden Reiter (doppelter Schaden gegen Reiterei). Günstig, aber gegen Schützen und Hexer verwundbar.",
+			"requires": ["unit:spearman_evil"], "bonus_vs": { "cavalry": 1.0 },
+			"speed": 2.0, "radius": 16, "sight": 6, "food_per_day": 8, "can_work": true, "carry": 10,
+			"hp": 120, "attack": 12, "attack_interval": 1.3, "range": 1.2, "armor": 0.2, "aggro_range": 5, "regen": 0.6,
+			"cost": { "wood": 35, "ore": 10, "food": 10, "mana": 5 }, "summon_time": 16, "kill_points": 2,
+			"sprite": "res://assets/sprites/units/spearman_evil.png"
+		},
+		{
+			"id": "crossbow_good", "name": "Armbrustschütze", "faction": "good", "tier": "crossbow", "role": "combat", "class": "ranged", "letter": "A",
+			"description": "Schwere Armbrust: langsame, harte Schüsse, die die halbe Rüstung durchschlagen – gut gegen gepanzerte Fusstruppen.",
+			"requires": ["unit:crossbow_good"], "armor_pierce": 0.5, "bonus_vs": { "cavalry": 0.2 },
+			"speed": 1.9, "radius": 15, "sight": 7, "food_per_day": 8, "can_work": true, "carry": 10,
+			"hp": 90, "attack": 19, "attack_interval": 2.4, "range": 6.0, "armor": 0.12, "aggro_range": 6.5, "regen": 0.6,
+			"projectile": "bolt", "building_damage": 0.6,
+			"cost": { "wood": 40, "ore": 25, "food": 10, "mana": 8 }, "summon_time": 20, "kill_points": 3,
+			"sprite": "res://assets/sprites/units/crossbow_good.png"
+		},
+		{
+			"id": "crossbow_evil", "name": "Höllenschütze", "faction": "evil", "tier": "crossbow", "role": "combat", "class": "ranged", "letter": "A",
+			"description": "Armbrust mit Widerhakenbolzen: langsame, harte Schüsse, die die halbe Rüstung durchschlagen – gut gegen gepanzerte Fusstruppen.",
+			"requires": ["unit:crossbow_evil"], "armor_pierce": 0.5, "bonus_vs": { "cavalry": 0.2 },
+			"speed": 1.9, "radius": 15, "sight": 7, "food_per_day": 8, "can_work": true, "carry": 10,
+			"hp": 85, "attack": 20, "attack_interval": 2.4, "range": 6.0, "armor": 0.1, "aggro_range": 6.5, "regen": 0.6,
+			"projectile": "bolt", "building_damage": 0.6,
+			"cost": { "wood": 40, "ore": 25, "food": 10, "mana": 8 }, "summon_time": 20, "kill_points": 3,
+			"sprite": "res://assets/sprites/units/crossbow_evil.png"
+		},
+		{
+			"id": "heavy_good", "name": "Schildwache", "faction": "good", "tier": "heavy", "role": "combat", "class": "infantry", "letter": "Sw",
+			"description": "Schwere Fusstruppe mit Turmschild: hält die Linie, schlägt Fusstruppen (+20 %). Langsam; Armbrüste und Magier sind ihr Verderben.",
+			"requires": ["unit:heavy_good"], "bonus_vs": { "infantry": 0.2 },
+			"speed": 1.6, "radius": 17, "sight": 6, "food_per_day": 10,
+			"hp": 250, "attack": 15, "attack_interval": 1.4, "range": 0.9, "armor": 0.45, "aggro_range": 5, "regen": 0.8,
+			"cost": { "ore": 40, "wood": 20, "food": 20, "mana": 10 }, "summon_time": 24, "kill_points": 4,
+			"sprite": "res://assets/sprites/units/heavy_good.png"
+		},
+		{
+			"id": "heavy_evil", "name": "Eisenhauer", "faction": "evil", "tier": "heavy", "role": "combat", "class": "infantry", "letter": "Ei",
+			"description": "Gepanzerter Schlächter mit Zweihandaxt: hält die Linie, schlägt Fusstruppen (+20 %). Langsam; Armbrüste und Hexer sind sein Verderben.",
+			"requires": ["unit:heavy_evil"], "bonus_vs": { "infantry": 0.2 },
+			"speed": 1.6, "radius": 17, "sight": 6, "food_per_day": 10,
+			"hp": 235, "attack": 17, "attack_interval": 1.4, "range": 0.9, "armor": 0.42, "aggro_range": 5, "regen": 0.8,
+			"cost": { "ore": 40, "wood": 20, "food": 20, "mana": 10 }, "summon_time": 24, "kill_points": 4,
+			"sprite": "res://assets/sprites/units/heavy_evil.png"
+		},
+		{
+			"id": "cavalry_good", "name": "Lanzenreiter", "faction": "good", "tier": "cavalry", "role": "combat", "class": "cavalry", "letter": "Lr",
+			"description": "Ritter zu Pferd: schnell, überrennt Schützen, Magier und Belagerungswaffen. Vor Speeren hüten (Reitstall).",
+			"requires": ["unit:cavalry_good"],
+			"speed": 3.6, "radius": 19, "sight": 7, "food_per_day": 14,
+			"hp": 210, "attack": 18, "attack_interval": 1.3, "range": 0.9, "armor": 0.25, "aggro_range": 6, "regen": 0.8,
+			"cost": { "food": 50, "wood": 30, "ore": 15, "mana": 15 }, "summon_time": 26, "kill_points": 4,
+			"sprite": "res://assets/sprites/units/cavalry_good.png"
+		},
+		{
+			"id": "cavalry_evil", "name": "Wolfsreiter", "faction": "evil", "tier": "cavalry", "role": "combat", "class": "cavalry", "letter": "Wr",
+			"description": "Ork auf einem Riesenwolf: sehr schnell, überrennt Schützen, Hexer und Belagerungswaffen. Vor Speeren hüten (Wolfszwinger).",
+			"requires": ["unit:cavalry_evil"],
+			"speed": 3.9, "radius": 19, "sight": 7, "food_per_day": 14,
+			"hp": 190, "attack": 19, "attack_interval": 1.2, "range": 0.9, "armor": 0.2, "aggro_range": 6, "regen": 0.8,
+			"cost": { "food": 55, "wood": 30, "ore": 12, "mana": 15 }, "summon_time": 26, "kill_points": 4,
+			"sprite": "res://assets/sprites/units/cavalry_evil.png"
+		},
+		{
+			"id": "battlemage_good", "name": "Kampfmagier", "faction": "good", "tier": "battlemage", "role": "combat", "class": "mage", "letter": "M",
+			"description": "Schleudert Sternenfeuer: Flächenschaden auf Gruppen, stark gegen Fusstruppen. Zerbrechlich – Reiter fürchten (Magierturm).",
+			"requires": ["unit:battlemage_good"],
+			"speed": 2.0, "radius": 15, "sight": 7, "food_per_day": 8,
+			"hp": 80, "attack": 16, "attack_interval": 2.6, "range": 5.5, "armor": 0.05, "aggro_range": 6, "regen": 0.8,
+			"projectile": "bolt", "building_damage": 0.8, "splash_radius": 1.1, "splash_factor": 0.6,
+			"cost": { "food": 30, "wood": 25, "mana": 30 }, "summon_time": 26, "kill_points": 4,
+			"sprite": "res://assets/sprites/units/battlemage_good.png"
+		},
+		{
+			"id": "battlemage_evil", "name": "Hexer", "faction": "evil", "tier": "battlemage", "role": "combat", "class": "mage", "letter": "M",
+			"description": "Wirft Schattenflammen: Flächenschaden auf Gruppen, stark gegen Fusstruppen. Zerbrechlich – Reiter fürchten (Hexenturm).",
+			"requires": ["unit:battlemage_evil"],
+			"speed": 2.0, "radius": 15, "sight": 7, "food_per_day": 8,
+			"hp": 75, "attack": 18, "attack_interval": 2.6, "range": 5.5, "armor": 0.05, "aggro_range": 6, "regen": 0.8,
+			"projectile": "bolt", "building_damage": 0.8, "splash_radius": 1.1, "splash_factor": 0.6,
+			"cost": { "food": 30, "wood": 25, "mana": 30 }, "summon_time": 26, "kill_points": 4,
+			"sprite": "res://assets/sprites/units/battlemage_evil.png"
 		},
 
 		{
@@ -162,6 +267,256 @@
 			"hp": 300, "attack": 22, "attack_interval": 1.8, "range": 0.9, "armor": 0.4, "aggro_range": 4, "regen": 2.0,
 			"kill_points": 5,
 			"sprite": "res://assets/sprites/units/monster_golem.png"
+		},
+		{
+			"id": "wyvern", "name": "Wyvern", "faction": "wild", "tier": "monster", "role": "monster", "letter": "Wy", "color": "#5f8a4a",
+			"speed": 3.2, "radius": 20, "sight": 7, "food_per_day": 0,
+			"hp": 220, "attack": 18, "attack_interval": 1.3, "range": 0.9, "armor": 0.15, "aggro_range": 6, "regen": 1.5,
+			"kill_points": 4,
+			"sprite": "res://assets/sprites/units/monster_wyvern.png"
+		},
+
+		{
+			"id": "messenger", "name": "Bote", "faction": "any", "tier": "messenger", "role": "messenger", "letter": "Bo", "color": "#e8dcb0",
+			"description": "Läufer eines Dorfs mit einer Nachricht. Kämpft nie, sprintet vor Feinden davon – abfangen verhindert, dass die Nachricht ankommt.",
+			"speed": 3.4, "radius": 13, "sight": 8, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 45, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 1.0,
+			"flee_on_hit": false, "joins_fights": false, "target_priority": 0.7, "kill_points": 1,
+			"sprite": "res://assets/sprites/units/messenger.png"
+		},
+		{
+			"id": "refugee", "name": "Flüchtling", "faction": "any", "tier": "refugee", "role": "worker", "letter": "Fl", "color": "#c9b8a0",
+			"description": "Ein Mensch auf der Flucht. Bittet am Rand eines Reichs um Aufnahme.",
+			"speed": 1.8, "radius": 14, "sight": 4, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 35, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
+			"flee_on_hit": true, "joins_fights": false, "target_priority": 0.5, "kill_points": 0,
+			"sprite": "res://assets/sprites/units/refugee.png"
+		},
+		{
+			"id": "wanderer", "name": "Wanderer", "faction": "any", "tier": "refugee", "role": "worker", "letter": "Wa", "color": "#8fb7d9",
+			"description": "Reisender Handwerker, der sich niederlassen möchte und Waren mitbringt.",
+			"speed": 2.0, "radius": 14, "sight": 5, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 45, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
+			"flee_on_hit": true, "joins_fights": false, "target_priority": 0.5, "kill_points": 0,
+			"sprite": "res://assets/sprites/units/wanderer.png"
+		},
+
+		{
+			"id": "militia_dwarves", "name": "Zwergenwache", "faction": "neutral", "tier": "militia", "role": "combat", "people": "dwarves", "letter": "Z", "color": "#b0703c",
+			"description": "Dorfwache der Zwerge. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
+			"speed": 1.8, "radius": 15, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
+			"hp": 170, "attack": 12, "attack_interval": 1.3, "range": 0.8, "armor": 0.35, "aggro_range": 5, "regen": 0.6,
+			"cost": {"ore": 15, "food": 15}, "kill_points": 3,
+			"sprite": "res://assets/sprites/units/militia_dwarves.png"
+		},
+
+		{
+			"id": "militia_halflings", "name": "Halblingschleuderer", "faction": "neutral", "tier": "militia", "role": "combat", "people": "halflings", "letter": "H", "color": "#8fbf5a",
+			"description": "Dorfwache der Halblinge. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
+			"speed": 2.4, "radius": 15, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
+			"hp": 60, "attack": 7, "attack_interval": 1.3, "range": 4.5, "armor": 0.05, "aggro_range": 6, "regen": 0.5,
+			"projectile": "arrow", "building_damage": 0.5,
+			"cost": {"food": 20, "wood": 5}, "kill_points": 2,
+			"sprite": "res://assets/sprites/units/militia_halflings.png"
+		},
+
+		{
+			"id": "militia_wood_elves", "name": "Waldelfenwache", "faction": "neutral", "tier": "militia", "role": "combat", "people": "wood_elves", "letter": "W", "color": "#3f9e5a",
+			"description": "Dorfwache der Waldelfen. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
+			"speed": 2.3, "radius": 15, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
+			"hp": 75, "attack": 10, "attack_interval": 1.4, "range": 6, "armor": 0.05, "aggro_range": 7, "regen": 0.5,
+			"projectile": "arrow", "building_damage": 0.5,
+			"cost": {"wood": 25, "food": 10}, "kill_points": 2,
+			"sprite": "res://assets/sprites/units/militia_wood_elves.png"
+		},
+
+		{
+			"id": "militia_lizardfolk", "name": "Echsenkrieger", "faction": "neutral", "tier": "militia", "role": "combat", "people": "lizardfolk", "letter": "E", "color": "#6aa38f",
+			"description": "Dorfwache des Echsenvolks. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
+			"speed": 2.3, "radius": 15, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
+			"hp": 130, "attack": 13, "attack_interval": 1.1, "range": 0.8, "armor": 0.15, "aggro_range": 5, "regen": 0.8,
+			"cost": {"food": 25}, "kill_points": 2,
+			"sprite": "res://assets/sprites/units/militia_lizardfolk.png"
+		},
+
+		{
+			"id": "militia_nomads", "name": "Nomadenwache", "faction": "neutral", "tier": "militia", "role": "combat", "people": "nomads", "letter": "N", "color": "#d9a441",
+			"description": "Dorfwache der Nomaden. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
+			"speed": 2.8, "radius": 15, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
+			"hp": 100, "attack": 11, "attack_interval": 1.2, "range": 0.8, "armor": 0.1, "aggro_range": 6, "regen": 0.5,
+			"cost": {"food": 20, "wood": 5}, "kill_points": 2,
+			"sprite": "res://assets/sprites/units/militia_nomads.png"
+		},
+
+		{
+			"id": "militia_giants", "name": "Riesenwächter", "faction": "neutral", "tier": "militia", "role": "combat", "people": "giants", "letter": "R", "color": "#8c8c9c",
+			"description": "Dorfwache der Riesen. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
+			"speed": 1.5, "radius": 24, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
+			"hp": 420, "attack": 30, "attack_interval": 2.0, "range": 1.0, "armor": 0.3, "aggro_range": 4, "regen": 1.5,
+			"building_damage": 2.0,
+			"cost": {"stone": 30, "food": 40}, "kill_points": 6,
+			"sprite": "res://assets/sprites/units/militia_giants.png"
+		},
+
+		{
+			"id": "militia_water_spirits", "name": "Quellwächter", "faction": "neutral", "tier": "militia", "role": "combat", "people": "water_spirits", "letter": "Q", "color": "#4fb6d6",
+			"description": "Dorfwache der Wassergeister. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
+			"speed": 2.2, "radius": 15, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
+			"hp": 90, "attack": 9, "attack_interval": 1.3, "range": 4, "armor": 0.1, "aggro_range": 6, "regen": 2.0,
+			"projectile": "bolt", "building_damage": 0.5,
+			"cost": {"mana": 10, "food": 10}, "kill_points": 2,
+			"sprite": "res://assets/sprites/units/militia_water_spirits.png"
+		},
+
+		{
+			"id": "militia_kobold_traders", "name": "Koboldwache", "faction": "neutral", "tier": "militia", "role": "combat", "people": "kobold_traders", "letter": "K", "color": "#c76fd1",
+			"description": "Dorfwache der Koboldhändler. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
+			"speed": 2.6, "radius": 15, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
+			"hp": 70, "attack": 8, "attack_interval": 1.0, "range": 4, "armor": 0.05, "aggro_range": 6, "regen": 0.5,
+			"projectile": "bolt", "building_damage": 0.5,
+			"cost": {"ore": 5, "food": 10}, "kill_points": 1,
+			"sprite": "res://assets/sprites/units/militia_kobold_traders.png"
+		},
+
+		{
+			"id": "dwarf_ironguard", "name": "Eisenwache", "faction": "neutral", "tier": "special", "role": "combat", "people": "dwarves", "letter": "Ei", "color": "#b0703c",
+			"description": "Volkskrieger der Zwerge. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf der Zwerge oder seiner Aufnahme ins Reich.",
+			"speed": 1.8, "radius": 16, "sight": 7, "food_per_day": 12, "can_work": false, "needs_housing": false,
+			"hp": 300, "attack": 20, "attack_interval": 1.4, "range": 0.8, "armor": 0.45, "aggro_range": 5, "regen": 0.5,
+			"cost": {"ore": 50, "food": 30, "mana": 10}, "summon_time": 28, "kill_points": 5,
+			"sprite": "res://assets/sprites/units/dwarf_ironguard.png"
+		},
+
+		{
+			"id": "halfling_slinger", "name": "Schleudermeister", "faction": "neutral", "tier": "special", "role": "combat", "people": "halflings", "letter": "Sm", "color": "#8fbf5a",
+			"description": "Volkskrieger der Halblinge. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf der Halblinge oder seiner Aufnahme ins Reich.",
+			"speed": 2.6, "radius": 16, "sight": 7, "food_per_day": 6, "can_work": false, "needs_housing": false,
+			"hp": 70, "attack": 11, "attack_interval": 1.1, "range": 5.5, "armor": 0.05, "aggro_range": 6, "regen": 0.5,
+			"projectile": "arrow", "building_damage": 0.5,
+			"cost": {"food": 30, "wood": 30, "mana": 5}, "summon_time": 16, "kill_points": 2,
+			"sprite": "res://assets/sprites/units/halfling_slinger.png"
+		},
+
+		{
+			"id": "wood_elf_ranger", "name": "Blattschütze", "faction": "neutral", "tier": "special", "role": "combat", "people": "wood_elves", "letter": "Bs", "color": "#3f9e5a",
+			"description": "Volkskrieger der Waldelfen. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf der Waldelfen oder seiner Aufnahme ins Reich.",
+			"speed": 2.4, "radius": 16, "sight": 7, "food_per_day": 8, "can_work": false, "needs_housing": false,
+			"hp": 90, "attack": 15, "attack_interval": 1.5, "range": 7, "armor": 0.05, "aggro_range": 7, "regen": 0.5,
+			"projectile": "arrow", "building_damage": 0.5,
+			"cost": {"wood": 50, "food": 20, "mana": 15}, "summon_time": 22, "kill_points": 4,
+			"sprite": "res://assets/sprites/units/wood_elf_ranger.png"
+		},
+
+		{
+			"id": "lizard_skirmisher", "name": "Sumpfjäger", "faction": "neutral", "tier": "special", "role": "combat", "people": "lizardfolk", "letter": "Sj", "color": "#6aa38f",
+			"description": "Volkskrieger des Echsenvolks. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf des Echsenvolks oder seiner Aufnahme ins Reich.",
+			"speed": 2.8, "radius": 16, "sight": 7, "food_per_day": 8, "can_work": false, "needs_housing": false,
+			"hp": 150, "attack": 16, "attack_interval": 1.0, "range": 0.8, "armor": 0.15, "aggro_range": 6, "regen": 0.5,
+			"cost": {"food": 40, "ore": 15, "mana": 10}, "summon_time": 20, "kill_points": 3,
+			"sprite": "res://assets/sprites/units/lizard_skirmisher.png"
+		},
+
+		{
+			"id": "nomad_rider", "name": "Steppenreiter", "faction": "neutral", "tier": "special", "role": "combat", "class": "cavalry", "people": "nomads", "letter": "Sr", "color": "#d9a441",
+			"description": "Volkskrieger der Nomaden. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf der Nomaden oder seiner Aufnahme ins Reich.",
+			"speed": 3.4, "radius": 16, "sight": 7, "food_per_day": 12, "can_work": false, "needs_housing": false,
+			"hp": 170, "attack": 17, "attack_interval": 1.2, "range": 0.9, "armor": 0.2, "aggro_range": 6, "regen": 0.5,
+			"cost": {"food": 40, "wood": 20, "ore": 20, "mana": 10}, "summon_time": 24, "kill_points": 4,
+			"sprite": "res://assets/sprites/units/nomad_rider.png"
+		},
+
+		{
+			"id": "giant_brute", "name": "Hügelriese", "faction": "neutral", "tier": "special", "role": "combat", "people": "giants", "letter": "Hr", "color": "#8c8c9c",
+			"description": "Volkskrieger der Riesen. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf der Riesen oder seiner Aufnahme ins Reich.",
+			"speed": 1.6, "radius": 26, "sight": 7, "food_per_day": 30, "can_work": false, "needs_housing": false,
+			"hp": 650, "attack": 38, "attack_interval": 2.0, "range": 1.0, "armor": 0.3, "aggro_range": 4, "regen": 0.5,
+			"building_damage": 2.5,
+			"cost": {"food": 80, "stone": 60, "ore": 30, "mana": 25}, "summon_time": 40, "kill_points": 8,
+			"sprite": "res://assets/sprites/units/giant_brute.png"
+		},
+
+		{
+			"id": "water_spirit_healer", "name": "Quellgeist", "faction": "neutral", "tier": "special", "role": "support", "people": "water_spirits", "letter": "Qg", "color": "#4fb6d6",
+			"description": "Volkskrieger der Wassergeister. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf der Wassergeister oder seiner Aufnahme ins Reich.",
+			"speed": 2.3, "radius": 16, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
+			"hp": 80, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.1, "aggro_range": 0, "regen": 2,
+			"heal": 9, "heal_range": 4,
+			"cost": {"mana": 25, "food": 20}, "summon_time": 20, "kill_points": 3,
+			"sprite": "res://assets/sprites/units/water_spirit_healer.png"
+		},
+
+		{
+			"id": "kobold_bombardier", "name": "Koboldsprenger", "faction": "neutral", "tier": "special", "role": "combat", "class": "ranged", "people": "kobold_traders", "letter": "Ks", "color": "#c76fd1",
+			"description": "Volkskrieger der Koboldhändler. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf der Koboldhändler oder seiner Aufnahme ins Reich.",
+			"speed": 2.3, "radius": 16, "sight": 7, "food_per_day": 6, "can_work": false, "needs_housing": false,
+			"hp": 60, "attack": 20, "attack_interval": 2.4, "range": 5, "armor": 0.05, "aggro_range": 6, "regen": 0.5,
+			"projectile": "bolt", "building_damage": 2.5,
+			"cost": {"ore": 30, "food": 20, "mana": 10}, "summon_time": 20, "kill_points": 3,
+			"sprite": "res://assets/sprites/units/kobold_bombardier.png"
+		},
+
+		{
+			"id": "spy_good", "name": "Kundschafterin", "faction": "good", "tier": "spy", "role": "spy", "letter": "Sp", "color": "#9fd8ff",
+			"description": "Getarnt und flink. Kundschaftet fremde Reiche aus und wiegelt Dörfer auf (Spionagefenster K).",
+			"requires": ["unit:spy_good"], "stealth": true, "speed": 3.2, "radius": 13, "sight": 9, "food_per_day": 4,
+			"can_work": false, "needs_housing": false, "hp": 70, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.05,
+			"aggro_range": 0, "regen": 1.0, "flee_on_hit": true, "joins_fights": false, "target_priority": 0.8, "formation_rank": 2,
+			"cost": {"food": 40, "ore": 20, "mana": 25}, "summon_time": 30, "kill_points": 4,
+			"sprite": "res://assets/sprites/units/spy_good.png"
+		},
+
+		{
+			"id": "spy_evil", "name": "Schattenspion", "faction": "evil", "tier": "spy", "role": "spy", "letter": "Sp", "color": "#5b2a86",
+			"description": "Ein Schatten unter Schatten. Späht fremde Reiche aus und hetzt Dörfer auf (Spionagefenster K).",
+			"requires": ["unit:spy_evil"], "stealth": true, "speed": 3.3, "radius": 13, "sight": 9, "food_per_day": 3,
+			"can_work": false, "needs_housing": false, "hp": 65, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.05,
+			"aggro_range": 0, "regen": 1.0, "flee_on_hit": true, "joins_fights": false, "target_priority": 0.8, "formation_rank": 2,
+			"cost": {"food": 40, "ore": 20, "mana": 25}, "summon_time": 30, "kill_points": 4,
+			"sprite": "res://assets/sprites/units/spy_evil.png"
+		},
+
+		{
+			"id": "caravan", "name": "Karawane", "faction": "any", "tier": "caravan", "role": "caravan", "letter": "Ka", "color": "#d9b46a",
+			"description": "Ochsenkarren mit Handelswaren. Pendelt auf einem Handelsweg zwischen Burg (oder Lager) und Partnerdorf. Langsam und schwach – wer sie überfällt, erbeutet einen Teil der Ladung.",
+			"speed": 1.6, "radius": 18, "sight": 6, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 160, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.2, "aggro_range": 0, "regen": 0.5,
+			"flee_on_hit": false, "joins_fights": false, "target_priority": 0.6, "kill_points": 2, "commandable": false,
+			"sprites": { "good": "res://assets/sprites/units/caravan_good.png", "evil": "res://assets/sprites/units/caravan_evil.png" }
+		},
+
+		{
+			"id": "ram_good", "name": "Rammbock", "faction": "good", "tier": "ram", "role": "combat", "letter": "R", "color": "#8a6a3a",
+			"description": "Schwerer Rammbock unter einem Schutzdach: zerschmettert Mauern, Tore und Gebäude. Langsam, gegen Einheiten fast wehrlos – greift nur Gebäude an.",
+			"requires": ["unit:ram_good"], "speed": 1.1, "radius": 22, "sight": 5, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 450, "attack": 50, "attack_interval": 3.5, "range": 0.9, "armor": 0.45, "aggro_range": 6, "regen": 0,
+			"building_damage": 3.5, "unit_damage": 0.1, "targets": "buildings", "mechanical": true, "formation_rank": 0, "target_priority": 0.9,
+			"cost": { "wood": 120, "ore": 30, "mana": 10 }, "summon_time": 40, "kill_points": 5, "sprite": "res://assets/sprites/units/ram_good.png"
+		},
+		{
+			"id": "ram_evil", "name": "Sturmbock", "faction": "evil", "tier": "ram", "role": "combat", "letter": "R", "color": "#5a3a4a",
+			"description": "Eisenbeschlagener Sturmbock mit Dornenschild: bricht Mauern und Tore. Langsam, gegen Einheiten fast wehrlos – greift nur Gebäude an.",
+			"requires": ["unit:ram_evil"], "speed": 1.1, "radius": 22, "sight": 5, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 420, "attack": 55, "attack_interval": 3.5, "range": 0.9, "armor": 0.45, "aggro_range": 6, "regen": 0,
+			"building_damage": 3.5, "unit_damage": 0.1, "targets": "buildings", "mechanical": true, "formation_rank": 0, "target_priority": 0.9,
+			"cost": { "wood": 120, "ore": 30, "mana": 10 }, "summon_time": 40, "kill_points": 5, "sprite": "res://assets/sprites/units/ram_evil.png"
+		},
+		{
+			"id": "catapult_good", "name": "Katapult", "faction": "good", "tier": "catapult", "role": "combat", "letter": "Kt", "color": "#a08050",
+			"description": "Schleudert Felsbrocken weit über Mauern: grosse Reichweite gegen Gebäude, Mauern und Türme (Flächenschaden), schwach gegen Einheiten.",
+			"requires": ["unit:catapult_good"], "speed": 1.0, "radius": 22, "sight": 10, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 220, "attack": 40, "attack_interval": 5.0, "range": 9.0, "armor": 0.1, "aggro_range": 10, "regen": 0,
+			"building_damage": 2.5, "unit_damage": 0.3, "splash_radius": 1.2, "splash_factor": 0.5, "targets": "buildings_first",
+			"projectile": "stone", "mechanical": true, "target_priority": 0.8,
+			"cost": { "wood": 160, "stone": 60, "ore": 40, "mana": 15 }, "summon_time": 50, "kill_points": 6, "sprite": "res://assets/sprites/units/catapult_good.png"
+		},
+		{
+			"id": "catapult_evil", "name": "Schädelschleuder", "faction": "evil", "tier": "catapult", "role": "combat", "letter": "Kt", "color": "#6a3a5a",
+			"description": "Schleudert brennende Schädel über Mauern: grosse Reichweite gegen Gebäude (Flächenschaden), schwach gegen Einheiten.",
+			"requires": ["unit:catapult_evil"], "speed": 1.0, "radius": 22, "sight": 10, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 210, "attack": 38, "attack_interval": 5.0, "range": 9.5, "armor": 0.1, "aggro_range": 10, "regen": 0,
+			"building_damage": 2.5, "unit_damage": 0.3, "splash_radius": 1.3, "splash_factor": 0.5, "targets": "buildings_first",
+			"projectile": "stone", "mechanical": true, "target_priority": 0.8,
+			"cost": { "wood": 160, "stone": 60, "ore": 40, "mana": 15 }, "summon_time": 50, "kill_points": 6, "sprite": "res://assets/sprites/units/catapult_evil.png"
 		}
 	]
 }

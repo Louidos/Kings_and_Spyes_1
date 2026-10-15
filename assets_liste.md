@@ -4,9 +4,29 @@ Alle Grafiken, die das Spiel braucht, mit Dateinamen und Ablageort.
 Fehlt eine Datei, erzeugt das Spiel automatisch einen Platzhalter.
 Liegt die Datei am richtigen Ort, wird sie beim nächsten Start verwendet – ohne Code-Änderung.
 
-**Status:**
-- ✅ = wird bereits verwendet
-- 🕓 = vorläufig, Name und Umfang werden in der genannten Phase festgelegt
+**Status:** ✅ = das Spiel lädt diese Datei, sobald sie da ist (alle Phasen 1–10 sind fertig; jede Datei,
+die der Code laden kann, steht in dieser Liste). Eine Prüfung: jeder Pfad `res://assets/…` aus `data/*.json`
+und `scripts/` kommt hier vor.
+
+Wie man Grafiken mit der Bild-KI erzeugt, verkleinert, ablegt und in Godot importiert, steht in
+**[docs/grafiken.md](docs/grafiken.md)**.
+
+## Inhalt
+
+- [Allgemeine Regeln](#allgemeine-regeln) (Grössen, Format, Stil, Prompt-Vorlagen)
+- [Phase 1 – Gelände](#-phase-1--gelände-64--64-nahtlos) · [Menü](#-menü)
+- [Phase 2 – Dorf und Wirtschaft](#-phase-2--dorf-und-wirtschaft)
+- [Phase 3 – Einheiten, Kampf, Monster](#-phase-3--einheiten-kampf-monster)
+- [Phase 4 – Forschung und Magie](#-phase-4--forschung-und-magie)
+- [Phase 5 – Helden](#-phase-5--helden)
+- [Phase 6 – Neutrale Völker](#-phase-6--neutrale-völker)
+- [Phase 7 – Gegner und Spionage](#-phase-7--gegner-und-spionage)
+- [Phase 8 – Zufriedenheit, Ereignisse, Monster, Tag/Nacht](#-phase-8--zufriedenheit-ereignisse-monster-tagnacht)
+- [Phase 9 – Belagerung und Handel](#-phase-9--belagerung-und-handel)
+- [Phase 10 – Speichern, Einstellungen, Hilfe](#-phase-10--speichern-einstellungen-hilfe)
+- [Truppen – neue Einheiten, Schmiede, Aussehen](#-truppen--neue-einheiten-schmiede-aussehen-skins)
+- [Oberfläche](#-oberfläche-fenster-obere-leiste-auswahlfenster)
+- [Übersicht der Ordner](#übersicht-der-ordner)
 
 ---
 
@@ -201,7 +221,8 @@ Zauberleiste zeichnet das Spiel selbst.
 
 **Helden** (`assets/sprites/heroes/`): Figur 64 × 64 (transparent, von oben, Blick nach unten, etwas
 grösser und prächtiger als normale Einheiten) und Porträt 128 × 128 (Brustbild, für Heldenfenster und
-Heldenleiste). Fehlt eine Datei, zeichnet das Spiel einen Kreis in der Heldenfarbe mit Buchstaben.
+Heldenleiste). Fehlt eine Datei, zeichnet das Spiel einen Kreis in der Heldenfarbe mit Buchstaben (als
+Porträt auf dunklem Grund in der Heldenfarbe, gefallene Helden grau).
 
 | Figur | Porträt | Held | Aussehen |
 |---|---|---|---|
@@ -233,24 +254,255 @@ und Statuen, Gold) / `hero_hall_evil.png` (Halle der Schatten: dunkle Halle mit 
 
 Heldenmarkierung, Fähigkeitseffekte, Stufenaufstieg und EP-Anzeigen zeichnet das Spiel selbst.
 
-## 🕓 Phase 6 – Neutrale Völker
+## ✅ Phase 6 – Neutrale Völker
 
-Dorfzentren (128 × 128): `village_dwarves.png`, `village_halflings.png`, `village_wood_elves.png`,
-`village_lizardfolk.png`, `village_nomads.png`, `village_giants.png`, `village_water_spirits.png`,
-`village_kobold_traders.png`
-Einheiten: `messenger.png` (Bote), `trader.png` (Händler/Karawane)
+Acht neutrale Völker leben in Dörfern. Jedes Dorf zeigt sein Volk über die Grafiken; fehlt eine Datei,
+zeichnet das Spiel ein Feld in der **Volksfarbe** (siehe `data/peoples.json` → `color`) mit Beschriftung.
+Wird ein Dorf aufgenommen oder erobert, behält es seine Grafik (das Dorfzentrum heisst dann *Aussenposten*).
 
-## 🕓 Phase 7 – Gegner und Spionage
+**Dorfzentren** (`assets/sprites/buildings/`, 128 × 128, transparent, 3 × 3 Kacheln):
 
-`spy_good.png`, `spy_evil.png`, Völker-Einheiten der Gegenseite (Liste folgt)
+| Datei | Volk | Motiv |
+|---|---|---|
+| `village_dwarves.png` | Zwerge | steinerne Halle am Fels, Schmiedeesse mit Glut, Ambosse, Erzkarren |
+| `village_halflings.png` | Halblinge | runde Hügelhöhle mit grüner Tür, Gemüsegarten, Pfeifenrauch |
+| `village_wood_elves.png` | Waldelfen | Baumhalle aus lebenden Ästen, Laternen mit Mondlicht, Lianen |
+| `village_lizardfolk.png` | Echsenvolk | Pfahlbau aus Schilf im Sumpf, Totems mit Schuppenmustern |
+| `village_nomads.png` | Nomaden | grosses buntes Zelt, Teppiche, Kamelsattel, Handelskisten |
+| `village_giants.png` | Riesen | grobe Steinhalle aus Felsblöcken, riesige Keule an der Wand |
+| `village_water_spirits.png` | Wassergeister | Quelltempel mit Wasserbecken, leuchtende blaue Perlen, Nebel |
+| `village_kobold_traders.png` | Koboldhändler | schiefer Markthügel mit Ständen, Münzhaufen, violette Laternen |
+| `village_hall.png` | Rückfall | einfaches Dorfzentrum (Holzhalle mit Glocke), wenn ein Volk keine Grafik hat |
 
-## 🕓 Phase 8 – Monster, Ereignisse
+**Hütten** (`assets/sprites/buildings/`, 128 × 128, transparent, 2 × 2 Kacheln) – kleine Wohnhütte im Stil
+des Volks (wie das Dorfzentrum, aber schlichter):
+`village_hut_dwarves.png`, `village_hut_halflings.png`, `village_hut_wood_elves.png`,
+`village_hut_lizardfolk.png`, `village_hut_nomads.png`, `village_hut_giants.png`,
+`village_hut_water_spirits.png`, `village_hut_kobold_traders.png`
 
-Weitere Monster: `monster_wyvern.png` (Wolf, Spinne und Golem: siehe Phase 3)
-Weitere: `refugee.png` (Flüchtling), Ereignis-Icons `event_drought.png`, `event_plague.png`,
-`event_magic_storm.png`, `event_monster_wave.png`, `event_refugees.png`
+**Dorfmilizen** (`assets/sprites/units/`, 64 × 64, transparent):
 
-## 🕓 Phase 9 – Belagerung
+| Datei | Einheit | Aussehen |
+|---|---|---|
+| `militia_dwarves.png` | Zwergenwache | gedrungener Zwerg mit Helm, Axt und Rundschild |
+| `militia_halflings.png` | Halblingschleuderer | kleiner Halbling mit Schleuder, Lederweste |
+| `militia_wood_elves.png` | Waldelfenwache | schlanke Elfe in Grün mit Kurzbogen |
+| `militia_lizardfolk.png` | Echsenkrieger | Echsenmensch mit Speer und Schilfschild |
+| `militia_nomads.png` | Nomadenwache | Wüstenkrieger mit Turban und Krummsäbel |
+| `militia_giants.png` | Riesenwächter | Hügelriese mit Baumstamm-Keule (wirkt grösser als andere) |
+| `militia_water_spirits.png` | Quellwächter | halb durchsichtige Wassergestalt mit Wasserkugel |
+| `militia_kobold_traders.png` | Koboldwache | Kobold mit Laterne und Funkenstab |
 
-`wall.png`, `tower_good.png` / `tower_evil.png`, `gate_good.png` / `gate_evil.png`,
-`siege_ram.png`, `siege_catapult.png`
+**Volkskrieger** (`assets/sprites/units/`, 64 × 64, transparent – in der Kaserne bei Bündnis oder Aufnahme):
+
+| Datei | Einheit | Aussehen |
+|---|---|---|
+| `dwarf_ironguard.png` | Eisenwache | schwer gepanzerter Zwerg, Turmschild, Kriegshammer |
+| `halfling_slinger.png` | Schleudermeister | Halbling mit verzierter Schleuder und Steinbeutel |
+| `wood_elf_ranger.png` | Blattschütze | Elfe mit Langbogen, Blätterumhang |
+| `lizard_skirmisher.png` | Sumpfjäger | flinker Echsenmensch mit zwei Wurfspeeren |
+| `nomad_rider.png` | Steppenreiter | Reiter auf Wüstenpferd mit Lanze |
+| `giant_brute.png` | Hügelriese | riesiger Riese mit Felsbrocken auf der Schulter |
+| `water_spirit_healer.png` | Quellgeist | leuchtender Wassergeist mit heilenden Tropfen |
+| `kobold_bombardier.png` | Koboldsprenger | Kobold mit rauchender Bombe und Schutzbrille |
+
+**Bote** (`assets/sprites/units/`, 64 × 64): `messenger.png` – leichtfüssiger Läufer mit Schriftrolle und
+Umhängetasche (kämpft nie). Auf der Minikarte blinkt er als weiss umrandetes Quadrat.
+
+Diplomatiefenster, Verträge und Ruf kommen ohne eigene Symbole aus (Text, Volksfarbe, Ruf-Balken) – dafür
+sind keine Grafiken nötig.
+
+Haussymbol der Dörfer und Ringe (rot = Krieg, gold = Bündnis) auf der Minikarte, Gebietsgrenzen in der
+Volksfarbe und Ruf-Balken zeichnet das Spiel selbst. Händler/Karawane: siehe Phase 9 (`caravan_*.png`).
+
+## ✅ Phase 7 – Gegner und Spionage
+
+Gegnerische Königreiche bauen mit denselben Gebäuden und Einheiten wie der Spieler (Fraktion der
+Gegenseite). Ihre Grenzen und Platzhalter erscheinen in der **Volksfarbe** (`data/peoples.json` → `color`).
+
+**Spione** (`assets/sprites/units/`, 64 × 64, transparent – getarnt halb durchsichtig, enttarnt normal):
+
+| Datei | Einheit | Aussehen |
+|---|---|---|
+| `spy_good.png` | Kundschafterin (GUT) | schlanke Gestalt mit hellblauem Kapuzenumhang, Fernrohr am Gürtel |
+| `spy_evil.png` | Schattenspion (BÖSE) | geduckte Gestalt in violettem Schattenmantel, Dolch, glühende Augen |
+
+**Gebäude** (`assets/sprites/buildings/`, 128 × 128, transparent):
+
+| Datei | Gebäude | Motiv |
+|---|---|---|
+| `spy_den_good.png` | Kundschafterhaus (GUT) | schmales Holzhaus mit Ausguck, Brieftauben, Landkarten am Fenster |
+| `spy_den_evil.png` | Schattenloge (BÖSE) | dunkles Steinhaus mit verhängten Fenstern, violette Laterne, Raben |
+
+**Burgen je Volk** (`assets/sprites/buildings/`, 256 × 256, transparent, optional – ohne Datei nimmt das
+Spiel die Burg der Fraktion `castle_good.png` / `castle_evil.png`):
+
+| Datei | Volk | Motiv |
+|---|---|---|
+| `castle_humans.png` | Menschen | Steinburg mit blauen Bannern, Zinnen, Torhaus |
+| `castle_high_elves.png` | Hochelfen | schlanke weisse Türme mit goldenen Spitzen |
+| `castle_druids.png` | Druiden | Burg aus lebendem Holz, Steinkreis, Efeu |
+| `castle_light_wardens.png` | Lichtwächter | helle Festung mit Sonnensymbol und Leuchtfeuer |
+| `castle_griffin_riders.png` | Greifenreiter | Bergfeste mit Greifenhorsten auf den Türmen |
+| `castle_star_mages.png` | Sternenmagier | Turmburg mit Sternwarte und blauen Kuppeln |
+| `castle_blood_elves.png` | Blutelfen | rot-goldene Türme, scharfe Spitzen, Glutkristalle |
+| `castle_orcs.png` | Orks | grobe Palisadenfeste mit Schädeln und Eisenspitzen |
+| `castle_night_riders.png` | Nachtreiter | schwarze Festung mit Ställen und Mondbannern |
+| `castle_warlocks.png` | Hexenmeister | Basaltburg am Lavastrom, violette Runen |
+| `castle_undead.png` | Untote | verfallene Gruft-Festung, grüne Geisterlichter |
+| `castle_demon_summoners.png` | Dämonenbeschwörer | Obsidianfeste mit Beschwörungskreis und Feuer |
+| `castle_shadow_cult.png` | Schattenkult | Tempelburg im Nebel, schwarze Schleier |
+| `castle_trolls.png` | Trolle | Felsenburg aus aufgetürmten Steinen, Knochenzaun |
+
+**Effekte** (`assets/sprites/effects/`, 128 × 128, transparent): `ruin.png` – Trümmerhaufen von oben
+(eingestürzte Mauern, verkohlte Balken); wird auf die Grundfläche des zerstörten Gebäudes gestreckt. Ohne
+Datei zeichnet das Spiel einen graubraunen Rahmen mit Bruchlinien.
+
+**Zauber-Symbole** (`assets/ui/icons/`, 64 × 64, wie die übrigen Zauber-Symbole):
+
+| Datei | Zauber | Motiv |
+|---|---|---|
+| `spell_realm_veil.png` | Reichsschleier (GUT) | Burg hinter einem hellblauen, durchscheinenden Schleier |
+| `spell_realm_shroud.png` | Reichsschatten (BÖSE) | Burg, von violettem Schattennebel verhüllt |
+
+Burgsymbole und Ruinen-Kreuze auf der Minikarte, Kundschaft-Punkte, der Entdeckungsbalken oben und die
+Fenster zeichnet das Spiel selbst.
+
+## ✅ Phase 8 – Zufriedenheit, Ereignisse, Monster, Tag/Nacht
+
+**Gebäude** (`assets/sprites/buildings/`, 128 × 128):
+
+| Datei | Motiv |
+|---|---|
+| `tavern_good.png` | Fachwerk-Gasthaus mit Schild und Laternen |
+| `tavern_evil.png` | düstere Schenke, grüne Laternen |
+| `temple_good.png` | weisser Tempel mit Sonnenkuppel (3×3 – Grafik 128 × 128, gestreckt wie die Heldenhalle) |
+| `temple_evil.png` | Schattenschrein aus schwarzem Stein, violette Flammen |
+
+**Einheiten** (`assets/sprites/units/`, 64 × 64):
+
+| Datei | Motiv |
+|---|---|
+| `refugee.png` | Flüchtling mit Bündel, zerlumpt |
+| `wanderer.png` | Reisender mit Rucksack und Wanderstab |
+| `monster_wyvern.png` | grüne Wyvern von oben, Flügel angelegt (Wolf, Spinne und Golem: siehe Phase 3) |
+
+**Ereignis-Symbole** (`assets/ui/icons/`, 32 × 32):
+
+| Datei | Motiv |
+|---|---|
+| `event_drought.png` | rissige Erde, Sonne |
+| `event_plague.png` | grüne Wolke, Totenkopf |
+| `event_magic_storm.png` | violetter Wirbel mit Blitz |
+| `event_monster_wave.png` | Monsterkrallen |
+| `event_refugees.png` | Menschen mit Bündeln |
+| `event_wanderers.png` | Stab und Rucksack |
+| `event_harvest_festival.png` | Garbe und Kürbis |
+| `event_mana_bloom.png` | blaue Blüte |
+
+**Stimmung** (`assets/ui/icons/`, 32 × 32, optional – sonst gezeichnet): `mood_angry.png`, `mood_unhappy.png`,
+`mood_content.png`, `mood_happy.png`
+
+**Tageszeit** (`assets/ui/icons/`, 32 × 32, optional): `daytime_sun.png`, `daytime_moon.png`
+
+**Effekte** (`assets/sprites/effects/`, 256 × 256, optional, gestreckt über das Gebiet): `event_drought.png`,
+`event_magic_storm.png`
+
+Tönung bei Nacht, Blitze, Seuchenwolken und Ereignisgebiete zeichnet das Spiel selbst.
+
+Die Völker der Königreiche (Spieler und KI) benutzen die Einheiten ihrer Fraktion (Phase 3); eigene Grafiken
+je Volk gibt es nur für Burgen (Phase 7) und Dörfer (Phase 6).
+
+## ✅ Phase 9 – Belagerung und Handel
+
+Ordner `assets/sprites/` (Unterordner wie angegeben). Fehlt eine Datei, zeichnet das Spiel einen Platzhalter:
+Mauern als verbundene Steinpfeiler, Tore als Holztür (verriegelt mit rotem Riegel), Türme, Werkstatt und
+Einheiten als farbige Formen mit Buchstaben, Steine als graue Kreise. Handelswege (gestrichelte Linien,
+rotes ✕) und Karawanen auf der Minikarte (Goldquadrate) zeichnet das Spiel selbst.
+
+| Datei(en) | Motiv | Grösse |
+|---|---|---|
+| `buildings/wall_good.png` / `wall_evil.png` | Mauerstück von oben (hell behauener Stein / schwarzer Stein mit Dornen), waagrecht, an den Seiten nahtlos | 64 × 64 |
+| `buildings/gate_good.png` / `gate_evil.png` | Tor im Mauerstück (Holz mit Eisenbändern / dunkles Eisengitter) | 64 × 64 |
+| `buildings/tower_good.png` / `tower_evil.png` | runder Wachturm mit Zinnen und Feuerkorb / Dornenturm mit violettem Feuer | 128 × 128 |
+| `buildings/siege_workshop_good.png` / `siege_workshop_evil.png` | Werkstatt mit Kran und Holzgerüst / Kriegsschmiede mit Ketten und Glut | 128 × 128 |
+| `units/ram_good.png` / `ram_evil.png` | Rammbock unter Holzdach / Sturmbock mit Dornenschild | 64 × 64 |
+| `units/catapult_good.png` / `catapult_evil.png` | Holzkatapult / Schädelschleuder | 64 × 64 |
+| `units/caravan_good.png` / `caravan_evil.png` | Ochsenkarren mit Kisten, helle Plane / dunkle Plane | 64 × 64 |
+| `effects/stone.png` | Felsbrocken (Geschoss) | 64 × 64 (wird klein gezeichnet) |
+
+## ✅ Phase 10 – Speichern, Einstellungen, Hilfe
+
+Keine neuen Grafiken: Speichern/Laden, Einstellungen, Hilfe (F1), Meldungsprotokoll (M), Sieg- und
+Niederlage-Bildschirm und Hauptmenü bestehen aus Text und gezeichneten Formen; der Hintergrund des
+Hauptmenüs ist `assets/ui/menu_background.png` (siehe „Menü“).
+
+Ton: Die Busse *Master*, *Music*, *SFX* und *UI* sind angelegt (Lautstärken in den Einstellungen); das Spiel
+spielt zurzeit keine Tondateien ab. Musik und Geräusche gehören später nach `assets/audio/music/` bzw.
+`assets/audio/sfx/` (OGG).
+
+## ✅ Truppen – neue Einheiten, Schmiede, Aussehen (Skins)
+
+**Neue Einheiten** (`assets/sprites/units/`, 64 × 64, transparent, von oben, Blick nach unten). Fehlt eine Datei,
+zeichnet das Spiel einen Kreis in Reichsfarbe mit Buchstaben.
+
+| Datei GUT | Datei BÖSE | Einheit | Aussehen |
+|---|---|---|---|
+| `spearman_good.png` | `spearman_evil.png` | Speerträger / Pfähler | langer Speer, Rundschild / Hakenspiess, Stachelhelm |
+| `crossbow_good.png` | `crossbow_evil.png` | Armbrustschütze / Höllenschütze | schwere Armbrust, Helm / Armbrust mit Widerhakenbolzen |
+| `heavy_good.png` | `heavy_evil.png` | Schildwache / Eisenhauer | Plattenrüstung mit Turmschild / Zweihandaxt, Stachelpanzer |
+| `cavalry_good.png` | `cavalry_evil.png` | Lanzenreiter / Wolfsreiter | Ritter auf Pferd mit Lanze / Ork auf grossem Wolf |
+| `battlemage_good.png` | `battlemage_evil.png` | Kampfmagier / Hexer | Robe mit Sternenstab, leuchtende Hand / Kapuze, violette Flammen |
+
+**Neue Gebäude** (`assets/sprites/buildings/`, 128 × 128, transparent):
+
+| Datei GUT | Datei BÖSE | Gebäude | Aussehen |
+|---|---|---|---|
+| `forge_good.png` | `forge_evil.png` | Schmiede / Blutschmiede | Esse mit Amboss und Waffenständer / dunkle Esse mit roter Glut und Ketten |
+| `stable_good.png` | `stable_evil.png` | Reitstall / Wolfszwinger (3 × 2 Felder, 192 × 128) | Holzstall mit Koppel / Pfahlzwinger mit Knochen |
+| `mage_tower_good.png` | `mage_tower_evil.png` | Magierturm / Hexenturm | schlanker blauer Turm mit Sternenkuppel / schiefer Turm mit violettem Feuer |
+
+**Aussehen (Skins)** – rein kosmetisch, im Auswahlfenster wählbar (Knopf „Aussehen“: für alle Einheiten eines Typs
+oder eine einzelne Einheit). Die Bilder der Beschwören-Knöpfe, der Warteschlange und des Armeefensters zeigen dieselbe
+Grafik im gewählten Aussehen. Datei: `assets/sprites/units/<einheit>_<skin>.png` (64 × 64). Fehlt sie, nimmt das Spiel die Grafik des
+Typs leicht getönt, sonst einen Platzhalter in den Skin-Farben (Rand in Saumfarbe) – dazu immer ein kleines
+gezeichnetes Abzeichen oben links.
+
+| Skin-ID | Name | Fraktion | Farben / Abzeichen |
+|---|---|---|---|
+| `standard` | Standard | alle | Farben des Reichs (die normale Grafik, keine eigene Datei) |
+| `royal` | Königsgarde | GUT | königsblau mit Gold, Krone |
+| `sunwatch` | Sonnenwacht | GUT | hellgelb mit Weiss, Sonne |
+| `shadow` | Schattenwache | BÖSE | schwarzviolett, Mond |
+| `blood` | Blutbanner | BÖSE | dunkelrot, Reisszahn |
+| `hero_banner` | Heldenbanner | alle (nur einzelne Einheiten ab Rang Elite) | Gold mit Weiss, Stern |
+
+Einheiten mit Skins und ihre Dateien (je Einheit `<id>_<skin>.png`):
+
+| Einheiten GUT (Skins `royal`, `sunwatch`, `hero_banner`) | Einheiten BÖSE (Skins `shadow`, `blood`, `hero_banner`) |
+|---|---|
+| `scout_good`, `fighter_good`, `spearman_good`, `archer_good`, `crossbow_good`, `heavy_good`, `elite_good`, `cavalry_good`, `battlemage_good`, `medic_good`, `ram_good`, `catapult_good` | `scout_evil`, `fighter_evil`, `spearman_evil`, `archer_evil`, `crossbow_evil`, `heavy_evil`, `elite_evil`, `cavalry_evil`, `battlemage_evil`, `medic_evil`, `ram_evil`, `catapult_evil` |
+
+Beispiele: `units/fighter_good_royal.png` (Schwertkämpfer der Königsgarde), `units/cavalry_evil_blood.png`
+(Wolfsreiter mit Blutbanner), `units/spearman_good_hero_banner.png`. Volkskrieger der Dörfer (z. B.
+`dwarf_ironguard`) tragen im Reich des Spielers die Skins seiner Fraktion: `dwarf_ironguard_royal.png` usw.
+
+Rangabzeichen (Winkel und Stern über den Einheiten) und die Abzeichen der Skins zeichnet das Spiel selbst.
+
+## ✅ Oberfläche (Fenster, obere Leiste, Auswahlfenster)
+
+Keine neuen Grafiken: Rahmen, Titelzeilen, Reiter, Wappen (Sonne GUT / Mondsichel BÖSE) und die Gruppen der oberen
+Leiste zeichnet das Spiel selbst (`UiStyle`); Farben und Schrift kommen aus `assets/ui/theme.tres`.
+
+## Übersicht der Ordner
+
+| Ordner | Inhalt (Phase) |
+|---|---|
+| `assets/sprites/terrain/` | Gelände je Biom, 4 Varianten (1) |
+| `assets/sprites/resources/` | Vorkommen auf der Karte (2) |
+| `assets/sprites/buildings/` | Gebäude je Fraktion (2–4, 7–9; Schmiede, Reitstall, Magierturm: Truppen), Burgen je Volk (7), Dörfer und Hütten je Volk (6) |
+| `assets/sprites/units/` | Bewohner, König, Truppen je Fraktion (2–3), Monster (3, 8), Milizen und Volkskrieger (6), Bote (6), Spione (7), Flüchtlinge/Wanderer (8), Belagerungswaffen und Karawanen (9), neue Truppen und Skins `<einheit>_<skin>.png` (Truppen) |
+| `assets/sprites/heroes/` | Helden und Porträts (5) |
+| `assets/sprites/effects/` | Geschosse (3, 9), Ruinen (7), Ereignisflächen (8) |
+| `assets/ui/icons/` | Ressourcen (2), Zauber (4, 7), Ereignisse, Stimmung, Tageszeit (8) |
+| `assets/ui/` | Menü-Hintergrund |

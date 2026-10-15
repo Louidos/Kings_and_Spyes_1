@@ -2,7 +2,7 @@
 	"_hinweis": [
 		"Wirtschaft und Bevölkerung. Zeiten in Spielsekunden (ein Spieltag = time.seconds_per_day aus game_config.json).",
 		"start: Startressourcen, Anzahl Bewohner und ihre Berufe.",
-		"Werte der Bewohner selbst (Tempo, Traglast, Nahrung) stehen in units.json. work: Unbeschäftigte laufen in diesem Umkreis um die Burg herum; retry_seconds = Wartezeit, bevor ein Arbeiter erneut nach Arbeit sucht.",
+		"Werte der Bewohner selbst (Tempo, Traglast, Nahrung) stehen in units.json. work: Unbeschäftigte laufen in diesem Umkreis um die Burg herum; retry_seconds = Wartezeit, bevor ein Arbeiter erneut nach Arbeit sucht; max_thinks_per_tick = höchstens so viele Arbeitsentscheidungen je Simulationstakt (alle Reiche zusammen).",
 		"population: alle growth_interval Sekunden kommt ein Bewohner dazu, wenn Wohnraum frei ist und mindestens growth_food_min Nahrung da ist (kostet growth_food_cost).",
 		"starvation.work_factor: Arbeitstempo bei Hungersnot; sie endet erst, wenn wieder recover_food Nahrung im Lager ist. road.speed_mult: Tempo auf fertigen Strassen.",
 		"demolish_refund / cancel_refund: Rückerstattung beim Abreissen bzw. beim Abbrechen einer Baustelle."
@@ -16,7 +16,8 @@
 
 	"work": {
 		"idle_wander_radius": 4,
-		"retry_seconds": 3.0
+		"retry_seconds": 3.0,
+		"max_thinks_per_tick": 20
 	},
 
 	"population": {

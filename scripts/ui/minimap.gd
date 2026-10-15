@@ -6,6 +6,14 @@
 ## Rahmen um das Gebiet jedes Reichs, Einheiten als Punkte, Monsterlager als
 ## orange Rauten (immer sichtbar – der Spieler soll wissen, wo Lager sind) und
 ## rot pulsierende Kreise, wo das eigene Reich angegriffen wird.
+## Neutrale Dörfer: Haussymbol in der Dorffarbe (nach der Aufnahme in der
+## Farbe des neuen Besitzers) mit Ring – rot bei Krieg, gold bei Bündnis.
+## Boten: blinkende Quadrate mit weissem Rand in der Farbe ihres Dorfs.
+## Königreiche (Spieler und KI, ab Phase 7): Burgsymbol (Quadrat mit drei Zinnen) in
+## der Reichsfarbe mit Ring – weiss beim Spieler, rot bei Feinden. Ruinen gefallener
+## Burgen als graues X.
+## Phase 9: Handelswege gestrichelt, Karawanen als Goldquadrate; Mauern erscheinen als
+## dichte Gebäudepunkte.
 ##
 ## Leistung: Karte, Gebäude und Einheitenpunkte werden höchstens alle 0.25 s
 ## gezeichnet; die Punkte stehen dann schon fertig umgerechnet in Listen
@@ -23,6 +31,13 @@ const PING_MERGE_TILES := 12.0
 const PING_COLOR := Color(1.0, 0.18, 0.12)
 const OUTLINE_COLOR := Color(0, 0, 0, 0.85)
 const LAIR_COLOR := Color(1.0, 0.55, 0.12)
+const VILLAGE_WAR_COLOR := Color(1.0, 0.25, 0.2)
+const VILLAGE_ALLY_COLOR := Color(1.0, 0.84, 0.3)
+const MESSENGER_OUTLINE := Color(1, 1, 1, 0.95)
+const CASTLE_PLAYER_RING := Color(1, 1, 1, 0.95)
+const CASTLE_ENEMY_RING := Color(1.0, 0.25, 0.2)
+const RUIN_COLOR := Color(0.62, 0.6, 0.56)
+const CARAVAN_OUTLINE := Color(0.95, 0.78, 0.3)
 
 var texture: Texture2D
 var world_size := Vector2.ONE
@@ -60,6 +75,17 @@ var _monster_fill := PackedVector2Array()
 var _monster_color := Color(0.88, 0.48, 0.13)
 ## Monsterlager als Mittelpunkte in Pixeln
 var _lair_points := PackedVector2Array()
+## Boten: [{color: Color, points: PackedVector2Array}] (Mittelpunkte in Pixeln)
+var _messenger_groups: Array = []
+## Karawanen: [{color: Color, points: PackedVector2Array}] (Mittelpunkte in Pixeln)
+var _caravan_groups: Array = []
+## Handelswege in Minikarten-Pixeln: [{color: Color, points: PackedVector2Array}]
+var _route_lines: Array = []
+var _routes_dirty := true
+var _routes_rect := Rect2()
+var _route_timer := 0.0
+## Boten blinken: jede zweite Neuberechnung werden sie nicht gezeichnet
+var _messenger_blink := false
 ## Angriffsmeldungen: [{pos: Vector2 (Welt), age: float}]
 var _pings: Array = []
 ## Obere Ebene für Kamerarahmen und Meldungen
@@ -93,6 +119,9 @@ func setup_game(game: Node) -> void:
 	_world = game.world
 	_kingdoms = game.kingdoms  # gleiche Liste – neue Reiche erscheinen automatisch
 	game.combat_system.kingdom_attacked.connect(_on_kingdom_attacked)
+	var trs: Variant = game.get("trade_route_system")
+	if trs != null:
+		(trs as TradeRouteSystem).routes_changed.connect(func(_k: Kingdom) -> void: _routes_dirty = true)
 	_update_territory_boxes()
 	_refresh()
 
@@ -114,6 +143,10 @@ func _process(delta: float) -> void:
 		if _bbox_timer >= bbox_refresh_interval:
 			_bbox_timer = 0.0
 			_update_territory_boxes()
+	_route_timer += delta
+	if _route_timer >= 2.0:
+		_route_timer = 0.0
+		_routes_dirty = true
 	_redraw_timer += delta
 	if _redraw_timer >= redraw_interval:
 		_redraw_timer = 0.0
@@ -141,6 +174,7 @@ func _draw() -> void:
 	draw_texture_rect(texture, r, false)
 	if _world != null:
 		_draw_markers(r)
+		_draw_routes(r)
 		_draw_units()
 	last_draw_usec = Time.get_ticks_usec() - t0
 
@@ -194,6 +228,98 @@ func _draw_markers(r: Rect2) -> void:
 			var fill := kingdom.color if building.constructed else Color(kingdom.color, 0.55)
 			draw_rect(rect.grow(1.0), outline, true)
 			draw_rect(rect, fill, true)
+	_draw_villages(r, tile_px)
+	_draw_castles(r, tile_px)
+	_draw_events(r, tile_px)
+
+
+## Burgsymbole der Königreiche (Spieler und KI) und Ruinen gefallener Burgen
+func _draw_castles(r: Rect2, tile_px: Vector2) -> void:
+	if _game == null:
+		return
+	var player: Kingdom = _game.player
+	var victory: Variant = _game.get("victory_system")
+	if victory is Object and is_instance_valid(victory):
+		for ruin in (victory as Object).get("ruins"):
+			if not bool(ruin.get("castle", false)):
+				continue
+			var cell: Vector2i = ruin["cell"]
+			var ruin_size: Vector2i = ruin["size"]
+			var rc := (r.position + (Vector2(cell) + Vector2(ruin_size) * 0.5) * tile_px).floor() + Vector2(0.5, 0.5)
+			draw_line(rc + Vector2(-3.5, -3.5), rc + Vector2(3.5, 3.5), OUTLINE_COLOR, 3.5)
+			draw_line(rc + Vector2(-3.5, 3.5), rc + Vector2(3.5, -3.5), OUTLINE_COLOR, 3.5)
+			draw_line(rc + Vector2(-2.5, -2.5), rc + Vector2(2.5, 2.5), RUIN_COLOR, 1.5)
+			draw_line(rc + Vector2(-2.5, 2.5), rc + Vector2(2.5, -2.5), RUIN_COLOR, 1.5)
+	for k in _kingdoms:
+		var kingdom: Kingdom = k
+		if (kingdom.controller != "player" and kingdom.controller != "ai") or not is_instance_valid(kingdom.castle):
+			continue
+		var castle: Building = kingdom.castle
+		var c := (r.position + (Vector2(castle.cell) + Vector2(castle.size) * 0.5) * tile_px).floor() + Vector2(0.5, 0.5)
+		var body := Rect2(c + Vector2(-3.5, -2.5), Vector2(7.0, 6.0))
+		draw_rect(body.grow(1.0), OUTLINE_COLOR, true)
+		# Drei Zinnen (2×2) auf der Oberkante
+		for i in 3:
+			var merlon := Rect2(c + Vector2(-3.5 + i * 2.5, -4.5), Vector2(2.0, 2.0))
+			draw_rect(merlon.grow(1.0), OUTLINE_COLOR, true)
+			draw_rect(merlon, kingdom.color, true)
+		draw_rect(body, kingdom.color, true)
+		if kingdom == player:
+			draw_arc(c + Vector2(0, -0.5), 8.5, 0.0, TAU, 24, CASTLE_PLAYER_RING, 1.5, true)
+		elif _game.are_hostile(player, kingdom):
+			draw_arc(c + Vector2(0, -0.5), 8.5, 0.0, TAU, 24, CASTLE_ENEMY_RING, 1.5, true)
+
+
+## Haussymbole der Dörfer (Quadrat mit Dach, schwarzer Rand), Ring bei Krieg/Bündnis
+func _draw_villages(r: Rect2, tile_px: Vector2) -> void:
+	if _game == null:
+		return
+	var vs: VillageSystem = _game.village_system
+	var player: Kingdom = _game.player
+	for v in vs.get_villages(true):
+		var hall := vs.get_hall(v)
+		if hall == null:
+			continue
+		var c := (r.position + hall.get_center() / float(_world.tile_size) * tile_px).floor() + Vector2(0.5, 0.5)
+		var owner_k := hall.kingdom
+		var body := Rect2(c + Vector2(-2.5, -1.0), Vector2(5.0, 4.0))
+		var roof := PackedVector2Array([c + Vector2(-3.5, -1.0), c + Vector2(0.0, -4.5), c + Vector2(3.5, -1.0)])
+		var roof_outline := PackedVector2Array([c + Vector2(-5.0, -0.5), c + Vector2(0.0, -6.0), c + Vector2(5.0, -0.5)])
+		draw_colored_polygon(roof_outline, OUTLINE_COLOR)
+		draw_rect(body.grow(1.0), OUTLINE_COLOR, true)
+		draw_colored_polygon(roof, owner_k.color)
+		draw_rect(body, owner_k.color, true)
+		if owner_k != player:
+			if _game.are_hostile(player, owner_k):
+				draw_arc(c + Vector2(0, -1), 7.5, 0.0, TAU, 20, VILLAGE_WAR_COLOR, 1.5, true)
+			elif _game.are_allied(player, owner_k):
+				draw_arc(c + Vector2(0, -1), 7.5, 0.0, TAU, 20, VILLAGE_ALLY_COLOR, 1.5, true)
+
+
+## Handelswege gestrichelt (neu berechnet nur bei Änderung oder neuer Grösse)
+func _draw_routes(r: Rect2) -> void:
+	var trs: Variant = _game.get("trade_route_system") if _game != null else null
+	if trs == null:
+		return
+	if _routes_dirty or r != _routes_rect:
+		_routes_dirty = false
+		_routes_rect = r
+		_route_lines.clear()
+		var s := r.size / world_size
+		var cols: Dictionary = DataDB.trade("display.colors", {})
+		for route in (trs as TradeRouteSystem).get_visible_routes(_game.player):
+			var rd: Dictionary = route
+			var pts := PackedVector2Array()
+			for p in rd["points"]:
+				pts.append(r.position + (p as Vector2) * s)
+			if pts.size() < 2:
+				continue
+			var key := str(rd["state"]) if int(rd["owner_id"]) == _game.player.id else "foreign"
+			_route_lines.append({"color": Color.from_string(str(cols.get(key, "#f2d16b")), Color.WHITE), "points": pts})
+	for line in _route_lines:
+		var pts: PackedVector2Array = line["points"]
+		for i in range(pts.size() - 1):
+			draw_dashed_line(pts[i], pts[i + 1], line["color"], 1.5, 4.0)
 
 
 ## Einheitenpunkte und Lager aus den vorbereiteten Listen. Reihenfolge:
@@ -214,6 +340,21 @@ func _draw_units() -> void:
 	for g in _dot_groups:
 		var group: Dictionary = g
 		draw_multiline(group["points"], group["color"], 2.0)
+	for g in _caravan_groups:
+		var group: Dictionary = g
+		for p in group["points"]:
+			var c: Vector2 = p
+			draw_rect(Rect2(c - Vector2(4, 4), Vector2(8, 8)), OUTLINE_COLOR, true)
+			draw_rect(Rect2(c - Vector2(3, 3), Vector2(6, 6)), CARAVAN_OUTLINE, true)
+			draw_rect(Rect2(c - Vector2(2, 2), Vector2(4, 4)), group["color"], true)
+	if not _messenger_blink:
+		for g in _messenger_groups:
+			var group: Dictionary = g
+			for p in group["points"]:
+				var c: Vector2 = p
+				draw_rect(Rect2(c - Vector2(3, 3), Vector2(6, 6)), OUTLINE_COLOR, true)
+				draw_rect(Rect2(c - Vector2(2, 2), Vector2(4, 4)), MESSENGER_OUTLINE, true)
+				draw_rect(Rect2(c - Vector2(1, 1), Vector2(2, 2)), group["color"], true)
 
 
 ## Einheiten in Pixel umrechnen (ein Durchlauf über alle Einheiten).
@@ -224,6 +365,9 @@ func _rebuild_cache() -> void:
 	_monster_outline = PackedVector2Array()
 	_monster_fill = PackedVector2Array()
 	_lair_points = PackedVector2Array()
+	_messenger_groups.clear()
+	_caravan_groups.clear()
+	_messenger_blink = not _messenger_blink
 	if _game == null or _world == null or texture == null:
 		return
 	var r := _map_rect()
@@ -249,12 +393,28 @@ func _rebuild_cache() -> void:
 				_monster_fill.append(Vector2(p.x + 1.0, p.y))
 			continue
 		var points := PackedVector2Array()
+		var messengers := PackedVector2Array()
+		var caravans := PackedVector2Array()
 		for u in kingdom.units:
 			if u.inside != null or (not visible_all and u.stealthed):
 				continue
 			var p: Vector2 = (origin + u.position * s).floor()
+			# Boten eigenes Symbol (blinkt), nur wenn der Spieler sie sieht
+			if u.role == "messenger":
+				if _game.can_see(player, u):
+					messengers.append(p + Vector2(0.5, 0.5))
+				continue
+			# Karawanen (Phase 9): Goldquadrat, blinkt nicht
+			if u.role == "caravan":
+				if _game.can_see(player, u):
+					caravans.append(p + Vector2(0.5, 0.5))
+				continue
 			points.append(Vector2(p.x - 1.0, p.y))
 			points.append(Vector2(p.x + 1.0, p.y))
+		if not messengers.is_empty():
+			_messenger_groups.append({"color": kingdom.color, "points": messengers})
+		if not caravans.is_empty():
+			_caravan_groups.append({"color": kingdom.color, "points": caravans})
 		if points.is_empty():
 			continue
 		var group := {"color": kingdom.color, "points": points}
@@ -328,3 +488,46 @@ func _map_rect() -> Rect2:
 		h = size.y
 		w = h * aspect
 	return Rect2((size - Vector2(w, h)) * 0.5, Vector2(w, h))
+
+
+## Phase 8: Ereignisgebiete (Kreisumriss in Ereignisfarbe), Streifzüge und Wellen
+## (blinkender oranger Ring mit Pfeil zum Ziel), wartende Flüchtlinge des Spielers
+## (heller Punkt mit Rahmen)
+func _draw_events(r: Rect2, tile_px: Vector2) -> void:
+	if _game == null:
+		return
+	var es: Variant = _game.get("event_system")
+	var scale_px := tile_px / float(_world.tile_size)
+	if es != null:
+		for ev in es.active:
+			var radius := float(ev["radius"])
+			if radius <= 0.0:
+				continue
+			var c := r.position + (ev["pos"] as Vector2) * scale_px
+			var col: Color = DataDB.get_event(str(ev["event_id"])).get("color", Color.WHITE)
+			draw_arc(c, maxf(radius * scale_px.x, 3.0), 0.0, TAU, 32, Color(col, 0.9), 1.5, true)
+		for offer in es.get_offers(_game.player):
+			for uid in offer["uids"]:
+				var u: Variant = _game.find_by_uid(int(uid))
+				if u is Unit:
+					var c := (r.position + (u as Unit).position * scale_px).floor() + Vector2(0.5, 0.5)
+					draw_rect(Rect2(c - Vector2(3, 3), Vector2(6, 6)), OUTLINE_COLOR, true)
+					draw_rect(Rect2(c - Vector2(2, 2), Vector2(4, 4)), Color(0.95, 0.92, 0.8), true)
+					break
+	var ms: Variant = _game.get("monster_system")
+	if ms == null or not (ms as Object).has_method("get_raid_markers"):
+		return
+	var blink := int(Time.get_ticks_msec() / 400.0) % 2 == 0
+	for m in ms.get_raid_markers():
+		var c := r.position + (m["pos"] as Vector2) * scale_px
+		var t := r.position + (m["target_pos"] as Vector2) * scale_px
+		var col := Color(1.0, 0.55, 0.15, 1.0 if blink else 0.55)
+		draw_arc(c, 5.0, 0.0, TAU, 16, OUTLINE_COLOR, 3.0, true)
+		draw_arc(c, 5.0, 0.0, TAU, 16, col, 1.5, true)
+		var dir := (t - c)
+		if dir.length() > 8.0:
+			var tip := c + dir.normalized() * minf(dir.length() - 2.0, 18.0)
+			draw_line(c + dir.normalized() * 6.0, tip, col, 1.5, true)
+			var side := Vector2(-dir.normalized().y, dir.normalized().x)
+			draw_colored_polygon(PackedVector2Array([tip, tip - dir.normalized() * 4.0 + side * 2.5,
+					tip - dir.normalized() * 4.0 - side * 2.5]), col)

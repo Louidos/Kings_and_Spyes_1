@@ -1,0 +1,19 @@
+{
+	"_hinweis": [
+		"Belagerung: Wegfindung um Mauerringe, Bresche, Reparatur, Türme.",
+		"nav: enclosure_max_cells = grösste Fläche (Kacheln), die als eingeschlossen erkannt wird (grössere gelten als offen); enclosure_margin = Rand um den Mauerrahmen, ab dem eine Flutfüllung als 'offen' gilt.",
+		"breach: max_tries = so oft sucht eine Einheit nacheinander ein neues Mauerstück; gate_factor/siege_gate_factor = Tore werden bei der Wahl um diesen Faktor 'näher' gerechnet (Rammböcke bevorzugen Tore); notify_interval/breach_notify_interval = Meldungen gedrosselt (Spielsekunden, je 20-Kachel-Gebiet).",
+		"repair: Bauarbeiter reparieren fertige, beschädigte Gebäude, wenn delay_seconds kein Schaden kam; hp_per_work = Leben je Sekunde Bauarbeit; cost_factor = Anteil der Baukosten für volle Reparatur; default_cost_per_hp für Gebäude ohne Baukosten (Burg); threshold = ab diesem Anteil gilt ein Gebäude als heil; repair_weight = Reparaturen zählen bei der Wahl so viel weiter weg als Baustellen.",
+		"towers: think_seconds = so oft sucht ein Turm ein neues Ziel; projectile_speed = Kacheln pro Sekunde (nur Darstellung).",
+		"segments: line_max = höchstens so viele Mauerstücke je Zug; replace_refund = Erstattung des ersetzten Mauerstücks, wenn ein Tor daraufgesetzt wird; built_notify_delay = Meldung 'Mauerbau fertig' nach so vielen Sekunden ohne weiteres fertiges Stück (gesammelt).",
+		"safety: Sicherheit für die Zufriedenheit (Phase 8, SatisfactionSystem über SiegeSystem.get_safety_bonus): walled = Burg liegt in einem Ring mit eigenem Tor, tower_each je Turm bis tower_max.",
+		"splash: Flächenschaden der Katapulte trifft auch eigene Mauern des Ziels in diesem Umkreis (Felder, siehe units.json splash_radius)."
+	],
+	"nav": {"enclosure_max_cells": 90000, "enclosure_margin": 2},
+	"breach": {"max_tries": 4, "gate_factor": 0.9, "siege_gate_factor": 0.6, "notify_interval": 20, "breach_notify_interval": 30},
+	"repair": {"delay_seconds": 10, "hp_per_work": 20, "cost_factor": 0.5, "default_cost_per_hp": {"stone": 0.02, "wood": 0.01},
+	           "threshold": 0.98, "repair_weight": 1.5},
+	"towers": {"think_seconds": 0.5, "projectile_speed": 16},
+	"safety": {"walled": 4, "tower_each": 1, "tower_max": 4},
+	"segments": {"line_max": 80, "replace_refund": 0.5, "built_notify_delay": 4}
+}
