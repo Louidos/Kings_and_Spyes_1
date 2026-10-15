@@ -8,6 +8,26 @@ Liegt die Datei am richtigen Ort, wird sie beim nächsten Start verwendet – oh
 die der Code laden kann, steht in dieser Liste). Eine Prüfung: jeder Pfad `res://assets/…` aus `data/*.json`
 und `scripts/` kommt hier vor.
 
+Wie man Grafiken mit der Bild-KI erzeugt, verkleinert, ablegt und in Godot importiert, steht in
+**[docs/grafiken.md](docs/grafiken.md)**.
+
+## Inhalt
+
+- [Allgemeine Regeln](#allgemeine-regeln) (Grössen, Format, Stil, Prompt-Vorlagen)
+- [Phase 1 – Gelände](#-phase-1--gelände-64--64-nahtlos) · [Menü](#-menü)
+- [Phase 2 – Dorf und Wirtschaft](#-phase-2--dorf-und-wirtschaft)
+- [Phase 3 – Einheiten, Kampf, Monster](#-phase-3--einheiten-kampf-monster)
+- [Phase 4 – Forschung und Magie](#-phase-4--forschung-und-magie)
+- [Phase 5 – Helden](#-phase-5--helden)
+- [Phase 6 – Neutrale Völker](#-phase-6--neutrale-völker)
+- [Phase 7 – Gegner und Spionage](#-phase-7--gegner-und-spionage)
+- [Phase 8 – Zufriedenheit, Ereignisse, Monster, Tag/Nacht](#-phase-8--zufriedenheit-ereignisse-monster-tagnacht)
+- [Phase 9 – Belagerung und Handel](#-phase-9--belagerung-und-handel)
+- [Phase 10 – Speichern, Einstellungen, Hilfe](#-phase-10--speichern-einstellungen-hilfe)
+- [Truppen – neue Einheiten, Schmiede, Aussehen](#-truppen--neue-einheiten-schmiede-aussehen-skins)
+- [Oberfläche](#-oberfläche-fenster-obere-leiste-auswahlfenster)
+- [Übersicht der Ordner](#übersicht-der-ordner)
+
 ---
 
 ## Allgemeine Regeln

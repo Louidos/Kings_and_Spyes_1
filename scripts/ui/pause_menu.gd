@@ -26,7 +26,7 @@ var _save_panel: SaveLoadPanel
 var _load_panel: SaveLoadPanel
 var _settings_form: SettingsForm
 var _confirm: ConfirmationDialog
-## "Tutorial starten" / "Tutorial fortsetzen (Schritt 7/30)" / "Tutorial von vorn"
+## "Tutorial starten" / "Tutorial fortsetzen (Schritt 7/35)" / "Tutorial von vorn"
 var _tutorial_button: Button
 ## Nach der Rückfrage: "menu" oder "quit"
 var _leave_action := ""

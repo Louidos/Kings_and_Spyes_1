@@ -1,6 +1,6 @@
 ## TutorialOverlay
 ##
-## Oberfläche des Tutorials (TutorialSystem): rechts ein Fenster mit Kapitel, "Schritt 5/30",
+## Oberfläche des Tutorials (TutorialSystem): rechts ein Fenster mit Kapitel, "Schritt 5/35",
 ## Titel, Text, Aufgabe bzw. "Geschafft!" und den Knöpfen "Zeigen", "Überspringen",
 ## "Beenden" und "Weiter" (einklappbar). Dazu ein pulsierender Rahmen um das Bedienelement
 ## des Schritts (Baumenü-Knopf, Knopf oben, Minikarte …) bzw. ein Pfeil zu einer Stelle in
