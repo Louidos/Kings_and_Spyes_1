@@ -561,6 +561,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		hud.toggle_heroes()
 	elif event.is_action_pressed("toggle_kingdom"):
 		hud.toggle_kingdom()
+	elif event.is_action_pressed("toggle_army"):
+		if hud.has_method("toggle_army"):
+			hud.call("toggle_army")
+	elif event.is_action_pressed("select_all_warriors"):
+		selection.select_all_warriors()
 	elif event.is_action_pressed("toggle_diplomacy"):
 		# Das Diplomatiefenster gehört zur Oberfläche (HUD); ohne Fenster nichts tun
 		if hud.has_method("toggle_diplomacy"):
@@ -687,11 +692,19 @@ func use_hero_ability(index: int) -> void:
 	spell_targeting.start_ability(u, ability_id)
 
 
-## Formation des Spielers wechseln (Block <-> Linie); gilt für die nächsten Marschbefehle
+## Formation des Spielers wechseln (Block -> Linie -> Keil -> Kreis); gilt für die nächsten Marschbefehle
 func toggle_formation() -> void:
-	player.formation = "line" if player.formation == "block" else "block"
-	formation_changed.emit(player.formation)
+	var list := CommandSystem.FORMATIONS
+	set_formation(str(list[(list.find(player.formation) + 1) % list.size()]))
 	Notify.info("Formation: %s" % CommandSystem.get_formation_name(player.formation))
+
+
+## Formation des Spielers setzen (CommandSystem.FORMATIONS; Truppenfenster, Taste F)
+func set_formation(formation: String) -> void:
+	if not CommandSystem.FORMATIONS.has(formation) or player.formation == formation:
+		return
+	player.formation = formation
+	formation_changed.emit(formation)
 
 
 ## Taste mit diesem Zeichen gedrückt? (z. B. "+" liegt auf Schweizer Tastaturen auf Shift+1)

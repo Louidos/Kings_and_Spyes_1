@@ -5,7 +5,11 @@
 ## ihre Arbeit (WorkSystem.suspend); "Zur Arbeit" setzt sie fort.
 ## Verwaltet ausserdem die Armeen (Steuergruppen 1–9) jedes Reichs und ist die
 ## einzige Stelle, die Ankunft und Scheitern von Befehlen behandelt.
-## Wird vom Spieler (SelectionController) und ab Phase 7 von der KI benutzt.
+## Wird vom Spieler (SelectionController, Truppenfenster) und ab Phase 7 von der KI benutzt.
+## Truppenfenster: Sammeln an der Burg, Rückzug zur Burg (danach Erholung), Patrouille,
+## Neuaufstellung in einer Formation (Block, Linie, Keil, Kreis), Haltung (aggressiv,
+## verteidigend, passiv – das CombatSystem fragt stance_allows_engage/leash_for) und
+## Armee auflösen.
 ##
 ## Gruppenmarsch: Statt für jede Einheit einen langen Weg zu berechnen, läuft
 ## ein Anführer den Weg; die anderen folgen ihm mit ihrem Formationsabstand
@@ -18,8 +22,22 @@ signal armies_changed(kingdom: Kingdom)
 ## Ein Befehl ist beendet (Ziel erreicht: ok = true, kein Weg: ok = false)
 signal command_finished(unit: Unit, command: String, ok: bool)
 
-const FORMATIONS := ["block", "line"]
-const FORMATION_NAMES := {"block": "Block", "line": "Linie"}
+const FORMATIONS := ["block", "line", "wedge", "circle"]
+const FORMATION_NAMES := {"block": "Block", "line": "Linie", "wedge": "Keil", "circle": "Kreis"}
+
+## Haltungen (Unit.stance): wie selbstständig eine Einheit kämpft.
+## aggressive – sucht Feinde und verfolgt sie weit (auch vom Posten weg)
+## defensive  – sucht Feinde in Sichtweite, kehrt nach kurzer Verfolgung auf den Posten zurück
+## passive    – greift nie von selbst an, wehrt sich nicht und hilft nicht; nur die
+##              ausdrücklichen Befehle "Angriff" und "Angreifend vorrücken" lassen sie kämpfen
+const STANCES := ["aggressive", "defensive", "passive"]
+const STANCE_NAMES := {"aggressive": "Aggressiv", "defensive": "Verteidigend", "passive": "Passiv"}
+const DEFAULT_STANCE := "defensive"
+## Aggressive Einheiten geben ein Ziel erst bei so viel mehr Abstand auf (Faktor auf die
+## Standardgrenze im CombatSystem)
+const AGGRESSIVE_CHASE_FACTOR := 1.5
+## Sammelplatz: so viele Kacheln vor dem Rand der Burg
+const RALLY_TILES := 3.0
 
 ## Alle Befehle und ihre Bedeutung (eine Tabelle statt verstreuter Abfragen):
 ## engage    – sucht selbst Feinde in Sichtweite
@@ -52,6 +70,12 @@ const COMMANDS := {
 	"seek_refuge": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "bittet um Aufnahme"},
 	# Karawane (Phase 9): zieht mit Waren zum Ziel, kämpft nie, danach Befehl gelöscht
 	"haul": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "zieht mit Waren"},
+	# Truppenfenster: Patrouille zwischen command_pos und patrol_from (kämpft unterwegs, kehrt am Ziel um)
+	"patrol": {"engage": true, "retaliate": true, "buildings": false, "leash": "chase", "on_arrive": "patrol", "text": "patrouilliert"},
+	# Rückzug zur Burg: läuft ohne zu kämpfen, danach "rest"
+	"retreat": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "rest", "text": "zieht sich zur Burg zurück"},
+	# An der Burg erholen (schnellere Heilung, siehe CombatSystem); verteidigt sich wie "hold"
+	"rest": {"engage": true, "retaliate": true, "buildings": false, "leash": "guard", "on_arrive": "", "text": "erholt sich an der Burg"},
 }
 
 ## Einheiten weiter als so viele Kacheln vom Gruppenmittelpunkt marschieren einzeln
@@ -102,9 +126,45 @@ static func get_formation_name(f: String) -> String:
 	return str(FORMATION_NAMES.get(f, f))
 
 
+static func get_stance_name(stance: String) -> String:
+	return str(STANCE_NAMES.get(stance, stance))
+
+
+## Darf u wegen seiner Haltung von selbst kämpfen (Ziele suchen, sich wehren, helfen)?
+## Ausdrückliche Angriffsbefehle gelten immer.
+static func stance_allows_engage(u: Unit) -> bool:
+	return u.stance != "passive" or u.command == "attack" or u.command == "attack_move"
+
+
+## Leine im Kampf: die des Befehls (COMMANDS.leash); aggressive Einheiten verfolgen
+## auch vom Posten weg ("guard" wird "chase")
+static func leash_for(u: Unit) -> String:
+	var leash := str(flag(u.command, "leash"))
+	if leash == "guard" and u.stance == "aggressive":
+		return "chase"
+	return leash
+
+
 ## Kämpft diese Einheit auf Befehl? (Bewohner und Heiler laufen nur mit)
 static func is_fighter(u: Unit) -> bool:
 	return u.attack > 0.0 and u.joins_fights
+
+
+## Gehört die Einheit zu den Truppen (Kämpfer, Schützen, Heiler, Belagerungswaffen,
+## beschworene Einheiten, Helden)? Bewohner, König, Spione, Boten und Karawanen nicht.
+static func is_warrior(u: Unit) -> bool:
+	if u.hero_id != 0:
+		return true
+	return (u.role == "combat" or u.role == "support") and bool(u.type_def.get("commandable", true))
+
+
+## Lebende Truppen des Reichs (is_warrior), z. B. für "Alle Krieger auswählen"
+func get_warriors(k: Kingdom) -> Array:
+	var list: Array = []
+	for u in k.units:
+		if is_instance_valid(u) and u.is_alive() and is_warrior(u):
+			list.append(u)
+	return list
 
 
 # ---------------------------------------------------------------------------
@@ -114,13 +174,17 @@ static func is_fighter(u: Unit) -> bool:
 ## Marschbefehl zu pos. Mehrere Einheiten verteilen sich in der Formation
 ## (leer = Formation des Reichs). attack_move: unterwegs kämpfen.
 func order_move(units: Array, pos: Vector2, attack_move: bool = false, formation: String = "") -> void:
+	_order_group(units, pos, "attack_move" if attack_move else "move", formation)
+
+
+## Gruppenbefehl mit Ziel: Formation, Befehl cmd, Gruppenmarsch
+func _order_group(units: Array, pos: Vector2, cmd: String, formation: String) -> void:
 	var list := _keep_king_home(_commandable(units), pos)
 	if list.is_empty():
 		return
 	if not FORMATIONS.has(formation):
 		formation = list[0].kingdom.formation
 	var slots := formation_slots(list, pos, formation)
-	var cmd := "attack_move" if attack_move else "move"
 	for i in list.size():
 		var u: Unit = list[i]
 		_prepare(u)
@@ -128,6 +192,83 @@ func order_move(units: Array, pos: Vector2, attack_move: bool = false, formation
 		u.command_pos = slots[i]
 		u.target = null
 	_start_march(list, slots, pos)
+
+
+## Sammeln an der Burg: Marsch in Formation zum Sammelplatz vor der Burg (danach Halt).
+func order_gather(units: Array) -> void:
+	var list := _commandable(units)
+	if list.is_empty():
+		return
+	var k: Kingdom = list[0].kingdom
+	if not is_instance_valid(k.castle):
+		return
+	order_move(list, castle_rally_point(k, _centroid(list)))
+
+
+## Rückzug zur Burg: ohne zu kämpfen zum Sammelplatz, dort erholen sie sich schneller
+## (Befehl "rest", CombatSystem). Ohne Burg: Halt.
+func order_retreat(units: Array) -> void:
+	var list := _commandable(units)
+	if list.is_empty():
+		return
+	var k: Kingdom = list[0].kingdom
+	if not is_instance_valid(k.castle):
+		order_stop(list)
+		return
+	_order_group(list, castle_rally_point(k, _centroid(list)), "retreat", "")
+
+
+## Patrouille zwischen dem jetzigen Ort der Gruppe und pos (hin und her, kämpft
+## unterwegs wie beim angreifenden Vorrücken). Jede Einheit läuft einzeln zu ihrem
+## Platz in der Formation am jeweiligen Wendepunkt.
+func order_patrol(units: Array, pos: Vector2, formation: String = "") -> void:
+	var list := _keep_king_home(_commandable(units), pos)
+	if list.is_empty():
+		return
+	if not FORMATIONS.has(formation):
+		formation = list[0].kingdom.formation
+	var start := _centroid(list)
+	var slots := formation_slots(list, pos, formation)
+	for i in list.size():
+		var u: Unit = list[i]
+		_prepare(u)
+		u.command = "patrol"
+		u.patrol_from = start + (slots[i] - pos)
+		u.command_pos = slots[i]
+		u.target = null
+		unit_system.move_to(u, slots[i])
+
+
+## Gruppe an ihrem Ort in einer Formation neu aufstellen (Mitte der Gruppe)
+func order_reform(units: Array, formation: String) -> void:
+	var list := _commandable(units)
+	if list.is_empty():
+		return
+	order_move(list, _centroid(list), false, formation)
+
+
+## Haltung setzen (STANCES). Passive Einheiten lassen selbst gesuchte Kämpfe fallen.
+func set_stance(units: Array, stance: String) -> void:
+	if not STANCES.has(stance):
+		return
+	for u in _commandable(units):
+		u.stance = stance
+		if stance == "passive" and u.command != "attack" and u.command != "attack_move" and u.target != null:
+			u.target = null
+			u.regroup_pending = true
+
+
+## Sammelplatz vor der Burg des Reichs, auf der Seite zu from (freie Kachel)
+func castle_rally_point(k: Kingdom, from: Vector2) -> Vector2:
+	var castle := k.castle
+	if not is_instance_valid(castle):
+		return from
+	var center := castle.get_center()
+	var dir := from - center
+	dir = Vector2.DOWN if dir.length() < 1.0 else dir.normalized()
+	var p := center + dir * (castle.get_radius() + RALLY_TILES * world.tile_size)
+	var c: Vector2i = game.nav.nearest_free(world.world_to_cell(p), 4)
+	return world.cell_to_world(c) if c.x >= 0 else p
 
 
 ## Angriff auf ein bestimmtes Ziel (Unit oder Building). Bewohner und Heiler
@@ -236,7 +377,14 @@ func formation_slots(units: Array, dest: Vector2, formation: String = "block") -
 	else:
 		cols = ceili(sqrt(float(n)))
 	var rows := ceili(float(n) / cols)
+	# Keil: Reihe r hat r + 1 Plätze (Spitze vorne)
+	if formation == "wedge":
+		rows = 0
+		while rows * (rows + 1) < 2 * n:
+			rows += 1
 	var spacing := _spacing * world.tile_size + _max_radius(units) * 0.6
+	if formation == "circle":
+		return _circle_slots(units, dest, centroid, forward, spacing)
 
 	# Reihenfolge: Rang (vorne -> hinten), dann Lage in Marschrichtung
 	var order: Array = range(n)
@@ -249,6 +397,9 @@ func formation_slots(units: Array, dest: Vector2, formation: String = "block") -
 	for row in rows:
 		var start := row * cols
 		var count := mini(cols, n - start)
+		if formation == "wedge":
+			start = (row * (row + 1)) >> 1
+			count = mini(row + 1, n - start)
 		var row_units: Array = order.slice(start, start + count)
 		row_units.sort_custom(func(a: int, b: int) -> bool:
 			return (units[a].position - centroid).dot(right) < (units[b].position - centroid).dot(right))
@@ -256,6 +407,37 @@ func formation_slots(units: Array, dest: Vector2, formation: String = "block") -
 		for col in count:
 			var x := (col - (count - 1) * 0.5) * spacing
 			result[row_units[col]] = dest + right * x + forward * y
+	return result
+
+
+## Kreis: Ringe um dest; vordere Ränge (Nahkämpfer) aussen, Fernkämpfer und Heiler
+## innen. Innerhalb eines Rings nach dem Winkel um den Gruppenmittelpunkt verteilt.
+func _circle_slots(units: Array, dest: Vector2, centroid: Vector2, forward: Vector2, spacing: float) -> Array:
+	var n := units.size()
+	var result: Array = []
+	result.resize(n)
+	# Plätze je Ring von innen (1, dann etwa 2πr), der äusserste nimmt den Rest
+	var counts: Array = []
+	var left := n
+	while left > 0:
+		var ring := counts.size()
+		var count := mini(1 if ring == 0 else floori(TAU * ring), left)
+		counts.append(count)
+		left -= count
+	var order: Array = range(n)
+	order.sort_custom(func(a: int, b: int) -> bool:
+		return units[a].formation_rank < units[b].formation_rank)
+	var index := 0
+	for ring in range(counts.size() - 1, -1, -1):
+		var count: int = counts[ring]
+		var ring_units: Array = order.slice(index, index + count)
+		ring_units.sort_custom(func(a: int, b: int) -> bool:
+			return fposmod(forward.angle_to(units[a].position - centroid), TAU) \
+					< fposmod(forward.angle_to(units[b].position - centroid), TAU))
+		for i in count:
+			var offset := forward.rotated(TAU * float(i) / float(count)) * float(ring) * spacing
+			result[ring_units[i]] = dest + offset
+		index += count
 	return result
 
 
@@ -285,6 +467,13 @@ func add_to_army(k: Kingdom, n: int, units: Array) -> void:
 		return
 	k.armies[n] = uids
 	armies_changed.emit(k)
+
+
+## Armee n auflösen (die Einheiten bleiben, wo sie sind)
+func dissolve_army(k: Kingdom, n: int) -> void:
+	if k.armies.has(n):
+		k.armies.erase(n)
+		armies_changed.emit(k)
 
 
 ## Lebende Einheiten der Armee n
@@ -362,6 +551,25 @@ func _finish(u: Unit, ok: bool) -> void:
 				u.command_pos = u.position
 		"clear":
 			u.command = ""
+		"rest":
+			if u.role == "worker" and u.can_work():
+				# Bewohner (mit dem Truppenfenster zurückgezogen) arbeiten an der Burg weiter
+				_resume_later(u, cmd)
+			else:
+				u.command = "rest"
+				u.command_pos = u.position
+		"patrol":
+			if ok:
+				# Wendepunkt: zum anderen Ende zurück
+				var back := u.patrol_from
+				u.patrol_from = u.command_pos
+				u.command_pos = back
+				u.speed_cap = 0.0
+				unit_system.move_to(u, back)
+				command_finished.emit(u, cmd, ok)
+				return
+			u.command = "hold"
+			u.command_pos = u.position
 		_:
 			return
 	u.speed_cap = 0.0
@@ -612,7 +820,7 @@ func rebuild_runtime() -> void:
 	for u in unit_system.units:
 		u.follow_leader = null
 		u.speed_cap = 0.0
-		if u.command != "move" and u.command != "attack_move":
+		if u.command != "move" and u.command != "attack_move" and u.command != "patrol" and u.command != "retreat":
 			continue
 		if u.moving or u.path_pending or u.inside != null:
 			continue

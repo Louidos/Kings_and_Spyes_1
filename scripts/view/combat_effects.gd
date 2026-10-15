@@ -55,6 +55,7 @@ const MARKER_COLORS := {
 	"attack_move": Color(1.0, 0.6, 0.15),
 	"attack": Color(1.0, 0.25, 0.2),
 	"rally": Color(1.0, 0.88, 0.25),
+	"patrol": Color(0.4, 0.75, 1.0),
 }
 const SPARK_UNIT_COLOR := Color(1.0, 0.22, 0.15)
 const SPARK_BUILDING_COLOR := Color(1.0, 0.6, 0.15)

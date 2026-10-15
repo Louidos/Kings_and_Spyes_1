@@ -23,7 +23,9 @@
 			{"keys": "Rechtsklick", "text": "Bewegen bzw. angreifen"},
 			{"keys": "Strg + Rechtsklick", "text": "Angreifend vorrücken"},
 			{"keys": "Strg + 1…9 / Umschalt + 1…9 / 1…9", "text": "Armee speichern / ergänzen / wählen"},
-			{"action": "toggle_formation", "text": "Formation Block / Linie"},
+			{"action": "toggle_formation", "text": "Formation Block / Linie / Keil / Kreis"},
+			{"action": "toggle_army", "text": "Truppenfenster: alle Krieger, Armeen, Befehle an alle, Haltung"},
+			{"action": "select_all_warriors", "text": "Alle Krieger auswählen (ohne Bewohner und König)"},
 			{"keys": "Rechtsklick mit Gebäude ausgewählt", "text": "Sammelpunkt setzen"}
 		]},
 		{"title": "Helden und Magie", "rows": [
@@ -57,6 +59,7 @@
 	"topics": [
 		{"title": "Wirtschaft", "text": "Bewohner sammeln Holz, Stein, Erz und Nahrung und bringen sie zur Burg oder zu Sammelhütten. Häuser geben Wohnraum, mit genug Nahrung wächst das Dorf. Fertige Gebäude vergrössern dein Gebiet; gebaut wird nur im eigenen Gebiet."},
 		{"title": "Kampf", "text": "Kaserne, Krankenstation und Burg beschwören Einheiten. Im eigenen Gebiet kämpfen sie stärker. Monsterlager bringen Beute und Kampfpunkte; mit Kampfpunkten verbesserst du das Mana."},
+		{"title": "Truppenfenster", "text": "T öffnet die Übersicht aller Krieger: je Einheitentyp Anzahl, Leben und was sie tun, dazu Helden und Armeen 1–9. „Wählen“ macht eine Zeile zur Befehlsgruppe; rechts gibst du ihr Befehle: Sammeln an der Burg, Rückzug zur Burg (dort erholen sie sich schneller), Angreifend vorrücken, Bewegen oder Patrouille (danach Ziel auf der Karte anklicken), Halten und Formation. Die Haltung bestimmt, wie selbstständig sie kämpfen: aggressiv verfolgt weit, verteidigend (Standard) kehrt auf den Posten zurück, passiv greift nie von selbst an. Strg+A wählt alle Krieger."},
 		{"title": "Magie und Forschung", "text": "Forschung schaltet Einheiten, Gebäude und Zauber frei. Mana entsteht an der Burg und in Manabrunnen; Zauber wirken in einem Kreis."},
 		{"title": "Helden", "text": "In der Heldenhalle wirbst du Helden an. Sie steigen durch Kämpfe auf, wählen Fähigkeiten und Talente und führen Armeen an. Gefallene Helden lassen sich an der Burg wiederbeleben."},
 		{"title": "Diplomatie", "text": "Neutrale Dörfer haben einen Ruf dir gegenüber. Geschenke, Handel und Verträge verbessern ihn; Bündnisse schalten Volkseinheiten frei, Dörfer können aufgenommen oder erobert werden."},

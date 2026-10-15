@@ -9,6 +9,8 @@
 ##   Taste G), Diplomatiefenster (DiplomacyPanel, Taste N) und Spionagefenster
 ##   (EspionagePanel, Taste K) in eigenen Ebenen darüber; es ist immer nur eines
 ##   davon offen (alle stehen in der Mitte)
+## - Truppenfenster (TroopPanel, Taste T) mit Knopf "Truppen · 24" (Strich = Leben der
+##   Truppen, roter Punkt = Truppen im Kampf) rechts neben "Helden"
 ## - Reichsübersicht (KingdomPanel, Taste L, Phase 8) mit Knopf "Reich", Tageszeit-
 ##   Symbol (DayClock), Ereignisleiste unter der oberen Leiste (EventBanner) und
 ##   Flüchtlingsdialog (RefugeeDialog, eigene Ebene darüber)
@@ -103,6 +105,10 @@ var event_banner: EventBanner
 var refugee_dialog: RefugeeDialog
 var _refugee_layer: CanvasLayer
 var day_clock: DayClock
+## Truppenfenster (Taste T) und sein Button oben
+var troop_panel: TroopPanel
+var _troop_layer: CanvasLayer
+var _troop_button: ResearchTipButton
 ## Hilfe (F1) und Meldungsprotokoll (M), Knopf "Protokoll (M)" über den Meldungen
 var help_panel: HelpPanel
 var message_log: MessageLogPanel
@@ -170,6 +176,7 @@ func setup(p_game: Node) -> void:
 	_setup_diplomacy()
 	_setup_espionage()
 	_setup_kingdom()
+	_setup_troops()
 	_setup_phase10()
 
 
@@ -417,6 +424,9 @@ func _input(event: InputEvent) -> void:
 	if refugee_dialog != null and refugee_dialog.is_open():
 		refugee_dialog.close()
 		get_viewport().set_input_as_handled()
+	elif is_army_open():
+		troop_panel.close()
+		get_viewport().set_input_as_handled()
 	elif is_kingdom_open():
 		kingdom_panel.close()
 		get_viewport().set_input_as_handled()
@@ -450,6 +460,9 @@ func close_top_panel() -> bool:
 		return true
 	if is_log_open():
 		message_log.close()
+		return true
+	if is_army_open():
+		troop_panel.close()
 		return true
 	if is_kingdom_open():
 		kingdom_panel.close()
@@ -509,6 +522,7 @@ func _process(delta: float) -> void:
 			_refresh_diplomacy_button()
 			_refresh_espionage_button()
 			_refresh_kingdom_button()
+			_refresh_troop_button()
 
 
 # ---------------------------------------------------------------------------
@@ -556,9 +570,9 @@ func _on_research_toggled(open: bool) -> void:
 
 
 ## Schliesst alle Fenster in der Mitte ausser keep (Forschung, Helden, Diplomatie,
-## Spionage, Reichsübersicht, Meldungsprotokoll)
+## Spionage, Reichsübersicht, Truppen, Meldungsprotokoll)
 func _close_other_panels(keep: Object) -> void:
-	for panel in [research_panel, hero_panel, diplomacy_panel, espionage_panel, kingdom_panel, message_log]:
+	for panel in [research_panel, hero_panel, diplomacy_panel, espionage_panel, kingdom_panel, troop_panel, message_log]:
 		if panel != null and panel != keep and panel.is_open():
 			panel.close()
 
@@ -1002,6 +1016,106 @@ func _kingdom_button_tip() -> String:
 	if not offers.is_empty():
 		lines.append(tip.colored("%d Gruppe(n) bitten um Aufnahme" % offers.size(), COLOR_URGENT))
 	lines.append("Volk: %s  ·  %s" % [tip.esc(DataDB.get_people_name(k.people_id)), tip.esc(game.day_night_system.get_phase_name())])
+	return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Truppen
+# ---------------------------------------------------------------------------
+
+const TROOP_LAYER := 11
+
+
+## Truppenfenster in eigener Ebene und Button "Truppen" rechts neben "Helden"
+func _setup_troops() -> void:
+	_troop_layer = CanvasLayer.new()
+	_troop_layer.layer = TROOP_LAYER
+	_troop_layer.name = "TroopLayer"
+	add_child(_troop_layer)
+	troop_panel = TroopPanel.new()
+	troop_panel.name = "TroopPanel"
+	_troop_layer.add_child(troop_panel)
+	troop_panel.setup(game)
+	troop_panel.toggled.connect(_on_troops_toggled)
+	visibility_changed.connect(func() -> void: _troop_layer.visible = visible)
+	_troop_layer.visible = visible
+
+	_troop_button = ResearchTipButton.new()
+	_troop_button.name = "TroopButton"
+	_troop_button.text = "Truppen"
+	_troop_button.toggle_mode = true
+	_troop_button.add_theme_font_size_override("font_size", 16)
+	_compact(_troop_button)
+	_troop_button.badge_color = COLOR_URGENT
+	_troop_button.tip_source = _troop_button_tip
+	_troop_button.pressed.connect(toggle_army)
+	var hbox := date_label.get_parent()
+	hbox.add_child(_troop_button)
+	hbox.move_child(_troop_button, _hero_button.get_index() + 1)
+	_refresh_troop_button()
+
+
+## Truppenfenster ein-/ausblenden (Taste T, Button oben)
+func toggle_army() -> void:
+	if troop_panel != null:
+		troop_panel.toggle()
+
+
+func open_army() -> void:
+	if troop_panel != null:
+		troop_panel.open()
+
+
+func is_army_open() -> bool:
+	return troop_panel != null and troop_panel.is_open()
+
+
+func _on_troops_toggled(open: bool) -> void:
+	_troop_button.set_pressed_no_signal(open)
+	if open:
+		_close_other_panels(troop_panel)
+
+
+## "Truppen · 24" mit Strich (Leben aller Truppen) und rotem Punkt, solange Truppen kämpfen
+func _refresh_troop_button() -> void:
+	if _troop_button == null:
+		return
+	var n := 0
+	var fighting := false
+	var hp := 0.0
+	var max_hp := 0.0
+	for u in game.player.units:
+		if not is_instance_valid(u) or not u.is_alive() or not CommandSystem.is_warrior(u):
+			continue
+		n += 1
+		hp += u.hp
+		max_hp += u.max_hp
+		if not fighting and TroopPanel.unit_state(u) == TroopPanel.STATE_FIGHTING:
+			fighting = true
+	var text := "Truppen" if n == 0 else "Truppen · %d" % n
+	if _troop_button.text != text:
+		_troop_button.text = text
+	var ratio := hp / max_hp if max_hp > 0.0 else -1.0
+	_troop_button.underline_ratio = ratio
+	if ratio >= 0.0:
+		_troop_button.underline_color = HpBar.color_for(ratio)
+	_troop_button.badge_visible = fighting
+
+
+func _troop_button_tip() -> String:
+	var k: Kingdom = game.player
+	var tip := ResearchTipButton
+	var units: Array = game.command_system.get_warriors(k)
+	var lines: PackedStringArray = ["[b]Truppen[/b] (Taste T)"]
+	if units.is_empty():
+		lines.append(tip.colored("Noch keine Truppen – in der Kaserne beschwören", COLOR_RESEARCH_IDLE))
+	else:
+		var counts := TroopPanel.count_states(units)
+		lines.append(tip.esc("%d Krieger – %s" % [units.size(), TroopPanel.states_text(counts)]))
+		if int(counts[TroopPanel.STATE_FIGHTING]) > 0:
+			lines.append(tip.colored("%d im Kampf" % int(counts[TroopPanel.STATE_FIGHTING]), COLOR_URGENT))
+	lines.append("Übersicht, Armeen, Befehle an alle, Formation und Haltung")
+	lines.append("Strg+A: alle Krieger auswählen")
 	return "\n".join(lines)
 
 

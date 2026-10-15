@@ -6,7 +6,8 @@
 ## Fähigkeit im Zielmodus, "selbst auslösen", Ausbildung, Heldenleiste, Tod und
 ## Wiederbelebung über die Burg im Auswahlfenster, Lage der Leisten.
 ##
-## Phase 6 bis 10 prüfen eigene Dateien (smoke_phase6.gd … smoke_phase10.gd).
+## Phase 6 bis 10 prüfen eigene Dateien (smoke_phase6.gd … smoke_phase10.gd), das
+## Truppenfenster smoke_army.gd.
 ## Phase 10: nach dem Hauptlauf wird ein Zwischenstand in eine frische Spielszene geladen,
 ## verglichen und weitergespielt (p10=off schaltet das ab, p10_after=<s> Dauer danach).
 ## passive=1: der Spieler tut nichts (kein Helden- und Phase-6-Test) – für lange Läufe,
@@ -26,6 +27,8 @@ const SmokePhase8 := preload("res://tests/smoke_phase8.gd")
 const SmokePhase9 := preload("res://tests/smoke_phase9.gd")
 const SmokePhase10 := preload("res://tests/smoke_phase10.gd")
 const BalancePhase10 := preload("res://tests/balance_phase10.gd")
+## Truppenfenster (Taste T): Übersicht, Auswahl, Befehle, Haltung, Speichern der Haltung
+const SmokeArmy := preload("res://tests/smoke_army.gd")
 
 var _args := {}
 var _game: Node = null
@@ -43,6 +46,7 @@ var _p7: RefCounted = null
 var _p8: RefCounted = null
 var _p9: RefCounted = null
 var _p10: RefCounted = null
+var _pa: RefCounted = null
 var _passive := false
 var _balance: RefCounted = null
 
@@ -114,6 +118,7 @@ func _process(_delta: float) -> void:
 				_hero_step = -1
 			else:
 				_p6 = SmokePhase6.new(_game)
+				_pa = SmokeArmy.new(_game)
 				if _game.get("siege_system") != null:
 					_p9 = SmokePhase9.new(_game)
 			_p7 = SmokePhase7.new(_game, _args)
@@ -139,6 +144,9 @@ func _process(_delta: float) -> void:
 		if _p9 != null:
 			_p9.set("ui_ready", _hero_step < 0)
 			_p9.tick(GameClock.game_time)
+		if _pa != null:
+			_pa.set("ui_ready", _hero_step < 0)
+			_pa.tick(GameClock.game_time)
 		if _p10 != null:
 			_p10.tick(GameClock.game_time, _hero_step < 0)
 		if _balance != null and GameClock.game_time >= _sim_seconds - 50.0:
@@ -176,6 +184,8 @@ func _report() -> void:
 		_p8.report()
 	if _p9 != null:
 		_p9.report()
+	if _pa != null:
+		_pa.report()
 
 
 # ---------------------------------------------------------------------------

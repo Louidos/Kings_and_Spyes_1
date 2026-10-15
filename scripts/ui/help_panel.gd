@@ -101,6 +101,8 @@ static func keys_text(action: String) -> String:
 			text = OS.get_keycode_string(key.keycode)
 		if text.is_empty():
 			text = key.as_text()
+		elif key.ctrl_pressed:
+			text = "Strg+" + text
 		parts.append(text)
 	return ", ".join(parts)
 

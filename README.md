@@ -39,7 +39,10 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Bewegen / Angreifen | Rechtsklick ins Gelände bzw. auf einen Feind (Monster, Höhle) |
 | Angreifend vorrücken | Strg + Rechtsklick (kämpft unterwegs) oder Button „Angriff-Vorrücken“, dann Klick ins Gelände (Esc bricht ab) |
 | Armee speichern / wählen | Strg + 1…9 speichern, Umschalt + 1…9 hinzufügen, 1…9 auswählen, zweimal drücken = Kamera hin |
-| Formation Block / Linie | F oder Button im Auswahlfenster |
+| Formation Block / Linie / Keil / Kreis | F (wechselt reihum) oder Button im Auswahlfenster bzw. im Truppenfenster |
+| Truppenfenster | T oder Button „Truppen · 24“ oben (Strich = Leben aller Truppen, roter Punkt = Truppen im Kampf): alle Krieger nach Typ (Anzahl, Leben gesamt/Ø, untätig / im Kampf / unterwegs / bei der Arbeit), Helden, Armeen 1–9 (Anzahl, Stärke, Ort, Befehl); „Wählen“ / „Hin“ / „✕“ (Armee auflösen); rechts Auswahl (alle Krieger, Untätige, Verwundete, Auswahl → Armee 1–9) und Befehle an die Gruppe: Sammeln an der Burg, Rückzug zur Burg, Angreifend vorrücken / Bewegen / Patrouille (danach Ziel anklicken, Esc bricht ab), Halten, Formation, Haltung. T oder Esc schliesst |
+| Alle Krieger auswählen | Strg + A (alle eigenen Truppen und Helden, ohne Bewohner und König) |
+| Haltung | im Truppenfenster: **aggressiv** (verfolgt weit, auch vom Posten weg), **verteidigend** (Standard: kehrt nach kurzer Verfolgung auf den Posten zurück), **passiv** (greift nie von selbst an und wehrt sich nicht – nur auf Angriffsbefehl) |
 | Sammelpunkt | Burg/Kaserne/Krankenstation auswählen → Rechtsklick in die Welt |
 | Einheiten beschwören | Burg (Späher), Kaserne (Kämpfer, Schützen, Elite – nach Forschung), Krankenstation (Heiler) auswählen → Buttons |
 | Forschung | R oder Button „Forschung“ oben: Forschungsbaum und Reiter „Kampfpunkte“ (Esc oder R schliesst) |
@@ -111,7 +114,7 @@ scripts/
   camera/                  Strategie-Kamera
   view/                    Darstellung über der Welt: Lebensbalken/Auswahlringe, Kampfeffekte
   ui/                      HUD-Panels, Bauvorschau, Auswahl und Befehle, Spielende, Speichern/Laden,
-                           Einstellungen, Hilfe (F1), Meldungsprotokoll (M)
+                           Einstellungen, Hilfe (F1), Meldungsprotokoll (M), Truppenfenster (T, TroopPanel)
   util/                    Hilfen (Grafik laden / Platzhalter erzeugen und zeichnen)
 assets/
   sprites/                 terrain/, units/, buildings/, heroes/, resources/, effects/
@@ -143,8 +146,10 @@ export_presets.cfg       Export-Vorlagen Windows/Linux (ohne Zugangsdaten)
   `UnitSystem` (Einheiten bewegen, Wegberechnung mit Zeitbudget, lange Wege in Abschnitten),
   `WorkSystem` (Berufe, Sammeln, Bauen, Abliefern), `EconomySystem` (Nahrung, Hunger, Wachstum),
   `CombatSystem` (Zielsuche, Schaden, Heilung, Tod; Schaden immer über `apply_damage`),
-  `CommandSystem` (Befehle mit Bedeutungstabelle `COMMANDS`, Formationen, Gruppenmarsch hinter einem
-  Anführer, Armeen 1–9 je Reich), `SummonSystem` (Beschwörung mit Warteschlange und Sammelpunkt),
+  `CommandSystem` (Befehle mit Bedeutungstabelle `COMMANDS`, Formationen Block/Linie/Keil/Kreis, Gruppenmarsch
+  hinter einem Anführer, Armeen 1–9 je Reich; Truppenfenster: `order_gather`, `order_retreat` → Befehl `rest`,
+  `order_patrol`, `order_reform`, `set_stance` mit Haltung `Unit.stance`, die das `CombatSystem` über
+  `stance_allows_engage`/`leash_for` fragt – dieselben Funktionen kann die KI nutzen), `SummonSystem` (Beschwörung mit Warteschlange und Sammelpunkt),
   `MonsterSystem` (Monsterlager; Lager ohne fremde Einheiten in der Nähe ruhen und kosten nichts),
   `ResearchSystem` (Forschung mit Warteschlange je Reich, Kampfpunkt-Verbesserungen),
   `MagicSystem` (Zauber des Königs: Wirkungen, Wettergebiete, Tarnung, Beschwörung),
@@ -356,7 +361,7 @@ Alle Dateien in `data/` enthalten `_hinweis`-Felder mit Erklärungen. Beispiele:
 3. **Kaserne** bauen (braucht Mana: Manabrunnen + Manawirker). Fertig auswählen → Schwertkämpfer,
    Bogenschützen beschwören; Ritter erst nach der Forschung *Ritterorden* (ab Phase 4, siehe unten). Mit Rechtsklick in die Welt einen **Sammelpunkt** setzen.
 4. Truppen mit gedrückter linker Maustaste **einrahmen** (Bewohner werden dabei nicht mitgenommen).
-   **Rechtsklick** ins Gelände: sie marschieren in Formation (F wechselt Block/Linie).
+   **Rechtsklick** ins Gelände: sie marschieren in Formation (F wechselt Block/Linie/Keil/Kreis).
 5. **Strg+1** speichert die Auswahl als Armee 1 (Leiste über dem Auswahlfenster), **1** wählt sie,
    zweimal **1** springt mit der Kamera hin.
 6. Armee auswählen, **Rechtsklick auf eine Monsterhöhle** oder ein Monster → Angriff. Bogenschützen
@@ -643,6 +648,33 @@ Tipp: F3 an, F9 = Rohstoffe.
    Vergleich → Weiterspielen (abschaltbar mit `p10=off`), die UI-Grössen-Prüfung und die Tooltip-Prüfung.
    Balancing: `tests/run_balance.sh` (siehe unten).
 
+## Truppenfenster testen
+
+1. Neues Spiel, Kaserne bauen und einige Kämpfer und Schützen beschwören (F3 → F9 gibt Rohstoffe).
+2. **T** (oder Knopf „Truppen · 6“ oben neben „Helden“) → Fenster in der Mitte; ein offenes Forschungs-,
+   Helden-, Diplomatie-, Spionage- oder Reichsfenster schliesst sich. **T** oder **Esc** schliesst es wieder.
+3. Links je Einheitentyp eine Zeile mit Bild, Anzahl, Lebensbalken („gesamt / Höchstwert (Ø …)“) und
+   „6 untätig · 2 unterwegs …“; darunter die Helden (Stufe, Zustand, Armee) und die Armeen mit Stärke, Ort
+   („Eigenes Gebiet, 12 Kacheln östlich der Burg“) und Befehl. „Bewohner und König zeigen“ nimmt sie dazu.
+4. **Strg+A** (oder „Alle Krieger auswählen“): alle Truppen und Helden sind ausgewählt, keine Bewohner, nicht
+   der König. „Untätige“ / „Verwundete“ (unter 70 % Leben) wählen nur diese.
+5. Einige Einheiten auswählen → rechts „Auswahl als Armee speichern“ **9** → Zeile „Armee 9“ erscheint (auch in
+   der Armeeleiste); „Wählen“ macht sie zur Befehlsgruppe (Name hervorgehoben), „Hin“ springt hin, „✕“ löst sie auf.
+6. **Angreifend vorrücken …** → Fenster schliesst, Mauszeiger wird zum Kreuz → Klick ins Gelände: die Gruppe
+   marschiert und kämpft unterwegs (Esc bricht den Zielmodus ab). Ebenso **Bewegen …** (ohne zu kämpfen) und
+   **Patrouille …** (läuft zwischen ihrem Ort und dem Ziel hin und her, blaue Zielmarke).
+7. **Halten**, **Sammeln an der Burg** (Marsch in Formation zum Platz vor der Burg) und **Rückzug zur Burg**
+   (läuft ohne zu kämpfen hin, Befehl „erholt sich an der Burg“: deutlich schnellere Heilung, `combat.json` → `rest`).
+8. **Formation** Block / Linie / Keil / Kreis: gilt für die nächsten Marschbefehle (auch Taste F, reihum), die
+   Befehlsgruppe stellt sich sofort an ihrem Ort so auf.
+9. **Haltung passiv** → F3, Umschalt+F11 setzt einen Übungsgolem neben die Truppe: niemand greift an, auch
+   nicht, wenn der Golem zuschlägt. **Verteidigend** → sie greifen an und kehren danach auf den Posten zurück;
+   **aggressiv** → sie verfolgen ihn auch weit vom Posten weg. Angriffsbefehle (Rechtsklick auf einen Feind,
+   angreifend vorrücken) gelten in jeder Haltung.
+10. **F5** / **F8**: Haltung und Patrouille bleiben erhalten.
+11. Rauchtest `tests/run_smoke.sh 900` enthält `tests/smoke_army.gd` (Fenster, Auswahl, Befehle über das Fenster,
+   passiv/verteidigend gegen einen Golem, Speichern der Haltung, Fenstergrösse bei 100/150 %, Tooltips).
+
 ## Balancing
 
 Gemessen mit `tests/run_balance.sh` (Modul `tests/balance_phase10.gd`, Aufruf `balance=1`): echte KI, Spieler
@@ -729,3 +761,4 @@ beim nächsten Start automatisch verwendet – ohne Code-Änderung.
 - [x] Phase 8 – Zufriedenheit, Verrat, Flüchtlinge, Ereignisse, Monster, Tag/Nacht
 - [x] Phase 9 – Belagerungen und Handelswege
 - [x] Phase 10 – Speichern/Laden, Schwierigkeitsgrade, UI-Feinschliff, Balancing
+- [x] Truppenfenster – Übersicht und Befehle für alle Krieger, Haltung, Patrouille, Rückzug, Formationen Keil/Kreis

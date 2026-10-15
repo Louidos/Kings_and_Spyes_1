@@ -48,7 +48,7 @@ var speed_cap := 0.0
 
 # --- Befehle (CommandSystem, siehe CommandSystem.COMMANDS) ---
 ## "" (frei: Arbeit bzw. Wache), "move", "attack_move", "attack", "hold",
-## "defend", "flee", "return"
+## "defend", "flee", "return", "patrol", "retreat", "rest" (alle in CommandSystem.COMMANDS)
 var command: String = ""
 ## Zielpunkt des Befehls (Bewegung, Formationsplatz, Wachposten)
 var command_pos := Vector2.ZERO
@@ -59,6 +59,11 @@ var follow_leader: Variant = null
 var follow_offset := Vector2.ZERO
 ## Gebäude, in dem sich die Einheit gerade aufhält (dann unsichtbar), sonst null
 var inside: Building = null
+## Haltung (CommandSystem.STANCES): "aggressive" verfolgt weit, "defensive" (Standard)
+## kehrt nach kurzer Verfolgung auf den Posten zurück, "passive" greift nie selbst an
+var stance := CommandSystem.DEFAULT_STANCE
+## Patrouille: der andere Wendepunkt (command_pos ist der, zu dem sie gerade läuft)
+var patrol_from := Vector2.ZERO
 
 # --- Kampfwerte (aus units.json, mit Modifikatoren; refresh_stats) ---
 var role := "worker"
@@ -390,8 +395,9 @@ func get_status_text() -> String:
 # ---------------------------------------------------------------------------
 
 ## Felder späterer Phasen, die gespeichert werden, sofern es sie gibt (Phase 8
-## Zufriedenheit, Phase 9 Rammbock-Ziel). Wiederhergestellt über UnitSystem.restore_unit.
-const SAVE_OPTIONAL := ["satisfaction", "resume_target_uid"]
+## Zufriedenheit, Phase 9 Rammbock-Ziel, Truppenfenster: Haltung und Patrouille).
+## Wiederhergestellt über UnitSystem.restore_unit.
+const SAVE_OPTIONAL := ["satisfaction", "resume_target_uid", "stance", "patrol_from"]
 
 
 ## Gespeicherter Zustand: einfache Werte, Verweise als uid, Weg nur wenn unterwegs
