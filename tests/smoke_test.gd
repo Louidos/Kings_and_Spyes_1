@@ -17,6 +17,8 @@
 ##   godot --headless res://tests/smoke_test.tscn -- faction=good seconds=120 size=small seed=12345
 ##   weitere Argumente: ai=<Anzahl KI-Reiche>, p7=natural, p8=natural, passive=1, difficulty=<id>, people=<volk>,
 ##   p10=off, p10_after=300, ui_scale=1.25 (Bildschirmfotos mit grösserer Oberfläche)
+## Tutorial: tutorial=1 startet eine Tutorial-Partie und spielt alle Schritte durch (tests/smoke_tutorial.gd;
+## ohne Helden- und Phasentests); ohne tutorial=1 prüft der Lauf nur, dass das Tutorial aus ist
 ## Balancing (Phase 10): balance=1 sample=600 (tests/balance_phase10.gd; setzt p7/p8=natural, passive=1, p10=off)
 extends Node
 
@@ -29,6 +31,7 @@ const SmokePhase10 := preload("res://tests/smoke_phase10.gd")
 const BalancePhase10 := preload("res://tests/balance_phase10.gd")
 ## Truppenfenster (Taste T): Übersicht, Auswahl, Befehle, Haltung, Speichern der Haltung
 const SmokeArmy := preload("res://tests/smoke_army.gd")
+const SmokeTutorial := preload("res://tests/smoke_tutorial.gd")
 
 var _args := {}
 var _game: Node = null
@@ -49,6 +52,9 @@ var _p10: RefCounted = null
 var _pa: RefCounted = null
 var _passive := false
 var _balance: RefCounted = null
+## Tutorial-Lauf (tutorial=1)
+var _tutorial := false
+var _tut: RefCounted = null
 
 
 func _ready() -> void:
@@ -70,8 +76,12 @@ func _ready() -> void:
 		Settings.ui_scale = clampf(float(_args["ui_scale"]), 0.75, 1.5)
 	_passive = str(_args.get("passive", "0")) == "1"
 	GameSession.ai_count_override = int(_args.get("ai", "-1"))
-	GameSession.setup_new_game(str(_args.get("faction", "good")), str(_args.get("difficulty", "normal")),
-			str(_args.get("size", "small")), str(_args.get("seed", "12345")), str(_args.get("people", "")))
+	_tutorial = str(_args.get("tutorial", "0")) == "1"
+	if _tutorial:
+		GameSession.setup_tutorial_game(str(_args.get("faction", "good")), str(_args.get("people", "")))
+	else:
+		GameSession.setup_new_game(str(_args.get("faction", "good")), str(_args.get("difficulty", "normal")),
+				str(_args.get("size", "small")), str(_args.get("seed", "12345")), str(_args.get("people", "")))
 	print("[smoke] Starte Partie: ", GameSession.faction_id, " Seed ", GameSession.seed_text)
 	_started_ms = Time.get_ticks_msec()
 	var scene: PackedScene = load("res://scenes/game.tscn")
@@ -114,6 +124,10 @@ func _process(_delta: float) -> void:
 			Engine.physics_ticks_per_second = 60
 			if _game.has_method("smoke_test_setup"):
 				_game.smoke_test_setup()
+			if _tutorial:
+				_hero_step = -1
+				_tut = SmokeTutorial.new(self, _game, _args)
+				return
 			if _passive:
 				_hero_step = -1
 			else:
@@ -129,6 +143,15 @@ func _process(_delta: float) -> void:
 		elif Time.get_ticks_msec() - _started_ms > 120000:
 			push_error("[smoke] Weltgenerierung dauert zu lange")
 			get_tree().quit(2)
+	elif _phase == 1 and _tut != null:
+		_tut.tick()
+		if _tut.get("finished") == true or GameClock.game_time >= _sim_seconds * 4.0:
+			if _tut.get("finished") != true:
+				push_error("[smoke] Tutorial FEHLER: nicht fertig nach %d Spielsekunden" % int(GameClock.game_time))
+			_phase = 4
+			_report()
+			_tut.report()
+			get_tree().quit(0)
 	elif _phase == 1:
 		if _hero_step >= 0 and GameClock.game_time >= _hero_wait_until:
 			_hero_test()
@@ -172,10 +195,12 @@ func _report() -> void:
 				str(k.defeated), ", ".join(res)])
 	if _hero_step >= 0:
 		_hero_fail("Heldentest nicht fertig geworden (Schritt %d)" % _hero_step)
-	if not _passive:
+	if not _passive and not _tutorial:
 		print("[smoke] Heldentest: %s" % ("OK" if _hero_errors == 0 else "%d Fehler" % _hero_errors))
 	if _game.has_method("smoke_test_report"):
 		_game.smoke_test_report()
+	if not _tutorial:
+		SmokeTutorial.quick_check(_game)
 	if _p6 != null:
 		_p6.report()
 	if _p7 != null:

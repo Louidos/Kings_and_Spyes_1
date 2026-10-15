@@ -4,6 +4,8 @@
 ## Seed). Das Hauptmenü füllt diese Werte, die Spielszene liest sie.
 ## Ab Phase 10 merkt sich die Sitzung auch, welcher Spielstand geladen werden soll
 ## (pending_load_path), die echte Spielzeit und Fehler für das Hauptmenü.
+## Tutorial: start_tutorial startet es mit der neuen Partie (Knopf "Tutorial" im Hauptmenü
+## bzw. "Tipps/Tutorial anzeigen"); sein Zustand liegt danach im TutorialSystem.
 extends Node
 
 ## "good" oder "evil"
@@ -29,6 +31,9 @@ var last_save_name: String = ""
 var last_error: String = ""
 ## Rauchtest: nach dem Laden den Zustand erneut einsammeln (Idempotenz-Vergleich)
 var debug_verify_load := false
+## Neue Partie startet mit dem Tutorial (gilt auch für "Neu starten" derselben Partie;
+## ein geladener Spielstand bringt seinen eigenen Tutorial-Zustand mit)
+var start_tutorial := false
 
 
 func _ready() -> void:
@@ -55,6 +60,15 @@ func setup_new_game(p_faction: String, p_difficulty: String, p_map_size: String,
 	pending_load_name = ""
 	last_save_name = ""
 	play_seconds = 0.0
+	start_tutorial = false
+
+
+## Tutorial-Partie (Knopf "Tutorial"): fester Seed, Kartengrösse und Schwierigkeit aus
+## tutorial.json, gewählte Fraktion; das Tutorial startet mit der Partie
+func setup_tutorial_game(p_faction: String, p_people: String = "") -> void:
+	setup_new_game(p_faction, str(DataDB.tut("game.difficulty", "easy")), str(DataDB.tut("game.map_size", "small")),
+			str(DataDB.tut("game.seed", "Lernreich")), p_people)
+	start_tutorial = true
 
 
 ## Gespeicherte Werte der Partie (Spielstand)
@@ -75,6 +89,7 @@ func apply_session(d: Dictionary) -> void:
 	if d.has("ai_count_override"):
 		ai_count_override = int(d["ai_count_override"])
 	play_seconds = float(d.get("play_seconds", 0.0))
+	start_tutorial = false
 
 
 ## Kartenbreite/-höhe in Kacheln

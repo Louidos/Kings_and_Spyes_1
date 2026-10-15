@@ -1,7 +1,8 @@
 ## MainMenu
 ##
 ## Hauptmenü: Fortsetzen (neuester Spielstand), Neues Spiel (Fraktion, Volk mit Stärken und
-## Schwächen, Schwierigkeit, Kartengrösse, Seed), Laden (Liste der Spielstände), Einstellungen, Beenden.
+## Schwächen, Schwierigkeit, Kartengrösse, Seed, "Tipps/Tutorial anzeigen"), Tutorial (geführte
+## Partie mit festem Seed aus tutorial.json), Laden (Liste der Spielstände), Einstellungen, Beenden.
 ## Fraktionen, Schwierigkeitsgrade und Kartengrössen kommen aus /data.
 extends Control
 
@@ -31,6 +32,9 @@ var settings_form: SettingsForm
 var _continue_button: Button
 var _error_label: Label
 var _difficulty_hint: Label
+## Knopf "Tutorial" und Haken "Tipps/Tutorial anzeigen" im Dialog "Neues Spiel"
+var _tutorial_button: Button
+var _tutorial_check: CheckBox
 
 
 func _ready() -> void:
@@ -88,6 +92,7 @@ func _ready() -> void:
 	grid.move_child(_difficulty_hint, spacer.get_index() + 1)
 	difficulty_option.item_selected.connect(func(_i: int) -> void: _update_difficulty_hint())
 	_update_difficulty_hint()
+	_build_tutorial_controls()
 	# Seiten: Laden und Einstellungen
 	load_panel = SaveLoadPanel.new()
 	load_panel.visible = false
@@ -200,6 +205,8 @@ func _build_faction_buttons() -> void:
 
 func _select_faction(id: String) -> void:
 	_selected_faction = id
+	if _tutorial_button != null:
+		_tutorial_button.tooltip_text = _tutorial_tooltip()
 	var f := DataDB.get_faction(id)
 	var names: Array = DataDB.get_peoples_of_faction(id).map(func(p): return p["name"])
 	faction_description.text = "%s\nVölker: %s" % [f.get("description", ""), ", ".join(names)]
@@ -297,6 +304,48 @@ func _start_game() -> void:
 		str(map_size_option.get_selected_metadata()),
 		seed_edit.text,
 		_selected_people)
+	GameSession.start_tutorial = _tutorial_check != null and _tutorial_check.button_pressed
+	get_tree().change_scene_to_file(GAME_SCENE)
+
+
+# ---------------------------------------------------------------------------
+# Tutorial
+# ---------------------------------------------------------------------------
+
+## Knopf "Tutorial" unter "Neues Spiel" und Haken im Dialog "Neues Spiel"
+func _build_tutorial_controls() -> void:
+	_tutorial_button = Button.new()
+	_tutorial_button.name = "TutorialButton"
+	_tutorial_button.text = "Tutorial"
+	_tutorial_button.custom_minimum_size = Vector2(0, 46)
+	_tutorial_button.add_theme_font_size_override("font_size", 22)
+	_tutorial_button.tooltip_text = _tutorial_tooltip()
+	_tutorial_button.pressed.connect(_start_tutorial)
+	main_buttons.add_child(_tutorial_button)
+	main_buttons.move_child(_tutorial_button, (%NewGameButton as Control).get_index() + 1)
+	_tutorial_check = CheckBox.new()
+	_tutorial_check.name = "TutorialCheck"
+	_tutorial_check.text = "Tipps/Tutorial anzeigen"
+	_tutorial_check.tooltip_text = "Die Partie beginnt mit dem Tutorial (Schritt für Schritt; Gegner und Ereignisse verschonen dich, solange es läuft)"
+	_tutorial_check.focus_mode = Control.FOCUS_NONE
+	var grid := difficulty_option.get_parent()
+	var label := Label.new()
+	label.text = "Tutorial"
+	grid.add_child(label)
+	grid.add_child(_tutorial_check)
+
+
+func _tutorial_tooltip() -> String:
+	var faction := str(DataDB.get_faction(_selected_faction).get("name", _selected_faction))
+	var diff := str(DataDB.get_difficulty(str(DataDB.tut("game.difficulty", "easy"))).get("name", ""))
+	var map_size := str(DataDB.get_map_size(str(DataDB.tut("game.map_size", "small"))).get("name", ""))
+	return "Geführte Partie zum Lernen: Seed „%s“, %s, Karte %s.\nFraktion: %s (unter „Neues Spiel“ wählbar).\nGegner und Ereignisse verschonen dich, solange das Tutorial läuft." % [
+			str(DataDB.tut("game.seed", "")), diff, map_size, faction]
+
+
+## Knopf "Tutorial": feste Partie aus tutorial.json mit der gewählten Fraktion
+func _start_tutorial() -> void:
+	GameSession.setup_tutorial_game(_selected_faction, _selected_people)
 	get_tree().change_scene_to_file(GAME_SCENE)
 
 

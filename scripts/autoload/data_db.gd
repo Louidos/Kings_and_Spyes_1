@@ -79,6 +79,8 @@ var siege_cfg: Dictionary = {}
 var trade_cfg: Dictionary = {}
 ## Hilfefenster F1 (help.json): Tasten-Abschnitte, Spielablauf-Themen
 var help_cfg: Dictionary = {}
+## Tutorial (tutorial.json): Partie, Einstellungen, Schritte
+var tutorial_cfg: Dictionary = {}
 ## md5 über alle Texte in data/*.json (Spielstände merken sich, mit welchen Daten sie entstanden)
 var data_fingerprint: String = ""
 
@@ -119,6 +121,7 @@ func reload() -> void:
 	satisfaction_cfg = _load_json("satisfaction.json")
 	daynight_cfg = _load_json("daynight.json")
 	help_cfg = _load_json("help.json")
+	tutorial_cfg = _load_json("tutorial.json")
 	_validate_peoples()
 	data_fingerprint = _compute_fingerprint()
 
@@ -226,6 +229,11 @@ func siege(path: String, default_value: Variant = null) -> Variant:
 ## Wert aus trade.json über Punkt-Pfad, z. B. "cut.losses"
 func trade(path: String, default_value: Variant = null) -> Variant:
 	return _dig(trade_cfg, path, default_value)
+
+
+## Wert aus tutorial.json über Punkt-Pfad, z. B. "settings.grace_minutes"
+func tut(path: String, default_value: Variant = null) -> Variant:
+	return _dig(tutorial_cfg, path, default_value)
 
 
 ## Schwierigkeit für die KI: Eintrag aus difficulties.json, ergänzt um ai.json →
