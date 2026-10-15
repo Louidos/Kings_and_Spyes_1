@@ -421,14 +421,61 @@ Ton: Die Busse *Master*, *Music*, *SFX* und *UI* sind angelegt (Lautstärken in 
 spielt zurzeit keine Tondateien ab. Musik und Geräusche gehören später nach `assets/audio/music/` bzw.
 `assets/audio/sfx/` (OGG).
 
+## ✅ Truppen – neue Einheiten, Schmiede, Aussehen (Skins)
+
+**Neue Einheiten** (`assets/sprites/units/`, 64 × 64, transparent, von oben, Blick nach unten). Fehlt eine Datei,
+zeichnet das Spiel einen Kreis in Reichsfarbe mit Buchstaben.
+
+| Datei GUT | Datei BÖSE | Einheit | Aussehen |
+|---|---|---|---|
+| `spearman_good.png` | `spearman_evil.png` | Speerträger / Pfähler | langer Speer, Rundschild / Hakenspiess, Stachelhelm |
+| `crossbow_good.png` | `crossbow_evil.png` | Armbrustschütze / Höllenschütze | schwere Armbrust, Helm / Armbrust mit Widerhakenbolzen |
+| `heavy_good.png` | `heavy_evil.png` | Schildwache / Eisenhauer | Plattenrüstung mit Turmschild / Zweihandaxt, Stachelpanzer |
+| `cavalry_good.png` | `cavalry_evil.png` | Lanzenreiter / Wolfsreiter | Ritter auf Pferd mit Lanze / Ork auf grossem Wolf |
+| `battlemage_good.png` | `battlemage_evil.png` | Kampfmagier / Hexer | Robe mit Sternenstab, leuchtende Hand / Kapuze, violette Flammen |
+
+**Neue Gebäude** (`assets/sprites/buildings/`, 128 × 128, transparent):
+
+| Datei GUT | Datei BÖSE | Gebäude | Aussehen |
+|---|---|---|---|
+| `forge_good.png` | `forge_evil.png` | Schmiede / Blutschmiede | Esse mit Amboss und Waffenständer / dunkle Esse mit roter Glut und Ketten |
+| `stable_good.png` | `stable_evil.png` | Reitstall / Wolfszwinger (3 × 2 Felder, 192 × 128) | Holzstall mit Koppel / Pfahlzwinger mit Knochen |
+| `mage_tower_good.png` | `mage_tower_evil.png` | Magierturm / Hexenturm | schlanker blauer Turm mit Sternenkuppel / schiefer Turm mit violettem Feuer |
+
+**Aussehen (Skins)** – rein kosmetisch, im Auswahlfenster wählbar (für alle Einheiten eines Typs oder eine einzelne
+Einheit). Datei: `assets/sprites/units/<einheit>_<skin>.png` (64 × 64). Fehlt sie, nimmt das Spiel die Grafik des
+Typs leicht getönt, sonst einen Platzhalter in den Skin-Farben (Rand in Saumfarbe) – dazu immer ein kleines
+gezeichnetes Abzeichen oben links.
+
+| Skin-ID | Name | Fraktion | Farben / Abzeichen |
+|---|---|---|---|
+| `standard` | Standard | alle | Farben des Reichs (die normale Grafik, keine eigene Datei) |
+| `royal` | Königsgarde | GUT | königsblau mit Gold, Krone |
+| `sunwatch` | Sonnenwacht | GUT | hellgelb mit Weiss, Sonne |
+| `shadow` | Schattenwache | BÖSE | schwarzviolett, Mond |
+| `blood` | Blutbanner | BÖSE | dunkelrot, Reisszahn |
+| `hero_banner` | Heldenbanner | alle (nur einzelne Einheiten ab Rang Elite) | Gold mit Weiss, Stern |
+
+Einheiten mit Skins und ihre Dateien (je Einheit `<id>_<skin>.png`):
+
+| Einheiten GUT (Skins `royal`, `sunwatch`, `hero_banner`) | Einheiten BÖSE (Skins `shadow`, `blood`, `hero_banner`) |
+|---|---|
+| `scout_good`, `fighter_good`, `spearman_good`, `archer_good`, `crossbow_good`, `heavy_good`, `elite_good`, `cavalry_good`, `battlemage_good`, `medic_good`, `ram_good`, `catapult_good` | `scout_evil`, `fighter_evil`, `spearman_evil`, `archer_evil`, `crossbow_evil`, `heavy_evil`, `elite_evil`, `cavalry_evil`, `battlemage_evil`, `medic_evil`, `ram_evil`, `catapult_evil` |
+
+Beispiele: `units/fighter_good_royal.png` (Schwertkämpfer der Königsgarde), `units/cavalry_evil_blood.png`
+(Wolfsreiter mit Blutbanner), `units/spearman_good_hero_banner.png`. Volkskrieger der Dörfer (z. B.
+`dwarf_ironguard`) tragen im Reich des Spielers die Skins seiner Fraktion: `dwarf_ironguard_royal.png` usw.
+
+Rangabzeichen (Winkel und Stern über den Einheiten) und die Abzeichen der Skins zeichnet das Spiel selbst.
+
 ## Übersicht der Ordner
 
 | Ordner | Inhalt (Phase) |
 |---|---|
 | `assets/sprites/terrain/` | Gelände je Biom, 4 Varianten (1) |
 | `assets/sprites/resources/` | Vorkommen auf der Karte (2) |
-| `assets/sprites/buildings/` | Gebäude je Fraktion (2–4, 7–9), Burgen je Volk (7), Dörfer und Hütten je Volk (6) |
-| `assets/sprites/units/` | Bewohner, König, Truppen je Fraktion (2–3), Monster (3, 8), Milizen und Volkskrieger (6), Bote (6), Spione (7), Flüchtlinge/Wanderer (8), Belagerungswaffen und Karawanen (9) |
+| `assets/sprites/buildings/` | Gebäude je Fraktion (2–4, 7–9; Schmiede, Reitstall, Magierturm: Truppen), Burgen je Volk (7), Dörfer und Hütten je Volk (6) |
+| `assets/sprites/units/` | Bewohner, König, Truppen je Fraktion (2–3), Monster (3, 8), Milizen und Volkskrieger (6), Bote (6), Spione (7), Flüchtlinge/Wanderer (8), Belagerungswaffen und Karawanen (9), neue Truppen und Skins `<einheit>_<skin>.png` (Truppen) |
 | `assets/sprites/heroes/` | Helden und Porträts (5) |
 | `assets/sprites/effects/` | Geschosse (3, 9), Ruinen (7), Ereignisflächen (8) |
 | `assets/ui/icons/` | Ressourcen (2), Zauber (4, 7), Ereignisse, Stimmung, Tageszeit (8) |

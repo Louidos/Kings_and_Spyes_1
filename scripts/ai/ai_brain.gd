@@ -134,6 +134,7 @@ func think(now: float) -> void:
 	if n % 2 == 0:
 		AIEconomy.tick_research(self, now)
 		AIEconomy.tick_upgrades(self)
+		AIMilitary.tick_forge(self, now)
 		t0 = _measure("research", t0)
 	AIMilitary.tick_summon(self, now)
 	t0 = _measure("summon", t0)

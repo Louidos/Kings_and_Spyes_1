@@ -5,8 +5,8 @@
 ## ihre Arbeit (WorkSystem.suspend); "Zur Arbeit" setzt sie fort.
 ## Verwaltet ausserdem die Armeen (Steuergruppen 1–9) jedes Reichs und ist die
 ## einzige Stelle, die Ankunft und Scheitern von Befehlen behandelt.
-## Wird vom Spieler (SelectionController, Truppenfenster) und ab Phase 7 von der KI benutzt.
-## Truppenfenster: Sammeln an der Burg, Rückzug zur Burg (danach Erholung), Patrouille,
+## Wird vom Spieler (SelectionController, Armeefenster) und ab Phase 7 von der KI benutzt.
+## Armeefenster: Sammeln an der Burg, Rückzug zur Burg (danach Erholung), Patrouille,
 ## Neuaufstellung in einer Formation (Block, Linie, Keil, Kreis), Haltung (aggressiv,
 ## verteidigend, passiv – das CombatSystem fragt stance_allows_engage/leash_for) und
 ## Armee auflösen.
@@ -70,7 +70,7 @@ const COMMANDS := {
 	"seek_refuge": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "bittet um Aufnahme"},
 	# Karawane (Phase 9): zieht mit Waren zum Ziel, kämpft nie, danach Befehl gelöscht
 	"haul": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "zieht mit Waren"},
-	# Truppenfenster: Patrouille zwischen command_pos und patrol_from (kämpft unterwegs, kehrt am Ziel um)
+	# Armeefenster: Patrouille zwischen command_pos und patrol_from (kämpft unterwegs, kehrt am Ziel um)
 	"patrol": {"engage": true, "retaliate": true, "buildings": false, "leash": "chase", "on_arrive": "patrol", "text": "patrouilliert"},
 	# Rückzug zur Burg: läuft ohne zu kämpfen, danach "rest"
 	"retreat": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "rest", "text": "zieht sich zur Burg zurück"},
@@ -553,7 +553,7 @@ func _finish(u: Unit, ok: bool) -> void:
 			u.command = ""
 		"rest":
 			if u.role == "worker" and u.can_work():
-				# Bewohner (mit dem Truppenfenster zurückgezogen) arbeiten an der Burg weiter
+				# Bewohner (mit dem Armeefenster zurückgezogen) arbeiten an der Burg weiter
 				_resume_later(u, cmd)
 			else:
 				u.command = "rest"

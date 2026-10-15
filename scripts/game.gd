@@ -60,6 +60,8 @@ signal formation_changed(formation: String)
 @onready var siege_system: SiegeSystem = $Systems/SiegeSystem
 @onready var trade_route_system: TradeRouteSystem = $Systems/TradeRouteSystem
 @onready var supply_system: SupplySystem = $Systems/SupplySystem
+## Truppen: Erfahrung, Wertepunkte, Schmiede, Aussehen (troops.json)
+@onready var troop_system: TroopSystem = $Systems/TroopSystem
 @onready var trade_route_view: TradeRouteView = $TradeRoutes
 ## Tutorial (Schritte, Schutz vor Gegnern und Ereignissen, Oberfläche)
 @onready var tutorial_system: TutorialSystem = $Systems/TutorialSystem
@@ -257,6 +259,8 @@ func _setup_world_and_systems() -> void:
 	siege_system.setup(self)
 	trade_route_system.setup(self)
 	supply_system.setup(self)
+	# Truppen nach Kampf, Einheiten und Helden (hört auf Treffer, Tod, Stufenaufstieg)
+	troop_system.setup(self)
 	# Tutorial nach allen Systemen und vor der Auswahl (hört auf deren Befehle)
 	tutorial_system.setup(self)
 	placement.setup(self)
@@ -708,7 +712,7 @@ func toggle_formation() -> void:
 	Notify.info("Formation: %s" % CommandSystem.get_formation_name(player.formation))
 
 
-## Formation des Spielers setzen (CommandSystem.FORMATIONS; Truppenfenster, Taste F)
+## Formation des Spielers setzen (CommandSystem.FORMATIONS; Armeefenster, Taste F)
 func set_formation(formation: String) -> void:
 	if not CommandSystem.FORMATIONS.has(formation) or player.formation == formation:
 		return

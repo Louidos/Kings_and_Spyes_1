@@ -6,7 +6,7 @@
 		"regen_delay: so lange ohne Schaden, bevor Einheiten sich erholen. retarget_seconds: wie oft untätige Kämpfer nach Feinden suchen.",
 		"leash_radius: Monster kehren um, wenn sie sich weiter von ihrer Höhle entfernen. camp_radius: Monster stehen in diesem Umkreis um die Höhle.",
 		"formation.spacing: Abstand in Formationen (Block, Linie, Keil, Kreis). worker_flee: angegriffene Arbeiter fliehen zur Burg.",
-		"rest: Rückzug zur Burg (Truppenfenster) – an der Burg erholen sich Einheiten mit regen × regen_mult plus max_hp_per_sec (Anteil des Höchstlebens je Sekunde), sobald regen_delay ohne Schaden vergangen ist.",
+		"rest: Rückzug zur Burg (Armeefenster) – an der Burg erholen sich Einheiten mit regen × regen_mult plus max_hp_per_sec (Anteil des Höchstlebens je Sekunde), sobald regen_delay ohne Schaden vergangen ist.",
 		"camps: Monsterlager. per_1000_tiles = Häufigkeit (mindestens min_count), min_distance_from_start = Abstand zum Startplatz, size = Anzahl Monster, by_biome = Monsterarten je Biom. near_start: Übungslager nahe am Start; min_site_distance = Abstand zu Dörfern und Königreichsplätzen (Kacheln).",
 		"raids: Streifzüge – alle check_seconds je Höhle mit chance (nachts × daynight.monsters.raid_chance_mult) zu einer Siedlung in range_tiles (ab min_minutes); share der Monster zieht los (mindestens min_size), je Zielreich höchstens alle target_gap s. Ankunft in arrive_tiles Kacheln, Rückzug unter retreat_ratio der Anfangsstärke oder nach max_seconds; heimkehrende Monster sind spätestens nach return_seconds wieder im Lager.",
 		"lair_growth: ruhige Höhlen (quiet_seconds ohne Kampf) wachsen alle interval s um ein Monster (bis max_monsters + extra_max); ab Spielminute late_kinds_minute kommen stärkere Arten (late_kinds) dazu.",

@@ -157,6 +157,29 @@ var cast_ability := ""
 var cast_target_uid := 0
 var cast_pos := Vector2.ZERO
 
+# --- Truppen: Klasse, Erfahrung, Wertepunkte, Aussehen (troops.json, TroopSystem) ---
+## Truppenklasse ("infantry", "cavalry", "ranged", "mage", "siege" …), aus units.json (setup)
+var unit_class := ""
+## Schadenszuschlag gegen Klassen (Klassen-Konter + bonus_vs): Klasse -> Zuschlag.
+## Gemeinsames, nur lesbares Dictionary aus DataDB – nie verändern.
+var counter_vs: Dictionary = {}
+## Anteil der gegnerischen Rüstung, der ignoriert wird (Armbrust), abgeleitet
+var armor_pierce := 0.0
+## Erfahrung (wird gespeichert)
+var vet_xp := 0.0
+## Rang 0 (Rekrut) … 4 (Held der Truppe), wird gespeichert
+var vet_rank := 0
+## Noch nicht verteilte Wertepunkte (wird gespeichert; Helden: aus der Stufe, siehe TroopSystem)
+var stat_points := 0
+## Verteilte Wertepunkte: Wert ("attack", "hp", "armor", "speed") -> Punkte (wird gespeichert)
+var stat_alloc: Dictionary = {}
+## Eigenes Aussehen dieser Einheit ("" = wie der Typ im Reich, Kingdom.unit_skins), wird gespeichert
+var skin := ""
+## Zuschläge aus Rang und Wertepunkten (wie hero_mods), abgeleitet in refresh_stats – nicht speichern
+var vet_mods: Dictionary = {}
+## Laufzeit (nicht speichern): uid der Einheit, die zuletzt getroffen hat (Erfahrung für den Sieg)
+var last_hit_by := 0
+
 # --- Zufriedenheit, Volk und Gelände (Phase 8) ---
 ## Zufriedenheit 0–100 (nur Bewohner; -1 = noch nicht erfasst). SatisfactionSystem, wird gespeichert.
 var satisfaction := -1.0
@@ -208,6 +231,9 @@ var hit_flash := 0.0
 var _texture: Texture2D
 var _token: Texture2D
 var _radius := 13.0
+## Aussehen: Tönung einer vorhandenen Grafik ohne eigene Skin-Datei und Abzeichen (oder null)
+var _tint := Color.WHITE
+var _emblem: Texture2D
 
 
 func setup(p_type_def: Dictionary, p_kingdom: Kingdom, p_uid: int) -> void:
@@ -226,6 +252,8 @@ func setup(p_type_def: Dictionary, p_kingdom: Kingdom, p_uid: int) -> void:
 	splash_radius = float(type_def.get("splash_radius", 0.0))
 	splash_factor = float(type_def.get("splash_factor", 0.0))
 	mechanical = bool(type_def.get("mechanical", false))
+	unit_class = str(type_def.get("class", ""))
+	counter_vs = type_def.get("counter_vs", {})
 	refresh_look()
 	refresh_stats()
 	hp = max_hp
@@ -233,14 +261,48 @@ func setup(p_type_def: Dictionary, p_kingdom: Kingdom, p_uid: int) -> void:
 	queue_redraw()
 
 
-## Grafik bzw. Platzhalter neu bestimmen (beim Aufbau und nach einem Besitzerwechsel)
+## Grafik bzw. Platzhalter neu bestimmen (beim Aufbau, nach einem Besitzerwechsel und
+## wenn sich das Aussehen ändert). Skin: eigene Datei <einheit>_<skin>.png, sonst die
+## Grafik des Typs getönt mit Abzeichen, sonst ein Platzhalter in Skin-Farben.
 func refresh_look() -> void:
-	_texture = Assets.texture(DataDB.get_unit_sprite(type_def, kingdom.faction_id))
-	_token = null
+	var skin_id := get_skin()
+	var skin_data := {} if skin_id == "standard" else TroopRules.skin_def(skin_id)
+	_tint = Color.WHITE
+	_emblem = null
+	_texture = null
+	if not skin_data.is_empty():
+		_texture = Assets.texture(TroopRules.skin_sprite(type_id, skin_id))
+	var own_skin_file := _texture != null
 	if _texture == null:
-		var color: Color = type_def.get("color", kingdom.color)
-		_token = Assets.unit_token(color, "diamond" if role == "monster" else "circle")
+		_texture = Assets.texture(DataDB.get_unit_sprite(type_def, kingdom.faction_id))
+	_token = null
+	var shape := "diamond" if role == "monster" else "circle"
+	var color: Color = type_def.get("color", kingdom.color)
+	if not skin_data.is_empty() and not own_skin_file:
+		var mix := float(DataDB.trp("skins.tint_mix", 0.55))
+		var tint: Color = skin_data.get("tint", color)
+		_emblem = Assets.emblem(str(skin_data.get("emblem", "")), skin_data.get("trim", Color.WHITE))
+		if _texture != null:
+			_tint = Color.WHITE.lerp(tint, mix * 0.6)
+		else:
+			_token = Assets.unit_skin_token(color.lerp(tint, mix), shape, skin_data.get("trim", Color.WHITE))
+	if _texture == null and _token == null:
+		_token = Assets.unit_token(color, shape)
 	queue_redraw()
+
+
+## Wirksames Aussehen: eigenes, sonst das des Typs im Reich, sonst "standard"
+## (nur Skins, die zur Fraktion des Reichs und zum Rang passen)
+func get_skin() -> String:
+	if kingdom == null or not TroopRules.has_skins(type_def):
+		return "standard"
+	if not skin.is_empty() and TroopRules.skin_allowed(kingdom, skin) \
+			and vet_rank >= int(TroopRules.skin_def(skin).get("min_rank", 0)):
+		return skin
+	var type_skin := str(kingdom.unit_skins.get(type_id, "standard"))
+	if TroopRules.skin_allowed(kingdom, type_skin) and int(TroopRules.skin_def(type_skin).get("min_rank", 0)) <= 0:
+		return type_skin
+	return "standard"
 
 
 ## Berechnet alle Werte neu: Grundwert aus units.json × Modifikatoren des
@@ -248,6 +310,8 @@ func refresh_look() -> void:
 ## Lebenspunkte bleibt erhalten.
 func refresh_stats() -> void:
 	var ratio := 1.0 if max_hp <= 0.0 else hp / max_hp
+	# Rang und Wertepunkte (TroopRules) vor den Werten
+	vet_mods = {} if vet_rank <= 0 and stat_alloc.is_empty() else TroopRules.build_mods(vet_rank, stat_alloc)
 	max_hp = maxf(_stat("hp"), 1.0)
 	attack = _stat("attack")
 	attack_interval = maxf(_stat("attack_interval"), 0.1)
@@ -263,6 +327,7 @@ func refresh_stats() -> void:
 	unit_damage = _stat_from(float(type_def.get("unit_damage", 1.0)), "unit_damage")
 	lifesteal = maxf(_stat("lifesteal"), 0.0)
 	damage_taken = maxf(_stat_from(1.0, "damage_taken"), 0.05)
+	armor_pierce = clampf(_stat("armor_pierce"), 0.0, 1.0)
 	hp = clampf(ratio, 0.0, 1.0) * max_hp
 	var now_stealthed := (bool(type_def.get("stealth", false)) or _has_effect_key("stealth")) \
 			and not _has_effect_key("revealed")
@@ -285,12 +350,18 @@ func _stat_from(value: float, key: String) -> float:
 			add += float(e.get("add", 0.0))
 			mult *= float(e.get("mult", 1.0))
 	if kingdom != null:
-		# Schlüssel, Schlüssel je Stufe ("attack.archer") und je Rolle ("hp@combat" = alle Truppen)
-		mult *= kingdom.mod(key) * kingdom.mod(key + "." + tier) * kingdom.mod(key + "@" + role)
+		# Schlüssel, Schlüssel je Stufe ("attack.archer"), je Rolle ("hp@combat" = alle Truppen)
+		# und je Truppenklasse ("attack#cavalry", Schmiede)
+		mult *= kingdom.mod(key) * kingdom.mod(key + "." + tier) * kingdom.mod(key + "@" + role) \
+				* kingdom.mod(key + "#" + unit_class)
 	if not hero_mods.is_empty() and hero_mods.has(key):
 		var m: Dictionary = hero_mods[key]
 		add += float(m.get("add", 0.0))
 		mult *= float(m.get("mult", 1.0))
+	if not vet_mods.is_empty() and vet_mods.has(key):
+		var vm: Dictionary = vet_mods[key]
+		add += float(vm.get("add", 0.0))
+		mult *= float(vm.get("mult", 1.0))
 	if not terrain_mods.is_empty():
 		mult *= float(terrain_mods.get(key, 1.0))
 	return (value + add) * mult
@@ -395,9 +466,10 @@ func get_status_text() -> String:
 # ---------------------------------------------------------------------------
 
 ## Felder späterer Phasen, die gespeichert werden, sofern es sie gibt (Phase 8
-## Zufriedenheit, Phase 9 Rammbock-Ziel, Truppenfenster: Haltung und Patrouille).
-## Wiederhergestellt über UnitSystem.restore_unit.
-const SAVE_OPTIONAL := ["satisfaction", "resume_target_uid", "stance", "patrol_from"]
+## Zufriedenheit, Phase 9 Rammbock-Ziel, Armeefenster: Haltung und Patrouille, Truppen:
+## Erfahrung, Rang, Wertepunkte, Aussehen). Wiederhergestellt über UnitSystem.restore_unit.
+const SAVE_OPTIONAL := ["satisfaction", "resume_target_uid", "stance", "patrol_from",
+		"vet_xp", "vet_rank", "stat_points", "stat_alloc", "skin"]
 
 
 ## Gespeicherter Zustand: einfache Werte, Verweise als uid, Weg nur wenn unterwegs
@@ -422,7 +494,7 @@ func to_dict() -> Dictionary:
 	for prop in SAVE_OPTIONAL:
 		var value: Variant = get(prop)
 		if value != null:
-			d[prop] = value
+			d[prop] = value.duplicate(true) if value is Dictionary else value
 	return d
 
 
@@ -453,7 +525,7 @@ func _draw() -> void:
 	if _texture != null:
 		# Grafik etwas grösser als der Platzhalter, Füsse auf der Position
 		var tex_size := r * 3.0
-		draw_texture_rect(_texture, Rect2(Vector2(-tex_size * 0.5, -tex_size * 0.75), Vector2(tex_size, tex_size)), false)
+		draw_texture_rect(_texture, Rect2(Vector2(-tex_size * 0.5, -tex_size * 0.75), Vector2(tex_size, tex_size)), false, _tint)
 	else:
 		# Platzhalter: einmal erzeugte Grafik (Kreis bzw. Raute für Monster)
 		var size := r * 2.0 + 4.0
@@ -471,6 +543,9 @@ func _draw() -> void:
 					Vector2(-r * 0.3, -r * 1.2), Vector2(0, -r * 1.55), Vector2(r * 0.3, -r * 1.2),
 					Vector2(r * 0.6, -r * 1.45), Vector2(r * 0.6, -r * 1.05)])
 			draw_colored_polygon(crown, Color(1.0, 0.82, 0.25))
+	if _emblem != null:
+		# Abzeichen des Aussehens (Skin) oben links
+		draw_texture_rect(_emblem, Rect2(Vector2(-r * 1.2, -r * 1.2), Vector2(r * 0.85, r * 0.85)), false)
 	if carry_amount >= 1.0 and not carry_res.is_empty():
 		var c: Color = DataDB.get_resource(carry_res).get("color", Color.WHITE)
 		var box := Rect2(Vector2(r * 0.35, -r * 1.05), Vector2(r * 0.8, r * 0.8))

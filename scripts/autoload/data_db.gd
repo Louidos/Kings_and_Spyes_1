@@ -81,6 +81,12 @@ var trade_cfg: Dictionary = {}
 var help_cfg: Dictionary = {}
 ## Tutorial (tutorial.json): Partie, Einstellungen, Schritte
 var tutorial_cfg: Dictionary = {}
+## Truppen (troops.json): Klassen und Konter, Schmiede, Erfahrung und Ränge, Aussehen
+var troops_cfg: Dictionary = {}
+## Schmiede-Verbesserung (troops.json → forge.upgrades) nach ID
+var forge_upgrade_by_id: Dictionary = {}
+## Aussehen (troops.json → skins.variants) nach ID
+var skin_by_id: Dictionary = {}
 ## md5 über alle Texte in data/*.json (Spielstände merken sich, mit welchen Daten sie entstanden)
 var data_fingerprint: String = ""
 
@@ -106,6 +112,8 @@ func reload() -> void:
 	_load_buildings()
 	_load_jobs()
 	economy = _load_json("economy.json")
+	# Truppenklassen vor den Einheiten (Klasse und Konter werden beim Normalisieren gesetzt)
+	_load_troops()
 	_load_units()
 	diplomacy = _load_json("diplomacy.json")
 	_prepare_diplomacy()
@@ -313,6 +321,21 @@ func get_unit_sprite(def: Dictionary, faction_id: String) -> String:
 	return str(sprites.get(faction_id, sprites.get("good", "")))
 
 
+## Liest einen Wert aus troops.json über einen Punkt-Pfad, z. B. "veterancy.max_per_stat".
+func trp(path: String, default_value: Variant = null) -> Variant:
+	return _dig(troops_cfg, path, default_value)
+
+
+## Schmiede-Verbesserung nach ID ({} wenn unbekannt)
+func get_forge_upgrade(id: String) -> Dictionary:
+	return forge_upgrade_by_id.get(id, {})
+
+
+## Name einer Truppenklasse ("cavalry" -> "Reiterei")
+func get_class_name(class_id: String) -> String:
+	return str((trp("classes", {}) as Dictionary).get(class_id, {}).get("name", class_id))
+
+
 ## Liest einen Wert aus combat.json über einen Punkt-Pfad, z. B. "camps.size".
 func cmb(path: String, default_value: Variant = null) -> Variant:
 	var node: Variant = combat
@@ -433,6 +456,9 @@ func describe_effect_source(source: String) -> String:
 			for up in mag("upgrades", []):
 				if str(up.get("id", "")) == parts[1]:
 					return str(up.get("name", parts[1]))
+			# Schmiede (troops.json): "Schmiede: Waffen der Fusstruppen"
+			if forge_upgrade_by_id.has(parts[1]):
+				return "Schmiede: %s" % str(get_forge_upgrade(parts[1]).get("name", parts[1]))
 		"ability":
 			# "ability:<id>" bzw. "ability:<id>#<held>"; Führung: "ability:leadership[_<heldentyp>]"
 			var aid := parts[1].get_slice("#", 0)
@@ -488,6 +514,8 @@ func get_effect_source_color(source: String) -> Color:
 		return Color(0.95, 0.82, 0.4)
 	if source == "supply":
 		return Color(0.95, 0.45, 0.35)
+	if source.begins_with("upgrade:forge"):
+		return Color(0.95, 0.68, 0.42)
 	return Color.WHITE
 
 
@@ -533,6 +561,8 @@ const _MOD_NAMES := {"attack": "Angriff", "armor": "Rüstung", "hp": "Leben", "s
 	"damage_taken": "erlittener Schaden", "defense": "Verteidigung", "feast_cost": "Kosten für Feste",
 	"fort_hp": "Leben von Mauern, Toren und Türmen", "tower_attack": "Turmschaden"}
 const _TIER_NAMES := {"fighter": "Kämpfer", "archer": "Schützen", "elite": "Elite", "scout": "Späher",
+	"spearman": "Speerträger", "crossbow": "Armbrustschützen", "heavy": "Schwere Fusstruppen", "cavalry": "Reiter",
+	"battlemage": "Kampfmagier",
 	"medic": "Heiler", "king": "König", "villager": "Bewohner", "summon": "Beschworene", "hero": "Helden",
 	"militia": "Miliz", "special": "Volkskrieger", "messenger": "Boten", "spy": "Spione", "refugee": "Flüchtlinge",
 	"ram": "Rammböcke", "catapult": "Katapulte", "caravan": "Karawanen"}
@@ -547,7 +577,12 @@ func describe_modifier(key: String, factor: float) -> String:
 	var stat := key
 	var qualifier := ""
 	var role_parts := key.split("@", true, 1)
-	if role_parts.size() > 1:
+	var class_parts := key.split("#", true, 1)
+	if class_parts.size() > 1:
+		# Truppenklasse (Schmiede): "attack#cavalry" -> "(Reiterei)"
+		stat = class_parts[0]
+		qualifier = get_class_name(class_parts[1])
+	elif role_parts.size() > 1:
 		stat = role_parts[0]
 		qualifier = str(_ROLE_NAMES.get(role_parts[1], role_parts[1]))
 	else:
@@ -841,6 +876,62 @@ func _normalize_unit(u: Dictionary) -> void:
 	u["splash_factor"] = float(u.get("splash_factor", 0.0))
 	u["mechanical"] = bool(u.get("mechanical", false))
 	u["commandable"] = bool(u.get("commandable", true))
+	# Truppen (troops.json): Klasse, Konter (Klassen-Tabelle + bonus_vs der Einheit), Rüstungsdurchschlag
+	if str(u.get("class", "")).is_empty():
+		u["class"] = _default_unit_class(u)
+	u["class"] = str(u["class"])
+	var counter: Dictionary = (_dig(troops_cfg, "counters." + str(u["class"]), {}) as Dictionary).duplicate()
+	var bonus_vs: Variant = u.get("bonus_vs", {})
+	if bonus_vs is Dictionary:
+		for c in bonus_vs:
+			counter[str(c)] = float(counter.get(str(c), 0.0)) + float(bonus_vs[c])
+	for c in counter:
+		counter[c] = float(counter[c])
+	u["counter_vs"] = counter
+	u["armor_pierce"] = clampf(float(u.get("armor_pierce", 0.0)), 0.0, 1.0)
+
+
+## Klasse eines Einheitentyps ohne "class": troops.json → classes_default (Stufe, dann Rolle),
+## sonst Fernkämpfer ab Reichweite 2, sonst Fusstruppen
+func _default_unit_class(u: Dictionary) -> String:
+	var by_tier: Dictionary = _dig(troops_cfg, "classes_default.by_tier", {})
+	if by_tier.has(str(u.get("tier", ""))):
+		return str(by_tier[str(u["tier"])])
+	var by_role: Dictionary = _dig(troops_cfg, "classes_default.by_role", {})
+	if by_role.has(str(u.get("role", ""))):
+		return str(by_role[str(u["role"])])
+	return "ranged" if float(u.get("range", 0.0)) >= 2.0 else "infantry"
+
+
+## troops.json: Schmiede-Verbesserungen (Kosten als Liste von Dictionaries mit Zahlen) und Skins nach ID
+func _load_troops() -> void:
+	troops_cfg = _load_json("troops.json")
+	forge_upgrade_by_id.clear()
+	for up in _dig(troops_cfg, "forge.upgrades", []):
+		var entry: Dictionary = up
+		var costs: Array = []
+		for c in entry.get("cost", []):
+			var cost := {}
+			for res in (c as Dictionary):
+				cost[str(res)] = float(c[res])
+			costs.append(cost)
+		entry["cost"] = costs
+		entry["max_level"] = costs.size()
+		entry["class"] = str(entry.get("class", "infantry"))
+		if not (entry.get("per_level", null) is Dictionary):
+			entry["per_level"] = {}
+		forge_upgrade_by_id[str(entry.get("id", ""))] = entry
+	skin_by_id.clear()
+	for v in _dig(troops_cfg, "skins.variants", []):
+		var skin: Dictionary = v
+		skin["faction"] = str(skin.get("faction", "any"))
+		skin["min_rank"] = int(skin.get("min_rank", 0))
+		skin["emblem"] = str(skin.get("emblem", ""))
+		if skin.has("tint"):
+			skin["tint"] = _parse_color(skin["tint"])
+		if skin.has("trim"):
+			skin["trim"] = _parse_color(skin["trim"])
+		skin_by_id[str(skin.get("id", ""))] = skin
 
 
 func _load_heroes() -> void:

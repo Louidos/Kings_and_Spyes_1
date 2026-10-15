@@ -82,7 +82,11 @@ func restore_unit(d: Dictionary) -> Unit:
 		nu.expires_at = float(d.get("expires_at", -1.0))
 		for prop in Unit.SAVE_OPTIONAL:
 			if d.has(prop) and nu.get(prop) != null:
-				nu.set(prop, d[prop])
+				var value: Variant = d[prop]
+				nu.set(prop, value.duplicate(true) if value is Dictionary else value)
+		# Rang, Wertepunkte und Aussehen sind jetzt bekannt (setup lief mit den Grundwerten)
+		nu.refresh_look()
+		nu.refresh_stats()
 	var u := spawn_unit(kingdom, type_id, d.get("pos", Vector2.ZERO), int(d.get("uid", 0)), init)
 	if u == null:
 		return null

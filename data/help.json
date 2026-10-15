@@ -24,9 +24,11 @@
 			{"keys": "Strg + Rechtsklick", "text": "Angreifend vorrücken"},
 			{"keys": "Strg + 1…9 / Umschalt + 1…9 / 1…9", "text": "Armee speichern / ergänzen / wählen"},
 			{"action": "toggle_formation", "text": "Formation Block / Linie / Keil / Kreis"},
-			{"action": "toggle_army", "text": "Truppenfenster: alle Krieger, Armeen, Befehle an alle, Haltung"},
+			{"action": "toggle_army", "text": "Armeefenster: alle Krieger, Armeen, Befehle an alle, Haltung"},
 			{"action": "select_all_warriors", "text": "Alle Krieger auswählen (ohne Bewohner und König)"},
-			{"keys": "Rechtsklick mit Gebäude ausgewählt", "text": "Sammelpunkt setzen"}
+			{"keys": "Rechtsklick mit Gebäude ausgewählt", "text": "Sammelpunkt setzen"},
+			{"keys": "Truppe auswählen → Angriff / Leben / Rüstung / Tempo +", "text": "Wertepunkte verteilen (Mehrfachauswahl: automatisch)"},
+			{"keys": "Schmiede auswählen → Waffen / Rüstung", "text": "Waffen- und Rüstungsstufen je Truppenklasse kaufen"}
 		]},
 		{"title": "Helden und Magie", "rows": [
 			{"action": "toggle_heroes", "text": "Heldenfenster"},
@@ -59,7 +61,7 @@
 	"topics": [
 		{"title": "Wirtschaft", "text": "Bewohner sammeln Holz, Stein, Erz und Nahrung und bringen sie zur Burg oder zu Sammelhütten. Häuser geben Wohnraum, mit genug Nahrung wächst das Dorf. Fertige Gebäude vergrössern dein Gebiet; gebaut wird nur im eigenen Gebiet."},
 		{"title": "Kampf", "text": "Kaserne, Krankenstation und Burg beschwören Einheiten. Im eigenen Gebiet kämpfen sie stärker. Monsterlager bringen Beute und Kampfpunkte; mit Kampfpunkten verbesserst du das Mana."},
-		{"title": "Truppenfenster", "text": "T öffnet die Übersicht aller Krieger: je Einheitentyp Anzahl, Leben und was sie tun, dazu Helden und Armeen 1–9. „Wählen“ macht eine Zeile zur Befehlsgruppe; rechts gibst du ihr Befehle: Sammeln an der Burg, Rückzug zur Burg (dort erholen sie sich schneller), Angreifend vorrücken, Bewegen oder Patrouille (danach Ziel auf der Karte anklicken), Halten und Formation. Die Haltung bestimmt, wie selbstständig sie kämpfen: aggressiv verfolgt weit, verteidigend (Standard) kehrt auf den Posten zurück, passiv greift nie von selbst an. Strg+A wählt alle Krieger."},
+		{"title": "Armeefenster", "text": "T öffnet die Übersicht aller Krieger: je Einheitentyp Anzahl, Leben und was sie tun, dazu Helden und Armeen 1–9. „Wählen“ macht eine Zeile zur Befehlsgruppe; rechts gibst du ihr Befehle: Sammeln an der Burg, Rückzug zur Burg (dort erholen sie sich schneller), Angreifend vorrücken, Bewegen oder Patrouille (danach Ziel auf der Karte anklicken), Halten und Formation. Die Haltung bestimmt, wie selbstständig sie kämpfen: aggressiv verfolgt weit, verteidigend (Standard) kehrt auf den Posten zurück, passiv greift nie von selbst an. Strg+A wählt alle Krieger."},
 		{"title": "Magie und Forschung", "text": "Forschung schaltet Einheiten, Gebäude und Zauber frei. Mana entsteht an der Burg und in Manabrunnen; Zauber wirken in einem Kreis."},
 		{"title": "Helden", "text": "In der Heldenhalle wirbst du Helden an. Sie steigen durch Kämpfe auf, wählen Fähigkeiten und Talente und führen Armeen an. Gefallene Helden lassen sich an der Burg wiederbeleben."},
 		{"title": "Diplomatie", "text": "Neutrale Dörfer haben einen Ruf dir gegenüber. Geschenke, Handel und Verträge verbessern ihn; Bündnisse schalten Volkseinheiten frei, Dörfer können aufgenommen oder erobert werden."},
@@ -67,6 +69,7 @@
 		{"title": "Zufriedenheit und Ereignisse", "text": "Bewohner wollen Nahrung, Wohnraum und Sicherheit; Taverne, Tempel und Feste heben die Stimmung. Unzufriedene arbeiten schlechter, laufen über oder verraten dich. Seltene Ereignisse (Dürre, Seuche, Magiesturm, Monsterwellen, Flüchtlinge) treffen alle Reiche. Nachts sinkt die Sicht und Monster streifen häufiger umher."},
 		{"title": "Belagerung und Handel", "text": "Mauern, Tore und Wachtürme schützen dein Reich; Bauarbeiter reparieren Schäden. Rammböcke und Katapulte brechen feindliche Mauern. Handelsverträge mit Dörfern schicken Karawanen auf den Weg – schütze sie, denn überfallene Wege liefern nichts. Truppen fern vom Gebiet erholen sich nicht."},
 		{"title": "Tutorial", "text": "Das Tutorial führt Schritt für Schritt durch Kamera, Bauen, Berufe, Einheiten, Forschung, Zauber, Helden, Diplomatie, Spionage und Speichern. Starten: Hauptmenü → „Tutorial“ (feste, freundliche Karte) oder beim neuen Spiel „Tipps/Tutorial anzeigen“. Im Spielmenü (Esc) setzt du ein beendetes Tutorial fort oder beginnst von vorn. Solange es läuft, greifen dich die Gegner nicht an und es gibt keine Ereignisse bei dir."},
+		{"title": "Truppenklassen, Schmiede und Ränge", "text": "Jede Truppe hat eine Klasse: Speerträger schlagen Reiter, Reiter überrennen Schützen und Magier, Schützen und Magier zermürben Fusstruppen, Armbrüste durchschlagen Rüstung. In der Schmiede kaufst du Waffen- und Rüstungsstufen je Klasse. Truppen sammeln im Kampf Erfahrung und steigen vom Rekruten bis zum Held der Truppe auf (Winkel über dem Kopf); jeder Aufstieg bringt Wertepunkte für Angriff, Leben, Rüstung oder Tempo. Das Aussehen wählst du im Auswahlfenster."},
 		{"title": "Speichern", "text": "F5 speichert schnell, F8 lädt diesen Stand. Im Spielmenü (Esc) speicherst du unter einem Namen und lädst ältere Stände. Das Spiel speichert ausserdem automatisch (Einstellungen: Abstand, reihum drei Plätze)."}
 	]
 }

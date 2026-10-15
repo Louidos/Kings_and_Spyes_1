@@ -17,7 +17,7 @@
 ## - 1–9: Armee wählen (zweimal schnell: Kamera hin), Strg+Zahl: speichern,
 ##   Umschalt+Zahl: hinzufügen. Strg+A: alle Krieger (select_all_warriors).
 ## - Zielmodus (arm_order): der nächste Klick gibt "angreifend vorrücken"
-##   (Strg+Rechtsklick, Knopf), "bewegen" oder "Patrouille" (Truppenfenster).
+##   (Strg+Rechtsklick, Knopf), "bewegen" oder "Patrouille" (Armeefenster).
 ## - Helden: der "aktive Held" der Auswahl (erster Held, Tab wechselt) bekommt
 ##   die Fähigkeitstasten C / V / B – auch in einer gemischten Auswahl (Armee).
 ## Der König lässt sich nur durch direktes Anklicken auswählen (nicht per
@@ -249,7 +249,7 @@ func get_armed_order() -> String:
 	return _arm_mode if _armed else ""
 
 
-## Alle eigenen Krieger auswählen (Strg+A, Truppenfenster) – ohne Bewohner und König
+## Alle eigenen Krieger auswählen (Strg+A, Armeefenster) – ohne Bewohner und König
 func select_all_warriors() -> void:
 	var list: Array = game.command_system.get_warriors(game.player)
 	if list.is_empty():

@@ -9,7 +9,7 @@
 ##   Taste G), Diplomatiefenster (DiplomacyPanel, Taste N) und Spionagefenster
 ##   (EspionagePanel, Taste K) in eigenen Ebenen darüber; es ist immer nur eines
 ##   davon offen (alle stehen in der Mitte)
-## - Truppenfenster (TroopPanel, Taste T) mit Knopf "Truppen · 24" (Strich = Leben der
+## - Armeefenster (TroopPanel, Taste T) mit Knopf "Armee · 24" (Strich = Leben der
 ##   Truppen, roter Punkt = Truppen im Kampf) rechts neben "Helden"
 ## - Reichsübersicht (KingdomPanel, Taste L, Phase 8) mit Knopf "Reich", Tageszeit-
 ##   Symbol (DayClock), Ereignisleiste unter der oberen Leiste (EventBanner) und
@@ -105,7 +105,7 @@ var event_banner: EventBanner
 var refugee_dialog: RefugeeDialog
 var _refugee_layer: CanvasLayer
 var day_clock: DayClock
-## Truppenfenster (Taste T) und sein Button oben
+## Armeefenster (Taste T) und sein Button oben
 var troop_panel: TroopPanel
 var _troop_layer: CanvasLayer
 var _troop_button: ResearchTipButton
@@ -1026,7 +1026,7 @@ func _kingdom_button_tip() -> String:
 const TROOP_LAYER := 11
 
 
-## Truppenfenster in eigener Ebene und Button "Truppen" rechts neben "Helden"
+## Armeefenster in eigener Ebene und Button "Armee" rechts neben "Helden"
 func _setup_troops() -> void:
 	_troop_layer = CanvasLayer.new()
 	_troop_layer.layer = TROOP_LAYER
@@ -1042,7 +1042,7 @@ func _setup_troops() -> void:
 
 	_troop_button = ResearchTipButton.new()
 	_troop_button.name = "TroopButton"
-	_troop_button.text = "Truppen"
+	_troop_button.text = "Armee"
 	_troop_button.toggle_mode = true
 	_troop_button.add_theme_font_size_override("font_size", 16)
 	_compact(_troop_button)
@@ -1055,7 +1055,7 @@ func _setup_troops() -> void:
 	_refresh_troop_button()
 
 
-## Truppenfenster ein-/ausblenden (Taste T, Button oben)
+## Armeefenster ein-/ausblenden (Taste T, Button oben)
 func toggle_army() -> void:
 	if troop_panel != null:
 		troop_panel.toggle()
@@ -1076,7 +1076,7 @@ func _on_troops_toggled(open: bool) -> void:
 		_close_other_panels(troop_panel)
 
 
-## "Truppen · 24" mit Strich (Leben aller Truppen) und rotem Punkt, solange Truppen kämpfen
+## "Armee · 24" mit Strich (Leben aller Truppen) und rotem Punkt, solange Truppen kämpfen
 func _refresh_troop_button() -> void:
 	if _troop_button == null:
 		return
@@ -1092,7 +1092,7 @@ func _refresh_troop_button() -> void:
 		max_hp += u.max_hp
 		if not fighting and TroopPanel.unit_state(u) == TroopPanel.STATE_FIGHTING:
 			fighting = true
-	var text := "Truppen" if n == 0 else "Truppen · %d" % n
+	var text := "Armee" if n == 0 else "Armee · %d" % n
 	if _troop_button.text != text:
 		_troop_button.text = text
 	var ratio := hp / max_hp if max_hp > 0.0 else -1.0
@@ -1106,7 +1106,7 @@ func _troop_button_tip() -> String:
 	var k: Kingdom = game.player
 	var tip := ResearchTipButton
 	var units: Array = game.command_system.get_warriors(k)
-	var lines: PackedStringArray = ["[b]Truppen[/b] (Taste T)"]
+	var lines: PackedStringArray = ["[b]Armee[/b] (Taste T)"]
 	if units.is_empty():
 		lines.append(tip.colored("Noch keine Truppen – in der Kaserne beschwören", COLOR_RESEARCH_IDLE))
 	else:

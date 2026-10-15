@@ -1,4 +1,4 @@
-## Rauchtest Truppenfenster (gestartet von tests/smoke_test.gd, nicht bei passive=1):
+## Rauchtest Armeefenster (gestartet von tests/smoke_test.gd, nicht bei passive=1):
 ## T öffnet das Fenster (die anderen Fenster in der Mitte schliessen sich), Strg+A und
 ## "Alle Krieger auswählen" wählen genau die Krieger, Testtruppe als Armee 9 speichern,
 ## Befehle über das Fenster: Angreifend vorrücken (Zielmodus + Klick), Halten, Patrouille
@@ -6,7 +6,7 @@
 ## Haltung passiv verhindert Angriffe auf einen Übungsgolem, verteidigend greift an;
 ## Haltung und Patrouille überstehen Speichern/Laden (Unit.to_dict → JSON → restore_unit).
 ## Dazu: Fenster passt bei UI-Grösse 100/150 %, alle Knöpfe haben Tooltips, Armee auflösen.
-## Fehler erscheinen als "ERROR: [smoke] Truppen FEHLER: …" (push_error).
+## Fehler erscheinen als "ERROR: [smoke] Armee FEHLER: …" (push_error).
 extends RefCounted
 
 ## Ab dieser Spielzeit (und wenn der Heldentest fertig ist) beginnt der Test
@@ -37,10 +37,10 @@ func _init(game: Node) -> void:
 
 func _check(cond: bool, text: String) -> void:
 	if cond:
-		print("[smoke] Truppen OK: " + text)
+		print("[smoke] Armee OK: " + text)
 	else:
 		_errors += 1
-		push_error("[smoke] Truppen FEHLER: " + text)
+		push_error("[smoke] Armee FEHLER: " + text)
 
 
 func _on_attacked(attacker: Object, _victim: Object, _damage: float) -> void:
@@ -123,12 +123,12 @@ func _s0_window() -> void:
 	# T öffnet, andere Fenster schliessen sich
 	hud.open_research()
 	_key(KEY_T, false)
-	_check(panel.is_open() and not hud.is_research_open(), "T öffnet das Truppenfenster und schliesst die Forschung")
+	_check(panel.is_open() and not hud.is_research_open(), "T öffnet das Armeefenster und schliesst die Forschung")
 	panel.refresh()
 	_check(panel._type_rows.has(fighter) and panel._type_rows.has(archer), "Zeilen für Kämpfer und Schützen")
 	var counts := TroopPanel.count_states(_units())
 	_check(int(counts[TroopPanel.STATE_IDLE]) == 6, "Testtruppe gilt als untätig (%s)" % TroopPanel.states_text(counts))
-	_check(hud.top_bar_fits(), "Obere Leiste passt mit dem Knopf „Truppen“")
+	_check(hud.top_bar_fits(), "Obere Leiste passt mit dem Knopf „Armee“")
 	_check(panel.location_text(_spot).contains("Kacheln") or panel.location_text(_spot).contains("Burg"),
 			"Ortsangabe: %s" % panel.location_text(_spot))
 	# Alle Krieger: Knopf und Strg+A
@@ -186,7 +186,7 @@ func _s0_window() -> void:
 		bad.append("Mindestbreiten: " + ", ".join(widths))
 	_check(bad.is_empty(), "Fenster und Leiste passen bei UI-Grösse 100/150 %%%s" % ("" if bad.is_empty() else ": " + ", ".join(bad)))
 	var missing := _missing_tooltips(panel)
-	_check(missing.is_empty(), "Alle Knöpfe des Truppenfensters haben Tooltips%s" % ("" if missing.is_empty() else ": " + ", ".join(missing)))
+	_check(missing.is_empty(), "Alle Knöpfe des Armeefensters haben Tooltips%s" % ("" if missing.is_empty() else ": " + ", ".join(missing)))
 	# Formationen: Plätze verschieden, Neuaufstellung
 	var cs: CommandSystem = g.command_system
 	for f in ["wedge", "circle"]:
@@ -378,8 +378,8 @@ static func _missing_tooltips(root: Node) -> PackedStringArray:
 
 func report() -> void:
 	if _step == 0 and GameClock.game_time < START_TIME:
-		print("[smoke] Truppentest: nicht gelaufen (Lauf kürzer als %d s)" % roundi(START_TIME))
+		print("[smoke] Armeetest: nicht gelaufen (Lauf kürzer als %d s)" % roundi(START_TIME))
 		return
 	if _step >= 0:
-		_check(false, "Truppentest nicht fertig geworden (Schritt %d)" % _step)
-	print("[smoke] Truppentest: %s" % ("OK" if _errors == 0 else "%d Fehler" % _errors))
+		_check(false, "Armeetest nicht fertig geworden (Schritt %d)" % _step)
+	print("[smoke] Armeetest: %s" % ("OK" if _errors == 0 else "%d Fehler" % _errors))

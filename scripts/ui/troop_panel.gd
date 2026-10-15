@@ -1,6 +1,6 @@
 ## TroopPanel
 ##
-## Truppenfenster (Taste T, Knopf "Truppen" oben; T, Esc oder × schliesst). Gleiche
+## Armeefenster (Taste T, Knopf "Armee" oben; T, Esc oder × schliesst). Gleiche
 ## Bauart wie Forschungs-, Helden-, Diplomatie- und Reichsfenster (eigene Ebene, Mitte
 ## oben, immer nur eines offen); das Spiel läuft weiter.
 ## Links: alle eigenen Truppen nach Einheitentyp (Bild, Anzahl, Leben gesamt und Ø,
@@ -406,7 +406,7 @@ func _build() -> void:
 	title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(title_row)
 	var title := _label(25, ResearchPanel.EVIL_LIGHT if _evil else ResearchPanel.GOOD_ACCENT)
-	title.text = "Truppen"
+	title.text = "Armee"
 	title.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.75))
 	title.add_theme_constant_override("outline_size", 4)
 	title_row.add_child(title)
