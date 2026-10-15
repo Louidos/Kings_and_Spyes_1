@@ -1,9 +1,10 @@
 ## TroopSelectionBox
 ##
 ## Truppen-Abschnitt im Auswahlfenster (SelectionPanel), steht über den Befehlen:
-## - eine eigene Truppe: Rang mit Winkeln und Erfahrungsbalken, freie Wertepunkte und je
-##   ein Knopf für Angriff, Leben, Rüstung und Tempo, der Reichsschalter "automatisch
-##   verteilen" und das Aussehen (für alle dieses Typs und für diese Einheit).
+## - eine eigene Truppe: Rang und Erfahrungsbalken in einer Zeile, darunter die
+##   Wertepunkte mit dem Reichsschalter "automatisch" und dem Umschalter "Aussehen";
+##   die Knöpfe Angriff/Leben/Rüstung/Tempo erscheinen nur, solange Punkte frei sind,
+##   das Aussehen (für alle dieses Typs und für diese Einheit) nur aufgeklappt.
 ##   Helden: nur die Wertepunkte (einer je Stufe). Im Debug-Modus (F3) "+50 EP (Test)".
 ## - eine fremde Truppe: nur der Rang.
 ## - mehrere eigene Einheiten: freie Punkte, "Punkte automatisch verteilen", der
@@ -40,6 +41,9 @@ var _stat_row: HBoxContainer
 ## Wert-ID -> Button
 var _stat_buttons: Dictionary = {}
 var _skin_row: HBoxContainer
+## Umschalter "Aussehen" (klappt die Auswahllisten auf; bleibt für alle Auswahlen gemerkt)
+var _skin_toggle: Button
+static var _skins_open := false
 var _type_skin: OptionButton
 var _unit_skin: OptionButton
 var _type_skin_ids: Array = []
@@ -86,9 +90,10 @@ func _ready() -> void:
 	_points_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_unit_part.add_child(_points_row)
 	_points_label = _label(_points_row, SMALL_FONT_SIZE, SelectionPanel.COLOR_DIM)
+	_points_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	_points_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_points_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_auto_button = _button(_points_row, "Punkte automatisch verteilen", SMALL_FONT_SIZE)
+	_auto_button = _button(_points_row, "Verteilen", SMALL_FONT_SIZE)
 	_auto_button.tooltip_text = "Alle freien Wertepunkte der ausgewählten Einheiten nach ihrer Klasse verteilen"
 	_auto_button.pressed.connect(press_auto)
 	_auto_check = CheckBox.new()
@@ -98,6 +103,12 @@ func _ready() -> void:
 	_auto_check.tooltip_text = "Für das ganze Reich: neue Wertepunkte beim Aufstieg sofort automatisch verteilen\n(Reihenfolge je Klasse, z. B. Fusstruppen zuerst Leben und Rüstung)"
 	_auto_check.toggled.connect(_on_auto_toggled)
 	_points_row.add_child(_auto_check)
+	_skin_toggle = _button(_points_row, "Aussehen", SMALL_FONT_SIZE)
+	_skin_toggle.toggle_mode = true
+	_skin_toggle.tooltip_text = "Aussehen (Skins) wählen – für alle dieses Typs oder nur diese Einheit"
+	_skin_toggle.toggled.connect(func(on: bool) -> void:
+		_skins_open = on
+		_skin_row.visible = on)
 
 	_stat_row = HBoxContainer.new()
 	_stat_row.add_theme_constant_override("separation", 4)
@@ -176,6 +187,7 @@ func show_unit(u: Unit, own: bool) -> void:
 		_points_row.visible = false
 		_stat_row.visible = false
 		_skin_row.visible = false
+		_skin_toggle.visible = false
 		return
 	_mode = "unit"
 	_unit = u
@@ -186,16 +198,25 @@ func show_unit(u: Unit, own: bool) -> void:
 	var hero := u.hero_id != 0
 	_rank_row.visible = not hero
 	if not hero:
-		_set_text(_rank_label, "%s (Rang %d/%d)" % [TroopRules.rank_name(u.vet_rank), u.vet_rank, TroopRules.max_rank()])
+		_set_text(_rank_label, "%s · Rang %d/%d" % [TroopRules.rank_name(u.vet_rank), u.vet_rank, TroopRules.max_rank()])
 		_xp_bar.visible = true
 		_xp_bar.set_value(ts.rank_progress(u), 1.0, ts.xp_text(u))
 		_debug_button.visible = _debug_on()
 	var free := ts.get_free_points(u)
 	_points_row.visible = true
-	_set_text(_points_label, "Wertepunkte: %d frei" % free if free > 0 else "Wertepunkte: keine frei")
+	var spent: PackedStringArray = []
+	for stat_id in TroopRules.STAT_IDS:
+		if int(u.stat_alloc.get(stat_id, 0)) > 0:
+			spent.append("%s %d" % [TroopRules.stat_name(stat_id), int(u.stat_alloc[stat_id])])
+	var points_text := "Wertepunkte: %d frei" % free if free > 0 else "Wertepunkte: keine frei"
+	if free <= 0 and not spent.is_empty():
+		points_text = "Punkte: " + ", ".join(spent)
+	_set_text(_points_label, points_text)
+	_points_label.tooltip_text = "Verteilt: " + (", ".join(spent) if not spent.is_empty() else "noch nichts")
 	_auto_button.visible = false
 	_sync_auto_check(u.kingdom)
-	_stat_row.visible = true
+	# Knöpfe nur, solange Punkte frei sind (sonst nimmt die Zeile nur Platz weg)
+	_stat_row.visible = free > 0
 	for stat_id in TroopRules.STAT_IDS:
 		var b: Button = _stat_buttons[stat_id]
 		var n := int(u.stat_alloc.get(stat_id, 0))
@@ -240,6 +261,7 @@ func show_units(units: Array) -> void:
 	var free := ts.free_points_of(eligible)
 	_points_row.visible = true
 	_set_text(_points_label, "Wertepunkte: %d frei" % free)
+	_points_label.tooltip_text = ""
 	_auto_button.visible = true
 	_auto_button.disabled = free <= 0
 	_sync_auto_check((eligible[0] as Unit).kingdom)
@@ -248,6 +270,7 @@ func show_units(units: Array) -> void:
 		_show_skins((eligible[0] as Unit).kingdom, def, null)
 	else:
 		_skin_row.visible = false
+		_skin_toggle.visible = false
 
 
 func _sync_auto_check(k: Kingdom) -> void:
@@ -260,8 +283,12 @@ func _show_skins(k: Kingdom, def: Dictionary, u: Unit) -> void:
 	var type_ids := TroopRules.skins_for(k, def)
 	if type_ids.size() <= 1:
 		_skin_row.visible = false
+		_skin_toggle.visible = false
 		return
-	_skin_row.visible = true
+	_skin_toggle.visible = true
+	if _skin_toggle.button_pressed != _skins_open:
+		_skin_toggle.set_pressed_no_signal(_skins_open)
+	_skin_row.visible = _skins_open
 	var ts: TroopSystem = game.troop_system
 	var type_id := str(def.get("id", ""))
 	var unit_ids: Array = []

@@ -221,6 +221,11 @@ func _enter_step(id: String) -> void:
 			parts.append("+%d %s" % [int(grant[res_id]), str(DataDB.get_resource(str(res_id)).get("name", res_id))])
 		k.resources_changed.emit()
 		Notify.good("Der Hofschatzmeister schenkt dir für das Tutorial: " + ", ".join(parts))
+	# Aufstieg (Schritt Wertepunkte): ein Krieger ohne Rang steigt auf, einmal je Partie
+	var promote := int(s.get("promote", 0))
+	if promote > 0 and not granted.has(id + ":promote") and k != null:
+		granted.append(id + ":promote")
+		_promote_one(k, promote)
 	var focus := str(s.get("focus", ""))
 	if not focus.is_empty():
 		var pos: Variant = world_target("world:" + focus)
@@ -229,6 +234,24 @@ func _enter_step(id: String) -> void:
 	_capture_base()
 	_timer = POLL_INTERVAL  # sofort prüfen
 	changed.emit()
+
+
+## Ersten Krieger ohne Rang um ranks Ränge aufsteigen lassen (Erfahrung bis zur Schwelle)
+func _promote_one(k: Kingdom, ranks: int) -> void:
+	var ts: Variant = game.get("troop_system")
+	if not (ts is TroopSystem):
+		return
+	var steps: Array = DataDB.trp("veterancy.ranks", [])
+	for u in k.units:
+		if not is_instance_valid(u) or not u.is_alive() or u.hero_id != 0 or not CommandSystem.is_warrior(u):
+			continue
+		if not (ts as TroopSystem).has_stat_points(u) or u.vet_rank > 0:
+			continue
+		var target := mini(u.vet_rank + ranks, steps.size() - 1)
+		var need: float = float((steps[target] as Dictionary).get("xp", 0)) - float(u.vet_xp)
+		if need > 0.0:
+			(ts as TroopSystem).add_xp(u, need + 0.5)
+		return
 
 
 func _capture_base() -> void:
@@ -414,6 +437,30 @@ func check_condition(cond: String) -> bool:
 				if u.is_alive() and u.hero_id == 0 and TROOP_TIERS.has(u.tier):
 					n += 1
 			return n >= maxi(int(arg), 1)
+		"warriors_selected":
+			var warriors: Array = game.command_system.get_warriors(k)
+			if warriors.size() < 2:
+				return false
+			var selected: Array = game.selection.selected
+			for u in warriors:
+				if not selected.has(u):
+					return false
+			return true
+		"stance_set":
+			for u in game.command_system.get_warriors(k):
+				if (u as Unit).stance != CommandSystem.DEFAULT_STANCE:
+					return true
+			return false
+		"forge_bought":
+			for up_id in k.forge_levels:
+				if int(k.forge_levels[up_id]) > 0:
+					return true
+			return false
+		"stat_point_spent":
+			for u in k.units:
+				if is_instance_valid(u) and u.is_alive() and u.hero_id == 0 and not (u.stat_alloc as Dictionary).is_empty():
+					return true
+			return false
 		"army_saved":
 			for n in k.armies:
 				if not (k.armies[n] as Array).is_empty():

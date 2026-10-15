@@ -264,5 +264,15 @@ static func skins_for(k: Kingdom, def: Dictionary, rank: int = -1) -> Array:
 
 
 ## Grafik eines Skins: res://assets/sprites/units/<einheit>_<skin>.png
+## Aussehen, das ein Typ im Reich trägt (Wahl "Alle: …"; ohne Rang-Skins), sonst "standard"
+static func type_skin(k: Kingdom, def: Dictionary) -> String:
+	if k == null or not has_skins(def):
+		return "standard"
+	var sid := str(k.unit_skins.get(str(def.get("id", "")), "standard"))
+	if skin_allowed(k, sid) and int(skin_def(sid).get("min_rank", 0)) <= 0:
+		return sid
+	return "standard"
+
+
 static func skin_sprite(type_id: String, skin_id: String) -> String:
 	return "res://assets/sprites/units/%s_%s.png" % [type_id, skin_id]

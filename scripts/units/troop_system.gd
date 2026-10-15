@@ -97,9 +97,10 @@ func _rank_up(u: Unit, new_rank: int) -> void:
 		u.refresh_look()
 	game.combat_system.heal_unit(u, u.max_hp * _rank_heal)
 	if u.vet_rank >= _notify_min_rank:
-		var text := "%s steigt auf: %s" % [u.get_display_name(), TroopRules.rank_name(u.vet_rank)]
+		# Kurz (eine Zeile in den Meldungen); Klick springt zur Einheit
+		var text := "%s ist jetzt %s" % [u.get_display_name(), TroopRules.rank_name(u.vet_rank)]
 		if u.stat_points > 0:
-			text += " – Wertepunkte verteilen (Auswahlfenster)"
+			text += " – Punkte frei"
 		u.kingdom.notify(text, "good", u.position)
 	rank_gained.emit(u, u.vet_rank)
 	troops_changed.emit(u.kingdom)

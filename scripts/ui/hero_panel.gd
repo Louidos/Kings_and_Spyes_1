@@ -233,54 +233,20 @@ func _build() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
-	# Titelzeile: Wappen, Titel, Anzahl, Reiter, Schliessen
-	var title_row := HBoxContainer.new()
-	title_row.add_theme_constant_override("separation", 8)
-	title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(title_row)
-	var emblem := ResearchPanel.Emblem.new()
-	emblem.evil = _evil
-	emblem.color = _evil_or(ResearchPanel.EVIL_LIGHT, ResearchPanel.GOOD_ACCENT)
-	emblem.custom_minimum_size = Vector2(26, 26)
-	emblem.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	emblem.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_row.add_child(emblem)
-	var title := _label(25, _evil_or(ResearchPanel.EVIL_LIGHT, ResearchPanel.GOOD_ACCENT))
-	title.text = "Helden · %s" % ("Schatten" if _evil else "Licht")
-	title.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.75))
-	title.add_theme_constant_override("outline_size", 4)
-	title_row.add_child(title)
+	# Titelzeile: Wappen, Titel, Anzahl, Reiter, Schliessen (gleicher Aufbau in allen Fenstern)
+	var title_row := UiStyle.window_header(root, "Helden", _evil, "Schliessen (G oder Esc)", close)
 	_count_label = _label(16, COLOR_DIM)
-	_count_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_row.add_child(_count_label)
+	UiStyle.header_add(title_row, _count_label, true)
 	var group := ButtonGroup.new()
 	_tab_heroes = _make_tab("Meine Helden", group)
 	_tab_heroes.badge_color = HeroUI.COLOR_PENDING
 	_tab_heroes.tooltip_text = "Eigene Helden: Stufenwahl, Ausbildung, Wiederbelebung"
 	_tab_heroes.pressed.connect(_show_tab.bind(TAB_HEROES))
-	title_row.add_child(_tab_heroes)
+	UiStyle.header_add(title_row, _tab_heroes)
 	_tab_recruit = _make_tab("Anwerben", group)
 	_tab_recruit.tooltip_text = "Neue Helden in der Heldenhalle anwerben"
 	_tab_recruit.pressed.connect(_show_tab.bind(TAB_RECRUIT))
-	title_row.add_child(_tab_recruit)
-	var spacer := Control.new()
-	spacer.custom_minimum_size = Vector2(6, 0)
-	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	title_row.add_child(spacer)
-	var close_button := Button.new()
-	close_button.text = "×"
-	close_button.focus_mode = Control.FOCUS_NONE
-	close_button.tooltip_text = "Schliessen (G oder Esc)"
-	close_button.add_theme_font_size_override("font_size", 22)
-	close_button.custom_minimum_size = Vector2(40, 36)
-	close_button.pressed.connect(close)
-	title_row.add_child(close_button)
-
-	var title_line := ColorRect.new()
-	title_line.color = Color(_accent, 0.55)
-	title_line.custom_minimum_size = Vector2(0, 1)
-	title_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(title_line)
+	UiStyle.header_add(title_row, _tab_recruit)
 
 	# Seiten (gleich hoch: das Fenster springt beim Reiterwechsel nicht)
 	var pages := MarginContainer.new()
@@ -482,18 +448,7 @@ func _build_recruit_page() -> void:
 
 
 func _make_tab(text: String, group: ButtonGroup) -> ResearchTipButton:
-	var b := ResearchTipButton.new()
-	b.text = text
-	b.toggle_mode = true
-	b.button_group = group
-	b.add_theme_font_size_override("font_size", 17)
-	b.custom_minimum_size = Vector2(150, 36)
-	var pressed := _flat(_evil_or(ResearchPanel.EVIL_MID, Color(0.62, 0.47, 0.2)), _light, 1, 4)
-	pressed.content_margin_left = 14
-	pressed.content_margin_right = 14
-	b.add_theme_stylebox_override("pressed", pressed)
-	b.add_theme_stylebox_override("hover_pressed", pressed)
-	return b
+	return UiStyle.tab_button(text, group, _evil)
 
 
 func _show_tab(tab: String) -> void:
@@ -1158,17 +1113,7 @@ func debug_action(action: String) -> void:
 # ---------------------------------------------------------------------------
 
 func _panel_style() -> StyleBoxFlat:
-	var bg := Color(0.07, 0.045, 0.1, 0.97) if _evil else Color(0.1, 0.085, 0.065, 0.97)
-	var st := _flat(bg, _accent, 2, 8)
-	st.content_margin_left = MARGIN_X
-	st.content_margin_right = MARGIN_X
-	st.content_margin_top = MARGIN_Y
-	st.content_margin_bottom = MARGIN_Y
-	st.shadow_color = Color(0, 0, 0, 0.55)
-	st.shadow_size = 14
-	if _evil:
-		st.border_blend = true
-	return st
+	return UiStyle.window_style(_evil)
 
 
 func _info_style(border: Color) -> StyleBoxFlat:

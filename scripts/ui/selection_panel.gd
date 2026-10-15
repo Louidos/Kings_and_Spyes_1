@@ -6,8 +6,10 @@
 ##   Beruf (wenn sie arbeiten kann) und Befehle (Halt, Zur Arbeit,
 ##   Angriff-Vorrücken); beim König zusätzlich, dass er im Reich bleibt.
 ## - mehrere eigene Einheiten: Anzahl je Typ, gesamtes Leben, Befehle, Formation.
+## - eigene Krieger (eine oder mehrere): Zeile "Haltung" aggressiv / verteidigend / passiv.
 ## - ein eigenes Gebäude: Bauzustand, Wohnraum, Annahme, Produktion, Leben,
-##   Arbeiter (−/+), Beschwören mit Warteschlange und Sammelpunkt, Abreissen.
+##   Arbeiter (−/+), Beschwören (ab drei Typen in zwei Spalten, Bild im gewählten
+##   Aussehen) mit Warteschlange und Sammelpunkt, Abreissen.
 ## - Fremdes (Monsterhöhle, Monster, Gegner): nur Anzeige – Reich, Leben,
 ##   Kampfwerte bzw. was im Lager wartet. Feindliche Königreiche (Phase 7) je nach
 ##   Kundschaft: ohne Bericht "?" statt Werten, Wirkungen erst bei genauer
@@ -49,8 +51,8 @@ const QUEUE_SLOTS := 5
 const QUEUE_SLOT_SIZE := 40.0
 ## Unter dieser Reichweite (Kacheln) heisst es "Nahkampf"
 const MELEE_RANGE := 1.5
-## Feste Zeilenumbrüche: sonst bricht die Zeile mitten in "F: Formation"
-const MULTI_HINT := "Rechtsklick: bewegen/angreifen\nStrg+Rechtsklick: angreifend vorrücken\nStrg+1–9: Armee speichern · F: Formation"
+## Kurzer Hinweis bei Mehrfachauswahl (alle Tasten in der Hilfe F1)
+const MULTI_HINT := "Strg+Rechtsklick: vorrücken · Strg+1–9: Armee"
 const KING_NOTE := "Der König verlässt sein Reich nicht."
 const NO_JOB_TIP := "Kein Beruf – wähle oben einen Beruf"
 const ATTACK_MOVE_TIP := "Nächster Rechtsklick: angreifend vorrücken (auch Strg+Rechtsklick)"
@@ -92,7 +94,7 @@ var _summon_box: VBoxContainer
 var _summon_header: Label
 ## Sammelpunkt-Zeile (bei der Heldenhalle aus: Helden erscheinen an der Halle)
 var _rally_row: HBoxContainer
-var _summon_list: VBoxContainer
+var _summon_list: GridContainer
 ## Je Einheitentyp: {"id", "def", "button", "row", "costs": {res_id: [Label, Menge]}}
 var _summon_entries: Array = []
 ## Gebäude, für das die Beschwörungs-Buttons gebaut wurden
@@ -119,6 +121,10 @@ var _halt_button: Button
 var _work_button: Button
 var _attack_move_button: Button
 var _formation_button: Button
+## Haltung eigener Krieger (aggressiv / verteidigend / passiv, wie im Armeefenster)
+var _stance_row: HBoxContainer
+## Haltung -> Button
+var _stance_buttons: Dictionary = {}
 
 ## Helden-Abschnitt (Stufe, Fähigkeiten; Burg: Wiederbeleben; Halle: Ausbildung)
 var _hero_box: HeroSelectionBox
@@ -274,6 +280,7 @@ func _ready() -> void:
 	_gate_button.pressed.connect(_on_gate_pressed)
 	_gate_row.add_child(_gate_button)
 
+	_build_stance_row(vbox)
 	_build_actions(vbox)
 
 	_research_button = Button.new()
@@ -426,6 +433,8 @@ func _refresh() -> void:
 		visible = false
 		_hero_box.hide_box()
 		_troop_box.hide_box()
+	if _mode != "unit" and _mode != "units":
+		_stance_row.visible = false
 	if _mode != "unit" and _mode != "building":
 		_show_village_row(null)
 	if _mode != "unit" and _spy_row.visible:
@@ -674,8 +683,11 @@ func _build_summon_box(parent: Control) -> void:
 	parent.add_child(_summon_box)
 	_summon_header = _make_label(_summon_box, 15, COLOR_TITLE)
 	_summon_header.text = "Beschwören"
-	_summon_list = VBoxContainer.new()
-	_summon_list.add_theme_constant_override("separation", 4)
+	# Raster: ab drei Einheitentypen zwei Spalten (Kaserne mit sechs, sieben Knöpfen)
+	_summon_list = GridContainer.new()
+	_summon_list.columns = 1
+	_summon_list.add_theme_constant_override("h_separation", 4)
+	_summon_list.add_theme_constant_override("v_separation", 4)
 	_summon_box.add_child(_summon_list)
 
 	# Warteschlange: immer fünf Plätze, damit die Höhe gleich bleibt
@@ -733,7 +745,8 @@ func _ensure_summon_buttons(b: Building) -> void:
 	var options: Array = game.summon_system.get_options(b)
 	var ids := PackedStringArray()
 	for o in options:
-		ids.append(str((o as Dictionary).get("id", "")))
+		# Mit dem Aussehen des Typs: ein neuer Skin baut die Bilder neu
+		ids.append("%s:%s" % [str((o as Dictionary).get("id", "")), TroopRules.type_skin(b.kingdom, o as Dictionary)])
 	if is_instance_valid(_summon_building) and _summon_building == b and ids == _summon_ids:
 		return
 	_summon_building = b
@@ -743,36 +756,60 @@ func _ensure_summon_buttons(b: Building) -> void:
 		_summon_list.remove_child(child)
 		child.queue_free()
 	_summon_entries.clear()
+	_summon_list.columns = 2 if options.size() > 2 else 1
 	for o in options:
 		_summon_entries.append(_make_summon_button(o as Dictionary, b.kingdom))
 
 
-## Ein Button je Einheitentyp: Bild, Name, Kosten (Symbol + Zahl), Dauer
+## Ein Button je Einheitentyp: Bild (im gewählten Aussehen) links, rechts oben der Name
+## (in einer Spalte mit Dauer), darunter die Kosten (Symbol + Zahl). Zwei Zeilen, damit
+## zwei Spalten passen.
 func _make_summon_button(def: Dictionary, k: Kingdom) -> Dictionary:
 	var id := str(def.get("id", ""))
 	var button := Button.new()
 	button.focus_mode = Control.FOCUS_NONE
-	button.custom_minimum_size = Vector2(0, 38)
+	button.custom_minimum_size = Vector2(0, 50)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(_on_summon_pressed.bind(id))
 	_summon_list.add_child(button)
 	var row := HBoxContainer.new()
 	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	row.offset_left = 6.0
-	row.offset_right = -10.0
-	row.add_theme_constant_override("separation", 8)
+	row.offset_left = 5.0
+	row.offset_right = -6.0
+	row.add_theme_constant_override("separation", 6)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	button.add_child(row)
 	var icon := UnitIcon.new()
-	icon.custom_minimum_size = Vector2(28, 28)
+	icon.custom_minimum_size = Vector2(30, 30)
 	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	icon.setup(def, k)
 	row.add_child(icon)
-	var name_label := _make_label(row, FONT_SIZE, COLOR_TEXT)
+	var lines := VBoxContainer.new()
+	lines.add_theme_constant_override("separation", 0)
+	lines.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lines.alignment = BoxContainer.ALIGNMENT_CENTER
+	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(lines)
+	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 4)
+	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lines.add_child(top)
+	var name_label := _make_label(top, SMALL_FONT_SIZE, COLOR_TEXT)
 	name_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_label.clip_text = true
 	name_label.text = str(def.get("name", id))
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# Dauer nur in einer Spalte (zwei Spalten: im Tooltip, der Name braucht den Platz)
+	var time_label := _make_label(top, 13, COLOR_DIM)
+	time_label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	time_label.text = "%d s" % ceili(_summon_seconds(def, k))
+	time_label.visible = _summon_list.columns == 1
+	var cost_row := HBoxContainer.new()
+	cost_row.add_theme_constant_override("separation", 5)
+	cost_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lines.add_child(cost_row)
 	var costs := {}
 	# Helden: wirkliche Kosten (jeder weitere Held kostet mehr)
 	var cost: Dictionary = game.summon_system.get_cost(k, id)
@@ -782,23 +819,17 @@ func _make_summon_button(def: Dictionary, k: Kingdom) -> Dictionary:
 		if amount <= 0.0:
 			continue
 		var pair := HBoxContainer.new()
-		pair.add_theme_constant_override("separation", 2)
+		pair.add_theme_constant_override("separation", 1)
 		pair.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		row.add_child(pair)
+		cost_row.add_child(pair)
 		var res_icon := ResourceIcon.new()
-		res_icon.setup(res_id, 16.0)
+		res_icon.setup(res_id, 14.0)
 		pair.add_child(res_icon)
-		var amount_label := _make_label(pair, SMALL_FONT_SIZE, COLOR_TEXT)
+		var amount_label := _make_label(pair, 13, COLOR_TEXT)
 		amount_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 		amount_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		amount_label.text = str(ceili(amount))
 		costs[res_id] = [amount_label, amount]
-	var time_label := _make_label(row, SMALL_FONT_SIZE, COLOR_DIM)
-	time_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-	time_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	time_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	time_label.custom_minimum_size = Vector2(34, 0)
-	time_label.text = "%d s" % ceili(_summon_seconds(def, k))
 	return {"id": id, "def": def, "button": button, "row": row, "costs": costs, "time": time_label}
 
 
@@ -1013,6 +1044,7 @@ func _show_unit(u: Unit) -> void:
 		_update_job_options(u)
 
 	_actions.visible = own and not caravan
+	_show_stance([u] if own and not caravan else [])
 	if not own or caravan:
 		_job_row.visible = false
 		return
@@ -1086,6 +1118,7 @@ func _show_units(units: Array) -> void:
 	_demolish_button.visible = false
 
 	_actions.visible = true
+	_show_stance(units)
 	_halt_button.visible = true
 	_halt_button.tooltip_text = "Alle bleiben stehen und verteidigen ihren Platz"
 	# Immer sichtbar (2×2-Raster bleibt gleich), ohne Beruf gesperrt
@@ -1329,6 +1362,53 @@ func _build_actions(parent: Control) -> void:
 	_formation_button = _make_action_button("Formation: Block")
 	_formation_button.tooltip_text = "Formation für die nächsten Marschbefehle wechseln (F)"
 	_formation_button.pressed.connect(_on_formation_pressed)
+
+
+## Zeile "Haltung" mit drei Umschaltern (CommandSystem.set_stance)
+func _build_stance_row(parent: Control) -> void:
+	_stance_row = HBoxContainer.new()
+	_stance_row.add_theme_constant_override("separation", 4)
+	_stance_row.visible = false
+	parent.add_child(_stance_row)
+	var label := Label.new()
+	label.text = "Haltung"
+	label.add_theme_font_size_override("font_size", SMALL_FONT_SIZE)
+	label.add_theme_color_override("font_color", COLOR_DIM)
+	label.custom_minimum_size = Vector2(62, 0)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stance_row.add_child(label)
+	for stance in CommandSystem.STANCES:
+		var b := _make_compact_button(CommandSystem.get_stance_name(stance), SMALL_FONT_SIZE)
+		b.toggle_mode = true
+		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		b.tooltip_text = "Haltung %s: %s" % [CommandSystem.get_stance_name(stance), str(CommandSystem.STANCE_TIPS.get(stance, ""))]
+		b.pressed.connect(_on_stance_pressed.bind(str(stance)))
+		_stance_row.add_child(b)
+		_stance_buttons[stance] = b
+
+
+## Haltung der eigenen Krieger zeigen (gedrückt = alle gleich); ohne Krieger ausblenden
+func _show_stance(units: Array) -> void:
+	var stances := {}
+	for o in units:
+		var u: Unit = o
+		if is_instance_valid(u) and u.is_alive() and u.kingdom == game.player and CommandSystem.is_warrior(u):
+			stances[u.stance] = true
+	_stance_row.visible = not stances.is_empty()
+	for stance in _stance_buttons:
+		var b: Button = _stance_buttons[stance]
+		var on := stances.size() == 1 and stances.has(stance)
+		if b.button_pressed != on:
+			b.set_pressed_no_signal(on)
+
+
+func _on_stance_pressed(stance: String) -> void:
+	var units: Array = []
+	for u in _command_units():
+		if CommandSystem.is_warrior(u):
+			units.append(u)
+	game.command_system.set_stance(units, stance)
+	_refresh()
 
 
 func _make_action_button(text: String) -> Button:
@@ -1588,7 +1668,8 @@ func _count_text(counts: Dictionary) -> String:
 		return ca > cb if ca != cb else str(a) < str(b))
 	var parts: PackedStringArray = []
 	for n in names:
-		parts.append("%d× %s" % [int(counts[n]), str(n)])
+		# Geschütztes Leerzeichen: "3×" bricht nicht vom Namen weg
+		parts.append("%d×\u00a0%s" % [int(counts[n]), str(n)])
 	return ", ".join(parts)
 
 

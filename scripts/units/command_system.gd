@@ -33,6 +33,10 @@ const FORMATION_NAMES := {"block": "Block", "line": "Linie", "wedge": "Keil", "c
 const STANCES := ["aggressive", "defensive", "passive"]
 const STANCE_NAMES := {"aggressive": "Aggressiv", "defensive": "Verteidigend", "passive": "Passiv"}
 const DEFAULT_STANCE := "defensive"
+## Erklärung je Haltung (Tooltips im Armee- und im Auswahlfenster)
+const STANCE_TIPS := {"aggressive": "Sucht Feinde und verfolgt sie weit – auch vom Posten weg",
+		"defensive": "Greift Feinde in Sichtweite an und kehrt nach kurzer Verfolgung auf den Posten zurück (Standard)",
+		"passive": "Greift nie von selbst an und wehrt sich nicht – nur ausdrückliche Angriffsbefehle"}
 ## Aggressive Einheiten geben ein Ziel erst bei so viel mehr Abstand auf (Faktor auf die
 ## Standardgrenze im CombatSystem)
 const AGGRESSIVE_CHASE_FACTOR := 1.5

@@ -35,28 +35,26 @@ func _ready() -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(center)
 	var panel := PanelContainer.new()
-	panel.custom_minimum_size = Vector2(760, 620)
+	panel.custom_minimum_size = Vector2(860, 620)
+	var evil := UiStyle.is_evil()
+	panel.add_theme_stylebox_override("panel", UiStyle.window_style(evil))
 	center.add_child(panel)
 	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 7)
 	panel.add_child(box)
-	box.add_child(UiStyle.make_title_bar("Meldungsprotokoll", close))
-	var filters := HBoxContainer.new()
+	# Titelzeile wie alle Fenster: Titel, Anzahl, Filter als Reiter, Schliessen
+	var header := UiStyle.window_header(box, "Protokoll", evil, "Schliessen (M oder Esc)", close)
+	_count_label = Label.new()
+	_count_label.add_theme_font_size_override("font_size", 16)
+	_count_label.add_theme_color_override("font_color", UiStyle.COLOR_DIM)
+	UiStyle.header_add(header, _count_label, true)
 	var group := ButtonGroup.new()
 	for f in FILTERS:
-		var b := Button.new()
-		b.text = str(f[1])
-		b.toggle_mode = true
-		b.button_group = group
+		var b := UiStyle.tab_button(str(f[1]), group, evil, 84.0)
 		b.button_pressed = str(f[0]) == _filter
-		b.focus_mode = Control.FOCUS_NONE
 		b.tooltip_text = "Nur Meldungen dieser Art zeigen" if not str(f[0]).is_empty() else "Alle Meldungen zeigen"
 		b.pressed.connect(set_filter.bind(str(f[0])))
-		filters.add_child(b)
-	_count_label = Label.new()
-	_count_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	filters.add_child(_count_label)
-	box.add_child(filters)
+		UiStyle.header_add(header, b)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

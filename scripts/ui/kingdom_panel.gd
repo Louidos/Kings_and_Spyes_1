@@ -179,16 +179,7 @@ func _build() -> void:
 	root.add_theme_constant_override("separation", 7)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
-	var title_row := HBoxContainer.new()
-	title_row.add_theme_constant_override("separation", 8)
-	title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(title_row)
-	var title := _label(25, ResearchPanel.EVIL_LIGHT if _evil else ResearchPanel.GOOD_ACCENT)
-	title.text = "Reich"
-	title.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.75))
-	title.add_theme_constant_override("outline_size", 4)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_row.add_child(title)
+	var title_row := UiStyle.window_header(root, "Reich", _evil, "Schliessen (L oder Esc)", close)
 	var group := ButtonGroup.new()
 	var pages := MarginContainer.new()
 	pages.custom_minimum_size = Vector2(0, PAGE_HEIGHT)
@@ -200,7 +191,7 @@ func _build() -> void:
 		var b := _make_tab(str(entry[1]), group)
 		b.tooltip_text = str(entry[2])
 		b.pressed.connect(show_tab.bind(str(entry[0])))
-		title_row.add_child(b)
+		UiStyle.header_add(title_row, b)
 		var scroll := ScrollContainer.new()
 		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 		pages.add_child(scroll)
@@ -218,19 +209,6 @@ func _build() -> void:
 				_build_people(page)
 			TAB_TRADE:
 				_build_trade(page)
-	var close_button := Button.new()
-	close_button.text = "×"
-	close_button.focus_mode = Control.FOCUS_NONE
-	close_button.tooltip_text = "Schliessen (L oder Esc)"
-	close_button.add_theme_font_size_override("font_size", 22)
-	close_button.custom_minimum_size = Vector2(40, 36)
-	close_button.pressed.connect(close)
-	title_row.add_child(close_button)
-	var line := ColorRect.new()
-	line.color = Color(_accent, 0.55)
-	line.custom_minimum_size = Vector2(0, 1)
-	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(line)
 	root.add_child(pages)
 	_footer = _label(15, COLOR_DIM)
 	_footer.text = "Zufriedenheit: Nahrung, Wohnraum, Sicherheit, Taverne und Tempel, Feste  ·  L / Esc: schliessen"
@@ -743,38 +721,11 @@ func _place() -> void:
 
 
 func _panel_style() -> StyleBoxFlat:
-	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.07, 0.045, 0.1, 0.97) if _evil else Color(0.1, 0.085, 0.065, 0.97)
-	st.border_color = _accent
-	st.set_border_width_all(2)
-	st.set_corner_radius_all(8)
-	st.anti_aliasing = true
-	st.content_margin_left = 16
-	st.content_margin_right = 16
-	st.content_margin_top = 12
-	st.content_margin_bottom = 12
-	st.shadow_color = Color(0, 0, 0, 0.55)
-	st.shadow_size = 14
-	return st
+	return UiStyle.window_style(_evil)
 
 
 func _make_tab(text: String, group: ButtonGroup) -> ResearchTipButton:
-	var b := ResearchTipButton.new()
-	b.text = text
-	b.toggle_mode = true
-	b.button_group = group
-	b.add_theme_font_size_override("font_size", 17)
-	b.custom_minimum_size = Vector2(150, 36)
-	var pressed := StyleBoxFlat.new()
-	pressed.bg_color = ResearchPanel.EVIL_MID if _evil else Color(0.62, 0.47, 0.2)
-	pressed.border_color = ResearchPanel.EVIL_LIGHT if _evil else ResearchPanel.GOOD_LIGHT
-	pressed.set_border_width_all(1)
-	pressed.set_corner_radius_all(4)
-	pressed.content_margin_left = 14
-	pressed.content_margin_right = 14
-	b.add_theme_stylebox_override("pressed", pressed)
-	b.add_theme_stylebox_override("hover_pressed", pressed)
-	return b
+	return UiStyle.tab_button(text, group, _evil)
 
 
 func _section(text: String) -> Label:

@@ -53,6 +53,8 @@ class BuildButton:
 		draw_rect(Rect2(c + Vector2(-1.0, 2.0), Vector2(2.0, 3.0)), Color(0.15, 0.13, 0.12))
 
 var game: Node
+## Höchstbreite (0 = beliebig), siehe set_max_width
+var _max_width := 0.0
 
 var _grid: GridContainer
 ## Gebäude-ID (oder DEMOLISH_ID) -> Button
@@ -141,9 +143,22 @@ func select_tab(menu: String) -> void:
 		(_buttons[id] as Button).visible = shown
 		if shown:
 			n += 1
-	# Möglichst zwei gleich lange Zeilen
-	_grid.columns = clampi(ceili(n / 2.0), 1, MAX_COLUMNS)
+	# Möglichst zwei gleich lange Zeilen – aber nie breiter als der Platz zwischen
+	# linker Spalte und Minikarte (dann eine Zeile mehr)
+	var cols := clampi(ceili(n / 2.0), 1, MAX_COLUMNS)
+	if _max_width > 0.0:
+		var sep := float(_grid.get_theme_constant("h_separation"))
+		var fit := floori((_max_width - 40.0 + sep) / (BUTTON_MIN_WIDTH + 12.0 + sep))
+		cols = clampi(mini(cols, fit), 2, MAX_COLUMNS)
+	_grid.columns = cols
 	reset_size()
+
+
+## Höchstbreite (vom HUD: Platz zwischen linker Spalte und Minikarte)
+func set_max_width(w: float) -> void:
+	if not is_equal_approx(w, _max_width):
+		_max_width = w
+		select_tab(_tab)
 
 
 ## Aktiver Reiter

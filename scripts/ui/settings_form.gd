@@ -30,7 +30,8 @@ func _ready() -> void:
 	add_theme_constant_override("separation", 6)
 	var title := Label.new()
 	title.text = "Einstellungen"
-	title.add_theme_font_size_override("font_size", UiStyle.TITLE_FONT_SIZE)
+	title.add_theme_font_size_override("font_size", UiStyle.WINDOW_TITLE_SIZE)
+	title.add_theme_color_override("font_color", UiStyle.title_color(UiStyle.is_evil()))
 	add_child(title)
 	_group("Ton")
 	for bus in Settings.BUSES:

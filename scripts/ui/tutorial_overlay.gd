@@ -341,8 +341,8 @@ func get_target_controls() -> Array:
 					if tab is Control:
 						list.append(tab)
 		"top":
-			var names := {"research": "_research_button", "heroes": "_hero_button", "diplomacy": "_diplomacy_button",
-					"espionage": "_espionage_button", "kingdom": "_kingdom_button"}
+			var names := {"research": "_research_button", "heroes": "_hero_button", "army": "_troop_button",
+					"diplomacy": "_diplomacy_button", "espionage": "_espionage_button", "kingdom": "_kingdom_button"}
 			list.append(hud.get(str(names.get(arg, ""))) if names.has(arg) else null)
 		"job":
 			var panel: Variant = hud.get("job_panel")
@@ -361,6 +361,19 @@ func get_target_controls() -> Array:
 				list.append(st.get("bar"))
 		"selection":
 			list.append(hud.get("selection_panel"))
+		"stance":
+			# Haltung: Zeile im Auswahlfenster, bei offenem Armeefenster auch dessen Knöpfe
+			var sel: Variant = hud.get("selection_panel")
+			if sel is Object:
+				list.append(sel.get("_stance_row"))
+			var army: Variant = hud.get("troop_panel")
+			if army is Object and army.call("is_open"):
+				for b in (army.get("_stance_buttons") as Dictionary).values():
+					list.append(b)
+		"army_select_all":
+			var army_panel: Variant = hud.get("troop_panel")
+			if army_panel is Object and army_panel.call("is_open"):
+				list.append((army_panel.get("buttons") as Dictionary).get("all"))
 		"jobs":
 			list.append(hud.get("job_panel"))
 		"log":

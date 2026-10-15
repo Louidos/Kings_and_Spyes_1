@@ -401,19 +401,10 @@ func _build() -> void:
 	root.add_theme_constant_override("separation", 7)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
-	var title_row := HBoxContainer.new()
-	title_row.add_theme_constant_override("separation", 12)
-	title_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(title_row)
-	var title := _label(25, ResearchPanel.EVIL_LIGHT if _evil else ResearchPanel.GOOD_ACCENT)
-	title.text = "Armee"
-	title.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.75))
-	title.add_theme_constant_override("outline_size", 4)
-	title_row.add_child(title)
+	var title_row := UiStyle.window_header(root, "Armee", _evil, "Schliessen (T oder Esc)", close)
 	_summary = _label(17, COLOR_TEXT)
-	_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_summary.clip_text = true
-	title_row.add_child(_summary)
+	UiStyle.header_add(title_row, _summary, true)
 	_civ_check = CheckBox.new()
 	_civ_check.text = "Bewohner und König zeigen"
 	_civ_check.focus_mode = Control.FOCUS_NONE
@@ -422,20 +413,7 @@ func _build() -> void:
 	_civ_check.toggled.connect(func(on: bool) -> void:
 		_show_civilians = on
 		refresh())
-	title_row.add_child(_civ_check)
-	var close_button := Button.new()
-	close_button.text = "×"
-	close_button.focus_mode = Control.FOCUS_NONE
-	close_button.tooltip_text = "Schliessen (T oder Esc)"
-	close_button.add_theme_font_size_override("font_size", 22)
-	close_button.custom_minimum_size = Vector2(40, 36)
-	close_button.pressed.connect(close)
-	title_row.add_child(close_button)
-	var line := ColorRect.new()
-	line.color = Color(_accent, 0.55)
-	line.custom_minimum_size = Vector2(0, 1)
-	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(line)
+	UiStyle.header_add(title_row, _civ_check)
 
 	var body := HBoxContainer.new()
 	body.add_theme_constant_override("separation", 16)
@@ -541,11 +519,8 @@ func _build_side() -> Control:
 
 	side.add_child(_section("Haltung"))
 	var srow := _hbox(side)
-	var tips := {"aggressive": "Sucht Feinde und verfolgt sie weit – auch vom Posten weg",
-			"defensive": "Greift Feinde in Sichtweite an und kehrt nach kurzer Verfolgung auf den Posten zurück (Standard)",
-			"passive": "Greift nie von selbst an und wehrt sich nicht – nur ausdrückliche Angriffsbefehle"}
 	for s in CommandSystem.STANCES:
-		var b := _button(CommandSystem.get_stance_name(s), str(tips[s]))
+		var b := _button(CommandSystem.get_stance_name(s), str(CommandSystem.STANCE_TIPS[s]))
 		b.toggle_mode = true
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(set_stance.bind(str(s)))
@@ -860,19 +835,7 @@ func _place() -> void:
 
 
 func _panel_style() -> StyleBoxFlat:
-	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.07, 0.045, 0.1, 0.97) if _evil else Color(0.1, 0.085, 0.065, 0.97)
-	st.border_color = _accent
-	st.set_border_width_all(2)
-	st.set_corner_radius_all(8)
-	st.anti_aliasing = true
-	st.content_margin_left = 16
-	st.content_margin_right = 16
-	st.content_margin_top = 12
-	st.content_margin_bottom = 12
-	st.shadow_color = Color(0, 0, 0, 0.55)
-	st.shadow_size = 14
-	return st
+	return UiStyle.window_style(_evil)
 
 
 func _section(text: String) -> Label:

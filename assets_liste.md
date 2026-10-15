@@ -442,8 +442,9 @@ zeichnet das Spiel einen Kreis in Reichsfarbe mit Buchstaben.
 | `stable_good.png` | `stable_evil.png` | Reitstall / Wolfszwinger (3 × 2 Felder, 192 × 128) | Holzstall mit Koppel / Pfahlzwinger mit Knochen |
 | `mage_tower_good.png` | `mage_tower_evil.png` | Magierturm / Hexenturm | schlanker blauer Turm mit Sternenkuppel / schiefer Turm mit violettem Feuer |
 
-**Aussehen (Skins)** – rein kosmetisch, im Auswahlfenster wählbar (für alle Einheiten eines Typs oder eine einzelne
-Einheit). Datei: `assets/sprites/units/<einheit>_<skin>.png` (64 × 64). Fehlt sie, nimmt das Spiel die Grafik des
+**Aussehen (Skins)** – rein kosmetisch, im Auswahlfenster wählbar (Knopf „Aussehen“: für alle Einheiten eines Typs
+oder eine einzelne Einheit). Die Bilder der Beschwören-Knöpfe, der Warteschlange und des Armeefensters zeigen dieselbe
+Grafik im gewählten Aussehen. Datei: `assets/sprites/units/<einheit>_<skin>.png` (64 × 64). Fehlt sie, nimmt das Spiel die Grafik des
 Typs leicht getönt, sonst einen Platzhalter in den Skin-Farben (Rand in Saumfarbe) – dazu immer ein kleines
 gezeichnetes Abzeichen oben links.
 
@@ -467,6 +468,11 @@ Beispiele: `units/fighter_good_royal.png` (Schwertkämpfer der Königsgarde), `u
 `dwarf_ironguard`) tragen im Reich des Spielers die Skins seiner Fraktion: `dwarf_ironguard_royal.png` usw.
 
 Rangabzeichen (Winkel und Stern über den Einheiten) und die Abzeichen der Skins zeichnet das Spiel selbst.
+
+## ✅ Oberfläche (Fenster, obere Leiste, Auswahlfenster)
+
+Keine neuen Grafiken: Rahmen, Titelzeilen, Reiter, Wappen (Sonne GUT / Mondsichel BÖSE) und die Gruppen der oberen
+Leiste zeichnet das Spiel selbst (`UiStyle`); Farben und Schrift kommen aus `assets/ui/theme.tres`.
 
 ## Übersicht der Ordner
 

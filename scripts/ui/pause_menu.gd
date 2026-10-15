@@ -69,6 +69,15 @@ func _ready() -> void:
 		_confirm.hide()
 		_leave(true))
 	add_child(_confirm)
+	# Gleicher Fensterstil wie Forschung, Helden, Armee usw.; die Unterseiten ohne eigenen Rahmen
+	var evil := UiStyle.is_evil()
+	_panel.add_theme_stylebox_override("panel", UiStyle.window_style(evil))
+	for sub in [_save_panel, _load_panel]:
+		(sub as Control).add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	var title: Label = _main_box.get_node("Title")
+	title.add_theme_color_override("font_color", UiStyle.title_color(evil))
+	title.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.75))
+	title.add_theme_constant_override("outline_size", 4)
 	UiStyle.register_scaled_layer(self, $Root as Control)
 	_show_page("main")
 

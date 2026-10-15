@@ -28,7 +28,7 @@ extends CanvasLayer
 const INFO_REFRESH_INTERVAL := 0.25
 ## Zeilen, die der Infobereich immer reserviert (damit das Auswahlfenster
 ## darüber nicht springt, wenn die Maus über die Karte fährt)
-const INFO_LINES := 7
+const INFO_LINES := 6
 ## Einheit unter der Maus: Suchradius in Bildschirmpixeln (wie beim Anklicken)
 const HOVER_PICK_RADIUS := 20.0
 ## Ebene des Forschungsfensters: über dem HUD und der Zauberleiste (beide 10),
@@ -54,6 +54,8 @@ const TOP_BUTTON_MARGIN := 5.0
 const TOP_BAR_SEPARATION := 4
 ## Höhe der oberen Leiste (wie in hud.tscn)
 const TOP_BAR_HEIGHT := 48.0
+## Steuerungshinweis über dem Baumenü (blendet nach 25 s aus; alles Weitere in der Hilfe)
+const HINT_TEXT := "Linksklick: auswählen  ·  Rechtsklick: bewegen / angreifen  ·  Leertaste: Pause  ·  Esc: Menü  ·  F1: Hilfe"
 
 @onready var kingdom_label: Label = %KingdomLabel
 @onready var top_bar: PanelContainer = $Root/TopBar
@@ -109,6 +111,9 @@ var day_clock: DayClock
 var troop_panel: TroopPanel
 var _troop_layer: CanvasLayer
 var _troop_button: ResearchTipButton
+## Gruppen der oberen Leiste: Fenster-Knöpfe und Tageszeit/Datum/Tempo
+var _window_box: HBoxContainer
+var _time_box: HBoxContainer
 ## Hilfe (F1) und Meldungsprotokoll (M), Knopf "Protokoll (M)" über den Meldungen
 var help_panel: HelpPanel
 var message_log: MessageLogPanel
@@ -137,6 +142,9 @@ func _ready() -> void:
 	kingdom_label.mouse_filter = Control.MOUSE_FILTER_STOP
 	kingdom_label.add_theme_color_override("font_color", faction.get("color", Color.WHITE))
 	info_label.text = "Bewege die Maus über die Karte."
+	# Kurzer Hinweis (alle Tasten stehen in der Hilfe F1)
+	hint_label.text = HINT_TEXT
+	hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info_label.custom_minimum_size.y = (info_label.get_line_height() + info_label.get_theme_constant("line_spacing")) * INFO_LINES
 	debug_label.visible = false
 	# Steuerungshinweis nach einer Weile ausblenden
@@ -177,7 +185,10 @@ func setup(p_game: Node) -> void:
 	_setup_espionage()
 	_setup_kingdom()
 	_setup_troops()
+	_group_top_bar()
 	_setup_phase10()
+	bottom_left.resized.connect(_layout_bottom, CONNECT_DEFERRED)
+	_layout_bottom()
 
 
 ## Forschungsfenster ein-/ausblenden (Taste R, Button oben)
@@ -357,6 +368,81 @@ func _on_settings_changed() -> void:
 	if is_inside_tree():
 		UiStyle.apply_ui_scale(get_tree())
 		_fit_top_bar()
+		_layout_bottom.call_deferred()
+
+
+## Obere Leiste in drei Gruppen: Reich und Ressourcen | Fenster-Knöpfe (Mitte) |
+## Tageszeit, Datum und Tempo. Jede Gruppe mit eigenem, dezentem Hintergrund.
+func _group_top_bar() -> void:
+	var hbox: HBoxContainer = top_bar.get_node("HBox")
+	resource_bar.size_flags_horizontal = Control.SIZE_FILL
+	var win_group := _top_group("WindowGroup")
+	_window_box = win_group.get_child(0)
+	hbox.add_child(win_group)
+	hbox.move_child(win_group, resource_bar.get_index() + 1)
+	for b in [_research_button, _hero_button, _troop_button, _diplomacy_button, _espionage_button, _kingdom_button]:
+		if b != null:
+			(b as Control).reparent(_window_box, false)
+	for i in 2:
+		var filler := Control.new()
+		filler.name = "Filler%d" % i
+		filler.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		filler.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hbox.add_child(filler)
+		hbox.move_child(filler, win_group.get_index() + i)
+	var time_group := _top_group("TimeGroup")
+	_time_box = time_group.get_child(0)
+	hbox.add_child(time_group)
+	for c in [day_clock, date_label, speed_bar]:
+		if c != null:
+			(c as Control).reparent(_time_box, false)
+
+
+func _top_group(group_name: String) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.name = group_name
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var st := UiStyle.flat(Color(0, 0, 0, 0.25), Color(0.78, 0.64, 0.36, 0.28), 1, 5)
+	st.content_margin_left = 4.0
+	st.content_margin_right = 4.0
+	st.content_margin_top = 2.0
+	st.content_margin_bottom = 2.0
+	panel.add_theme_stylebox_override("panel", st)
+	var box := HBoxContainer.new()
+	box.add_theme_constant_override("separation", TOP_BAR_SEPARATION)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(box)
+	return panel
+
+
+## Baumenü und Steuerungshinweis zwischen der linken Spalte (Auswahl, Info) und der
+## Minikarte: so überdecken sie nichts, auch nicht bei UI-Grösse 125 %/150 %
+func _layout_bottom() -> void:
+	if not is_inside_tree():
+		return
+	var root := $Root as Control
+	var bc := $Root/BottomCenter as Control
+	var mm := $Root/MinimapPanel as Control
+	var left := bottom_left.position.x + bottom_left.size.x + 12.0
+	var right := maxf(root.size.x - mm.position.x, 0.0) + 12.0
+	bc.anchor_left = 0.0
+	bc.anchor_right = 1.0
+	bc.offset_left = left
+	bc.offset_right = -right
+	build_menu.set_max_width(maxf(root.size.x - left - right, 200.0))
+
+
+## Linke Spalte und Meldungen: Arbeitsverteilung klappt ein, wenn sie sonst in das
+## Auswahlfenster ragt; Meldungen reichen nicht über die Zauberleiste hinunter
+func _update_docks() -> void:
+	if job_panel.visible:
+		var need := job_panel.position.y + job_panel.get_expanded_height() + 8.0
+		job_panel.set_auto_collapsed(selection_panel.visible and need > bottom_left.position.y)
+	var st: Variant = game.get("spell_targeting") if game != null else null
+	var bar: Variant = st.get("bar") if st is Object else null
+	if bar is Control and (bar as Control).is_visible_in_tree():
+		notification_panel.limit_bottom((bar as Control).get_global_transform_with_canvas().origin.y - 8.0)
 
 
 ## Obere Leiste in die verfügbare Breite einpassen (UI-Grösse 125 %/150 % lässt nur
@@ -495,6 +581,8 @@ func toggle_debug() -> void:
 
 func _process(delta: float) -> void:
 	date_label.text = _date_text()
+	if game != null:
+		_update_docks()
 	if _save_indicator != null and _save_indicator.visible:
 		_save_indicator_time -= delta
 		if _save_indicator_time <= 0.0:
@@ -1114,6 +1202,8 @@ func _troop_button_tip() -> String:
 		lines.append(tip.esc("%d Krieger – %s" % [units.size(), TroopPanel.states_text(counts)]))
 		if int(counts[TroopPanel.STATE_FIGHTING]) > 0:
 			lines.append(tip.colored("%d im Kampf" % int(counts[TroopPanel.STATE_FIGHTING]), COLOR_URGENT))
+	lines.append(tip.esc("Beschworen: %d  ·  Besiegte Feinde: %d  ·  Verluste: %d" % [int(k.stats.get("summoned", 0)),
+			int(k.stats.get("kills", 0)), int(k.stats.get("losses", 0))]))
 	lines.append("Übersicht, Armeen, Befehle an alle, Formation und Haltung")
 	lines.append("Strg+A: alle Krieger auswählen")
 	return "\n".join(lines)
@@ -1205,7 +1295,7 @@ func _update_info() -> void:
 	var b := world.get_biome(cell)
 	var defense := float(b.get("defense_bonus", 0.0))
 	var lines: PackedStringArray = []
-	lines.append("%s\nKachel %d, %d\nBewegung: %.1f×   Verteidigung: %+d %%\nBebaubar: %s   Höhe: %d %%" % [
+	lines.append("%s  (%d, %d)\nBewegung: %.1f×  ·  Verteidigung: %+d %%\nBebaubar: %s  ·  Höhe: %d %%" % [
 		b.get("name", "?"), cell.x, cell.y,
 		float(b.get("movement_cost", 1.0)), roundi(defense * 100.0),
 		"ja" if b.get("buildable", false) else "nein",

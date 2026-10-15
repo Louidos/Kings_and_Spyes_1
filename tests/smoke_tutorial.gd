@@ -100,7 +100,7 @@ func _start_checks() -> void:
 			and GameSession.seed_text == str(DataDB.tut("game.seed")), "Tutorial-Partie: %s, %s, Seed %s" % [
 			GameSession.difficulty_id, GameSession.map_size_id, GameSession.seed_text])
 	_check(ts.is_running() and ts.get_step_number() == 1, "Tutorial läuft ab Schritt 1 (%d Schritte)" % ts.get_step_count())
-	_check(ts.get_step_count() >= 20 and ts.get_step_count() <= 32, "Anzahl Schritte %d" % ts.get_step_count())
+	_check(ts.get_step_count() >= 20 and ts.get_step_count() <= 40, "Anzahl Schritte %d" % ts.get_step_count())
 	_check(TutorialSystem.protects(game, game.player), "Schutz aktiv")
 	_check(ts.overlay != null and ts.overlay.visible, "Tutorial-Fenster sichtbar")
 	_check(ts.overlay._progress_label.text == "Schritt 1/%d" % ts.get_step_count() and not ts.overlay._title.text.is_empty(),
@@ -298,6 +298,40 @@ func _act(ts: TutorialSystem, id: String) -> bool:
 			else:
 				ts.skip()
 				return false
+		"select_all":
+			# Knopf im Armeefenster (wie Strg+A)
+			var panel: TroopPanel = hud.troop_panel
+			(panel.buttons["all"] as Button).pressed.emit()
+		"stance":
+			game.selection.select_all_warriors()
+			var stance_row: HBoxContainer = hud.selection_panel.get("_stance_row")
+			_check(stance_row.visible, "Auswahlfenster zeigt die Haltung")
+			(hud.selection_panel.get("_stance_buttons")["aggressive"] as Button).pressed.emit()
+		"forge":
+			hud.close_top_panel()
+			var forge := _place("forge", true)
+			_check(forge != null, "Schmiede gesetzt")
+			if forge == null:
+				ts.skip()
+				return false
+			game.selection.select([forge])
+			hud.selection_panel._refresh()
+			var box: TroopSelectionBox = hud.selection_panel.get("_troop_box")
+			_check(box.get_mode() == "forge" and box.press_forge("forge_infantry_weapons"), "Schmiede-Stufe gekauft")
+		"stat_points":
+			var promoted: Unit = null
+			for u in k.units:
+				if is_instance_valid(u) and u.is_alive() and game.troop_system.get_free_points(u) > 0:
+					promoted = u
+					break
+			_check(promoted != null, "Ein Krieger ist aufgestiegen und hat einen Wertepunkt")
+			if promoted == null:
+				ts.skip()
+				return false
+			game.selection.select([promoted])
+			hud.selection_panel._refresh()
+			var tbox: TroopSelectionBox = hud.selection_panel.get("_troop_box")
+			_check(tbox.press_stat("hp"), "Wertepunkt auf Leben verteilt")
 		"save":
 			hud.close_top_panel()
 			_check(game.quick_save(false).is_empty(), "Schnellspeichern im Tutorial")

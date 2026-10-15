@@ -3,8 +3,8 @@
 ## Ressourcenleiste in der oberen Leiste: je Ressource Symbol und Menge
 ## (Tooltip: Ertrag pro Minute, bei Nahrung auch Verbrauch und Hungersnot,
 ## bei Mana Bestand/Maximum mit allen Anteilen), daneben die Kampfpunkte,
-## danach Bewohner/Wohnraum mit dem Wachstumszustand im Tooltip, die Truppen
-## (beschworene Einheiten) und das Leben des Königs. Ab Phase 8 nach den Bewohnern
+## danach Bewohner/Wohnraum mit dem Wachstumszustand im Tooltip und das Leben des
+## Königs (die Zahl der Truppen steht auf dem Knopf „Armee“). Ab Phase 8 nach den Bewohnern
 ## die Zufriedenheit (Gesicht mit Durchschnitt, Tooltip mit Ursachen; Klick öffnet
 ## die Reichsübersicht).
 ## Zeigt nur an – wird viermal pro Sekunde aktualisiert, nicht in jedem Bild.
@@ -86,7 +86,6 @@ var _kp_icon: SwordsIcon
 var _pop_label: Label
 var _mood_icon: MoodIcon
 var _mood_label: Label
-var _troops_label: Label
 var _king_label: Label
 var _timer := 0.0
 ## Spielzeit des letzten "Mana voll"-Hinweises (-INF = noch nie)
@@ -124,11 +123,6 @@ func setup(p_game: Node) -> void:
 	# Phase 8: engere Abstände, damit die obere Leiste mit der Zufriedenheit und allen
 	# Fenster-Knöpfen in 1920 passt
 	add_theme_constant_override("separation", 4)
-	var troops_entry := _make_entry()
-	troops_entry.source = _troops_tip
-	_troops_label = _make_label(0)
-	troops_entry.add_child(_troops_label)
-	_entries["_troops"] = troops_entry
 	var king_entry := _make_entry()
 	_king_label = _make_label(0)
 	king_entry.add_child(_king_label)
@@ -187,7 +181,6 @@ func _refresh() -> void:
 	_set_label(_kp_label, str(k.kill_points), COLOR_NORMAL)
 	_refresh_population(k)
 	_refresh_satisfaction(k)
-	_refresh_troops(k)
 	_refresh_king(k)
 
 
@@ -393,25 +386,6 @@ func _satisfaction_tip() -> String:
 		lines.append(tip.colored("%d läuft gerade über" % int(risk["defecting"]), COLOR_BAD))
 	lines.append(tip.colored("Klick: Reichsübersicht (L)", COLOR_DIM))
 	return "\n".join(lines)
-
-
-## Truppen = eigene Einheiten ausser Bewohnern und König
-func _refresh_troops(k: Kingdom) -> void:
-	var troops := 0
-	for u in k.units:
-		var role: String = u.role
-		if role != "worker" and role != "king":
-			troops += 1
-	_set_label(_troops_label, "Truppen %d" % troops, COLOR_NORMAL)
-
-
-func _troops_tip() -> String:
-	var k: Kingdom = game.player
-	if k == null:
-		return ""
-	return "Beschworene Einheiten: %d\nKampfpunkte: %d (gesamt %d)\nBesiegte Feinde: %d  ·  Verluste: %d" % [
-		int(k.stats.get("summoned", 0)), k.kill_points, k.kill_points_total,
-		int(k.stats.get("kills", 0)), int(k.stats.get("losses", 0))]
 
 
 ## "König 600/600", rot unter halbem Leben; ohne König ausgeblendet

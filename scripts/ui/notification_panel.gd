@@ -82,6 +82,17 @@ func _on_posted(text: String, kind: String, world_pos: Variant) -> void:
 		_remove(_entries.size() - 1)
 
 
+## Unterkante (Bildschirmpunkte) nicht überschreiten, z. B. über der Zauberleiste: die
+## älteste Meldung verschwindet (eine je Aufruf – die Grösse folgt erst im nächsten Bild).
+## Alle Meldungen bleiben im Protokoll (M).
+func limit_bottom(screen_y: float) -> void:
+	if _entries.size() <= 1:
+		return
+	var bottom := (get_global_transform_with_canvas() * Vector2(0.0, size.y)).y
+	if bottom > screen_y:
+		_remove(_entries.size() - 1)
+
+
 ## Ziel einer Meldung öffnen (auch aus dem Protokoll): Verweis -> Fenster (und Stelle),
 ## Vector2 -> Kamera springt hin
 static func open_target(p_game: Node, world_pos: Variant) -> void:

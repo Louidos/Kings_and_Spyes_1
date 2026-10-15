@@ -20,6 +20,7 @@
 ##   p10=off, p10_after=300, ui_scale=1.25 (Bildschirmfotos mit grösserer Oberfläche)
 ## Tutorial: tutorial=1 startet eine Tutorial-Partie und spielt alle Schritte durch (tests/smoke_tutorial.gd;
 ## ohne Helden- und Phasentests); ohne tutorial=1 prüft der Lauf nur, dass das Tutorial aus ist
+## Oberfläche fotografieren: ui_shots=1 shots=<ordner> win=1600x900 ui_scale=1.25 (tests/ui_shots.gd, unter xvfb-run)
 ## Balancing (Phase 10): balance=1 sample=600 (tests/balance_phase10.gd; setzt p7/p8=natural, passive=1, p10=off)
 extends Node
 
@@ -35,6 +36,8 @@ const SmokeArmy := preload("res://tests/smoke_army.gd")
 const SmokeTutorial := preload("res://tests/smoke_tutorial.gd")
 ## Truppen: Klassen, Konter, Schmiede, Ränge, Wertepunkte, Aussehen
 const SmokeTroops := preload("res://tests/smoke_troops.gd")
+## Bildschirmfotos der Oberfläche (ui_shots=1 shots=<ordner> win=1600x900)
+const UiShots := preload("res://tests/ui_shots.gd")
 
 var _args := {}
 var _game: Node = null
@@ -59,6 +62,8 @@ var _balance: RefCounted = null
 var _tutorial := false
 var _tut: RefCounted = null
 var _troops: RefCounted = null
+## Bildschirmfotos der Oberfläche (ui_shots=1)
+var _ui_shots: RefCounted = null
 
 
 func _ready() -> void:
@@ -134,6 +139,11 @@ func _process(_delta: float) -> void:
 				_hero_step = -1
 				_tut = SmokeTutorial.new(self, _game, _args)
 				return
+			if str(_args.get("ui_shots", "0")) == "1":
+				_hero_step = -1
+				Engine.time_scale = 1.0
+				_ui_shots = UiShots.new(self, _game, _args)
+				return
 			if _passive:
 				_hero_step = -1
 			else:
@@ -155,6 +165,11 @@ func _process(_delta: float) -> void:
 		elif Time.get_ticks_msec() - _started_ms > 120000:
 			push_error("[smoke] Weltgenerierung dauert zu lange")
 			get_tree().quit(2)
+	elif _phase == 1 and _ui_shots != null:
+		_ui_shots.tick()
+		if _ui_shots.get("finished") == true:
+			_phase = 4
+			get_tree().quit(0)
 	elif _phase == 1 and _tut != null:
 		_tut.tick()
 		if _tut.get("finished") == true or GameClock.game_time >= _sim_seconds * 4.0:

@@ -4,6 +4,24 @@
 Du bist ein König, wählst die Fraktion GUT oder BÖSE, baust dein Dorf aus,
 beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst die Gegenseite.
 
+## Inhalt
+
+1. [Voraussetzungen](#voraussetzungen)
+2. [Starten](#starten)
+3. [Steuerung](#steuerung)
+4. [Oberfläche](#oberfläche)
+5. [Tutorial](#tutorial)
+6. [Speichern und Laden](#speichern-und-laden)
+7. [Daten anpassen](#daten-anpassen)
+8. [Grafiken austauschen](#grafiken-austauschen)
+9. [Ordnerstruktur](#ordnerstruktur)
+10. [Aufbau (Architektur)](#aufbau-architektur)
+11. [Prüfungen](#prüfungen)
+12. [Von Hand testen](#von-hand-testen)
+13. [Balancing](#balancing)
+14. [Exportieren](#exportieren)
+15. [Entwicklungsstand](#entwicklungsstand)
+
 ## Voraussetzungen
 
 - Godot **4.4 oder neuer**, Standard-Version (nicht .NET). Getestet mit 4.4.1 und 4.7.
@@ -18,6 +36,11 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 
 ## Steuerung
 
+Alle Tasten stehen auch im Spiel in der Hilfe (**F1**) und in den Tooltips der Knöpfe. Ändern lassen sie sich im
+Editor unter *Projekt → Projekteinstellungen → Eingabe-Zuordnung*.
+
+### Kamera und Zeit
+
 | Aktion | Taste / Maus |
 |---|---|
 | Kamera verschieben | WASD, Pfeiltasten, Maus an den Bildschirmrand, mittlere Maustaste ziehen |
@@ -25,56 +48,262 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Zur Burg springen | H, Pos1 |
 | Minikarte | Linksklick oder Ziehen springt zur Stelle |
 | Pause an/aus | Leertaste, P |
-| Spieltempo | + / − (oder die Buttons oben rechts: Pause-Symbol ❚❚, 0.5x, 1x, 2x, 3x) |
-| Gebäude bauen | Baumenü unten anklicken → Vorschau (grün = möglich, rot = Grund wird angezeigt) → Linksklick |
+| Spieltempo | + / − oder die Knöpfe oben rechts (Pause-Symbol, 0.5x, 1x, 2x, 3x) |
+
+### Bauen und Wirtschaft
+
+| Aktion | Taste / Maus |
+|---|---|
+| Gebäude bauen | Baumenü unten (Reiter Dorf / Militär & Wissen / Verteidigung) → Vorschau (grün = möglich, rot = Grund) → Linksklick |
 | Mehrere gleiche Gebäude | Umschalttaste beim Klicken gedrückt halten |
-| Baumenü-Reiter | Dorf / Militär & Wissen / Verteidigung (über den Knöpfen des Baumenüs) |
 | Strassen | „Strasse“ im Baumenü → Maustaste gedrückt halten und ziehen (bleibt aktiv bis Rechtsklick/Esc) |
-| Mauer | Baumenü → Verteidigung → „Mauer“: wie Strassen ziehen (über eigenen Strassen entstehen Tore) |
-| Tor | Baumenü → Verteidigung → „Tor“ auf ein eigenes Mauerstück oder eine eigene Strasse setzen; Tor auswählen → „Verriegeln“ / „Öffnen“ |
-| Abreissen | X oder „Abreissen“ im Baumenü: Strassen und eigene Mauern anklicken/überziehen, Gebäude anklicken → Auswahlfenster |
+| Mauer / Tor | Baumenü → Verteidigung: „Mauer“ wie Strassen ziehen (über eigenen Strassen entstehen Tore); „Tor“ auf ein eigenes Mauerstück oder eine Strasse setzen, Tor auswählen → „Verriegeln“ / „Öffnen“ |
+| Abreissen | X oder „Abreissen“ im Baumenü: Strassen und Mauern anklicken/überziehen; Gebäude anklicken → „Abreissen“ im Auswahlfenster |
 | Bauen abbrechen | Rechtsklick oder Esc |
+| Arbeitsverteilung | J blendet sie ein/aus; „−“ in ihrer Titelzeile klappt sie ein (dann nur „Arbeit · 2 frei“) |
+
+### Auswahl und Befehle
+
+| Aktion | Taste / Maus |
+|---|---|
 | Auswählen | Linksklick auf Einheit oder Gebäude (Klick ins Leere / Esc hebt auf), Umschalttaste = hinzufügen |
 | Rahmenauswahl | Linke Maustaste gedrückt ziehen – wählt eigene Truppen (Bewohner nur, wenn keine Truppen im Rahmen sind) |
 | Alle gleichen Einheiten | Doppelklick auf eine Einheit (alle dieses Typs im Bild) |
-| Bewegen / Angreifen | Rechtsklick ins Gelände bzw. auf einen Feind (Monster, Höhle) |
-| Angreifend vorrücken | Strg + Rechtsklick (kämpft unterwegs) oder Button „Angriff-Vorrücken“, dann Klick ins Gelände (Esc bricht ab) |
-| Armee speichern / wählen | Strg + 1…9 speichern, Umschalt + 1…9 hinzufügen, 1…9 auswählen, zweimal drücken = Kamera hin |
-| Formation Block / Linie / Keil / Kreis | F (wechselt reihum) oder Button im Auswahlfenster bzw. im Armeefenster |
-| Armeefenster | T oder Button „Armee · 24“ oben (Strich = Leben aller Truppen, roter Punkt = Truppen im Kampf): alle Krieger nach Typ (Anzahl, Leben gesamt/Ø, untätig / im Kampf / unterwegs / bei der Arbeit), Helden, Armeen 1–9 (Anzahl, Stärke, Ort, Befehl); „Wählen“ / „Hin“ / „✕“ (Armee auflösen); rechts Auswahl (alle Krieger, Untätige, Verwundete, Auswahl → Armee 1–9) und Befehle an die Gruppe: Sammeln an der Burg, Rückzug zur Burg, Angreifend vorrücken / Bewegen / Patrouille (danach Ziel anklicken, Esc bricht ab), Halten, Formation, Haltung. T oder Esc schliesst |
 | Alle Krieger auswählen | Strg + A (alle eigenen Truppen und Helden, ohne Bewohner und König) |
-| Haltung | im Armeefenster: **aggressiv** (verfolgt weit, auch vom Posten weg), **verteidigend** (Standard: kehrt nach kurzer Verfolgung auf den Posten zurück), **passiv** (greift nie von selbst an und wehrt sich nicht – nur auf Angriffsbefehl) |
-| Sammelpunkt | Burg/Kaserne/Krankenstation auswählen → Rechtsklick in die Welt |
-| Einheiten beschwören | Burg (Späher), Kaserne (Kämpfer, Schützen; nach Forschung Speerträger, Armbrustschützen, schwere Fusstruppen, Elite), Reitstall (Reiter), Magierturm (Kampfmagier), Krankenstation (Heiler) auswählen → Buttons |
-| Wertepunkte verteilen | eine eigene Truppe auswählen → im Auswahlfenster „Angriff +“, „Leben +“, „Rüstung +“, „Tempo +“ (Punkte gibt jeder Aufstieg im Rang; Helden einen je Stufe) |
-| Punkte automatisch verteilen | mehrere Truppen auswählen → „Punkte automatisch verteilen“; Häkchen „automatisch“ = für das ganze Reich bei jedem Aufstieg |
-| Aussehen (Skins) | Truppe auswählen → „Aussehen: Alle: …“ (ganzer Typ) bzw. „Diese: …“ (nur diese Einheit; Heldenbanner ab Rang Elite) |
-| Schmiede | Schmiede (BÖSE: Blutschmiede) auswählen → je Truppenklasse „Waffen x/3“ und „Rüstung x/3“ anklicken (Kosten im Tooltip) |
-| Forschung | R oder Button „Forschung“ oben: Forschungsbaum und Reiter „Kampfpunkte“ (Esc oder R schliesst) |
-| Zaubern | Zauber in der Zauberleiste (unten rechts) anklicken → Kreis an die Stelle führen → Linksklick; Rechtsklick/Esc bricht ab |
-| Heldenfenster | G oder Button „Helden“ oben: eigene Helden (Stufenwahl, Ausbildung, Wiederbelebung) und Anwerben |
-| Helden auswählen | Heldenleiste unten links über dem Infobereich (Klick wählt, Doppelklick springt hin, Rechtsklick öffnet das Heldenfenster; gefallener Held: Klick belebt wieder, sobald es geht) – Helden sind auch Teil von Armeen |
-| Heldenfähigkeiten | C / V / B (oder die Knöpfe im Auswahlfenster) – auch wenn die ganze Armee ausgewählt ist; Tab wechselt den Helden; Rechtsklick auf einen Knopf schaltet „selbst auslösen“ um (goldener Rahmen). Fähigkeiten mit Ziel: Feind bzw. Stelle anklicken, Rechtsklick/Esc bricht ab |
-| Diplomatie | N oder Button „Diplomatie“ oben: Reiter „Dörfer“ (alle neutralen Dörfer mit Ruf, Vertrag, Entfernung und Stärke; Geschenke, Verträge, Handel, Aufnahme, Drohung, Krieg/Frieden), „Reiche“ (feindliche Königreiche: Volk, Kriege, geschätzte Stärke – nur mit Kundschaft) und „Handelswege“. Esc oder N schliesst. Ein Dorfgebäude, eine Miliz oder ein Bote auswählen → Knopf „Diplomatie (N)“ im Auswahlfenster |
-| Spionage | K oder Button „Spionage · 42“ oben (Zahl und Strich = dein Entdeckungswert, roter Punkt = fremder Spion entdeckt oder ein Reich ist aufmerksamer geworden): Reiter „Übersicht“ (Ursachen, Reichstarnung), „Reiche & Dörfer“ (Kundschaft), „Spione“ (beschwören, Aufträge). Esc oder K schliesst |
-| Spion: Auftrag | Spion auswählen → „Auftrag (K)“ im Auswahlfenster, oder Spionagefenster, Reiter „Spione“: Auftrag, Ziel (und Zweitziel) wählen → „Auftrag erteilen“; „Zurückrufen“ holt ihn heim |
-| Handelswege | N → Reiter „Handelswege“ oder L → Reiter „Handel“: Karawanen, Ladung, Lieferungen, Verluste, „Weg freigeben“, gesichtete fremde Wege, Versorgung |
-| Belagerungswaffen | Forschung „Belagerungskunst“ → Belagerungswerkstatt (Baumenü → Verteidigung) auswählen → Rammbock / Katapult (BÖSE: Sturmbock / Schädelschleuder) beschwören → Rechtsklick auf ein feindliches Gebäude, Tor oder Mauerstück |
+| Bewegen / Angreifen | Rechtsklick ins Gelände bzw. auf einen Feind (Monster, Höhle, Gebäude) |
+| Angreifend vorrücken | Strg + Rechtsklick (kämpft unterwegs) oder Knopf „Angriff-Vorrücken“, dann Klick ins Gelände (Esc bricht ab) |
+| Armee speichern / wählen | Strg + 1…9 speichern, Umschalt + 1…9 hinzufügen, 1…9 auswählen, zweimal drücken = Kamera hin |
+| Formation Block / Linie / Keil / Kreis | F (wechselt reihum) oder Knopf im Auswahl- bzw. Armeefenster |
+| Haltung | im Auswahlfenster (Zeile „Haltung“) oder im Armeefenster: **aggressiv** (verfolgt weit, auch vom Posten weg), **verteidigend** (Standard: kehrt nach kurzer Verfolgung zurück), **passiv** (greift nie von selbst an – nur auf Angriffsbefehl) |
+| Sammelpunkt | Burg / Kaserne / Reitstall / Magierturm / Krankenstation auswählen → Rechtsklick in die Welt |
 | Krieg gegen ein Dorf | mit eigenen Truppen zweimal Rechtsklick (innerhalb von 3 s) auf eine Einheit oder ein Gebäude des Dorfs – der erste Klick warnt nur – oder „Krieg erklären“ im Diplomatiefenster |
-| Reichsübersicht | L oder Button „Reich“ oben (Zufriedenheit, Ereignisse, Volk und Tageszeit, Handel; Esc oder L schliesst). Gesicht in der Ressourcenleiste und Sonne/Mond neben dem Datum öffnen sie ebenfalls |
-| Flüchtlinge aufnehmen | Meldung, Ereignisleiste (oben Mitte) oder einen Flüchtling anklicken → „Aufnehmen“ / „Abweisen“ |
+| Belagerungswaffen | Forschung „Belagerungskunst“ → Belagerungswerkstatt → Rammbock / Katapult (BÖSE: Sturmbock / Schädelschleuder) → Rechtsklick auf ein feindliches Gebäude, Tor oder Mauerstück |
 | Überläufer aufhalten | dem Überläufer einen Befehl geben (z. B. Rechtsklick ins Gelände oder „Halt“) |
-| Meldungen | Klick springt zur Stelle; Meldungen zur Stufenwahl oder Wiederbelebung öffnen das Heldenfenster |
-| Arbeitsverteilung ein/aus | J |
-| Hilfe (alle Tasten, Spielablauf, Schwierigkeit) | F1 (auch im Spielmenü: „Hilfe (F1)“) |
-| Tutorial | Hauptmenü → „Tutorial“ oder beim neuen Spiel „Tipps/Tutorial anzeigen“; Fenster rechts: „Weiter“, „Überspringen“, „Beenden“ (zweimal klicken), „–“ klappt ein, „Zeigen“ springt zum Pfeil; Esc → „Tutorial fortsetzen“ / „Tutorial starten“ / „Tutorial von vorn“ |
-| Meldungsprotokoll | M oder Knopf „Protokoll (M)“ über den Meldungen: alle Meldungen der Partie, Filter, Klick springt zur Stelle |
-| Schnellspeichern / Schnellladen | F5 / F8 (vorige Schnellspeicherung bleibt als Sicherung) |
-| Spielmenü | Esc (wenn kein Fenster offen ist und nichts gebaut/ausgewählt wird): Fortsetzen, **Speichern**, **Laden**, **Einstellungen**, Hilfe, Hauptmenü, Beenden |
-| Grösse der Oberfläche | Esc → Einstellungen → „Grösse der Oberfläche“ (75–150 %; wirkt sofort auf HUD, Fenster, Menüs) |
-| Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu, F11 setzt 3 Wölfe an die Maus, Umschalt+F11 einen Übungsgolem, Strg+F11 einen feindlichen Rammbock (marschiert zur Burg), F12 gibt dem ausgewählten Helden eine Stufe (zum Testen), im Auswahlfenster einer Truppe gibt „+50 EP (Test)“ Erfahrung; im Spionagefenster erscheinen Debug-Knöpfe (Aufmerksamkeit, Kundschaft, KI-Angriff, KI-Reich besiegen, Rivalen-Krieg), in der Reichsübersicht (L) Knöpfe für Ereignisse, Zufriedenheit und Tageszeit |
 
-Alle Tasten lassen sich im Editor unter *Projekt → Projekteinstellungen → Eingabe-Zuordnung* ändern.
+### Armee und Truppen
+
+| Aktion | Taste / Maus |
+|---|---|
+| Armeefenster | **T** oder Knopf „Armee · 24“ oben (Strich = Leben aller Truppen, roter Punkt = Kampf): alle Krieger nach Typ (Anzahl, Leben, untätig / im Kampf / unterwegs / bei der Arbeit), Helden, Armeen 1–9; „Wählen“ / „Hin“ / „✕“ (Armee auflösen); rechts Auswahl (alle Krieger, Untätige, Verwundete, Auswahl → Armee 1–9) und Befehle an die Gruppe: Sammeln an der Burg, Rückzug zur Burg, Angreifend vorrücken / Bewegen / Patrouille (danach Ziel anklicken), Halten, Formation, Haltung |
+| Einheiten beschwören | Burg (Späher), Kaserne (Kämpfer, Schützen; nach Forschung Speerträger, Armbrustschützen, Schildwache, Elite), Reitstall (Reiter), Magierturm (Kampfmagier), Krankenstation (Heiler) auswählen → Knöpfe im Raster (Bild im gewählten Aussehen, Kosten; Dauer im Tooltip) |
+| Wertepunkte verteilen | Truppe auswählen → „Angriff +“, „Leben +“, „Rüstung +“, „Tempo +“ (erscheinen, solange Punkte frei sind; jeder Rang-Aufstieg gibt Punkte, Helden einen je Stufe) |
+| Punkte automatisch verteilen | mehrere Truppen auswählen → „Verteilen“; Häkchen „automatisch“ = für das ganze Reich bei jedem Aufstieg |
+| Aussehen (Skins) | Truppe auswählen → Knopf „Aussehen“ → „Alle: …“ (ganzer Typ) bzw. „Diese: …“ (nur diese Einheit; Heldenbanner ab Rang Elite) |
+| Schmiede | Schmiede (BÖSE: Blutschmiede) auswählen → je Truppenklasse „Waffen x/3“ und „Rüstung x/3“ (Kosten und Wirkung im Tooltip) |
+
+### Helden und Magie
+
+| Aktion | Taste / Maus |
+|---|---|
+| Heldenfenster | **G** oder Knopf „Helden“ oben: eigene Helden (Stufenwahl, Ausbildung, Wiederbelebung) und Anwerben |
+| Helden auswählen | Heldenleiste unten links (Klick wählt, Doppelklick springt hin, Rechtsklick öffnet das Heldenfenster; gefallener Held: Klick belebt wieder) – Helden sind auch Teil von Armeen |
+| Heldenfähigkeiten | C / V / B (oder die Knöpfe im Auswahlfenster), auch mit der ganzen Armee ausgewählt; Tab wechselt den Helden; Rechtsklick auf einen Knopf schaltet „selbst auslösen“ um. Fähigkeiten mit Ziel: Feind bzw. Stelle anklicken, Rechtsklick/Esc bricht ab |
+| Forschung | **R** oder Knopf „Forschung“ oben: Forschungsbaum und Reiter „Kampfpunkte“ |
+| Zaubern | Zauber in der Zauberleiste (unten rechts) anklicken → Kreis an die Stelle führen → Linksklick; Rechtsklick/Esc bricht ab |
+
+### Reich, Diplomatie und Spionage
+
+| Aktion | Taste / Maus |
+|---|---|
+| Diplomatie | **N** oder Knopf „Diplomatie“: Reiter „Dörfer“ (Ruf, Vertrag, Entfernung, Stärke; Geschenke, Verträge, Handel, Aufnahme, Drohung, Krieg/Frieden), „Reiche“ (nur mit Kundschaft) und „Handelswege“. Dorfgebäude, Miliz oder Bote auswählen → „Diplomatie (N)“ |
+| Spionage | **K** oder Knopf „Spionage · 42“ (Zahl und Strich = dein Entdeckungswert, roter Punkt = Gefahr): Reiter „Übersicht“, „Reiche & Dörfer“, „Spione“ |
+| Spion: Auftrag | Spion auswählen → „Auftrag (K)“, oder Spionagefenster → „Spione“: Auftrag und Ziel wählen → „Auftrag erteilen“; „Zurückrufen“ holt ihn heim |
+| Reichsübersicht | **L** oder Knopf „Reich“ (Zufriedenheit, Ereignisse, Volk und Tageszeit, Handel). Gesicht in der Ressourcenleiste und Sonne/Mond neben dem Datum öffnen sie ebenfalls |
+| Handelswege | N → „Handelswege“ oder L → „Handel“: Karawanen, Ladung, Lieferungen, Verluste, „Weg freigeben“, Versorgung |
+| Flüchtlinge aufnehmen | Meldung, Ereignisleiste (oben Mitte) oder einen Flüchtling anklicken → „Aufnehmen“ / „Abweisen“ |
+
+### Meldungen, Speichern und Menü
+
+| Aktion | Taste / Maus |
+|---|---|
+| Meldungen | oben rechts; Klick springt zur Stelle bzw. öffnet das passende Fenster. Sie reichen nie über die Zauberleiste – ältere stehen im Protokoll |
+| Meldungsprotokoll | **M** oder Knopf „Protokoll (M)“: alle Meldungen der Partie, Filter, Klick springt zur Stelle |
+| Schnellspeichern / Schnellladen | F5 / F8 (vorige Schnellspeicherung bleibt als Sicherung) |
+| Spielmenü | Esc (wenn kein Fenster offen ist und nichts gebaut/ausgewählt wird): Fortsetzen, Speichern, Laden, Einstellungen, Hilfe, Tutorial, Hauptmenü, Beenden |
+| Hilfe | **F1** (auch im Spielmenü): Reiter Steuerung, Spielablauf, Schwierigkeit |
+| Tutorial | Hauptmenü → „Tutorial“ oder beim neuen Spiel „Tipps/Tutorial anzeigen“; Fenster rechts: „Weiter“, „Überspringen“, „Beenden“, „–“ klappt ein, „Zeigen“ springt zum Pfeil |
+| Grösse der Oberfläche | Esc → Einstellungen → „Grösse der Oberfläche“ (75–150 %, wirkt sofort) |
+| Fenster schliessen | dieselbe Taste noch einmal, Esc oder „×“ oben rechts im Fenster |
+| Debug | F3 (FPS, Zoom, Chunks) – dazu F9 +100 jeder Ressource, F10 König −150, F11 3 Wölfe an der Maus, Umschalt+F11 Übungsgolem, Strg+F11 feindlicher Rammbock, F12 Held +1 Stufe; „+50 EP (Test)“ im Auswahlfenster einer Truppe; Debug-Knöpfe im Spionagefenster und in der Reichsübersicht |
+
+## Oberfläche
+
+Alle Fenster haben denselben Aufbau (`UiStyle`): Rahmen und Titel in der Farbe der Fraktion (GUT Gold, BÖSE
+Violett), links Wappen und Titel, rechts die Reiter und „×“, unten eine Fusszeile mit Hinweisen und der Taste zum
+Schliessen. Es ist immer nur ein Fenster in der Mitte offen.
+
+- **Obere Leiste** in drei Gruppen: links Ressourcen, Kampfpunkte, Bewohner, Zufriedenheit und König; in der Mitte die
+  Fenster-Knöpfe *Forschung · Helden · Armee · Diplomatie · Spionage · Reich* (Zahl, Strich und roter Punkt zeigen
+  den Stand, die Taste steht im Tooltip); rechts Tageszeit, Datum und Tempo. Passt sie nicht (UI-Grösse 125/150 %),
+  wird erst der Reichsname ausgeblendet, dann die Leiste etwas verkleinert.
+- **Links**: oben die Arbeitsverteilung (J); sie klappt sich von selbst ein, solange das Auswahlfenster darunter den
+  Platz braucht (Titel dann „Arbeit · 2 frei“). Unten das Auswahlfenster, die Armee- und die Heldenleiste und der
+  Infobereich (Gelände, Kachel, Gebäude oder Einheit unter der Maus).
+- **Auswahlfenster**: Name, Leben, Kampfwerte, Zustand; bei Truppen eine Zeile Rang mit Erfahrungsbalken, darunter
+  „Wertepunkte“ mit „automatisch“ und „Aussehen“ (klappt die Skin-Auswahl auf), die vier Wertepunkt-Knöpfe nur bei
+  freien Punkten, dann **Haltung** (aggressiv / verteidigend / passiv) und die Befehle. Gebäude mit vielen
+  Einheitentypen (Kaserne) zeigen die Beschwören-Knöpfe in zwei Spalten.
+- **Unten Mitte** das Baumenü mit einem kurzen Steuerungshinweis darüber; es steht immer zwischen der linken Spalte
+  und der Minikarte und bekommt bei wenig Platz eine Zeile mehr.
+- **Rechts**: Meldungen und Protokoll-Knopf oben, Zauberleiste und Minikarte unten.
+
+Bildschirmfotos aller Fenster: `xvfb-run -a -s "-screen 0 1920x1080x24" godot --rendering-driver opengl3 --resolution 1600x900
+res://tests/smoke_test.tscn -- ui_shots=1 shots=/tmp/shots win=1600x900 ui_scale=1.25` (`tests/ui_shots.gd`).
+
+## Tutorial
+
+**Starten:** Hauptmenü → **Tutorial**: eine feste, freundliche Partie (Seed „Lernreich“, kleine Karte, *Leicht*, ein
+Gegnerreich) mit der zuletzt gewählten Fraktion. Oder im Dialog *Neues Spiel* den Haken **„Tipps/Tutorial anzeigen“**
+setzen – dann läuft das Tutorial in der Partie mit den eigenen Einstellungen.
+
+**Ablauf:** Rechts erscheint ein Fenster mit Kapitel, „Schritt 5/35“, Titel, kurzem Text und der Aufgabe. Ein pulsierender
+goldener Rahmen zeigt das Bedienelement (Baumenü-Knopf – liegt er in einem anderen Reiter, wird der Reiter gezeigt –,
+Knöpfe oben, Arbeitsverteilung, Minikarte, Auswahlfenster, Zauberleiste …), ein Pfeil die Stelle in der Welt (Burg,
+Manaquelle, nächstes Dorf; ausserhalb des Bildes am Rand). Klicks gehen durch Rahmen und Pfeil hindurch. Ist die
+Aufgabe erfüllt, steht „✓ Geschafft!“ und es geht nach gut einer Sekunde weiter; reine Erklärschritte haben „Weiter“.
+Lange Schritte (Haus fertig, Truppen, Forschung, Zauber, Held, Geschenk …) lassen sich **überspringen**. „Beenden“
+(zweimal klicken) blendet das Tutorial aus; im **Spielmenü (Esc)** steht dann „Tutorial fortsetzen (Schritt 7/35)“,
+nach dem Abschluss „Tutorial starten“, während es läuft „Tutorial von vorn“.
+
+**Kapitel** (35 Schritte): Erste Schritte (Kamera, Zoom/Minikarte, Pause, Tempo) · Dein Dorf (Vorräte, Wohnhaus,
+Bauernhof, Strassen, Berufe mit J, Manabrunnen) · Einheiten (Späher aus der Burg, Auswählen, Bewegen, Kaserne, Truppen,
+Armee mit Strg+1, Angriff-Vorrücken) · Armee und Truppen (Armeefenster mit T, alle Krieger mit Strg+A, Haltung,
+Schmiede mit einer Waffenstufe, Rang-Aufstieg und Wertepunkt) · Wissen und Magie (Bibliothek, Forschung mit R, Zauber)
+· Helden (Heldenhalle, Anwerben mit G) · Reich und Nachbarn (Diplomatie mit N, Geschenk, Spionage mit K,
+Reichsübersicht mit L) · Speichern und Hilfe (F5, F1). Beim Schritt „Ränge und Wertepunkte“ steigt ein Krieger einmal
+auf (`promote`), damit es einen Punkt zu verteilen gibt.
+
+**Damit nichts dazwischenkommt:** Solange das Tutorial läuft (höchstens 120 Spielminuten ab dem ersten Start), wählen die KI-Reiche den
+Spieler nicht als Wellenziel, Zufallsereignisse (auch Monsterwellen und Flüchtlinge) und Monster-Streifzüge treffen ihn
+nicht; nach dem Ende gilt das noch 10 Minuten, danach wieder die normalen Regeln der Schwierigkeit (z. B. erste Welle
+frühestens nach `first_attack_minutes`). Der Hofschatzmeister schenkt bei einigen Schritten die nötigen Rohstoffe
+(einmal je Partie, auch nach „von vorn“ nicht doppelt), damit niemand lange warten muss. Ein im Spielmenü nachträglich
+gestartetes Tutorial in einer normalen Partie schützt nicht.
+
+**Spielstand:** Schritt, Zustand, Schutz und bezahlte Geschenke werden gespeichert (`TutorialSystem.to_dict`); nach
+dem Laden geht es beim gleichen Schritt weiter.
+
+**Anpassen** (`data/tutorial.json`): `game` (Seed, Karte, Schwierigkeit), `settings` (Weiter-Pause, Schutzdauer,
+Schonfrist, Schwellen für Kamera/Zoom/Strassen), `aliases` (fraktionsabhängige Forschung/Zauber), `steps` (Text mit
+Platzhaltern `{b:house}`, `{u:scout}`, `{r:healing}`, `{s:heal_spell}`, `{key:toggle_help}`; `highlight`, `world`,
+`condition`, `skippable`, `grant`, `promote`, `focus`, `requires_hud` – alle Werte stehen im `_hinweis` der Datei).
+
+**Rauchtest:** `GODOT=… tests/run_smoke.sh 900 tutorial=1` startet je Fraktion eine Tutorial-Partie und spielt alle
+Schritte über dieselben Schnittstellen wie die Oberfläche durch (Gebäude setzen, Berufe, Beschwören, Befehle, Forschung,
+Zauber, Helden, Armeefenster, Haltung, Schmiede, Wertepunkte, Fenster, Geschenk, Schnellspeichern, Hilfe). Geprüft werden: „Weiter“ ist vor der Aufgabe gesperrt,
+jede Bedingung wird erfüllt, Rahmen und Pfeil finden ihr Ziel, Geschenke, der Schutz (Ereignis- und Wellenziele), Laden
+des Spielstands aus dem Schritt „Speichern“, Beenden und Fortsetzen über das Spielmenü. Ohne `tutorial=1` prüft der
+normale Rauchtest, dass das Tutorial aus ist und nicht schützt.
+
+## Speichern und Laden
+
+- **Ablage**: `user://saves/<name>.save` – unter Windows `%APPDATA%\Koenigreiche\saves`, unter Linux
+  `~/.local/share/Koenigreiche/saves` (`project.godot`: eigener Benutzerordner „Koenigreiche“; dort liegt auch
+  `settings.cfg` – frühere Einstellungen gelten deshalb einmalig nicht mehr). Plätze: beliebig viele mit Namen,
+  `quicksave` (F5/F8), `autosave_1…3` (reihum, Abstand in den Einstellungen).
+- **Datei**: Zeile 1 `KOENIGREICHE-SAVE 1`, Zeile 2 Kopf als JSON (Name, Datum, Spielzeit, Fraktion, Schwierigkeit,
+  Karte, Seed, Versionen, Prüfsumme), danach die Daten als JSON (zstd-komprimiert, abschaltbar). Geschrieben
+  wird nach `.tmp`, die alte Datei wird zur Sicherung `.bak`, dann umbenannt; Codieren und Schreiben laufen im
+  Hintergrund (`SaveManager`).
+- **Inhalt** (`SaveGame`): Die Welt wird aus dem Seed neu erzeugt; gespeichert werden nur ihre Änderungen
+  (`WorldData.changed_cells`, Strassen, nachwachsende Vorkommen) und ein Fingerabdruck der frischen Welt.
+  Dazu alle Reiche (`Kingdom.to_dict` speichert jedes Feld ausser abgeleiteten und `_`-Feldern automatisch),
+  Gebäude (`Building.to_dict`), Einheiten (`Unit.to_dict`, Verweise als uid, laufende Wege), alle Systeme,
+  Uhr, Sitzung und das Meldungsprotokoll.
+- **Typen** (`SaveCodec`): int/float, Vektoren, Farben, gepackte Arrays, Dictionaries mit Zahlen-Schlüsseln und
+  64-Bit-Zahlen bleiben erhalten (`{"#v2": [x, y]}`, `{"#d": [[k, v]]}` …).
+- **Schnittstelle jedes Systems**: `to_dict()` (nur einfache Werte, Kopien), `from_dict(d)` (nur Daten, keine
+  Signale) und `rebuild_runtime()` (Zwischenspeicher und Wirkungen neu, idempotent). Register `SaveGame.SYSTEMS`
+  (fehlende Systeme werden übersprungen; weitere Nodes unter *Systems* mit den drei Methoden werden automatisch
+  mitgespeichert), Reihenfolge des Neuaufbaus `SaveGame.REBUILD_ORDER`.
+- **Laden**: Kopf prüfen → Welt im Thread erzeugen, Fingerabdruck vergleichen, Änderungen anwenden, Wege
+  berechnen → Reiche, Gebäude (ohne Signale), Gebiet, Einheiten, Verweise, Systeme (`from_dict`, dann
+  `rebuild_runtime`), zuletzt Leben und Meldungen. Arbeiter suchen ihren Arbeitsschritt neu, Gruppenmärsche
+  gehen einzeln weiter.
+- **Regeln für neue Felder**: neues Feld → in `to_dict`/`from_dict` mit Standardwert (Kingdom: automatisch).
+  Feld umbenannt oder umgedeutet → `SaveGame.SAVE_VERSION + 1` und ein Schritt in `SaveMigration.migrate`.
+  Ergibt derselbe Seed eine andere Welt (Generator oder `worldgen.json`/`biomes.json` geändert) →
+  `WorldGenerator.VERSION + 1` (alte Spielstände werden als nicht ladbar angezeigt). Geänderte Spieldaten sonst:
+  nur ein gelber Hinweis in der Liste.
+- **Schwierigkeit** (`Difficulty`, `data/difficulties.json`): Quelle `"difficulty"` auf KI-Reichen (Ertrag,
+  Stärke, Tempo, Wachsamkeit) und den wilden Monstern (Stärke), Startressourcen des Spielers, Angriffslust der
+  KI, Nachwuchs der Monsterlager; ab Phase 8 auch Streifzüge und Ereignisse. Beim Laden neu gesetzt.
+- **Einstellungen** (`Settings`, `SettingsForm` im Haupt- und Spielmenü): Lautstärken (Busse Master, Music,
+  SFX, UI), Kamera, Vollbild, Grösse der Oberfläche, Tag-Nacht-Abdunklung, automatisch speichern, Kompression.
+- **UI-Grösse und Fensterstil** (`UiStyle`): HUD, Spielmenü, Hilfe, Protokoll und Sieg/Niederlage sind als Ebenen angemeldet
+  (`register_scaled_layer`: Ebene skaliert, Wurzel = Viewport / Faktor); die zentrierten Fenster platzieren sich
+  mit `UiStyle.place_window` (Faktor, aber nie grösser als der Bildschirm), die Zauberleiste folgt der
+  skalierten Minikarte. Die obere Leiste passt sich an (`hud._fit_top_bar`: Reichsname ausblenden, sonst
+  verkleinern). `UiStyle.window_style`, `window_header`, `header_add`, `tab_button`, `section_label` und
+  `footer_label` geben allen Fenstern denselben Rahmen, dieselbe Titelzeile und dieselben Reiter.
+
+## Daten anpassen
+
+Alle Dateien in `data/` enthalten `_hinweis`-Felder mit Erklärungen. Beispiele:
+
+- Mehr Berge: in `biomes.json` bei *Berge* `height_min` senken (0.84 → 0.78).
+- Längere Tage: in `game_config.json` `time.seconds_per_day` erhöhen.
+- Andere Tempostufen: `time.speed_steps`.
+- Kartengrössen: `map.sizes`.
+- Billigere Häuser: in `buildings.json` bei *house* `cost` ändern.
+- Mehr Nahrung pro Bauer: `buildings.json` → *farm* → `production.food`.
+- Schnellere Bewohner: `units.json` → *villager* → `speed`.
+- Andere Startausstattung: `economy.json` → `start`.
+- Stärkere Ritter: `units.json` → *elite_good* → `attack`, `hp`, `armor`.
+- Speerträger noch stärker gegen Reiter: `units.json` → *spearman_good* → `"bonus_vs": {"cavalry": 1.5}` (+150 %).
+- Reiter weniger stark gegen Schützen: `troops.json` → `counters.cavalry.ranged` 0.35 → 0.2.
+- Neue Truppe mit Klasse: in `units.json` `"class": "cavalry"` setzen (fehlt sie, gilt `troops.json → classes_default`).
+- Schmiede: `troops.json` → `forge.upgrades` (z. B. `"per_level": {"attack": 0.15}` = +15 % je Stufe, `cost` je Stufe;
+  eine vierte Stufe = vierter Eintrag in `cost`).
+- Schnellere Ränge: `troops.json` → `veterancy.ranks` (`"xp": 60` für Soldat …), mehr Punkte `"points"`;
+  Wirkung je Punkt `veterancy.stats` (`{"id": "attack", "mult": 0.06}`), höchstens `max_per_stat`.
+- Neues Aussehen: `troops.json` → `skins.variants` (`{"id": "winter", "name": "Winterwacht", "faction": "good",
+  "tint": "#cfe3ff", "trim": "#ffffff", "emblem": "star"}`), Grafik `assets/sprites/units/<einheit>_winter.png`.
+- Billigere Truppen: `units.json` → `cost` und `summon_time`.
+- Weniger oder mehr Monsterlager: `combat.json` → `camps.per_1000_tiles`, Übungslager `camps.near_start`.
+- Stärkerer Heimvorteil: `combat.json` → `territory_bonus`.
+- Schnellere Forschung: `research.json` → `time` (Sekunden), Kosten unter `cost`.
+- Billigere Zauber: `spells.json` → `mana_cost`, `cooldown`; Reichweite ausserhalb des Gebiets: `settings.cast_range_outside`.
+- Mehr Mana-Maximum: `resources.json` → *mana* → `cap`; Kampfpunkt-Verbesserungen: `spells.json` → `upgrades`.
+- Helden: `heroes.json` → `heroes` (Werte unter `stats`, Kosten, Fähigkeiten, Talente), `abilities` (Werte je Rang),
+  `settings` (Erfahrung je Stufe `levels`, Teilung `xp_share`, Ausbildung, Wiederbelebung, höchstens `max_heroes`).
+- Mehr oder weniger Dörfer: `worldgen.json` → `villages.count_by_size` (z. B. `[256, 6]` → `[256, 8]`),
+  Abstand zum Start `min_dist_start`, Hütten je Dorf `size`.
+- Ruf: `diplomacy.json` → `reputation.tiers` (Stufen und Farben), `events` (z. B. Angriff `attack: -5`,
+  Kriegserklärung `declare_war: -30`, Gerüchte `rumour_*`), Verfall `reputation.decay_per_interval`.
+- Geschenke: `diplomacy.json` → `gifts` (`value_per_point`, `max_per_gift`, Ermüdung `saturation`/`half_life`);
+  Lieblingswaren je Volk: `peoples.json` → `gift_preferences` (z. B. Zwerge `"food": 1.5`).
+- Verträge: `diplomacy.json` → `treaties.<protection|trade|alliance>` (`min_reputation`, `keep_min`,
+  `rep_per_hour`, `cancel_penalty`, Schutzfrist `help_seconds`); Tribut und Lieferungen je Volk:
+  `peoples.json` → `tribute`, `delivery`; Annahme-Chance `treaties.chance_base` / `chance_span`.
+- Handel: `diplomacy.json` → `trade` (`base_margin`, `daily_value_limit`); Kurse je Volk `trade_rates`
+  (`sells` < 1 = billiger, `buys` > 1 = zahlt mehr) und `trade_bonus` (Koboldhändler 0.25).
+- Aufnahme und Drohung: `diplomacy.json` → `annex` (`min_reputation`, `intimidation_ratio`, `gift_size_scale`),
+  `threat` (`min_ratio`, `tribute_max`, `cooldown`); grosses Geschenk je Volk `peoples.json` → `annex_gift`.
+- Dörfer und Milizen: `diplomacy.json` → `village` (`militia_base`, `militia_per_size`, `refill_seconds`,
+  `start_stock`); Werte der Milizen und Volkskrieger in `units.json` (`militia_*`, z. B. `dwarf_ironguard`).
+- Boten: `diplomacy.json` → `messenger` (`cooldown`, `max_village_distance`, `sprint_mult`).
+- Gegner-KI: `ai.json` → `difficulty.<id>` (Anzahl Reiche je Kartengrösse `kingdoms`, erste Welle gegen den
+  Spieler `first_attack_minutes`, Pause `wave_interval`, Wellengrösse `wave_min_size`/`first_wave_max`,
+  `army_size_mult`, `awareness_mult`), Bauliste `build_order`, Persönlichkeiten `personalities`
+  (z. B. `aggressive`: mehr Armee, frühere Wellen), Rückzug `difficulty.<id>.retreat_ratio`, Rivalität `rivalry`
+  (`war_at`, `peace_at`), Berufe `jobs` (Drosselung `rebalance_every`, `rebalance_min_gap`, `targets_seconds`).
+  Beispiel: spätere erste Welle auf Normal – `difficulty.normal.first_attack_minutes` 45 → 60.
+- Entdeckung und Spionage: `espionage.json` → `discovery.building_weights` (z. B. `barracks: 2.5`),
+  `per_population`, `per_army_power`, Stufen `discovery.tiers`; Aufmerksamkeit `awareness` (`rumour` 30,
+  `discovered` 60, `rise_per_minute`); Reichstarnung `cloak` (`reduction` 0.4, `upkeep_per_point`); Spione
+  `spies` (`max_base`, `levels` mit Geschick und Tempo, `detect_base`, `vigilance.buildings`, Dauer der
+  Aufträge `scout_duration`, `incite_duration`). Beispiel: Spione schwerer zu entdecken – `spies.detect_base`
+  0.03 → 0.02.
+- Neues Volk: in `peoples.json` einen Eintrag mit `"faction": "neutral"`, `village_title`, `village_names`,
+  `produces`, `militia_unit` und `special_unit` (beide in `units.json` anlegen) – Dörfer dieses Volks
+  entstehen dann automatisch bei der Weltgenerierung.
+
+## Grafiken austauschen
+
+Alle Grafiken sind zunächst automatisch erzeugte Platzhalter. Legt man eine PNG-Datei
+mit dem in **`assets_liste.md`** genannten Namen in den passenden Ordner, wird sie
+beim nächsten Start automatisch verwendet – ohne Code-Änderung.
 
 ## Ordnerstruktur
 
@@ -110,7 +339,7 @@ scenes/                  Szenen (.tscn)
 scripts/
   autoload/                Globale Dienste: DataDB, Settings, GameSession, GameClock, Assets, Notify, SaveManager
   save/                    Spielstände: SaveGame (Inhalt, Laden), SaveCodec (Typen in JSON), SaveMigration
-  kingdoms/                Schwierigkeit (Difficulty), Sieg und Niederlage (VictorySystem)
+  kingdoms/                Schwierigkeit (Difficulty), Sieg und Niederlage (VictorySystem: Niederlage der KI-Reiche, Ruinen, Sieg)
   tutorial/                TutorialSystem (Schritte, Bedingungen, Schutz, Spielstand)
   world/                   Kartendaten, Generator, Chunk-Darstellung, Tilesets, Gebiet, Wegfindung
   economy/                 Reich (Kingdom), Gebäude, BuildingSystem, EconomySystem
@@ -121,19 +350,20 @@ scripts/
   ai/                      AISystem (KI-Reiche gründen, Takt), AIBrain (Gehirn je Reich) mit den Modulen AIEconomy,
                            AIMilitary, AIDiplomacy; AIRivalry (Spannung zwischen KI-Reichen)
   espionage/               EspionageSystem (Entdeckung, Aufmerksamkeit, Kundschaft, Tarnung), SpySystem (Spione)
-  kingdoms/                VictorySystem (Niederlage der KI-Reiche, Ruinen, Sieg)
   camera/                  Strategie-Kamera
   view/                    Darstellung über der Welt: Lebensbalken/Auswahlringe, Kampfeffekte
   ui/                      HUD-Panels, Bauvorschau, Auswahl und Befehle, Spielende, Speichern/Laden,
-                           Einstellungen, Hilfe (F1), Meldungsprotokoll (M), Armeefenster (T, TroopPanel)
+                           Einstellungen, Hilfe (F1), Meldungsprotokoll (M), Armeefenster (T, TroopPanel),
+                           gemeinsamer Fensterstil (UiStyle)
   util/                    Hilfen (Grafik laden / Platzhalter erzeugen und zeichnen)
 assets/
   sprites/                 terrain/, units/, buildings/, heroes/, resources/, effects/
   ui/                      Theme (theme.tres), Icons, Menü-Hintergrund
   audio/                   music/, sfx/
-tests/                   Prüfungen ohne Fenster
+tests/                   Prüfungen (siehe „Prüfungen“)
   check_scripts.sh         alle Skripte auf Fehler und Warnungen prüfen
-  run_smoke.sh             Rauchtest beider Fraktionen (smoke_test.tscn + smoke_phase6…10.gd, smoke_army.gd, smoke_troops.gd; tutorial=1: smoke_tutorial.gd)
+  run_smoke.sh             Rauchtest beider Fraktionen (smoke_test.tscn + smoke_phase6…10.gd, smoke_army.gd,
+                           smoke_troops.gd; tutorial=1: smoke_tutorial.gd; ui_shots=1: ui_shots.gd)
   run_balance.sh           Balancing-Läufe (balance_phase10.gd), Ausgabe nach build/balance
 export_presets.cfg       Export-Vorlagen Windows/Linux (ohne Zugangsdaten)
 ```
@@ -309,6 +539,8 @@ export_presets.cfg       Export-Vorlagen Windows/Linux (ohne Zugangsdaten)
     einen Punkt je Stufe (`stat_alloc` im Heldeneintrag, beim Wiederbeleben und Laden übernommen).
   - **Aussehen**: `Kingdom.unit_skins` (Typ → Skin) und `Unit.skin` (einzelne Einheit); `Unit.refresh_look` lädt
     `<einheit>_<skin>.png` oder zeichnet den Platzhalter (`PlaceholderArt.make_unit_skin_token`, `make_emblem`).
+    Die Bilder in Fenstern (`UnitIcon`: Beschwören-Knöpfe, Warteschlange, Armeefenster) zeigen dasselbe Aussehen
+    (`TroopRules.type_skin`).
   - Gespeichert: `Unit.SAVE_OPTIONAL` (`vet_xp`, `vet_rank`, `stat_points`, `stat_alloc`, `skin`), die Felder der
     Reiche automatisch; `TroopSystem.rebuild_runtime` setzt die Schmiede-Modifikatoren neu.
   - KI: `ai.json → army.composition` mit den neuen Stufen, Gebäude in `build_order`, `AIMilitary.tick_forge`
@@ -316,113 +548,24 @@ export_presets.cfg       Export-Vorlagen Windows/Linux (ohne Zugangsdaten)
 - **Gebiet**: Jedes fertige Gebäude beansprucht einen Kreis; bei Überschneidung gewinnt das ältere.
   Gebaut werden darf nur im eigenen Gebiet; Sammler holen nichts aus fremdem Gebiet (z. B. eines Dorfs).
 
-## Daten anpassen
+## Prüfungen
 
-Alle Dateien in `data/` enthalten `_hinweis`-Felder mit Erklärungen. Beispiele:
+- `GODOT=/pfad/zu/godot tests/check_scripts.sh` – alle Skripte auf Fehler **und** Warnungen prüfen (vorher einmal
+  `godot --headless --editor --quit`, damit der Klassen-Zwischenspeicher stimmt).
+- `GODOT=… tests/run_smoke.sh 900` – Rauchtest beider Fraktionen ohne Fenster: Heldentest, Phase 6–10
+  (`smoke_phase6…10.gd`, mit Speichern → Laden in eine frische Szene → Vergleich → Weiterspielen), Armeefenster
+  (`smoke_army.gd`), Truppen (`smoke_troops.gd`), Tutorial aus. Weitere Argumente: `p10=off`, `passive=1`,
+  `ui_scale=1.25`, `shots=<ordner>` (nur mit Fenster).
+- `GODOT=… tests/run_smoke.sh 900 tutorial=1` – spielt das ganze Tutorial je Fraktion durch (`smoke_tutorial.gd`).
+- `ui_shots=1 shots=<ordner> win=1920x1080` – Bildschirmfotos von HUD, Auswahlfenster (Kaserne, Schmiede, Truppe,
+  Gruppe, Held) und allen Fenstern (`tests/ui_shots.gd`, siehe *Oberfläche*).
+- `GODOT=… tests/run_balance.sh` – Balancing-Läufe (siehe *Balancing*).
 
-- Mehr Berge: in `biomes.json` bei *Berge* `height_min` senken (0.84 → 0.78).
-- Längere Tage: in `game_config.json` `time.seconds_per_day` erhöhen.
-- Andere Tempostufen: `time.speed_steps`.
-- Kartengrössen: `map.sizes`.
-- Billigere Häuser: in `buildings.json` bei *house* `cost` ändern.
-- Mehr Nahrung pro Bauer: `buildings.json` → *farm* → `production.food`.
-- Schnellere Bewohner: `units.json` → *villager* → `speed`.
-- Andere Startausstattung: `economy.json` → `start`.
-- Stärkere Ritter: `units.json` → *elite_good* → `attack`, `hp`, `armor`.
-- Speerträger noch stärker gegen Reiter: `units.json` → *spearman_good* → `"bonus_vs": {"cavalry": 1.5}` (+150 %).
-- Reiter weniger stark gegen Schützen: `troops.json` → `counters.cavalry.ranged` 0.35 → 0.2.
-- Neue Truppe mit Klasse: in `units.json` `"class": "cavalry"` setzen (fehlt sie, gilt `troops.json → classes_default`).
-- Schmiede: `troops.json` → `forge.upgrades` (z. B. `"per_level": {"attack": 0.15}` = +15 % je Stufe, `cost` je Stufe;
-  eine vierte Stufe = vierter Eintrag in `cost`).
-- Schnellere Ränge: `troops.json` → `veterancy.ranks` (`"xp": 60` für Soldat …), mehr Punkte `"points"`;
-  Wirkung je Punkt `veterancy.stats` (`{"id": "attack", "mult": 0.06}`), höchstens `max_per_stat`.
-- Neues Aussehen: `troops.json` → `skins.variants` (`{"id": "winter", "name": "Winterwacht", "faction": "good",
-  "tint": "#cfe3ff", "trim": "#ffffff", "emblem": "star"}`), Grafik `assets/sprites/units/<einheit>_winter.png`.
-- Billigere Truppen: `units.json` → `cost` und `summon_time`.
-- Weniger oder mehr Monsterlager: `combat.json` → `camps.per_1000_tiles`, Übungslager `camps.near_start`.
-- Stärkerer Heimvorteil: `combat.json` → `territory_bonus`.
-- Schnellere Forschung: `research.json` → `time` (Sekunden), Kosten unter `cost`.
-- Billigere Zauber: `spells.json` → `mana_cost`, `cooldown`; Reichweite ausserhalb des Gebiets: `settings.cast_range_outside`.
-- Mehr Mana-Maximum: `resources.json` → *mana* → `cap`; Kampfpunkt-Verbesserungen: `spells.json` → `upgrades`.
-- Helden: `heroes.json` → `heroes` (Werte unter `stats`, Kosten, Fähigkeiten, Talente), `abilities` (Werte je Rang),
-  `settings` (Erfahrung je Stufe `levels`, Teilung `xp_share`, Ausbildung, Wiederbelebung, höchstens `max_heroes`).
-- Mehr oder weniger Dörfer: `worldgen.json` → `villages.count_by_size` (z. B. `[256, 6]` → `[256, 8]`),
-  Abstand zum Start `min_dist_start`, Hütten je Dorf `size`.
-- Ruf: `diplomacy.json` → `reputation.tiers` (Stufen und Farben), `events` (z. B. Angriff `attack: -5`,
-  Kriegserklärung `declare_war: -30`, Gerüchte `rumour_*`), Verfall `reputation.decay_per_interval`.
-- Geschenke: `diplomacy.json` → `gifts` (`value_per_point`, `max_per_gift`, Ermüdung `saturation`/`half_life`);
-  Lieblingswaren je Volk: `peoples.json` → `gift_preferences` (z. B. Zwerge `"food": 1.5`).
-- Verträge: `diplomacy.json` → `treaties.<protection|trade|alliance>` (`min_reputation`, `keep_min`,
-  `rep_per_hour`, `cancel_penalty`, Schutzfrist `help_seconds`); Tribut und Lieferungen je Volk:
-  `peoples.json` → `tribute`, `delivery`; Annahme-Chance `treaties.chance_base` / `chance_span`.
-- Handel: `diplomacy.json` → `trade` (`base_margin`, `daily_value_limit`); Kurse je Volk `trade_rates`
-  (`sells` < 1 = billiger, `buys` > 1 = zahlt mehr) und `trade_bonus` (Koboldhändler 0.25).
-- Aufnahme und Drohung: `diplomacy.json` → `annex` (`min_reputation`, `intimidation_ratio`, `gift_size_scale`),
-  `threat` (`min_ratio`, `tribute_max`, `cooldown`); grosses Geschenk je Volk `peoples.json` → `annex_gift`.
-- Dörfer und Milizen: `diplomacy.json` → `village` (`militia_base`, `militia_per_size`, `refill_seconds`,
-  `start_stock`); Werte der Milizen und Volkskrieger in `units.json` (`militia_*`, z. B. `dwarf_ironguard`).
-- Boten: `diplomacy.json` → `messenger` (`cooldown`, `max_village_distance`, `sprint_mult`).
-- Gegner-KI: `ai.json` → `difficulty.<id>` (Anzahl Reiche je Kartengrösse `kingdoms`, erste Welle gegen den
-  Spieler `first_attack_minutes`, Pause `wave_interval`, Wellengrösse `wave_min_size`/`first_wave_max`,
-  `army_size_mult`, `awareness_mult`), Bauliste `build_order`, Persönlichkeiten `personalities`
-  (z. B. `aggressive`: mehr Armee, frühere Wellen), Rückzug `difficulty.<id>.retreat_ratio`, Rivalität `rivalry`
-  (`war_at`, `peace_at`), Berufe `jobs` (Drosselung `rebalance_every`, `rebalance_min_gap`, `targets_seconds`).
-  Beispiel: spätere erste Welle auf Normal – `difficulty.normal.first_attack_minutes` 45 → 60.
-- Entdeckung und Spionage: `espionage.json` → `discovery.building_weights` (z. B. `barracks: 2.5`),
-  `per_population`, `per_army_power`, Stufen `discovery.tiers`; Aufmerksamkeit `awareness` (`rumour` 30,
-  `discovered` 60, `rise_per_minute`); Reichstarnung `cloak` (`reduction` 0.4, `upkeep_per_point`); Spione
-  `spies` (`max_base`, `levels` mit Geschick und Tempo, `detect_base`, `vigilance.buildings`, Dauer der
-  Aufträge `scout_duration`, `incite_duration`). Beispiel: Spione schwerer zu entdecken – `spies.detect_base`
-  0.03 → 0.02.
-- Neues Volk: in `peoples.json` einen Eintrag mit `"faction": "neutral"`, `village_title`, `village_names`,
-  `produces`, `militia_unit` und `special_unit` (beide in `units.json` anlegen) – Dörfer dieses Volks
-  entstehen dann automatisch bei der Weltgenerierung.
+## Von Hand testen
 
-## Tutorial
+Schritt für Schritt je Ausbaustufe; die automatischen Prüfungen decken dasselbe ab (siehe *Prüfungen*).
 
-**Starten:** Hauptmenü → **Tutorial**: eine feste, freundliche Partie (Seed „Lernreich“, kleine Karte, *Leicht*, ein
-Gegnerreich) mit der zuletzt gewählten Fraktion. Oder im Dialog *Neues Spiel* den Haken **„Tipps/Tutorial anzeigen“**
-setzen – dann läuft das Tutorial in der Partie mit den eigenen Einstellungen.
-
-**Ablauf:** Rechts erscheint ein Fenster mit Kapitel, „Schritt 5/30“, Titel, kurzem Text und der Aufgabe. Ein pulsierender
-goldener Rahmen zeigt das Bedienelement (Baumenü-Knopf – liegt er in einem anderen Reiter, wird der Reiter gezeigt –,
-Knöpfe oben, Arbeitsverteilung, Minikarte, Auswahlfenster, Zauberleiste …), ein Pfeil die Stelle in der Welt (Burg,
-Manaquelle, nächstes Dorf; ausserhalb des Bildes am Rand). Klicks gehen durch Rahmen und Pfeil hindurch. Ist die
-Aufgabe erfüllt, steht „✓ Geschafft!“ und es geht nach gut einer Sekunde weiter; reine Erklärschritte haben „Weiter“.
-Lange Schritte (Haus fertig, Truppen, Forschung, Zauber, Held, Geschenk …) lassen sich **überspringen**. „Beenden“
-(zweimal klicken) blendet das Tutorial aus; im **Spielmenü (Esc)** steht dann „Tutorial fortsetzen (Schritt 7/30)“,
-nach dem Abschluss „Tutorial starten“, während es läuft „Tutorial von vorn“.
-
-**Kapitel** (30 Schritte): Erste Schritte (Kamera, Zoom/Minikarte, Pause, Tempo) · Dein Dorf (Vorräte, Wohnhaus,
-Bauernhof, Strassen, Berufe mit J, Manabrunnen) · Einheiten (Späher aus der Burg, Auswählen, Bewegen, Kaserne, Truppen,
-Armee mit Strg+1, Angriff-Vorrücken) · Wissen und Magie (Bibliothek, Forschung mit R, Zauber) · Helden (Heldenhalle,
-Anwerben mit G) · Reich und Nachbarn (Diplomatie mit N, Geschenk, Spionage mit K, Reichsübersicht mit L) · Speichern und
-Hilfe (F5, F1). Ein Schritt mit `requires_hud` erscheint nur, wenn das HUD das Fenster hat (z. B. ein späteres
-Armeefenster mit T).
-
-**Damit nichts dazwischenkommt:** Solange das Tutorial läuft (höchstens 120 Spielminuten ab dem ersten Start), wählen die KI-Reiche den
-Spieler nicht als Wellenziel, Zufallsereignisse (auch Monsterwellen und Flüchtlinge) und Monster-Streifzüge treffen ihn
-nicht; nach dem Ende gilt das noch 10 Minuten, danach wieder die normalen Regeln der Schwierigkeit (z. B. erste Welle
-frühestens nach `first_attack_minutes`). Der Hofschatzmeister schenkt bei einigen Schritten die nötigen Rohstoffe
-(einmal je Partie, auch nach „von vorn“ nicht doppelt), damit niemand lange warten muss. Ein im Spielmenü nachträglich
-gestartetes Tutorial in einer normalen Partie schützt nicht.
-
-**Spielstand:** Schritt, Zustand, Schutz und bezahlte Geschenke werden gespeichert (`TutorialSystem.to_dict`); nach
-dem Laden geht es beim gleichen Schritt weiter.
-
-**Anpassen** (`data/tutorial.json`): `game` (Seed, Karte, Schwierigkeit), `settings` (Weiter-Pause, Schutzdauer,
-Schonfrist, Schwellen für Kamera/Zoom/Strassen), `aliases` (fraktionsabhängige Forschung/Zauber), `steps` (Text mit
-Platzhaltern `{b:house}`, `{u:scout}`, `{r:healing}`, `{s:heal_spell}`, `{key:toggle_help}`; `highlight`, `world`,
-`condition`, `skippable`, `grant`, `focus`, `requires_hud` – alle Werte stehen im `_hinweis` der Datei).
-
-**Rauchtest:** `GODOT=… tests/run_smoke.sh 900 tutorial=1` startet je Fraktion eine Tutorial-Partie und spielt alle
-Schritte über dieselben Schnittstellen wie die Oberfläche durch (Gebäude setzen, Berufe, Beschwören, Befehle, Forschung,
-Zauber, Helden, Fenster, Geschenk, Schnellspeichern, Hilfe). Geprüft werden: „Weiter“ ist vor der Aufgabe gesperrt,
-jede Bedingung wird erfüllt, Rahmen und Pfeil finden ihr Ziel, Geschenke, der Schutz (Ereignis- und Wellenziele), Laden
-des Spielstands aus dem Schritt „Speichern“, Beenden und Fortsetzen über das Spielmenü. Ohne `tutorial=1` prüft der
-normale Rauchtest, dass das Tutorial aus ist und nicht schützt.
-
-## Phase 2 testen
+### Phase 2
 
 1. Neues Spiel starten. Die Burg steht im eigenen Gebiet (farbige Grenze), 5 Bewohner laufen los:
    2 Holzfäller, 1 Sammler, 2 Bauarbeiter (siehe *Arbeitsverteilung* links, Taste J).
@@ -441,7 +584,7 @@ normale Rauchtest, dass das Tutorial aus ist und nicht schützt.
    Arbeit halb so schnell). Sammler wieder einsetzen → die Hungersnot endet.
 10. Mit X oder „Abreissen“ Strassen entfernen; ein Gebäude auswählen → „Abreissen“ (zweimal klicken).
 
-## Phase 3 testen
+### Phase 3
 
 1. Neues Spiel. Vor der Burg steht der **König** (Krone). Er verteidigt die Burg, verlässt aber nie
    das eigene Gebiet. Auf der Minikarte sind **Monsterlager** orange markiert; zwei kleine Übungslager
@@ -467,7 +610,7 @@ normale Rauchtest, dass das Tutorial aus ist und nicht schützt.
 9. Spielende testen: F3 (Debug) und dann mehrmals F10 → der König verliert Leben, flieht verletzt in
    die Burg; stirbt er, erscheint „Der König ist gefallen“ mit „Neu starten (gleiche Karte)“.
 
-## Phase 4 testen
+### Phase 4
 
 Tipp: Mit F3 (Debug) gibt F9 Ressourcen und F11 setzt 3 Wölfe an die Maus – so lassen sich Flüche,
 Nebel, Tarnung und Heilung auch im eigenen Gebiet ausprobieren. Monster folgen bis 12 Felder von
@@ -506,7 +649,7 @@ ihrer Höhle; man kann sie also auch an die Grenze locken.
    Abklingzeiten um 25 %, *Weitreichende Magie* / *Lange Schatten* (Magie 2) erweitert die Reichweite
    um 8 Felder. Die Werte im Tooltip der Zauberleiste ändern sich entsprechend.
 
-## Phase 5 testen
+### Phase 5
 
 Tipp: F3 (Debug) einschalten. F9 gibt Ressourcen, F12 gibt dem ausgewählten Helden eine Stufe, F11 setzt
 Wölfe und Umschalt+F11 einen Übungsgolem (viel Leben, Rüstung) an die Maus. Im Heldenfenster erscheinen im
@@ -536,7 +679,7 @@ F3-Modus zusätzlich Knöpfe „+1 Stufe“, „Abklingzeiten“, „Sofort wied
    BÖSE – *Seelenblitz*, *Totenerweckung*, *Fluchaura* (Nekromant); *Wirbelwind*, *Kriegsschrei*, *Blutzoll*
    (Kriegsherr); *Schattenschritt*, *Giftklinge*, *Ausweichen* (Klingentänzerin).
 
-## Phase 6 testen
+### Phase 6
 
 Tipp: F3 (Debug) einschalten – F9 gibt Ressourcen. Im Diplomatiefenster erscheinen im F3-Modus die Knöpfe
 „Ruf +20“, „Ruf −20“ und „Bote senden (Test)“.
@@ -572,7 +715,7 @@ Tipp: F3 (Debug) einschalten – F9 gibt Ressourcen. Im Diplomatiefenster ersche
    nach 60 s ohne Angriff, wenn der Ruf nicht zu tief ist.
 10. Sinkt der Ruf unter −50, wird ein Dorf feindlich (ab Phase 7 schliesst es sich dann dem Gegner an).
 
-## Phase 7 testen
+### Phase 7
 
 Tipp: F3 (Debug) einschalten – im Spionagefenster erscheinen dann „Aufmerksamkeit +30“, „Volle Kundschaft“,
 „KI greift jetzt an“, „KI-Reich besiegen“ und „Rivalen: Krieg“, im Diplomatiefenster (Reiter „Reiche“)
@@ -612,7 +755,7 @@ Rauchtest mit echter KI über lange Zeit (ohne Debug-Stufen):
 `godot --headless res://tests/smoke_test.tscn -- faction=evil seconds=3600 p7=natural size=medium`
 (`passive=1`: der Spieler tut nichts; der Bericht zeigt Zeitleiste, Wellen und Denkzeit der KI).
 
-## Phase 8 testen
+### Phase 8
 
 Tipp: F3 einschalten → in der Reichsübersicht (L) erscheinen Debug-Knöpfe: Ereignis auslösen, Alle beenden,
 Monsterstreifzug, Zufriedenheit ±30, Überläufer jetzt, Verrat jetzt, Tag/Nacht/Dämmerung/echte Zeit
@@ -650,7 +793,7 @@ Monsterstreifzug, Zufriedenheit ±30, Überläufer jetzt, Verrat jetzt, Tag/Nach
 Rauchtest: `tests/run_smoke.sh 600` (prüft Phase 8 in `tests/smoke_phase8.gd`); lange Läufe mit
 `p8=natural seconds=3600 size=medium`, ein bestimmtes Volk mit `people=<id>`.
 
-## Phase 9 testen
+### Phase 9
 
 Tipp: F3 an, F9 = Rohstoffe.
 
@@ -674,77 +817,7 @@ Tipp: F3 an, F9 = Rohstoffe.
 10. KI: Nach Angriffen baut sie Türme, auf Normal später auch einen Mauerring. Gegen deine Mauern bringt sie
     Rammböcke und Katapulte.
 
-## Truppen testen
-
-Tipp: F3 (Debug) einschalten – F9 gibt Ressourcen, F11 setzt Wölfe an die Maus, im Auswahlfenster einer Truppe
-gibt „+50 EP (Test)“ Erfahrung.
-
-1. **Neue Truppen**: Kaserne bauen. Forschung *Waffenschmiede* (BÖSE: *Schwarze Klingen*) schaltet Speerträger
-   (Pfähler) und Armbrustschützen (Höllenschützen) frei, *Ritterorden* (*Schreckensorden*) den **Reitstall**
-   (*Wolfszwinger*) mit Lanzenreitern (Wolfsreitern), *Schildwall* (*Dornenpanzer*) die Schildwache (Eisenhauer),
-   *Lichtsegen* (*Fluch der Schwäche*) den **Magierturm** (*Hexenturm*) mit Kampfmagiern (Hexern). Der Tooltip
-   der Beschwören-Knöpfe nennt Klasse und Konter („Stark gegen Reiterei (+100 %)“).
-2. **Konter**: Reiter gegen Bogenschützen schicken – sie gewinnen deutlich; Speerträger gegen Reiter – die
-   Reiter verlieren. Armbrüste schaden schweren Fusstruppen mehr (halbe Rüstung durchschlagen), Magier treffen
-   Gruppen (Flächenschaden).
-3. **Schmiede** (BÖSE: Blutschmiede, braucht eine Kaserne) bauen und anklicken: je Klasse „Waffen 0/3“ und
-   „Rüstung 0/3“. Ein Klick kauft die nächste Stufe; der Tooltip der Kampfwerte einer Truppe zeigt
-   „Schmiede: Waffen der Fusstruppen +10 %“.
-4. **Erfahrung**: Truppen gegen Wölfe (F11) kämpfen lassen. Nach 60 EP wird ein Rekrut zum Soldaten (ein
-   silberner Winkel über dem Kopf, Veteran zwei, Elite drei goldene, Held der Truppe ein Stern). Truppe anklicken:
-   Rang, Erfahrungsbalken und „Wertepunkte: 1 frei“ → „Angriff +“ – der Angriff steigt um 6 %.
-5. Mehrere Truppen auswählen → „Punkte automatisch verteilen“. Das Häkchen „automatisch“ lässt das Reich neue
-   Punkte immer selbst verteilen (bei der KI immer an).
-6. **Helden**: ab Stufe 2 ein Wertepunkt je Stufe – Held anklicken, gleiche Knöpfe.
-7. **Aussehen**: Truppe anklicken → „Alle: Königsgarde“ (BÖSE: Schattenwache, Blutbanner) färbt alle Einheiten
-   dieses Typs um (Rand, Abzeichen); „Diese: …“ nur die eine. Das Heldenbanner gibt es ab Rang Elite.
-8. F5/F8: Ränge, Punkte, Aussehen und Schmiede-Stufen bleiben erhalten.
-
-Rauchtest: `tests/run_smoke.sh 900` (prüft die Truppen in `tests/smoke_troops.gd`: jede neue
-Truppe beschwören, Konter, Schmiede, Rang und Wertepunkte, Aussehen und dessen Erhalt im Speichern-Laden-Rundlauf).
-
-## Speichern und Laden (Phase 10)
-
-- **Ablage**: `user://saves/<name>.save` – unter Windows `%APPDATA%\Koenigreiche\saves`, unter Linux
-  `~/.local/share/Koenigreiche/saves` (`project.godot`: eigener Benutzerordner „Koenigreiche“; dort liegt auch
-  `settings.cfg` – frühere Einstellungen gelten deshalb einmalig nicht mehr). Plätze: beliebig viele mit Namen,
-  `quicksave` (F5/F8), `autosave_1…3` (reihum, Abstand in den Einstellungen).
-- **Datei**: Zeile 1 `KOENIGREICHE-SAVE 1`, Zeile 2 Kopf als JSON (Name, Datum, Spielzeit, Fraktion, Schwierigkeit,
-  Karte, Seed, Versionen, Prüfsumme), danach die Daten als JSON (zstd-komprimiert, abschaltbar). Geschrieben
-  wird nach `.tmp`, die alte Datei wird zur Sicherung `.bak`, dann umbenannt; Codieren und Schreiben laufen im
-  Hintergrund (`SaveManager`).
-- **Inhalt** (`SaveGame`): Die Welt wird aus dem Seed neu erzeugt; gespeichert werden nur ihre Änderungen
-  (`WorldData.changed_cells`, Strassen, nachwachsende Vorkommen) und ein Fingerabdruck der frischen Welt.
-  Dazu alle Reiche (`Kingdom.to_dict` speichert jedes Feld ausser abgeleiteten und `_`-Feldern automatisch),
-  Gebäude (`Building.to_dict`), Einheiten (`Unit.to_dict`, Verweise als uid, laufende Wege), alle Systeme,
-  Uhr, Sitzung und das Meldungsprotokoll.
-- **Typen** (`SaveCodec`): int/float, Vektoren, Farben, gepackte Arrays, Dictionaries mit Zahlen-Schlüsseln und
-  64-Bit-Zahlen bleiben erhalten (`{"#v2": [x, y]}`, `{"#d": [[k, v]]}` …).
-- **Schnittstelle jedes Systems**: `to_dict()` (nur einfache Werte, Kopien), `from_dict(d)` (nur Daten, keine
-  Signale) und `rebuild_runtime()` (Zwischenspeicher und Wirkungen neu, idempotent). Register `SaveGame.SYSTEMS`
-  (fehlende Systeme werden übersprungen; weitere Nodes unter *Systems* mit den drei Methoden werden automatisch
-  mitgespeichert), Reihenfolge des Neuaufbaus `SaveGame.REBUILD_ORDER`.
-- **Laden**: Kopf prüfen → Welt im Thread erzeugen, Fingerabdruck vergleichen, Änderungen anwenden, Wege
-  berechnen → Reiche, Gebäude (ohne Signale), Gebiet, Einheiten, Verweise, Systeme (`from_dict`, dann
-  `rebuild_runtime`), zuletzt Leben und Meldungen. Arbeiter suchen ihren Arbeitsschritt neu, Gruppenmärsche
-  gehen einzeln weiter.
-- **Regeln für neue Felder**: neues Feld → in `to_dict`/`from_dict` mit Standardwert (Kingdom: automatisch).
-  Feld umbenannt oder umgedeutet → `SaveGame.SAVE_VERSION + 1` und ein Schritt in `SaveMigration.migrate`.
-  Ergibt derselbe Seed eine andere Welt (Generator oder `worldgen.json`/`biomes.json` geändert) →
-  `WorldGenerator.VERSION + 1` (alte Spielstände werden als nicht ladbar angezeigt). Geänderte Spieldaten sonst:
-  nur ein gelber Hinweis in der Liste.
-- **Schwierigkeit** (`Difficulty`, `data/difficulties.json`): Quelle `"difficulty"` auf KI-Reichen (Ertrag,
-  Stärke, Tempo, Wachsamkeit) und den wilden Monstern (Stärke), Startressourcen des Spielers, Angriffslust der
-  KI, Nachwuchs der Monsterlager; ab Phase 8 auch Streifzüge und Ereignisse. Beim Laden neu gesetzt.
-- **Einstellungen** (`Settings`, `SettingsForm` im Haupt- und Spielmenü): Lautstärken (Busse Master, Music,
-  SFX, UI), Kamera, Vollbild, Grösse der Oberfläche, Tag-Nacht-Abdunklung, automatisch speichern, Kompression.
-- **UI-Grösse** (`UiStyle`): HUD, Spielmenü, Hilfe, Protokoll und Sieg/Niederlage sind als Ebenen angemeldet
-  (`register_scaled_layer`: Ebene skaliert, Wurzel = Viewport / Faktor); die zentrierten Fenster platzieren sich
-  mit `UiStyle.place_window` (Faktor, aber nie grösser als der Bildschirm), die Zauberleiste folgt der
-  skalierten Minikarte. Die obere Leiste passt sich an (`hud._fit_top_bar`: Reichsname ausblenden, sonst
-  verkleinern).
-
-## Phase 10 testen
+### Phase 10
 
 1. Neues Spiel, ein paar Minuten spielen, **F5**, ein Gebäude abreissen, **F8** → alles wie vorher (Gebäude im
    Bau, Warteschlangen, Sammelpunkte, Helden, Zauberzonen, Monsterlager).
@@ -764,11 +837,38 @@ Truppe beschwören, Konter, Schmiede, Rang und Wertepunkte, Aussehen und dessen 
 8. Eine Kaserne mit voller Warteschlange abreissen → Kosten zurück; wird sie von Feinden zerstört, ist der
    Einsatz verloren.
 9. Jeder Knopf hat einen Tooltip (der Rauchtest prüft HUD, alle Fenster mit allen Reitern und das Spielmenü).
-10. Rauchtest `tests/run_smoke.sh 1200` – enthält den Rundlauf Speichern → Laden in eine frische Szene →
-   Vergleich → Weiterspielen (abschaltbar mit `p10=off`), die UI-Grössen-Prüfung und die Tooltip-Prüfung.
-   Balancing: `tests/run_balance.sh` (siehe unten).
+10. Rauchtest `tests/run_smoke.sh 1200` (siehe *Prüfungen*) – mit Rundlauf, UI-Grössen- und Tooltip-Prüfung.
 
-## Armeefenster testen
+### Truppen
+
+Tipp: F3 (Debug) einschalten – F9 gibt Ressourcen, F11 setzt Wölfe an die Maus, im Auswahlfenster einer Truppe
+gibt „+50 EP (Test)“ Erfahrung.
+
+1. **Neue Truppen**: Kaserne bauen. Forschung *Waffenschmiede* (BÖSE: *Schwarze Klingen*) schaltet Speerträger
+   (Pfähler) und Armbrustschützen (Höllenschützen) frei, *Ritterorden* (*Schreckensorden*) den **Reitstall**
+   (*Wolfszwinger*) mit Lanzenreitern (Wolfsreitern), *Schildwall* (*Dornenpanzer*) die Schildwache (Eisenhauer),
+   *Lichtsegen* (*Fluch der Schwäche*) den **Magierturm** (*Hexenturm*) mit Kampfmagiern (Hexern). Der Tooltip
+   der Beschwören-Knöpfe nennt Klasse und Konter („Stark gegen Reiterei (+100 %)“).
+2. **Konter**: Reiter gegen Bogenschützen schicken – sie gewinnen deutlich; Speerträger gegen Reiter – die
+   Reiter verlieren. Armbrüste schaden schweren Fusstruppen mehr (halbe Rüstung durchschlagen), Magier treffen
+   Gruppen (Flächenschaden).
+3. **Schmiede** (BÖSE: Blutschmiede, braucht eine Kaserne) bauen und anklicken: je Klasse „Waffen 0/3“ und
+   „Rüstung 0/3“. Ein Klick kauft die nächste Stufe; der Tooltip der Kampfwerte einer Truppe zeigt
+   „Schmiede: Waffen der Fusstruppen +10 %“.
+4. **Erfahrung**: Truppen gegen Wölfe (F11) kämpfen lassen. Nach 60 EP wird ein Rekrut zum Soldaten (ein
+   silberner Winkel über dem Kopf, Veteran zwei, Elite drei goldene, Held der Truppe ein Stern). Truppe anklicken:
+   Rang, Erfahrungsbalken und „Wertepunkte: 1 frei“ → „Angriff +“ (die vier Knöpfe erscheinen nur bei freien Punkten) – der Angriff steigt um 6 %.
+5. Mehrere Truppen auswählen → „Verteilen“. Das Häkchen „automatisch“ lässt das Reich neue
+   Punkte immer selbst verteilen (bei der KI immer an).
+6. **Helden**: ab Stufe 2 ein Wertepunkt je Stufe – Held anklicken, gleiche Knöpfe.
+7. **Aussehen**: Truppe anklicken → Knopf „Aussehen“ → „Alle: Königsgarde“ (BÖSE: Schattenwache, Blutbanner) färbt alle Einheiten
+   dieses Typs um (Rand, Abzeichen); „Diese: …“ nur die eine. Das Heldenbanner gibt es ab Rang Elite. Die Beschwören-Knöpfe der Kaserne zeigen das gewählte Aussehen.
+8. F5/F8: Ränge, Punkte, Aussehen und Schmiede-Stufen bleiben erhalten.
+
+Rauchtest: `tests/run_smoke.sh 900` (prüft die Truppen in `tests/smoke_troops.gd`: jede neue
+Truppe beschwören, Konter, Schmiede, Rang und Wertepunkte, Aussehen und dessen Erhalt im Speichern-Laden-Rundlauf).
+
+### Armeefenster
 
 1. Neues Spiel, Kaserne bauen und einige Kämpfer und Schützen beschwören (F3 → F9 gibt Rohstoffe).
 2. **T** (oder Knopf „Armee · 6“ oben neben „Helden“) → Fenster in der Mitte; ein offenes Forschungs-,
@@ -787,7 +887,7 @@ Truppe beschwören, Konter, Schmiede, Rang und Wertepunkte, Aussehen und dessen 
    (läuft ohne zu kämpfen hin, Befehl „erholt sich an der Burg“: deutlich schnellere Heilung, `combat.json` → `rest`).
 8. **Formation** Block / Linie / Keil / Kreis: gilt für die nächsten Marschbefehle (auch Taste F, reihum), die
    Befehlsgruppe stellt sich sofort an ihrem Ort so auf.
-9. **Haltung passiv** → F3, Umschalt+F11 setzt einen Übungsgolem neben die Truppe: niemand greift an, auch
+9. **Haltung passiv** (im Armeefenster oder in der Zeile „Haltung“ des Auswahlfensters) → F3, Umschalt+F11 setzt einen Übungsgolem neben die Truppe: niemand greift an, auch
    nicht, wenn der Golem zuschlägt. **Verteidigend** → sie greifen an und kehren danach auf den Posten zurück;
    **aggressiv** → sie verfolgen ihn auch weit vom Posten weg. Angriffsbefehle (Rechtsklick auf einen Feind,
    angreifend vorrücken) gelten in jeder Haltung.
@@ -863,12 +963,6 @@ werden geheilt, damit der Lauf die vollen 3 Stunden geht):
    Linux `~/.local/share/Koenigreiche` (siehe „Speichern und Laden“). Eigene Grafiken (`assets/…`, siehe
    `assets_liste.md`) vor dem Export ins Projekt legen.
 
-## Grafiken austauschen
-
-Alle Grafiken sind zunächst automatisch erzeugte Platzhalter. Legt man eine PNG-Datei
-mit dem in **`assets_liste.md`** genannten Namen in den passenden Ordner, wird sie
-beim nächsten Start automatisch verwendet – ohne Code-Änderung.
-
 ## Entwicklungsstand
 
 - [x] Phase 1 – Projekt-Setup, Kamera, prozedurale Karte mit Biomen, Spieltempo und Pause
@@ -884,3 +978,4 @@ beim nächsten Start automatisch verwendet – ohne Code-Änderung.
 - [x] Armeefenster – Übersicht und Befehle für alle Krieger, Haltung, Patrouille, Rückzug, Formationen Keil/Kreis
 - [x] Truppen – neue Einheiten mit Klassen und Kontern, Schmiede, Erfahrung/Ränge/Wertepunkte, Aussehen
 - [x] Tutorial – geführte Partie mit Hervorhebung, Schutz vor Gegnern und Rauchtest
+- [x] Aufgeräumte Oberfläche – einheitliche Fenster, gegliederte obere Leiste, einklappbare Arbeitsverteilung, Haltung im Auswahlfenster
