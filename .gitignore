@@ -4,12 +4,28 @@
 *.translation
 export_credentials.cfg
 *.tmp
+# Vorübergehende Datei der Skriptprüfung (tests/check_scripts.sh)
+/override.cfg
+
 # Exporte und Balancing-Ausgaben
 /build/
+*.exe
+*.pck
+*.x86_64
+
+# Python
+__pycache__/
+*.pyc
 
 # Betriebssystem
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Editoren
+.vscode/
+.idea/
+*.swp
 
 # Arbeitskopien der Werkzeuge
 .claude/

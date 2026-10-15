@@ -1,7 +1,22 @@
-# Einheitliche Zeilenenden für Godot-Dateien
+# Einheitliche Zeilenenden (LF) für alle Textdateien
 * text=auto eol=lf
+
+# Shell-Skripte immer mit LF (auch unter Windows ausführbar in Git Bash/WSL)
+*.sh text eol=lf
+
+# Binärdateien nie verändern
 *.png binary
 *.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
 *.ogg binary
 *.wav binary
 *.mp3 binary
+*.ttf binary
+*.otf binary
+*.zip binary
+*.pck binary
+*.exe binary
+*.save binary
