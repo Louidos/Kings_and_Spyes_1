@@ -41,7 +41,11 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Armee speichern / wählen | Strg + 1…9 speichern, Umschalt + 1…9 hinzufügen, 1…9 auswählen, zweimal drücken = Kamera hin |
 | Formation Block / Linie | F oder Button im Auswahlfenster |
 | Sammelpunkt | Burg/Kaserne/Krankenstation auswählen → Rechtsklick in die Welt |
-| Einheiten beschwören | Burg (Späher), Kaserne (Kämpfer, Schützen, Elite – nach Forschung), Krankenstation (Heiler) auswählen → Buttons |
+| Einheiten beschwören | Burg (Späher), Kaserne (Kämpfer, Schützen; nach Forschung Speerträger, Armbrustschützen, schwere Fusstruppen, Elite), Reitstall (Reiter), Magierturm (Kampfmagier), Krankenstation (Heiler) auswählen → Buttons |
+| Wertepunkte verteilen | eine eigene Truppe auswählen → im Auswahlfenster „Angriff +“, „Leben +“, „Rüstung +“, „Tempo +“ (Punkte gibt jeder Aufstieg im Rang; Helden einen je Stufe) |
+| Punkte automatisch verteilen | mehrere Truppen auswählen → „Punkte automatisch verteilen“; Häkchen „automatisch“ = für das ganze Reich bei jedem Aufstieg |
+| Aussehen (Skins) | Truppe auswählen → „Aussehen: Alle: …“ (ganzer Typ) bzw. „Diese: …“ (nur diese Einheit; Heldenbanner ab Rang Elite) |
+| Schmiede | Schmiede (BÖSE: Blutschmiede) auswählen → je Truppenklasse „Waffen x/3“ und „Rüstung x/3“ anklicken (Kosten im Tooltip) |
 | Forschung | R oder Button „Forschung“ oben: Forschungsbaum und Reiter „Kampfpunkte“ (Esc oder R schliesst) |
 | Zaubern | Zauber in der Zauberleiste (unten rechts) anklicken → Kreis an die Stelle führen → Linksklick; Rechtsklick/Esc bricht ab |
 | Heldenfenster | G oder Button „Helden“ oben: eigene Helden (Stufenwahl, Ausbildung, Wiederbelebung) und Anwerben |
@@ -63,7 +67,7 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Schnellspeichern / Schnellladen | F5 / F8 (vorige Schnellspeicherung bleibt als Sicherung) |
 | Spielmenü | Esc (wenn kein Fenster offen ist und nichts gebaut/ausgewählt wird): Fortsetzen, **Speichern**, **Laden**, **Einstellungen**, Hilfe, Hauptmenü, Beenden |
 | Grösse der Oberfläche | Esc → Einstellungen → „Grösse der Oberfläche“ (75–150 %; wirkt sofort auf HUD, Fenster, Menüs) |
-| Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu, F11 setzt 3 Wölfe an die Maus, Umschalt+F11 einen Übungsgolem, Strg+F11 einen feindlichen Rammbock (marschiert zur Burg), F12 gibt dem ausgewählten Helden eine Stufe (zum Testen); im Spionagefenster erscheinen Debug-Knöpfe (Aufmerksamkeit, Kundschaft, KI-Angriff, KI-Reich besiegen, Rivalen-Krieg), in der Reichsübersicht (L) Knöpfe für Ereignisse, Zufriedenheit und Tageszeit |
+| Debug-Anzeige (FPS, Zoom, Chunks) | F3 – dabei gibt F9 +100 von jeder Ressource, F10 fügt dem König 150 Schaden zu, F11 setzt 3 Wölfe an die Maus, Umschalt+F11 einen Übungsgolem, Strg+F11 einen feindlichen Rammbock (marschiert zur Burg), F12 gibt dem ausgewählten Helden eine Stufe (zum Testen), im Auswahlfenster einer Truppe gibt „+50 EP (Test)“ Erfahrung; im Spionagefenster erscheinen Debug-Knöpfe (Aufmerksamkeit, Kundschaft, KI-Angriff, KI-Reich besiegen, Rivalen-Krieg), in der Reichsübersicht (L) Knöpfe für Ereignisse, Zufriedenheit und Tageszeit |
 
 Alle Tasten lassen sich im Editor unter *Projekt → Projekteinstellungen → Eingabe-Zuordnung* ändern.
 
@@ -87,8 +91,10 @@ data/                    Spieldaten (JSON) – ohne Code änderbar
   resources.json           Ressourcen und Rohstoffvorkommen (Bäume, Steine, Erz, Beeren, Manaquellen)
   buildings.json           Gebäude: Kosten, Bauzeit, Wohnraum, Gebiet, Annahme, Produktion
   jobs.json                Berufe der Bewohner (Holzfäller, Bauer, Bauarbeiter ...)
-  units.json               Einheitentypen: Bewohner, König, Späher, Kämpfer, Schützen, Elite, Heiler, Monster,
-                           Dorfmilizen, Volkskrieger, Bote
+  units.json               Einheitentypen: Bewohner, König, Späher, Kämpfer, Speerträger, Schützen, Armbrust,
+                           schwere Fusstruppen, Reiter, Kampfmagier, Elite, Heiler, Monster, Dorfmilizen,
+                           Volkskrieger, Bote
+  troops.json              Truppen: Klassen und Konter, Schmiede-Stufen, Erfahrung/Ränge/Wertepunkte, Aussehen
   combat.json              Kampfregeln (Gebietsbonus, Streuung, Erholung, Leine), Formationen, Monsterlager
   economy.json             Startausstattung, Wachstum, Hunger, Strassen, Rückerstattung
 scenes/                  Szenen (.tscn)
@@ -102,7 +108,8 @@ scripts/
   world/                   Kartendaten, Generator, Chunk-Darstellung, Tilesets, Gebiet, Wegfindung
   economy/                 Reich (Kingdom), Gebäude, BuildingSystem, EconomySystem
   units/                   Einheiten, UnitSystem (Bewegung), WorkSystem (Berufe), CombatSystem (Kampf),
-                           CommandSystem (Befehle, Formationen, Armeen), SummonSystem, MonsterSystem
+                           CommandSystem (Befehle, Formationen, Armeen), SummonSystem, MonsterSystem,
+                           TroopSystem und TroopRules (Ränge, Wertepunkte, Schmiede, Aussehen)
   diplomacy/               VillageSystem (Dörfer), DiplomacySystem (Ruf, Verträge, Handel), MessengerSystem (Boten)
   ai/                      AISystem (KI-Reiche gründen, Takt), AIBrain (Gehirn je Reich) mit den Modulen AIEconomy,
                            AIMilitary, AIDiplomacy; AIRivalry (Spannung zwischen KI-Reichen)
@@ -119,7 +126,7 @@ assets/
   audio/                   music/, sfx/
 tests/                   Prüfungen ohne Fenster
   check_scripts.sh         alle Skripte auf Fehler und Warnungen prüfen
-  run_smoke.sh             Rauchtest beider Fraktionen (smoke_test.tscn + smoke_phase6…10.gd)
+  run_smoke.sh             Rauchtest beider Fraktionen (smoke_test.tscn + smoke_phase6…10.gd + smoke_troops.gd)
   run_balance.sh           Balancing-Läufe (balance_phase10.gd), Ausgabe nach build/balance
 export_presets.cfg       Export-Vorlagen Windows/Linux (ohne Zugangsdaten)
 ```
@@ -270,6 +277,25 @@ export_presets.cfg       Export-Vorlagen Windows/Linux (ohne Zugangsdaten)
     erholen sich verletzte Einheiten nicht (Wirkung `supply:regen` über das MagicSystem).
   - KI: `AISiege` (`scripts/ai/`) baut Türme und einen Mauerring bei Bedrohung, bringt Belagerungswaffen
     gegen befestigte Ziele und schliesst früh einen Handelsvertrag.
+- **Truppen** (`data/troops.json`, `scripts/units/troop_system.gd`, `troop_rules.gd`, UI `TroopSelectionBox`):
+  - Jeder Einheitentyp hat eine **Klasse** (`class` in units.json: infantry, cavalry, ranged, mage, siege, support).
+    Der Schaden im `CombatSystem._damage_value` wird mit dem **Konter** multipliziert: Klassen-Tabelle
+    `troops.json → counters` plus `bonus_vs` der Einheit (DataDB legt beides als `counter_vs` je Typ zusammen);
+    `armor_pierce` (Armbrust) senkt die wirksame Rüstung des Opfers.
+  - **Schmiede** (Gebäude mit `"forge": true`): Stufen je Klasse (`forge.upgrades`), gemerkt in
+    `Kingdom.forge_levels`, Wirkung als Modifikatoren mit Quelle `"upgrade:<id>"` und dem neuen Schlüssel
+    `"<wert>#<klasse>"` (z. B. `attack#cavalry`; `Unit._stat_from` liest ihn zusätzlich zu Stufe und Rolle).
+  - **Erfahrung und Ränge**: das TroopSystem hört auf `CombatSystem.attacked` (EP je Schaden) und `unit_died`
+    (EP für den letzten Treffer, `Unit.last_hit_by`). Ränge Rekrut → Soldat → Veteran → Elite → Held der Truppe
+    (`veterancy.ranks`) bringen Wertepunkte; Rang und Punkte wirken als `Unit.vet_mods` (wie `hero_mods`).
+    `Kingdom.auto_stat_points` (Spieler aus, KI und Dörfer an) verteilt neue Punkte selbst. Helden bekommen
+    einen Punkt je Stufe (`stat_alloc` im Heldeneintrag, beim Wiederbeleben und Laden übernommen).
+  - **Aussehen**: `Kingdom.unit_skins` (Typ → Skin) und `Unit.skin` (einzelne Einheit); `Unit.refresh_look` lädt
+    `<einheit>_<skin>.png` oder zeichnet den Platzhalter (`PlaceholderArt.make_unit_skin_token`, `make_emblem`).
+  - Gespeichert: `Unit.SAVE_OPTIONAL` (`vet_xp`, `vet_rank`, `stat_points`, `stat_alloc`, `skin`), die Felder der
+    Reiche automatisch; `TroopSystem.rebuild_runtime` setzt die Schmiede-Modifikatoren neu.
+  - KI: `ai.json → army.composition` mit den neuen Stufen, Gebäude in `build_order`, `AIMilitary.tick_forge`
+    kauft Schmiede-Stufen (`ai.json → forge`).
 - **Gebiet**: Jedes fertige Gebäude beansprucht einen Kreis; bei Überschneidung gewinnt das ältere.
   Gebaut werden darf nur im eigenen Gebiet; Sammler holen nichts aus fremdem Gebiet (z. B. eines Dorfs).
 
@@ -286,6 +312,15 @@ Alle Dateien in `data/` enthalten `_hinweis`-Felder mit Erklärungen. Beispiele:
 - Schnellere Bewohner: `units.json` → *villager* → `speed`.
 - Andere Startausstattung: `economy.json` → `start`.
 - Stärkere Ritter: `units.json` → *elite_good* → `attack`, `hp`, `armor`.
+- Speerträger noch stärker gegen Reiter: `units.json` → *spearman_good* → `"bonus_vs": {"cavalry": 1.5}` (+150 %).
+- Reiter weniger stark gegen Schützen: `troops.json` → `counters.cavalry.ranged` 0.35 → 0.2.
+- Neue Truppe mit Klasse: in `units.json` `"class": "cavalry"` setzen (fehlt sie, gilt `troops.json → classes_default`).
+- Schmiede: `troops.json` → `forge.upgrades` (z. B. `"per_level": {"attack": 0.15}` = +15 % je Stufe, `cost` je Stufe;
+  eine vierte Stufe = vierter Eintrag in `cost`).
+- Schnellere Ränge: `troops.json` → `veterancy.ranks` (`"xp": 60` für Soldat …), mehr Punkte `"points"`;
+  Wirkung je Punkt `veterancy.stats` (`{"id": "attack", "mult": 0.06}`), höchstens `max_per_stat`.
+- Neues Aussehen: `troops.json` → `skins.variants` (`{"id": "winter", "name": "Winterwacht", "faction": "good",
+  "tint": "#cfe3ff", "trim": "#ffffff", "emblem": "star"}`), Grafik `assets/sprites/units/<einheit>_winter.png`.
 - Billigere Truppen: `units.json` → `cost` und `summon_time`.
 - Weniger oder mehr Monsterlager: `combat.json` → `camps.per_1000_tiles`, Übungslager `camps.near_start`.
 - Stärkerer Heimvorteil: `combat.json` → `territory_bonus`.
@@ -578,6 +613,35 @@ Tipp: F3 an, F9 = Rohstoffe.
 10. KI: Nach Angriffen baut sie Türme, auf Normal später auch einen Mauerring. Gegen deine Mauern bringt sie
     Rammböcke und Katapulte.
 
+## Truppen testen
+
+Tipp: F3 (Debug) einschalten – F9 gibt Ressourcen, F11 setzt Wölfe an die Maus, im Auswahlfenster einer Truppe
+gibt „+50 EP (Test)“ Erfahrung.
+
+1. **Neue Truppen**: Kaserne bauen. Forschung *Waffenschmiede* (BÖSE: *Schwarze Klingen*) schaltet Speerträger
+   (Pfähler) und Armbrustschützen (Höllenschützen) frei, *Ritterorden* (*Schreckensorden*) den **Reitstall**
+   (*Wolfszwinger*) mit Lanzenreitern (Wolfsreitern), *Schildwall* (*Dornenpanzer*) die Schildwache (Eisenhauer),
+   *Lichtsegen* (*Fluch der Schwäche*) den **Magierturm** (*Hexenturm*) mit Kampfmagiern (Hexern). Der Tooltip
+   der Beschwören-Knöpfe nennt Klasse und Konter („Stark gegen Reiterei (+100 %)“).
+2. **Konter**: Reiter gegen Bogenschützen schicken – sie gewinnen deutlich; Speerträger gegen Reiter – die
+   Reiter verlieren. Armbrüste schaden schweren Fusstruppen mehr (halbe Rüstung durchschlagen), Magier treffen
+   Gruppen (Flächenschaden).
+3. **Schmiede** (BÖSE: Blutschmiede, braucht eine Kaserne) bauen und anklicken: je Klasse „Waffen 0/3“ und
+   „Rüstung 0/3“. Ein Klick kauft die nächste Stufe; der Tooltip der Kampfwerte einer Truppe zeigt
+   „Schmiede: Waffen der Fusstruppen +10 %“.
+4. **Erfahrung**: Truppen gegen Wölfe (F11) kämpfen lassen. Nach 60 EP wird ein Rekrut zum Soldaten (ein
+   silberner Winkel über dem Kopf, Veteran zwei, Elite drei goldene, Held der Truppe ein Stern). Truppe anklicken:
+   Rang, Erfahrungsbalken und „Wertepunkte: 1 frei“ → „Angriff +“ – der Angriff steigt um 6 %.
+5. Mehrere Truppen auswählen → „Punkte automatisch verteilen“. Das Häkchen „automatisch“ lässt das Reich neue
+   Punkte immer selbst verteilen (bei der KI immer an).
+6. **Helden**: ab Stufe 2 ein Wertepunkt je Stufe – Held anklicken, gleiche Knöpfe.
+7. **Aussehen**: Truppe anklicken → „Alle: Königsgarde“ (BÖSE: Schattenwache, Blutbanner) färbt alle Einheiten
+   dieses Typs um (Rand, Abzeichen); „Diese: …“ nur die eine. Das Heldenbanner gibt es ab Rang Elite.
+8. F5/F8: Ränge, Punkte, Aussehen und Schmiede-Stufen bleiben erhalten.
+
+Rauchtest: `tests/run_smoke.sh 900` (prüft die Truppen in `tests/smoke_troops.gd`: jede neue
+Truppe beschwören, Konter, Schmiede, Rang und Wertepunkte, Aussehen und dessen Erhalt im Speichern-Laden-Rundlauf).
+
 ## Speichern und Laden (Phase 10)
 
 - **Ablage**: `user://saves/<name>.save` – unter Windows `%APPDATA%\Koenigreiche\saves`, unter Linux
@@ -729,3 +793,4 @@ beim nächsten Start automatisch verwendet – ohne Code-Änderung.
 - [x] Phase 8 – Zufriedenheit, Verrat, Flüchtlinge, Ereignisse, Monster, Tag/Nacht
 - [x] Phase 9 – Belagerungen und Handelswege
 - [x] Phase 10 – Speichern/Laden, Schwierigkeitsgrade, UI-Feinschliff, Balancing
+- [x] Truppen – neue Einheiten mit Klassen und Kontern, Schmiede, Erfahrung/Ränge/Wertepunkte, Aussehen

@@ -1,0 +1,122 @@
+{
+	"_hinweis": [
+		"Truppen: Klassen und Konter, Schmiede (Waffen- und Rüstungsstufen), Erfahrung und Ränge mit Wertepunkten, Aussehen (Skins).",
+		"Einheiten bekommen ihre Klasse in units.json (\"class\"); fehlt sie, gilt classes_default (by_tier, dann by_role, sonst ranged ab Reichweite 2, sonst infantry).",
+		"counters: Angreifer-Klasse -> {Opfer-Klasse: Zuschlag}. 0.35 = +35 % Schaden, negativ = weniger. Dazu kommt bonus_vs der Einheit in units.json (z. B. Speerträger {\"cavalry\": 1.0} = doppelter Schaden gegen Reiterei).",
+		"armor_pierce in units.json: Anteil der gegnerischen Rüstung, der ignoriert wird (0.5 = Armbrust durchschlägt die halbe Rüstung).",
+		"forge.upgrades: kaufbare Stufen in der Schmiede (Gebäude mit \"forge\": true). class = Truppenklasse, per_level = Faktor je Stufe (attack 0.1 = +10 % Angriff je Stufe, Stufe 3 = +30 %), cost = Kosten je Stufe (Liste, Länge = höchste Stufe). Wirkung als Modifikator des Reichs mit Quelle \"upgrade:<id>\" und Schlüssel \"<wert>#<klasse>\" (z. B. attack#cavalry).",
+		"veterancy: Erfahrung (EP) für Truppen der Rollen roles: xp_per_damage je Schadenspunkt gegen Feinde (gegen Gebäude mal building_xp), kill_xp + kill_xp_per_point × Kampfpunkte des Opfers für den letzten Treffer. ranks: Name, nötige EP und Wertepunkte beim Aufstieg (5 Ränge). rank_bonus: Faktor je Rang (hp 0.03 = +3 % Leben je Rang). rank_heal: Anteil Leben beim Aufstieg.",
+		"veterancy.stats: Wertepunkte (mult = Faktor je Punkt, add = Zuschlag je Punkt, Rüstung 0.03 = +3 Prozentpunkte), höchstens max_per_stat Punkte je Wert. auto_priority: Reihenfolge beim automatischen Verteilen je Klasse. hero_points_per_level: Wertepunkte der Helden je Stufe ab Stufe 2. notify_min_rank: Aufstiege ab diesem Rang werden gemeldet.",
+		"skins.variants: Aussehen je Truppentyp (rein kosmetisch). faction: für Reiche dieser Fraktion (any = alle). tint = Grundfarbe des Platzhalters (Mischung tint_mix), trim = Rand, emblem = Abzeichen (crown, sun, skull, fang, star, moon, shield). min_rank: nur für einzelne Einheiten ab diesem Rang. Grafik: assets/sprites/units/<einheit>_<skin>.png (64x64), sonst Platzhalter. skins.roles: welche Rollen Skins haben."
+	],
+
+	"classes": {
+		"infantry": {"name": "Fusstruppen"},
+		"cavalry": {"name": "Reiterei"},
+		"ranged": {"name": "Fernkämpfer"},
+		"mage": {"name": "Magier"},
+		"siege": {"name": "Belagerung"},
+		"support": {"name": "Heiler"},
+		"beast": {"name": "Bestien"},
+		"hero": {"name": "Helden"},
+		"civilian": {"name": "Zivil"}
+	},
+	"classes_default": {
+		"by_tier": {"ram": "siege", "catapult": "siege", "medic": "support", "scout": "infantry"},
+		"by_role": {"worker": "civilian", "monster": "beast", "hero": "hero", "support": "support", "messenger": "civilian",
+		            "spy": "civilian", "caravan": "civilian", "king": "infantry"}
+	},
+	"counters": {
+		"infantry": {"siege": 0.3},
+		"cavalry": {"ranged": 0.35, "mage": 0.35, "siege": 0.5, "support": 0.25},
+		"ranged": {"infantry": 0.1, "cavalry": -0.2},
+		"mage": {"infantry": 0.25, "siege": 0.25, "beast": 0.15},
+		"siege": {},
+		"beast": {}
+	},
+
+	"forge": {
+		"upgrades": [
+			{"id": "forge_infantry_weapons", "class": "infantry", "kind": "weapon", "name": "Waffen der Fusstruppen",
+			 "names": {"good": "Stahlklingen", "evil": "Schwarzstahl"}, "per_level": {"attack": 0.1},
+			 "cost": [{"ore": 40, "wood": 20}, {"ore": 80, "wood": 30, "mana": 15}, {"ore": 140, "wood": 40, "mana": 35}]},
+			{"id": "forge_infantry_armor", "class": "infantry", "kind": "armor", "name": "Rüstung der Fusstruppen",
+			 "names": {"good": "Kettenhemden", "evil": "Dornenpanzer"}, "per_level": {"armor": 0.12, "hp": 0.05},
+			 "cost": [{"ore": 45, "stone": 20}, {"ore": 90, "stone": 30, "mana": 15}, {"ore": 150, "stone": 40, "mana": 35}]},
+			{"id": "forge_cavalry_weapons", "class": "cavalry", "kind": "weapon", "name": "Waffen der Reiterei",
+			 "names": {"good": "Turnierlanzen", "evil": "Wolfsklingen"}, "per_level": {"attack": 0.1},
+			 "cost": [{"ore": 50, "wood": 30}, {"ore": 90, "wood": 40, "mana": 20}, {"ore": 150, "wood": 50, "mana": 40}]},
+			{"id": "forge_cavalry_armor", "class": "cavalry", "kind": "armor", "name": "Rüstung der Reiterei",
+			 "names": {"good": "Rossharnisch", "evil": "Wolfspanzer"}, "per_level": {"armor": 0.12, "hp": 0.05},
+			 "cost": [{"ore": 50, "stone": 20}, {"ore": 95, "stone": 30, "mana": 20}, {"ore": 160, "stone": 40, "mana": 40}]},
+			{"id": "forge_ranged_weapons", "class": "ranged", "kind": "weapon", "name": "Geschosse der Fernkämpfer",
+			 "names": {"good": "Gefiederte Pfeile", "evil": "Widerhakenbolzen"}, "per_level": {"attack": 0.1},
+			 "cost": [{"wood": 50, "ore": 20}, {"wood": 80, "ore": 40, "mana": 15}, {"wood": 120, "ore": 70, "mana": 35}]},
+			{"id": "forge_ranged_armor", "class": "ranged", "kind": "armor", "name": "Rüstung der Fernkämpfer",
+			 "names": {"good": "Lederwämser", "evil": "Schattenleder"}, "per_level": {"armor": 0.15, "hp": 0.06},
+			 "cost": [{"wood": 30, "ore": 30}, {"wood": 50, "ore": 60, "mana": 15}, {"wood": 70, "ore": 100, "mana": 35}]},
+			{"id": "forge_mage_weapons", "class": "mage", "kind": "weapon", "name": "Stäbe der Magier",
+			 "names": {"good": "Sternenstäbe", "evil": "Knochenstäbe"}, "per_level": {"attack": 0.1},
+			 "cost": [{"wood": 30, "mana": 40}, {"wood": 40, "ore": 30, "mana": 70}, {"wood": 60, "ore": 50, "mana": 110}]},
+			{"id": "forge_mage_armor", "class": "mage", "kind": "armor", "name": "Schutz der Magier",
+			 "names": {"good": "Schutzrunen", "evil": "Blutsiegel"}, "per_level": {"armor": 0.1, "hp": 0.08},
+			 "cost": [{"stone": 30, "mana": 35}, {"stone": 50, "ore": 30, "mana": 60}, {"stone": 70, "ore": 50, "mana": 100}]},
+			{"id": "forge_siege_armor", "class": "siege", "kind": "armor", "name": "Beschläge der Belagerungswaffen",
+			 "names": {"good": "Eisenbeschläge", "evil": "Dornenbeschläge"}, "per_level": {"armor": 0.1, "hp": 0.1},
+			 "cost": [{"wood": 60, "ore": 40}, {"wood": 90, "ore": 70, "mana": 20}, {"wood": 120, "ore": 110, "mana": 40}]}
+		]
+	},
+
+	"veterancy": {
+		"roles": ["combat"],
+		"exclude_tiers": ["summon", "spy", "caravan", "messenger", "ram", "catapult"],
+		"xp_per_damage": 0.25,
+		"building_xp": 0.2,
+		"kill_xp": 8,
+		"kill_xp_per_point": 4,
+		"ranks": [
+			{"name": "Rekrut", "xp": 0, "points": 0},
+			{"name": "Soldat", "xp": 60, "points": 1},
+			{"name": "Veteran", "xp": 180, "points": 1},
+			{"name": "Elite", "xp": 420, "points": 2},
+			{"name": "Held der Truppe", "xp": 900, "points": 2}
+		],
+		"rank_bonus": {"hp": 0.03, "attack": 0.03},
+		"rank_heal": 0.25,
+		"stats": [
+			{"id": "attack", "name": "Angriff", "mult": 0.06},
+			{"id": "hp", "name": "Leben", "mult": 0.08},
+			{"id": "armor", "name": "Rüstung", "add": 0.03},
+			{"id": "speed", "name": "Tempo", "mult": 0.04}
+		],
+		"max_per_stat": 4,
+		"auto_priority": {
+			"infantry": ["hp", "armor", "attack", "speed"],
+			"cavalry": ["attack", "speed", "hp", "armor"],
+			"ranged": ["attack", "hp", "speed", "armor"],
+			"mage": ["attack", "hp", "armor", "speed"],
+			"default": ["attack", "hp", "armor", "speed"]
+		},
+		"hero_points_per_level": 1,
+		"notify_min_rank": 2
+	},
+
+	"skins": {
+		"roles": ["combat", "support"],
+		"exclude_tiers": ["summon", "spy", "caravan", "messenger", "king", "militia"],
+		"tint_mix": 0.55,
+		"variants": [
+			{"id": "standard", "name": "Standard", "faction": "any", "description": "Farben des Reichs."},
+			{"id": "royal", "name": "Königsgarde", "faction": "good", "tint": "#3e63c9", "trim": "#f3d36b", "emblem": "crown",
+			 "description": "Blau und Gold der königlichen Garde."},
+			{"id": "sunwatch", "name": "Sonnenwacht", "faction": "good", "tint": "#e8c25a", "trim": "#fff4d2", "emblem": "sun",
+			 "description": "Helle Wappenröcke mit Sonnenzeichen."},
+			{"id": "shadow", "name": "Schattenwache", "faction": "evil", "tint": "#2e2440", "trim": "#a874d6", "emblem": "moon",
+			 "description": "Schwarze Umhänge mit violettem Saum."},
+			{"id": "blood", "name": "Blutbanner", "faction": "evil", "tint": "#7a1414", "trim": "#e85050", "emblem": "fang",
+			 "description": "Rote Banner der Blutkrieger."},
+			{"id": "hero_banner", "name": "Heldenbanner", "faction": "any", "tint": "#d9a520", "trim": "#ffffff", "emblem": "star", "min_rank": 3,
+			 "description": "Nur für einzelne Einheiten ab dem Rang Elite: goldenes Banner verdienter Krieger."}
+		]
+	}
+}

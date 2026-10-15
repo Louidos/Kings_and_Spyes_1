@@ -18,6 +18,8 @@
 ## - Helden (auch der aktive Held einer gemischten Auswahl): Stufe, Erfahrung,
 ##   Stufenwahl und die Fähigkeitsknöpfe C / V / B (HeroSelectionBox); Burg:
 ##   gefallene Helden wiederbeleben; Heldenhalle: Ausbildung.
+## - Truppen (TroopSelectionBox): Rang, Erfahrung, Wertepunkte, Aussehen; mehrere
+##   Einheiten: "Punkte automatisch verteilen"; Schmiede: Waffen- und Rüstungsstufen.
 ## - Magie: bei einer Einheit laufende Zauberwirkungen (Restzeit, in der
 ##   Zauberfarbe), "Getarnt" und bei beschworenen Wächtern die Restzeit;
 ##   bei der Forschungsstätte die laufende Forschung und "Forschung öffnen (R)".
@@ -120,6 +122,8 @@ var _formation_button: Button
 
 ## Helden-Abschnitt (Stufe, Fähigkeiten; Burg: Wiederbeleben; Halle: Ausbildung)
 var _hero_box: HeroSelectionBox
+## Truppen-Abschnitt (Rang, Wertepunkte, Aussehen; Schmiede)
+var _troop_box: TroopSelectionBox
 ## Dorf-Zeile: Knopf "Diplomatie (N)" für Dorfgebäude, Milizen und Boten
 var _village_row: HBoxContainer
 var _diplo_button: Button
@@ -228,6 +232,9 @@ func _ready() -> void:
 	_hero_box = HeroSelectionBox.new()
 	vbox.add_child(_hero_box)
 
+	_troop_box = TroopSelectionBox.new()
+	vbox.add_child(_troop_box)
+
 	_village_row = HBoxContainer.new()
 	_village_row.add_theme_constant_override("separation", 6)
 	_village_row.visible = false
@@ -304,6 +311,8 @@ func setup(p_game: Node) -> void:
 	game.work_system.jobs_changed.connect(_on_jobs_changed)
 	game.command_system.armies_changed.connect(_on_armies_changed)
 	_hero_box.setup(game)
+	_troop_box.setup(game)
+	game.troop_system.troops_changed.connect(_on_troops_changed)
 	game.selection.focus_hero_changed.connect(_on_focus_hero_changed)
 	game.hero_system.heroes_changed.connect(_on_heroes_changed)
 	_on_selection_changed(game.selection.selected)
@@ -378,6 +387,12 @@ func _on_heroes_changed(k: Kingdom) -> void:
 		_dirty = true
 
 
+## Schmiede, Wertepunkte, Aussehen oder Rang geändert
+func _on_troops_changed(k: Kingdom) -> void:
+	if k == game.player and _mode != "":
+		_dirty = true
+
+
 func _on_formation_changed(_formation: String) -> void:
 	_update_formation_button()
 
@@ -410,6 +425,7 @@ func _refresh() -> void:
 		_mode = ""
 		visible = false
 		_hero_box.hide_box()
+		_troop_box.hide_box()
 	if _mode != "unit" and _mode != "building":
 		_show_village_row(null)
 	if _mode != "unit" and _spy_row.visible:
@@ -483,6 +499,7 @@ func _show_building(b: Building) -> void:
 	_magic_box.visible = false
 	_show_research(b, own)
 	_hero_box.show_building(b if own else null)
+	_troop_box.show_building(b if own else null)
 
 	# Beschwören (nur eigene, fertige Gebäude)
 	# Heldenhalle: Anwerben über dieselben Knöpfe (Angebote vom HeroSystem), ohne Sammelpunkt
@@ -867,9 +884,10 @@ func _summon_seconds(def: Dictionary, k: Kingdom) -> float:
 	return float(def.get("summon_time", 10.0)) / maxf(k.mod("summon"), 0.01)
 
 
-## Grundwert eines Einheitentyps mit den Faktoren des Reichs (wie Unit._stat)
+## Grundwert eines Einheitentyps mit den Faktoren des Reichs (wie Unit._stat; auch je Klasse – Schmiede)
 func _type_stat(def: Dictionary, k: Kingdom, key: String) -> float:
-	return float(def.get(key, 0.0)) * k.mod(key) * k.mod(key + "." + str(def.get("tier", "")))
+	return float(def.get(key, 0.0)) * k.mod(key) * k.mod(key + "." + str(def.get("tier", ""))) \
+			* k.mod(key + "#" + str(def.get("class", "")))
 
 
 func _summon_tooltip(def: Dictionary, k: Kingdom) -> String:
@@ -889,6 +907,10 @@ func _summon_tooltip(def: Dictionary, k: Kingdom) -> String:
 		stats.append("Reichweite %s" % _range_text(_type_stat(def, k, "range")))
 	stats.append("Tempo %s" % ResourceBar.format_number(_type_stat(def, k, "speed")))
 	lines.append(" · ".join(stats))
+	if str(def.get("role", "")) != "hero":
+		lines.append(TroopRules.class_line(def))
+	if not str(def.get("description", "")).is_empty():
+		lines.append(str(def["description"]))
 	if bool(def.get("can_work", false)):
 		lines.append("Kann auch einen Beruf ausüben (braucht dann Wohnraum)")
 	return "\n".join(lines)
@@ -982,6 +1004,10 @@ func _show_unit(u: Unit) -> void:
 		_hero_box.show_hero(u, false)
 	else:
 		_hero_box.hide_box()
+	if intel >= 2 and not caravan:
+		_troop_box.show_unit(u, own)
+	else:
+		_troop_box.hide_box()
 	_job_row.visible = own and u.can_work()
 	if _job_row.visible:
 		_update_job_options(u)
@@ -1053,6 +1079,7 @@ func _show_units(units: Array) -> void:
 	_hide_research()
 	# Aktiver Held der Auswahl (Tab wechselt): Fähigkeiten auch mit der ganzen Armee
 	_hero_box.show_hero(game.selection.get_focus_hero(), true)
+	_troop_box.show_units(units)
 	_summon_box.visible = false
 	_worker_row.visible = false
 	_job_row.visible = false
@@ -1172,7 +1199,7 @@ func _stat_source_line(u: Unit, key: String, label: String, value: float, as_per
 	var parts: PackedStringArray = []
 	var k := u.kingdom
 	if k != null:
-		var keys: PackedStringArray = [key, key + "." + u.tier, key + "@" + u.role]
+		var keys: PackedStringArray = [key, key + "." + u.tier, key + "@" + u.role, key + "#" + u.unit_class]
 		for source in k.modifier_sources:
 			var entry: Dictionary = k.modifier_sources[source]
 			for mod_key in keys:
@@ -1183,9 +1210,12 @@ func _stat_source_line(u: Unit, key: String, label: String, value: float, as_per
 	if not u.terrain_mods.is_empty() and u.terrain_mods.has(terrain_key):
 		var biome_name := str(DataDB.get_biome(u.terrain_biome).get("name", "")) if u.terrain_biome >= 0 else ""
 		parts.append("Gelände %s %s" % [biome_name, _factor_text(float(u.terrain_mods[terrain_key]), key)])
-	# Helden: Stufe, Talente und passive Fähigkeiten (Unit.hero_mods)
-	if u.hero_mods.has(key):
-		for part in (u.hero_mods[key] as Dictionary).get("parts", []):
+	# Helden: Stufe, Talente und passive Fähigkeiten (Unit.hero_mods); Truppen: Rang und
+	# Wertepunkte (Unit.vet_mods, gleicher Aufbau)
+	for mods: Dictionary in [u.hero_mods, u.vet_mods]:
+		if not mods.has(key):
+			continue
+		for part in (mods[key] as Dictionary).get("parts", []):
 			var p: Array = part
 			if not is_equal_approx(float(p[2]), 1.0):
 				parts.append("%s %s" % [str(p[0]), _factor_text(float(p[2]), key)])

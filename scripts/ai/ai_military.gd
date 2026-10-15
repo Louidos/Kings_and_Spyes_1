@@ -85,7 +85,7 @@ static func tick_summon(b: AIBrain, now: float) -> void:
 	composition.merge(AISiege.extra_composition(b))
 	var alarm: Dictionary = b.st["alarm"]
 	var max_queue := int(DataDB.ai("army.max_queue_per_building", 2))
-	for bld in k.buildings:
+	for bld in _buildings_by_deficit(b, ss, composition, counts, total):
 		if total >= target:
 			return
 		if not _is_troop_building(bld) or bld.summon_queue.size() >= max_queue:
@@ -123,6 +123,82 @@ static func tick_summon(b: AIBrain, now: float) -> void:
 				total += 1
 				b.log_first("first_summon", now)
 				break
+
+
+## Truppengebäude nach dem grössten Rückstand ihrer Einheiten gegenüber der Zusammensetzung
+## (über alle Gebäude gerechnet), damit Reitstall und Magierturm nicht hinter den Kasernen
+## verhungern, wenn das Armee-Soll fast erreicht ist
+static func _buildings_by_deficit(b: AIBrain, ss: SummonSystem, composition: Dictionary, counts: Dictionary, total: int) -> Array:
+	var k := b.k
+	var weight_sum := 0.0
+	var tiers_seen := {}
+	var per_building: Array = []
+	for bld in k.buildings:
+		if not _is_troop_building(bld):
+			continue
+		var tiers: Array = []
+		for def in ss.get_options(bld):
+			var tier := str(def.get("tier", ""))
+			if not composition.has(tier) or not k.has_all_unlocks(def.get("requires", [])):
+				continue
+			tiers.append(tier)
+			if not tiers_seen.has(tier):
+				tiers_seen[tier] = true
+				weight_sum += float(composition[tier])
+		per_building.append([bld, tiers])
+	var scored: Array = []
+	for entry in per_building:
+		var best := -INF
+		for tier in entry[1]:
+			var deficit := float(composition[tier]) / maxf(weight_sum, 0.001) * float(total + 1) - float(counts.get(tier, 0))
+			best = maxf(best, deficit)
+		scored.append([best, entry[0]])
+	scored.sort_custom(func(x: Array, y: Array) -> bool: return float(x[0]) > float(y[0]))
+	var list: Array = []
+	for e in scored:
+		list.append(e[1])
+	return list
+
+
+## Schmiede (Truppen): eine Stufe je Denkvorgang kaufen, sobald es die Reserve erlaubt –
+## für die Klasse mit den meisten eigenen Truppen zuerst, höchstens bis zur Stufe aus
+## forge.max_level_by_minute. Gleiche Schnittstelle wie der Spieler (TroopSystem.buy_forge).
+static func tick_forge(b: AIBrain, now: float) -> void:
+	if not bool(DataDB.ai("forge.enabled", true)) or not b.time_ok(now, float(DataDB.ai("forge.min_minute", 18))):
+		return
+	var k := b.k
+	var ts: TroopSystem = b.game.troop_system
+	if ts.get_forge(k) == null:
+		return
+	var cap := 0
+	for p in DataDB.ai("forge.max_level_by_minute", [[18, 1]]):
+		if b.minutes(now) >= float((p as Array)[0]) or b.sys.debug_fast:
+			cap = maxi(cap, int((p as Array)[1]))
+	if cap <= 0:
+		return
+	var per_class := {}
+	for u in b.army_units():
+		per_class[u.unit_class] = int(per_class.get(u.unit_class, 0)) + 1
+	var options: Array = []
+	for up in ts.get_forge_upgrades():
+		var id := str(up.get("id", ""))
+		var count := int(per_class.get(str(up.get("class", "")), 0))
+		var level := ts.get_forge_level(k, id)
+		if count <= 0 or level >= cap or not ts.can_buy_forge(k, id).is_empty():
+			continue
+		# Viele Truppen der Klasse und niedrige Stufe zuerst
+		options.append([float(count) / float(level + 1), id])
+	options.sort_custom(func(x: Array, y: Array) -> bool: return float(x[0]) > float(y[0]))
+	# Erst kaufen, wenn das Lager reserve_factor × Kosten hält (die Truppen gehen vor)
+	var factor := maxf(float(DataDB.ai("forge.reserve_factor", 2.0)), 1.0)
+	for o in options:
+		var id := str(o[1])
+		var cost := ts.get_forge_cost(k, id)
+		var check := {}
+		for res in cost:
+			check[res] = float(cost[res]) * factor
+		if b.can_spend(check) and ts.buy_forge(k, id):
+			return
 
 
 ## Gebäude, in dem Truppen beschworen werden (nicht Burg, Heldenhalle, Spionagehaus)

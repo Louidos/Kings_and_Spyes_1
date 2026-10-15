@@ -481,7 +481,8 @@ func _splash(u: Unit, t: Object, raw: float) -> void:
 	for v in index.query(center, radius):
 		if v == t or not is_valid_target(u.kingdom, v):
 			continue
-		apply_damage(v, maxf(mitigate(v, raw * u.unit_damage * u.splash_factor), _min_damage), u, u.kingdom, "splash")
+		apply_damage(v, maxf(mitigate(v, raw * u.unit_damage * u.splash_factor * TroopRules.counter_factor(u, v as Unit)),
+				_min_damage), u, u.kingdom, "splash")
 
 
 ## Schuss eines Turms (SiegeSystem): Schaden = tower.attack × Streuung × Modifikator tower_attack,
@@ -500,19 +501,21 @@ func tower_attack(tower: Building, victim: Unit) -> bool:
 	return victim.hp <= 0.0
 
 
-## Schaden = Angriff × Streuung × (1 + Gebietsbonus des Angreifers)
+## Schaden = Angriff × Streuung × (1 + Gebietsbonus des Angreifers) × Konter
 ##          × (1 − Verteidigung) × (1 − Gebietsbonus des Verteidigers).
-## Verteidigung = Rüstung + Geländebonus (biomes.json), begrenzt.
+## Verteidigung = Rüstung (abzüglich Rüstungsdurchschlag des Angreifers) + Geländebonus
+## (biomes.json), begrenzt. Konter: Klasse des Angreifers gegen Klasse des Opfers
+## (troops.json counters + bonus_vs der Einheit).
 ## Gegen Gebäude zählt building_damage des Angreifers und die Gebäuderüstung.
 func _damage_value(u: Unit, victim: Object, spread: float) -> float:
 	var dmg := u.attack * spread
 	if world.get_owner(world.world_to_cell(u.position)) == u.kingdom.id:
 		dmg *= 1.0 + _territory_bonus
 	if victim is Unit:
-		dmg *= u.unit_damage
+		dmg *= u.unit_damage * TroopRules.counter_factor(u, victim as Unit)
 	else:
 		dmg *= u.building_damage
-	return maxf(mitigate(victim, dmg), _min_damage)
+	return maxf(mitigate(victim, dmg, 1.0 - u.armor_pierce), _min_damage)
 
 
 ## Verteidigung des Opfers auf rohen Schaden anwenden: Rüstung (mal armor_factor)

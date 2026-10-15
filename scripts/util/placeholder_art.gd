@@ -178,6 +178,81 @@ static func make_unit_token(color: Color, shape: String, size: int = 48) -> Imag
 	return _downsample(img, size, _SS)
 
 
+## Platzhalter-Spielfigur eines Skins (troops.json → skins): wie make_unit_token, aber mit
+## breitem Rand in der Farbe trim und einem feinen inneren Ring (Wappenrock-Saum).
+static func make_unit_skin_token(color: Color, shape: String, trim: Color, size: int = 48) -> Image:
+	var s := size * _SS
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c := Vector2(s, s) * 0.5
+	var r := s * 0.44
+	var dark := trim.darkened(0.55)
+	var light := color.lightened(0.25)
+	if shape == "diamond":
+		var outer := PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)])
+		_polygon(img, _offset_poly(outer, Vector2(s * 0.02, s * 0.04)), Color(0, 0, 0, 0.3))
+		_polygon(img, outer, dark)
+		_polygon(img, _scale_poly(outer, c, 0.92), trim)
+		_polygon(img, _scale_poly(outer, c, 0.78), color)
+		_polygon(img, _offset_poly(_scale_poly(outer, c, 0.36), Vector2(-r * 0.18, -r * 0.18)), light)
+	else:
+		_circle(img, c + Vector2(s * 0.02, s * 0.04), r, Color(0, 0, 0, 0.3))
+		_circle(img, c, r, dark)
+		_circle(img, c, r * 0.93, trim)
+		_circle(img, c, r * 0.78, color)
+		_ring(img, c, Vector2(r * 0.62, r * 0.62), r * 0.05, Color(trim, 0.55))
+		_ellipse(img, c + Vector2(-r * 0.22, -r * 0.28), Vector2(r * 0.32, r * 0.22), color.lerp(light, 0.55))
+	return _downsample(img, size, _SS)
+
+
+## Abzeichen eines Skins: runde Plakette in dunkler Farbe mit Symbol in trim.
+## kind: crown, sun, skull, fang, star, moon, shield (unbekannt = Punkt)
+static func make_emblem(kind: String, trim: Color, size: int = 24) -> Image:
+	var s := size * _SS
+	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var c := Vector2(s, s) * 0.5
+	var r := s * 0.46
+	var back := trim.darkened(0.72)
+	_circle(img, c, r, Color(0, 0, 0, 0.85))
+	_circle(img, c, r * 0.86, back)
+	var w := r * 0.62
+	match kind:
+		"crown":
+			_polygon(img, PackedVector2Array([c + Vector2(-w, w * 0.55), c + Vector2(-w, -w * 0.45), c + Vector2(-w * 0.45, 0),
+					c + Vector2(0, -w * 0.75), c + Vector2(w * 0.45, 0), c + Vector2(w, -w * 0.45), c + Vector2(w, w * 0.55)]), trim)
+		"sun":
+			for i in 8:
+				var d := Vector2.RIGHT.rotated(TAU * i / 8.0)
+				var o := d.orthogonal() * w * 0.2
+				_triangle(img, c + d * w * 0.45 - o, c + d * w * 0.45 + o, c + d * w * 1.05, trim)
+			_circle(img, c, w * 0.5, trim)
+		"skull":
+			_circle(img, c + Vector2(0, -w * 0.15), w * 0.72, trim)
+			_polygon(img, PackedVector2Array([c + Vector2(-w * 0.4, w * 0.3), c + Vector2(w * 0.4, w * 0.3),
+					c + Vector2(w * 0.3, w * 0.85), c + Vector2(-w * 0.3, w * 0.85)]), trim)
+			_circle(img, c + Vector2(-w * 0.28, -w * 0.15), w * 0.2, back)
+			_circle(img, c + Vector2(w * 0.28, -w * 0.15), w * 0.2, back)
+		"fang":
+			_triangle(img, c + Vector2(-w * 0.85, -w * 0.6), c + Vector2(-w * 0.15, -w * 0.6), c + Vector2(-w * 0.45, w * 0.9), trim)
+			_triangle(img, c + Vector2(w * 0.15, -w * 0.6), c + Vector2(w * 0.85, -w * 0.6), c + Vector2(w * 0.45, w * 0.9), trim)
+		"star":
+			var pts := PackedVector2Array()
+			for i in 10:
+				var rr := w if i % 2 == 0 else w * 0.42
+				pts.append(c + Vector2.UP.rotated(TAU * i / 10.0) * rr)
+			_polygon(img, pts, trim)
+		"moon":
+			_circle(img, c, w * 0.85, trim)
+			_circle(img, c + Vector2(w * 0.38, -w * 0.22), w * 0.7, back)
+		"shield":
+			_polygon(img, PackedVector2Array([c + Vector2(-w * 0.75, -w * 0.75), c + Vector2(w * 0.75, -w * 0.75),
+					c + Vector2(w * 0.7, w * 0.15), c + Vector2(0, w * 0.9), c + Vector2(-w * 0.7, w * 0.15)]), trim)
+		_:
+			_circle(img, c, w * 0.45, trim)
+	return _downsample(img, size, _SS)
+
+
 # ---------------------------------------------------------------------------
 # Zeichen-Helfer (direkt auf Image)
 # ---------------------------------------------------------------------------

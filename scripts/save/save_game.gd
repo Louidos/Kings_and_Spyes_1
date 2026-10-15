@@ -29,7 +29,7 @@ const SYSTEMS := [["building", "building_system"], ["unit", "unit_system"], ["wo
 		["ai", "ai_system"], ["victory", "victory_system"], ["people", "people_system"],
 		["day_night", "day_night_system"], ["satisfaction", "satisfaction_system"], ["event", "event_system"],
 		["monster", "monster_system"], ["siege", "siege_system"], ["fortification", "fortification_system"],
-		["trade_route", "trade_route_system"], ["supply", "supply_system"]]
+		["trade_route", "trade_route_system"], ["supply", "supply_system"], ["troop", "troop_system"]]
 
 ## Reihenfolge von rebuild_runtime (Schlüssel aus SYSTEMS; "@difficulty" = Difficulty.reapply_all).
 ## Wegfindung (Belagerung) zuerst, dann Wirkungen auf Reiche (Forschung, Schwierigkeit, Volk,
@@ -37,7 +37,7 @@ const SYSTEMS := [["building", "building_system"], ["unit", "unit_system"], ["wo
 ## Spionage/KI/Sieg, Phase-8/9-Systeme, zuletzt Kampf, Arbeit, Befehle und Wege.
 ## Nicht genannte Systeme folgen danach in Registerreihenfolge.
 const REBUILD_ORDER := ["siege", "fortification", "research", "@difficulty", "people", "day_night", "diplomacy",
-		"village", "messenger", "magic", "hero", "monster", "espionage", "spy", "ai", "victory", "satisfaction",
+		"village", "messenger", "magic", "hero", "troop", "monster", "espionage", "spy", "ai", "victory", "satisfaction",
 		"event", "trade_route", "supply", "combat", "work", "command", "unit", "economy"]
 
 ## Schnittstellenfehler (System ohne die drei Methoden; der Rauchtest prüft: leer)

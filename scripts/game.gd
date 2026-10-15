@@ -60,6 +60,8 @@ signal formation_changed(formation: String)
 @onready var siege_system: SiegeSystem = $Systems/SiegeSystem
 @onready var trade_route_system: TradeRouteSystem = $Systems/TradeRouteSystem
 @onready var supply_system: SupplySystem = $Systems/SupplySystem
+## Truppen: Erfahrung, Wertepunkte, Schmiede, Aussehen (troops.json)
+@onready var troop_system: TroopSystem = $Systems/TroopSystem
 @onready var trade_route_view: TradeRouteView = $TradeRoutes
 @onready var selection: SelectionController = $Selection
 @onready var hud: CanvasLayer = $HUD
@@ -255,6 +257,8 @@ func _setup_world_and_systems() -> void:
 	siege_system.setup(self)
 	trade_route_system.setup(self)
 	supply_system.setup(self)
+	# Truppen nach Kampf, Einheiten und Helden (hört auf Treffer, Tod, Stufenaufstieg)
+	troop_system.setup(self)
 	placement.setup(self)
 	selection.setup(self)
 	unit_overlay.setup(self)

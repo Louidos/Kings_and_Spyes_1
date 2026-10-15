@@ -100,6 +100,13 @@ var starving: bool = false
 var growth_timer := 0.0
 ## Merker für einmalige Meldungen u. Ä. (Name -> Wert)
 var flags: Dictionary = {}
+# --- Truppen (troops.json, TroopSystem) ---
+## Schmiede: Verbesserungs-ID -> gekaufte Stufe (Wirkung als Quelle "upgrade:<id>")
+var forge_levels: Dictionary = {}
+## Aussehen je Einheitentyp: Typ-ID -> Skin-ID (nicht eingetragen = "standard")
+var unit_skins: Dictionary = {}
+## Wertepunkte der Truppen beim Aufstieg selbst verteilen (KI und Dörfer: an, Spieler: aus)
+var auto_stat_points: bool = false
 ## Faktoren für Forschung, Schwierigkeit, Helden usw., nach Quelle getrennt:
 ## Quelle -> {Schlüssel -> Faktor}. mod(key) liefert das Produkt aller Quellen.
 ## Schlüssel (nicht gesetzt = 1.0):
@@ -107,7 +114,8 @@ var flags: Dictionary = {}
 ##   "production", "production.<res>", "cap.<res>"
 ## Einheiten: "hp", "attack", "attack_interval", "range", "armor", "aggro_range",
 ##   "sight", "speed", "regen", "heal", "heal_range" – jeweils auch
-##   "<wert>.<stufe>" (z. B. "attack.archer"); dazu "defense" (erlittener
+##   "<wert>.<stufe>" (z. B. "attack.archer"), "<wert>@<rolle>" und "<wert>#<klasse>"
+##   (Truppenklasse aus troops.json, z. B. "attack#cavalry" – Schmiede); dazu "defense" (erlittener
 ##   Schaden wird geteilt), "summon" (Beschwörungstempo), "building_hp".
 ## Quellen ab Phase 8: "daynight" (Tageszeit), "people:<id>" (Volk), "event:<id>#<nr>" (Ereignis).
 var modifier_sources: Dictionary = {}
@@ -126,6 +134,7 @@ func setup(p_id: int, p_faction_id: String, p_controller: String = "player") -> 
 	color = faction.get("color", Color.WHITE)
 	has_economy = bool(faction.get("economy", true))
 	display_name = "Dein Königreich" if is_player else "Reich %d" % id
+	auto_stat_points = not is_player
 	for r in DataDB.resources:
 		resources[r["id"]] = 0.0
 		income_rate[r["id"]] = 0.0

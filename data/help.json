@@ -24,7 +24,9 @@
 			{"keys": "Strg + Rechtsklick", "text": "Angreifend vorrücken"},
 			{"keys": "Strg + 1…9 / Umschalt + 1…9 / 1…9", "text": "Armee speichern / ergänzen / wählen"},
 			{"action": "toggle_formation", "text": "Formation Block / Linie"},
-			{"keys": "Rechtsklick mit Gebäude ausgewählt", "text": "Sammelpunkt setzen"}
+			{"keys": "Rechtsklick mit Gebäude ausgewählt", "text": "Sammelpunkt setzen"},
+			{"keys": "Truppe auswählen → Angriff / Leben / Rüstung / Tempo +", "text": "Wertepunkte verteilen (Mehrfachauswahl: automatisch)"},
+			{"keys": "Schmiede auswählen → Waffen / Rüstung", "text": "Waffen- und Rüstungsstufen je Truppenklasse kaufen"}
 		]},
 		{"title": "Helden und Magie", "rows": [
 			{"action": "toggle_heroes", "text": "Heldenfenster"},
@@ -63,6 +65,7 @@
 		{"title": "Gegner und Spionage", "text": "Gegnerische Königreiche wachsen wie du. Je grösser und angriffslustiger dein Reich, desto eher entdecken sie dich und greifen an. Spione kundschaften aus und hetzen Dörfer auf."},
 		{"title": "Zufriedenheit und Ereignisse", "text": "Bewohner wollen Nahrung, Wohnraum und Sicherheit; Taverne, Tempel und Feste heben die Stimmung. Unzufriedene arbeiten schlechter, laufen über oder verraten dich. Seltene Ereignisse (Dürre, Seuche, Magiesturm, Monsterwellen, Flüchtlinge) treffen alle Reiche. Nachts sinkt die Sicht und Monster streifen häufiger umher."},
 		{"title": "Belagerung und Handel", "text": "Mauern, Tore und Wachtürme schützen dein Reich; Bauarbeiter reparieren Schäden. Rammböcke und Katapulte brechen feindliche Mauern. Handelsverträge mit Dörfern schicken Karawanen auf den Weg – schütze sie, denn überfallene Wege liefern nichts. Truppen fern vom Gebiet erholen sich nicht."},
+		{"title": "Truppen", "text": "Jede Truppe hat eine Klasse: Speerträger schlagen Reiter, Reiter überrennen Schützen und Magier, Schützen und Magier zermürben Fusstruppen, Armbrüste durchschlagen Rüstung. In der Schmiede kaufst du Waffen- und Rüstungsstufen je Klasse. Truppen sammeln im Kampf Erfahrung und steigen vom Rekruten bis zum Held der Truppe auf (Winkel über dem Kopf); jeder Aufstieg bringt Wertepunkte für Angriff, Leben, Rüstung oder Tempo. Das Aussehen wählst du im Auswahlfenster."},
 		{"title": "Speichern", "text": "F5 speichert schnell, F8 lädt diesen Stand. Im Spielmenü (Esc) speicherst du unter einem Namen und lädst ältere Stände. Das Spiel speichert ausserdem automatisch (Einstellungen: Abstand, reihum drei Plätze)."}
 	]
 }

@@ -17,7 +17,8 @@
 		"satisfaction: {bonus, capacity, cause} = Zufriedenheit für bis zu capacity Bewohner (mehrere Gebäude addieren die Plätze); plague_spread_mult / discover_bonus: der Tempel mildert Seuchen und entdeckt Verräter und eingeschleuste Spione eher (Phase 8).",
 		"spy_den: true = Spionagehaus (Spione beginnen eine Stufe höher, +1 Spion, Wachsamkeit siehe espionage.json). people_sprites bei der Burg: Grafik je Volk (nur wenn die Datei existiert, sonst Fraktionsgrafik).",
 		"segment: true = Mauerstück/Tor (kein eigenes Gebäude für Meldungen, Entdeckung, KI-Zählung, Ruinen). fortification: wall/gate/tower. replaces: darf auf eigene Gebäude dieser ids gesetzt werden (Tor auf Mauer). allow_on_road: darf auf eine eigene Strasse. line_gate: beim Ziehen einer Mauer über eine eigene Strasse wird stattdessen dieses Gebäude gesetzt. max_builders: höchstens so viele Bauarbeiter je Baustelle.",
-		"tower: {attack, interval, range (Felder), projectile, priority (Faktor je Stufe/Rolle, kleiner = bevorzugt)} – schiesst selbsttätig auf feindliche Einheiten (Forschung: Modifikator tower_attack, Zuschlag tower_range). menu: Reiter im Baumenü (economy = Dorf, military = Militär & Wissen, defense = Verteidigung; Standard economy). repairable: false = Bauarbeiter reparieren nicht (Standard true). armor: Rüstung eines Gebäudes (0.3 = 30 % weniger Schaden)."
+		"tower: {attack, interval, range (Felder), projectile, priority (Faktor je Stufe/Rolle, kleiner = bevorzugt)} – schiesst selbsttätig auf feindliche Einheiten (Forschung: Modifikator tower_attack, Zuschlag tower_range). menu: Reiter im Baumenü (economy = Dorf, military = Militär & Wissen, defense = Verteidigung; Standard economy). repairable: false = Bauarbeiter reparieren nicht (Standard true). armor: Rüstung eines Gebäudes (0.3 = 30 % weniger Schaden).",
+		"forge: true = Schmiede: im Auswahlfenster Waffen- und Rüstungsstufen je Truppenklasse kaufen (troops.json → forge). Reitstall (stable) und Magierturm (mage_tower) beschwören die neuen Truppen (summons cavalry bzw. battlemage) und müssen erforscht werden."
 	],
 
 	"buildings": [
@@ -121,10 +122,10 @@
 		},
 		{
 			"id": "barracks", "name": "Kaserne", "label": "Kas.",
-			"description": "Hier beschwört der König Schwertkämpfer, Bogenschützen und Elitekrieger. Wird mit Mana errichtet.",
+			"description": "Hier beschwört der König Schwertkämpfer, Bogenschützen und – nach Forschung – Speerträger, Armbrustschützen, schwere Fusstruppen und Elitekrieger. Wird mit Mana errichtet.",
 			"size": [2, 2], "cost": { "wood": 60, "stone": 40, "mana": 30 }, "build_time": 45,
 			"territory_radius": 4, "hp": 600,
-			"summons": ["fighter", "archer", "elite"],
+			"summons": ["fighter", "spearman", "archer", "crossbow", "heavy", "elite"],
 			"menu": "military", "color": "#8c3b3b",
 			"sprites": { "good": "res://assets/sprites/buildings/barracks_good.png", "evil": "res://assets/sprites/buildings/barracks_evil.png" }
 		},
@@ -270,6 +271,38 @@
 			"cost": { "wood": 150, "stone": 80, "ore": 40, "mana": 30 }, "build_time": 60, "territory_radius": 4, "hp": 800,
 			"summons": ["ram", "catapult"], "menu": "military", "color": "#6b4f2e",
 			"sprites": { "good": "res://assets/sprites/buildings/siege_workshop_good.png", "evil": "res://assets/sprites/buildings/siege_workshop_evil.png" }
+		},
+		{
+			"id": "forge", "name": "Schmiede", "names": { "good": "Schmiede", "evil": "Blutschmiede" },
+			"label": "Schmiede", "labels": { "good": "Schmiede", "evil": "Blutsch." },
+			"description": "Hier werden Waffen und Rüstungen der Truppen verbessert: je Truppenklasse drei Stufen (Auswahlfenster der Schmiede). Braucht eine Kaserne, nur eine pro Reich.",
+			"requires_buildings": ["barracks"], "max_per_kingdom": 1,
+			"size": [2, 2], "cost": { "wood": 70, "stone": 60, "ore": 20 }, "build_time": 45,
+			"territory_radius": 4, "hp": 650, "forge": true,
+			"menu": "military", "color": "#7a4b2a",
+			"sprites": { "good": "res://assets/sprites/buildings/forge_good.png", "evil": "res://assets/sprites/buildings/forge_evil.png" }
+		},
+		{
+			"id": "stable", "name": "Reitstall", "names": { "good": "Reitstall", "evil": "Wolfszwinger" },
+			"label": "Stall", "labels": { "good": "Stall", "evil": "Zwinger" },
+			"description": "Hier entstehen schnelle Reiter (GUT: Lanzenreiter, BÖSE: Wolfsreiter). Muss erforscht werden (Militär: Ritterorden bzw. Schreckensorden) und braucht eine Kaserne.",
+			"requires": ["building:stable"], "requires_buildings": ["barracks"],
+			"size": [3, 2], "cost": { "wood": 90, "stone": 40, "food": 40, "mana": 20 }, "build_time": 55,
+			"territory_radius": 4, "hp": 700,
+			"summons": ["cavalry"],
+			"menu": "military", "color": "#8a6d3b",
+			"sprites": { "good": "res://assets/sprites/buildings/stable_good.png", "evil": "res://assets/sprites/buildings/stable_evil.png" }
+		},
+		{
+			"id": "mage_tower", "name": "Magierturm", "names": { "good": "Magierturm", "evil": "Hexenturm" },
+			"label": "Magier", "labels": { "good": "Magier", "evil": "Hexer" },
+			"description": "Bildet Kampfmagier (BÖSE: Hexer) aus, die Gruppen mit Flächenschaden treffen. Muss erforscht werden (Magie: Lichtsegen bzw. Fluch der Schwäche) und braucht eine Forschungsstätte.",
+			"requires": ["building:mage_tower"], "requires_buildings": ["library"],
+			"size": [2, 2], "cost": { "wood": 50, "stone": 90, "mana": 40 }, "build_time": 60,
+			"territory_radius": 4, "hp": 650, "sight": 8,
+			"summons": ["battlemage"],
+			"menu": "military", "color": "#4b5fa8",
+			"sprites": { "good": "res://assets/sprites/buildings/mage_tower_good.png", "evil": "res://assets/sprites/buildings/mage_tower_evil.png" }
 		},
 		{
 			"id": "road", "name": "Strasse", "label": "",
