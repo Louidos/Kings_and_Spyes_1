@@ -1,6 +1,6 @@
 # Königreiche
 
-[![Tests](https://github.com/Louidos/Game/actions/workflows/tests.yml/badge.svg?branch=claude/godot-strategy-builder-nicc70)](https://github.com/Louidos/Game/actions/workflows/tests.yml)
+[![Tests](https://github.com/Louidos/Kings_and_Spyes_1/actions/workflows/tests.yml/badge.svg?branch=ccr-eab978f9-9dj810)](https://github.com/Louidos/Kings_and_Spyes_1/actions/workflows/tests.yml)
 ![Godot 4.4+](https://img.shields.io/badge/Godot-4.4%2B-478cbf?logo=godotengine&logoColor=white)
 ![Version 1.0.0](https://img.shields.io/badge/Version-1.0.0-c9a640)
 
