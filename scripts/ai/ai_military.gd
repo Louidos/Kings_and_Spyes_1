@@ -420,6 +420,9 @@ static func _candidates(b: AIBrain, now: float) -> Array:
 			continue
 		if other.controller == "player" and not b.time_ok(now, float(b.diff.get("first_attack_minutes", 45))):
 			continue
+		# Tutorial: der Spieler wird verschont, solange es läuft (danach gelten die Zeitsperren wieder)
+		if other.controller == "player" and TutorialSystem.protects(b.game, other):
+			continue
 		if not b.sys.debug_fast and b.sys.get_awareness(k, other) < discovered:
 			continue
 		var pos := other.castle.get_approach_point(home)

@@ -774,6 +774,9 @@ func _pick_target(def: Dictionary, now: float) -> Kingdom:
 			kind = "neutral"
 		if kind.is_empty() or not targets.has(kind):
 			continue
+		# Tutorial: keine Ereignisse beim Spieler, solange es ihn schützt
+		if TutorialSystem.protects(game, k):
+			continue
 		if now - float(kingdom_last.get(k.id, -1.0e9)) < gap or get_active(k).size() >= per_kingdom:
 			continue
 		if k.get_population() < int(def.get("min_population", 0)):

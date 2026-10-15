@@ -12,7 +12,8 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 ## Starten
 
 1. Godot öffnen → **Importieren** → `project.godot` in diesem Ordner wählen.
-2. **F5** drücken (Projekt starten) → Hauptmenü → *Neues Spiel* (oder *Fortsetzen* / *Laden*).
+2. **F5** drücken (Projekt starten) → Hauptmenü → *Neues Spiel* (oder *Tutorial*, *Fortsetzen* / *Laden*).
+   Zum Kennenlernen: **Tutorial** (siehe unten).
    F5 startet nur im Editor das Projekt – im laufenden Spiel ist F5 *Schnellspeichern*.
 
 ## Steuerung
@@ -59,6 +60,7 @@ beschwörst Einheiten, schliesst Bündnisse mit neutralen Völkern und besiegst 
 | Meldungen | Klick springt zur Stelle; Meldungen zur Stufenwahl oder Wiederbelebung öffnen das Heldenfenster |
 | Arbeitsverteilung ein/aus | J |
 | Hilfe (alle Tasten, Spielablauf, Schwierigkeit) | F1 (auch im Spielmenü: „Hilfe (F1)“) |
+| Tutorial | Hauptmenü → „Tutorial“ oder beim neuen Spiel „Tipps/Tutorial anzeigen“; Fenster rechts: „Weiter“, „Überspringen“, „Beenden“ (zweimal klicken), „–“ klappt ein, „Zeigen“ springt zum Pfeil; Esc → „Tutorial fortsetzen“ / „Tutorial starten“ / „Tutorial von vorn“ |
 | Meldungsprotokoll | M oder Knopf „Protokoll (M)“ über den Meldungen: alle Meldungen der Partie, Filter, Klick springt zur Stelle |
 | Schnellspeichern / Schnellladen | F5 / F8 (vorige Schnellspeicherung bleibt als Sicherung) |
 | Spielmenü | Esc (wenn kein Fenster offen ist und nichts gebaut/ausgewählt wird): Fortsetzen, **Speichern**, **Laden**, **Einstellungen**, Hilfe, Hauptmenü, Beenden |
@@ -81,6 +83,7 @@ data/                    Spieldaten (JSON) – ohne Code änderbar
   diplomacy.json           Ruf, Geschenke, Verträge, Handel, Aufnahme, Drohung, Dörfer, Boten
   difficulties.json        Schwierigkeitsgrade (KI, Monster, Startvorrat, Beschreibung)
   help.json                Hilfefenster F1 (Tasten, Spielablauf)
+  tutorial.json            Tutorial: Partie (Seed, Karte, Schwierigkeit), Schutz, Schritte mit Text, Ziel, Bedingung
   ai.json                  Gegner-KI: Namen, Persönlichkeiten, Schwierigkeit (Reiche, erste Welle, Faktoren),
                            Bauliste, Berufe, Forschung, Armee, Wellen, Lager, Rivalität, Niederlage
   espionage.json           Entdeckung, Aggression, Reichstarnung, Aufmerksamkeit, Kundschaft, Berichte, Spione
@@ -99,6 +102,7 @@ scripts/
   autoload/                Globale Dienste: DataDB, Settings, GameSession, GameClock, Assets, Notify, SaveManager
   save/                    Spielstände: SaveGame (Inhalt, Laden), SaveCodec (Typen in JSON), SaveMigration
   kingdoms/                Schwierigkeit (Difficulty), Sieg und Niederlage (VictorySystem)
+  tutorial/                TutorialSystem (Schritte, Bedingungen, Schutz, Spielstand)
   world/                   Kartendaten, Generator, Chunk-Darstellung, Tilesets, Gebiet, Wegfindung
   economy/                 Reich (Kingdom), Gebäude, BuildingSystem, EconomySystem
   units/                   Einheiten, UnitSystem (Bewegung), WorkSystem (Berufe), CombatSystem (Kampf),
@@ -119,7 +123,7 @@ assets/
   audio/                   music/, sfx/
 tests/                   Prüfungen ohne Fenster
   check_scripts.sh         alle Skripte auf Fehler und Warnungen prüfen
-  run_smoke.sh             Rauchtest beider Fraktionen (smoke_test.tscn + smoke_phase6…10.gd)
+  run_smoke.sh             Rauchtest beider Fraktionen (smoke_test.tscn + smoke_phase6…10.gd; tutorial=1: smoke_tutorial.gd)
   run_balance.sh           Balancing-Läufe (balance_phase10.gd), Ausgabe nach build/balance
 export_presets.cfg       Export-Vorlagen Windows/Linux (ohne Zugangsdaten)
 ```
@@ -270,6 +274,14 @@ export_presets.cfg       Export-Vorlagen Windows/Linux (ohne Zugangsdaten)
     erholen sich verletzte Einheiten nicht (Wirkung `supply:regen` über das MagicSystem).
   - KI: `AISiege` (`scripts/ai/`) baut Türme und einen Mauerring bei Bedrohung, bringt Belagerungswaffen
     gegen befestigte Ziele und schliesst früh einen Handelsvertrag.
+- **Tutorial** (`scripts/tutorial/tutorial_system.gd`, `scripts/ui/tutorial_overlay.gd`, `data/tutorial.json`): Das
+  `TutorialSystem` (Node unter *Systems*, im Spielstand als `"tutorial"`) führt durch die Schritte der Datei. Bedingungen
+  wie `building_placed:house` oder `window_opened:heroes` liest es alle 0,25 echte Sekunden aus dem Zustand des Spiels
+  (läuft auch in der Pause); Aktionen ohne bleibenden Zustand (Bewegungsbefehl, Speichern, Tempo) merkt es sich über
+  Signale (`SelectionController.command_issued`, `SaveManager.save_finished`, `GameClock.speed_changed`). Der Schutz
+  (`TutorialSystem.protects(game, kingdom)`) wird von `AIMilitary` (Wellenziele), `EventSystem` (Ereignisziele) und
+  `MonsterSystem` (Streifzüge) abgefragt. `TutorialOverlay` (Ebene 30) zeigt Fenster, Rahmen und Pfeil und lässt alle
+  Klicks zum Ziel durch.
 - **Gebiet**: Jedes fertige Gebäude beansprucht einen Kreis; bei Überschneidung gewinnt das ältere.
   Gebaut werden darf nur im eigenen Gebiet; Sammler holen nichts aus fremdem Gebiet (z. B. eines Dorfs).
 
@@ -325,6 +337,50 @@ Alle Dateien in `data/` enthalten `_hinweis`-Felder mit Erklärungen. Beispiele:
 - Neues Volk: in `peoples.json` einen Eintrag mit `"faction": "neutral"`, `village_title`, `village_names`,
   `produces`, `militia_unit` und `special_unit` (beide in `units.json` anlegen) – Dörfer dieses Volks
   entstehen dann automatisch bei der Weltgenerierung.
+
+## Tutorial
+
+**Starten:** Hauptmenü → **Tutorial**: eine feste, freundliche Partie (Seed „Lernreich“, kleine Karte, *Leicht*, ein
+Gegnerreich) mit der zuletzt gewählten Fraktion. Oder im Dialog *Neues Spiel* den Haken **„Tipps/Tutorial anzeigen“**
+setzen – dann läuft das Tutorial in der Partie mit den eigenen Einstellungen.
+
+**Ablauf:** Rechts erscheint ein Fenster mit Kapitel, „Schritt 5/30“, Titel, kurzem Text und der Aufgabe. Ein pulsierender
+goldener Rahmen zeigt das Bedienelement (Baumenü-Knopf – liegt er in einem anderen Reiter, wird der Reiter gezeigt –,
+Knöpfe oben, Arbeitsverteilung, Minikarte, Auswahlfenster, Zauberleiste …), ein Pfeil die Stelle in der Welt (Burg,
+Manaquelle, nächstes Dorf; ausserhalb des Bildes am Rand). Klicks gehen durch Rahmen und Pfeil hindurch. Ist die
+Aufgabe erfüllt, steht „✓ Geschafft!“ und es geht nach gut einer Sekunde weiter; reine Erklärschritte haben „Weiter“.
+Lange Schritte (Haus fertig, Truppen, Forschung, Zauber, Held, Geschenk …) lassen sich **überspringen**. „Beenden“
+(zweimal klicken) blendet das Tutorial aus; im **Spielmenü (Esc)** steht dann „Tutorial fortsetzen (Schritt 7/30)“,
+nach dem Abschluss „Tutorial starten“, während es läuft „Tutorial von vorn“.
+
+**Kapitel** (30 Schritte): Erste Schritte (Kamera, Zoom/Minikarte, Pause, Tempo) · Dein Dorf (Vorräte, Wohnhaus,
+Bauernhof, Strassen, Berufe mit J, Manabrunnen) · Einheiten (Späher aus der Burg, Auswählen, Bewegen, Kaserne, Truppen,
+Armee mit Strg+1, Angriff-Vorrücken) · Wissen und Magie (Bibliothek, Forschung mit R, Zauber) · Helden (Heldenhalle,
+Anwerben mit G) · Reich und Nachbarn (Diplomatie mit N, Geschenk, Spionage mit K, Reichsübersicht mit L) · Speichern und
+Hilfe (F5, F1). Ein Schritt mit `requires_hud` erscheint nur, wenn das HUD das Fenster hat (z. B. ein späteres
+Armeefenster mit T).
+
+**Damit nichts dazwischenkommt:** Solange das Tutorial läuft (höchstens 120 Spielminuten ab dem ersten Start), wählen die KI-Reiche den
+Spieler nicht als Wellenziel, Zufallsereignisse (auch Monsterwellen und Flüchtlinge) und Monster-Streifzüge treffen ihn
+nicht; nach dem Ende gilt das noch 10 Minuten, danach wieder die normalen Regeln der Schwierigkeit (z. B. erste Welle
+frühestens nach `first_attack_minutes`). Der Hofschatzmeister schenkt bei einigen Schritten die nötigen Rohstoffe
+(einmal je Partie, auch nach „von vorn“ nicht doppelt), damit niemand lange warten muss. Ein im Spielmenü nachträglich
+gestartetes Tutorial in einer normalen Partie schützt nicht.
+
+**Spielstand:** Schritt, Zustand, Schutz und bezahlte Geschenke werden gespeichert (`TutorialSystem.to_dict`); nach
+dem Laden geht es beim gleichen Schritt weiter.
+
+**Anpassen** (`data/tutorial.json`): `game` (Seed, Karte, Schwierigkeit), `settings` (Weiter-Pause, Schutzdauer,
+Schonfrist, Schwellen für Kamera/Zoom/Strassen), `aliases` (fraktionsabhängige Forschung/Zauber), `steps` (Text mit
+Platzhaltern `{b:house}`, `{u:scout}`, `{r:healing}`, `{s:heal_spell}`, `{key:toggle_help}`; `highlight`, `world`,
+`condition`, `skippable`, `grant`, `focus`, `requires_hud` – alle Werte stehen im `_hinweis` der Datei).
+
+**Rauchtest:** `GODOT=… tests/run_smoke.sh 900 tutorial=1` startet je Fraktion eine Tutorial-Partie und spielt alle
+Schritte über dieselben Schnittstellen wie die Oberfläche durch (Gebäude setzen, Berufe, Beschwören, Befehle, Forschung,
+Zauber, Helden, Fenster, Geschenk, Schnellspeichern, Hilfe). Geprüft werden: „Weiter“ ist vor der Aufgabe gesperrt,
+jede Bedingung wird erfüllt, Rahmen und Pfeil finden ihr Ziel, Geschenke, der Schutz (Ereignis- und Wellenziele), Laden
+des Spielstands aus dem Schritt „Speichern“, Beenden und Fortsetzen über das Spielmenü. Ohne `tutorial=1` prüft der
+normale Rauchtest, dass das Tutorial aus ist und nicht schützt.
 
 ## Phase 2 testen
 

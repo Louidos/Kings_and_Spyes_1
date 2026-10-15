@@ -1,7 +1,7 @@
 ## PauseMenu
 ##
-## Spielmenü (Esc): Fortsetzen, Speichern, Laden, Einstellungen, Hilfe, zurück zum
-## Hauptmenü, Beenden. Speichern, Laden und Einstellungen sind Unterseiten im selben
+## Spielmenü (Esc): Fortsetzen, Speichern, Laden, Einstellungen, Hilfe, Tutorial (starten,
+## fortsetzen oder von vorn), zurück zum Hauptmenü, Beenden. Speichern, Laden und Einstellungen sind Unterseiten im selben
 ## Fenster (Esc führt zurück zur Hauptseite). Vor dem Verlassen mit ungespeichertem
 ## Fortschritt fragt das Menü nach ("Speichern und beenden" schnellspeichert vorher).
 extends CanvasLayer
@@ -26,6 +26,8 @@ var _save_panel: SaveLoadPanel
 var _load_panel: SaveLoadPanel
 var _settings_form: SettingsForm
 var _confirm: ConfirmationDialog
+## "Tutorial starten" / "Tutorial fortsetzen (Schritt 7/30)" / "Tutorial von vorn"
+var _tutorial_button: Button
 ## Nach der Rückfrage: "menu" oder "quit"
 var _leave_action := ""
 
@@ -38,6 +40,13 @@ func _ready() -> void:
 	load_button.pressed.connect(_show_page.bind("load"))
 	settings_button.pressed.connect(_show_page.bind("settings"))
 	help_button.pressed.connect(_on_help)
+	_tutorial_button = Button.new()
+	_tutorial_button.name = "TutorialButton"
+	_tutorial_button.text = "Tutorial"
+	_tutorial_button.tooltip_text = "Geführte Schritte durch das Spiel"
+	_tutorial_button.pressed.connect(_on_tutorial)
+	help_button.get_parent().add_child(_tutorial_button)
+	help_button.get_parent().move_child(_tutorial_button, help_button.get_index() + 1)
 	main_menu_button.pressed.connect(_ask_leave.bind("menu"))
 	quit_button.pressed.connect(_ask_leave.bind("quit"))
 	_save_panel = SaveLoadPanel.new()
@@ -144,6 +153,11 @@ func _refresh_info() -> void:
 	info_label.text = "Fraktion: %s\nSchwierigkeit: %s\n%s\nKarte: %s · Seed: %s\n%s\n%s" % [
 		who, str(GameSession.get_difficulty().get("name", "?")), Difficulty.short_text(GameSession.difficulty_id),
 		map_size.get("name", "?"), GameSession.seed_text, GameClock.get_time_string(), saved]
+	var ts: Variant = game.get("tutorial_system") if game != null else null
+	_tutorial_button.visible = ts is TutorialSystem
+	if ts is TutorialSystem:
+		_tutorial_button.text = (ts as TutorialSystem).menu_action_text()
+		_tutorial_button.tooltip_text = (ts as TutorialSystem).menu_action_tooltip()
 	var reason: String = game.can_save() if game != null else "Kein Spiel"
 	save_button.disabled = not reason.is_empty()
 	save_button.tooltip_text = "Partie unter einem Namen speichern" if reason.is_empty() else reason
@@ -158,6 +172,15 @@ func _unhandled_input(event: InputEvent) -> void:
 			_show_page("main")
 		else:
 			close()
+
+
+## Tutorial starten bzw. fortsetzen und zurück ins Spiel
+func _on_tutorial() -> void:
+	var ts: Variant = game.get("tutorial_system") if game != null else null
+	if not (ts is TutorialSystem):
+		return
+	close()
+	(ts as TutorialSystem).menu_action()
 
 
 func _on_help() -> void:

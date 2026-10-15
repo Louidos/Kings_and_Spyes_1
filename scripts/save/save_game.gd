@@ -29,7 +29,7 @@ const SYSTEMS := [["building", "building_system"], ["unit", "unit_system"], ["wo
 		["ai", "ai_system"], ["victory", "victory_system"], ["people", "people_system"],
 		["day_night", "day_night_system"], ["satisfaction", "satisfaction_system"], ["event", "event_system"],
 		["monster", "monster_system"], ["siege", "siege_system"], ["fortification", "fortification_system"],
-		["trade_route", "trade_route_system"], ["supply", "supply_system"]]
+		["trade_route", "trade_route_system"], ["supply", "supply_system"], ["tutorial", "tutorial_system"]]
 
 ## Reihenfolge von rebuild_runtime (Schlüssel aus SYSTEMS; "@difficulty" = Difficulty.reapply_all).
 ## Wegfindung (Belagerung) zuerst, dann Wirkungen auf Reiche (Forschung, Schwierigkeit, Volk,

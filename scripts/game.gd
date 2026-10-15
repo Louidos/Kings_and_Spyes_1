@@ -61,6 +61,8 @@ signal formation_changed(formation: String)
 @onready var trade_route_system: TradeRouteSystem = $Systems/TradeRouteSystem
 @onready var supply_system: SupplySystem = $Systems/SupplySystem
 @onready var trade_route_view: TradeRouteView = $TradeRoutes
+## Tutorial (Schritte, Schutz vor Gegnern und Ereignissen, Oberfläche)
+@onready var tutorial_system: TutorialSystem = $Systems/TutorialSystem
 @onready var selection: SelectionController = $Selection
 @onready var hud: CanvasLayer = $HUD
 @onready var pause_menu: CanvasLayer = $PauseMenu
@@ -255,6 +257,8 @@ func _setup_world_and_systems() -> void:
 	siege_system.setup(self)
 	trade_route_system.setup(self)
 	supply_system.setup(self)
+	# Tutorial nach allen Systemen und vor der Auswahl (hört auf deren Befehle)
+	tutorial_system.setup(self)
 	placement.setup(self)
 	selection.setup(self)
 	unit_overlay.setup(self)
@@ -302,6 +306,7 @@ func _finish_start(is_new: bool) -> void:
 	elif is_instance_valid(player.castle):
 		camera.focus_on(player.castle.get_center(), float(DataDB.cfg("camera.zoom_start", 0.8)))
 	hud.setup(self)
+	tutorial_system.setup_ui()
 	hud.visible = true
 	loading.close()
 	camera.input_enabled = true
@@ -319,6 +324,10 @@ func _finish_start(is_new: bool) -> void:
 			Notify.warning("Spieldaten geändert – Werte können vom Spielstand abweichen")
 		return
 	GameClock.start_new_game()
+	if GameSession.start_tutorial:
+		# Das Tutorial begrüsst selbst; Gegner und Ereignisse verschonen den Spieler, solange es läuft
+		tutorial_system.start(true)
+		return
 	Notify.info("Willkommen, König! Baue dein Dorf aus: Baumenü unten, Arbeitsverteilung links (J).",
 			player.castle.get_center())
 	Notify.info("Burg anklicken: Späher beschwören. Monsterlager (orange auf der Minikarte) bringen Beute.",

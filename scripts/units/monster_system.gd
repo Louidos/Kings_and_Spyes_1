@@ -606,6 +606,9 @@ func _roll_raids(now: float) -> void:
 		var target := _nearest_settlement(lair.get_center(), range_px)
 		if target == null or now - float(raid_target_last.get(target.id, -1.0e9)) < gap:
 			continue
+		# Tutorial: keine Streifzüge zum Spieler, solange es ihn schützt
+		if TutorialSystem.protects(game, target):
+			continue
 		if _raid_rng.randf() >= chance:
 			continue
 		if start_raid(lair, target) > 0:
