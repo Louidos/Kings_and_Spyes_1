@@ -530,14 +530,16 @@ static func count_of(kingdom: Kingdom, def_id: String, min_level: int) -> int:
 	return n
 
 
-## Grund, wenn die Burgstufe des Reichs unter needed liegt ("" = erreicht): nennt die nötige
-## Stufe und was für die nächste Burgstufe noch fehlt, z. B.
-## "Braucht Burgstufe 3 (Stadt) · für Dorf: noch 4 Bewohner, Lager"
-static func castle_lock_reason(needed: int, kingdom: Kingdom) -> String:
+## Grund, wenn die Burgstufe des Reichs unter needed liegt ("" = erreicht): "Braucht Burgstufe 3
+## (Stadt)"; detailed = true (Oberfläche) nennt dazu, was für die nächste Burgstufe noch fehlt,
+## z. B. "… · für Dorf: noch 4 Bewohner, Lager" (die KI braucht den Text nicht – er kostet Zeit)
+static func castle_lock_reason(needed: int, kingdom: Kingdom, detailed: bool = false) -> String:
 	var have := kingdom.get_castle_level()
 	if needed <= 1 or have >= needed:
 		return ""
 	var text := "Braucht Burgstufe %d (%s)" % [needed, DataDB.castle_level_name(needed)]
+	if not detailed:
+		return text
 	var missing := next_castle_missing(kingdom)
 	if not missing.is_empty():
 		text += " · für %s: %s" % [DataDB.castle_level_name(have + 1), ", ".join(missing)]

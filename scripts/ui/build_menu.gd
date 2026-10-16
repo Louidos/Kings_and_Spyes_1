@@ -208,7 +208,7 @@ func _on_research_completed(k: Kingdom, _id: String) -> void:
 ## "Braucht Burgstufe 3 (Stadt) · für Dorf: noch 4 Bewohner" oder "Benötigt Forschung: Heilkunde"
 ## (wie BuildingSystem.can_build_type), "" = freigeschaltet
 static func lock_reason(def: Dictionary, k: Kingdom) -> String:
-	var castle_reason := BuildingSystem.castle_lock_reason(int(def.get("requires_castle_level", 1)), k)
+	var castle_reason := BuildingSystem.castle_lock_reason(int(def.get("requires_castle_level", 1)), k, true)
 	if not castle_reason.is_empty():
 		return castle_reason
 	var requires: Array = def.get("requires", [])
