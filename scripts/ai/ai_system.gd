@@ -502,7 +502,7 @@ func rebuild_runtime() -> void:
 # Debug (F3-Knöpfe, Rauchtest)
 # ---------------------------------------------------------------------------
 
-## +2000 je Ressource, Kundschafter-, Waffen- und Elite-Forschung, fehlende Kaserne,
+## +2000 je Ressource, Burgstufe Stadt, Kundschafter-, Waffen- und Elite-Forschung, fehlende Kaserne,
 ## Bibliothek und Heldenhalle sofort bauen; das Armee-Soll steigt auf mindestens 8
 func debug_boost(k: Kingdom) -> void:
 	var brain := get_brain(k)
@@ -520,6 +520,8 @@ func debug_boost(k: Kingdom) -> void:
 			k.researched[id] = true
 			rs.apply_effects(k, str(id))
 	var bs: BuildingSystem = game.building_system
+	# Burgstufe Stadt: Kaserne, Bibliothek und Heldenhalle dürfen stehen
+	bs.set_castle_level(k, 3)
 	for id in ["barracks", "library", "hero_hall"]:
 		var def := DataDB.get_building(str(id))
 		if def.is_empty() or bs.count_buildings(k, str(id), true) > 0:

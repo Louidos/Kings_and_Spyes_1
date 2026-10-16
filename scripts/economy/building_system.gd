@@ -230,6 +230,9 @@ func transfer_building(b: Building, to: Kingdom) -> void:
 ## Forschung (requires), andere fertige Gebäude (requires_buildings) und die
 ## Höchstzahl (max_per_kingdom, Baustellen zählen mit). "" = ja, sonst der Grund.
 func can_build_type(def: Dictionary, kingdom: Kingdom) -> String:
+	var castle_reason := castle_lock_reason(int(def.get("requires_castle_level", 1)), kingdom)
+	if not castle_reason.is_empty():
+		return castle_reason
 	var requires: Array = def.get("requires", [])
 	if not kingdom.has_all_unlocks(requires):
 		return "Benötigt Forschung: %s" % DataDB.describe_requirement(requires, kingdom.faction_id)
@@ -474,15 +477,89 @@ func can_upgrade(b: Building, check_cost: bool = true) -> String:
 	return b.kingdom.missing_text(b.get_next_level_entry().get("cost", {})) if check_cost else ""
 
 
-## Bedingungen eines levels-Eintrags (Forschung, fertige Gebäude). "" = erfüllt
+## Bedingungen eines levels-Eintrags (Burgstufe, Bewohner, Forschung, fertige und ausgebaute
+## Gebäude). "" = erfüllt, sonst die erste fehlende
 func level_requirement_reason(entry: Dictionary, kingdom: Kingdom) -> String:
-	var requires: Array = entry.get("requires", [])
-	if not kingdom.has_all_unlocks(requires):
-		return "Benötigt Forschung: %s" % DataDB.describe_requirement(requires, kingdom.faction_id)
-	for bid in entry.get("requires_buildings", []):
-		if count_buildings(kingdom, str(bid), true) == 0:
-			return "Benötigt: %s" % DataDB.get_building_name(DataDB.get_building(str(bid)), kingdom.faction_id)
+	for req in level_requirements(entry, kingdom):
+		if not bool(req["ok"]):
+			return str(req["missing"])
 	return ""
+
+
+## Alle Bedingungen eines levels-Eintrags als Liste {"text", "ok", "missing"} (für ✓/✗ in
+## Fenstern und Tooltips; ohne Kosten). Dieselben Prüfungen für Spieler und KI.
+static func level_requirements(entry: Dictionary, kingdom: Kingdom) -> Array:
+	var list: Array = []
+	var castle_level := int(entry.get("requires_castle_level", 0))
+	if castle_level > 1:
+		list.append({"text": "Burgstufe %d (%s)" % [castle_level, DataDB.castle_level_name(castle_level)],
+				"ok": kingdom.get_castle_level() >= castle_level,
+				"missing": castle_lock_reason(castle_level, kingdom)})
+	var pop := int(entry.get("requires_population", 0))
+	if pop > 0:
+		var have := kingdom.get_population()
+		list.append({"text": "%d Bewohner (jetzt %d)" % [pop, have], "ok": have >= pop,
+				"missing": "Braucht %d Bewohner · noch %d" % [pop, pop - have]})
+	var requires: Array = entry.get("requires", [])
+	if not requires.is_empty():
+		var text := "Forschung: %s" % DataDB.describe_requirement(requires, kingdom.faction_id)
+		list.append({"text": text, "ok": kingdom.has_all_unlocks(requires), "missing": "Benötigt " + text})
+	for bid in entry.get("requires_buildings", []):
+		var bname := DataDB.get_building_name(DataDB.get_building(str(bid)), kingdom.faction_id)
+		list.append({"text": bname, "ok": count_of(kingdom, str(bid), 1) > 0, "missing": "Benötigt: %s" % bname})
+	var upgraded := int(entry.get("requires_upgraded_buildings", 0))
+	if upgraded > 0:
+		var have := count_of(kingdom, "", 2)
+		list.append({"text": "%d Gebäude auf Stufe II (jetzt %d)" % [upgraded, have],
+				"ok": have >= upgraded,
+				"missing": "Braucht %d ausgebaute%s Gebäude (Stufe II) · noch %d" % [upgraded, "s" if upgraded == 1 else "",
+						upgraded - have]})
+	return list
+
+
+## Fertige Gebäude eines Typs (def_id "" = alle ausser der Burg) mit mindestens min_level
+static func count_of(kingdom: Kingdom, def_id: String, min_level: int) -> int:
+	var n := 0
+	for b in kingdom.buildings:
+		if not b.constructed or b.level < min_level or b.is_segment:
+			continue
+		if def_id.is_empty() and b == kingdom.castle:
+			continue
+		if def_id.is_empty() or b.get_def_id() == def_id:
+			n += 1
+	return n
+
+
+## Grund, wenn die Burgstufe des Reichs unter needed liegt ("" = erreicht): nennt die nötige
+## Stufe und was für die nächste Burgstufe noch fehlt, z. B.
+## "Braucht Burgstufe 3 (Stadt) · für Dorf: noch 4 Bewohner, Lager"
+static func castle_lock_reason(needed: int, kingdom: Kingdom) -> String:
+	var have := kingdom.get_castle_level()
+	if needed <= 1 or have >= needed:
+		return ""
+	var text := "Braucht Burgstufe %d (%s)" % [needed, DataDB.castle_level_name(needed)]
+	var missing := next_castle_missing(kingdom)
+	if not missing.is_empty():
+		text += " · für %s: %s" % [DataDB.castle_level_name(have + 1), ", ".join(missing)]
+	return text
+
+
+## Was für die nächste Burgstufe noch fehlt (kurz: "noch 4 Bewohner", "Lager", "1 ausgebautes
+## Gebäude"); leer, wenn nur noch die Kosten fehlen oder die höchste Stufe erreicht ist
+static func next_castle_missing(kingdom: Kingdom) -> PackedStringArray:
+	var out: PackedStringArray = []
+	var entry := DataDB.get_building_level_entry("castle", kingdom.get_castle_level() + 1)
+	if entry.is_empty():
+		return out
+	var pop := int(entry.get("requires_population", 0))
+	if kingdom.get_population() < pop:
+		out.append("noch %d Bewohner" % (pop - kingdom.get_population()))
+	for req in level_requirements(entry, kingdom):
+		if bool(req["ok"]) or str(req["text"]).contains("Bewohner"):
+			continue
+		var t := str(req["text"])
+		out.append(t.get_slice(" (jetzt", 0))
+	return out
 
 
 ## Ausbau bezahlen und beginnen: die Bauarbeiter kommen wie zu einer Baustelle, das Gebäude
@@ -523,7 +600,7 @@ func count_buildings_at_level(kingdom: Kingdom, def_id: String, min_level: int) 
 ## Was sich von Werten a zu Werten b ändert (Zeilen für Tooltips: "Wohnraum 4 → 5" …)
 static func level_change_lines(a: Dictionary, b: Dictionary) -> PackedStringArray:
 	var lines: PackedStringArray = []
-	var pairs := [["housing", "Wohnraum", false], ["workers", "Arbeitsplätze", false],
+	var pairs := [["housing", "Wohnraum", false], ["territory_radius", "Gebiet (Felder)", false], ["workers", "Arbeitsplätze", false],
 			["gather_radius", "Sammelradius (Felder)", false], ["gather_bonus", "Sammeltempo", true],
 			["hp", "Leben", false], ["armor", "Rüstung", true], ["summon_speed", "Beschwörungstempo", true],
 			["research_speed", "Forschungstempo", true], ["forge_discount", "Rabatt in der Schmiede", true]]
@@ -659,14 +736,35 @@ func _on_building_finished(b: Building) -> void:
 	building_completed.emit(b)
 
 
-## Ausbau fertig: Wohnraum und Arbeitsplätze neu, Meldung
+## Ausbau fertig: Gebiet, Wohnraum und Arbeitsplätze neu, Meldung
 func _on_building_upgraded(b: Building) -> void:
 	var kingdom := b.kingdom
+	var before := DataDB.get_building_at_level(b.get_def_id(), b.level - 1)
+	if int(b.def.get("territory_radius", 0)) != int(before.get("territory_radius", 0)):
+		game.territory.recompute_area(world, TerritorySystem.claim_rect(b, world), game.kingdoms)
 	if int(b.def.get("housing", 0)) > 0:
 		kingdom.population_changed.emit()
 	kingdom.add_stat("buildings_upgraded")
-	kingdom.notify("%s auf Stufe %s ausgebaut" % [b.get_display_name(), DataDB.level_numeral(b.level)], "good", b.get_center())
+	if b == kingdom.castle:
+		var unlocked := DataDB.buildings_unlocked_at(b.level, kingdom.faction_id)
+		kingdom.notify("Die Burg ist jetzt ein %s (Burgstufe %d)%s" % [DataDB.castle_level_name(b.level), b.level,
+				" – neu baubar: " + ", ".join(unlocked) if not unlocked.is_empty() else ""], "good", b.get_center())
+	else:
+		kingdom.notify("%s auf Stufe %s ausgebaut" % [b.get_display_name(), DataDB.level_numeral(b.level)], "good", b.get_center())
 	building_upgraded.emit(b)
+
+
+## Burgstufe direkt setzen (Tutorial-Geschenk, Rauchtest): ohne Kosten und Bedingungen,
+## sonst wie ein fertiger Ausbau (Gebiet, Wohnraum, Meldung)
+func set_castle_level(kingdom: Kingdom, new_level: int) -> void:
+	var castle := kingdom.castle
+	if not is_instance_valid(castle):
+		return
+	if castle.upgrading:
+		cancel_upgrade(castle)
+	while castle.level < mini(new_level, castle.get_max_level()):
+		castle.upgrading = true
+		castle.complete_upgrade()
 
 
 ## Wald o. Ä. unter einem Gebäude oder einer Strasse roden (Biom wird z. B. Ebene).

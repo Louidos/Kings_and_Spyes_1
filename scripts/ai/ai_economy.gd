@@ -661,15 +661,26 @@ static func _can_research(b: AIBrain, rs: ResearchSystem, id: String) -> bool:
 ## (BuildingSystem.can_upgrade/start_upgrade), nur mit übrigem Geld, Wirtschaft zuerst
 static func tick_building_upgrades(b: AIBrain, now: float) -> void:
 	var cfg: Dictionary = DataDB.ai("upgrades", {})
+	var bs: BuildingSystem = b.game.building_system
+	# Burgstufe zuerst: sind die Bedingungen erfüllt, wird darauf gespart (reserve_cost)
+	b.st["castle_saving"] = false
+	var castle := b.k.castle
+	if not cfg.is_empty() and is_instance_valid(castle) and b.time_ok(now, float(cfg.get("castle_min_minute", 0))) \
+			and bs.can_upgrade(castle, false).is_empty():
+		if b.can_spend(castle.get_next_level_entry().get("cost", {})):
+			if bs.start_upgrade(castle):
+				b.log_first("first_castle_upgrade", now)
+			return
+		b.st["castle_saving"] = true
+		return
 	if cfg.is_empty() or not b.time_ok(now, float(cfg.get("min_minute", 8))):
 		return
 	# Auf ein neues Gebäude wird gespart: das geht vor
 	if not (b.st["build_waiting"] as Dictionary).is_empty():
 		return
-	var bs: BuildingSystem = b.game.building_system
 	var running := 0
 	for bld in b.k.buildings:
-		if bld.upgrading:
+		if bld.upgrading and bld != castle:
 			running += 1
 	if running >= int(cfg.get("max_parallel", 1)):
 		return

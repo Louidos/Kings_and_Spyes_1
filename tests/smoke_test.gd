@@ -38,6 +38,8 @@ const SmokeTutorial := preload("res://tests/smoke_tutorial.gd")
 const SmokeTroops := preload("res://tests/smoke_troops.gd")
 ## Ausbaustufen der Gebäude: Ausbau, Bauarbeiter, Werte, Abbruch, Abriss, Speichern
 const SmokeLevels := preload("res://tests/smoke_levels.gd")
+## Burgstufen: Sperren im Baumenü, Bedingungen, Ausbau zum Dorf; danach Burgstufe IV für die übrigen Tests
+const SmokeCastle := preload("res://tests/smoke_castle.gd")
 ## Bildschirmfotos der Oberfläche (ui_shots=1 shots=<ordner> win=1600x900)
 const UiShots := preload("res://tests/ui_shots.gd")
 
@@ -65,6 +67,7 @@ var _tutorial := false
 var _tut: RefCounted = null
 var _troops: RefCounted = null
 var _levels: RefCounted = null
+var _castle: RefCounted = null
 ## Bildschirmfotos der Oberfläche (ui_shots=1)
 var _ui_shots: RefCounted = null
 
@@ -124,6 +127,8 @@ func _process(_delta: float) -> void:
 			_troops.tick_after_load(_game, str(_p10.get("_rt_state")))
 		if _levels != null:
 			_levels.tick_after_load(_game, str(_p10.get("_rt_state")))
+		if _castle != null:
+			_castle.tick_after_load(_game, str(_p10.get("_rt_state")))
 		if _p10.get("finished") == true:
 			_phase = 4
 			_p10.report()
@@ -152,6 +157,8 @@ func _process(_delta: float) -> void:
 			if _passive:
 				_hero_step = -1
 			else:
+				# Zuerst: Burgstufen prüfen und die Burg auf Stufe IV setzen (alle Gebäude frei)
+				_castle = SmokeCastle.new(_game)
 				_p6 = SmokePhase6.new(_game)
 				_pa = SmokeArmy.new(_game)
 				if _game.get("siege_system") != null:
@@ -253,6 +260,8 @@ func _report() -> void:
 		_troops.report()
 	if _levels != null:
 		_levels.report()
+	if _castle != null:
+		_castle.report()
 
 
 # ---------------------------------------------------------------------------

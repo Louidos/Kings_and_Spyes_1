@@ -221,6 +221,13 @@ func _enter_step(id: String) -> void:
 			parts.append("+%d %s" % [int(grant[res_id]), str(DataDB.get_resource(str(res_id)).get("name", res_id))])
 		k.resources_changed.emit()
 		Notify.good("Der Hofschatzmeister schenkt dir für das Tutorial: " + ", ".join(parts))
+	# Burgstufe als Geschenk (castle_level): die Burg wächst ohne Bedingungen, einmal je Partie
+	var castle_level := int(s.get("castle_level", 0))
+	if castle_level > 0 and not granted.has(id + ":castle") and k != null and k.get_castle_level() < castle_level:
+		granted.append(id + ":castle")
+		game.building_system.set_castle_level(k, castle_level)
+		Notify.good("Der Hofschatzmeister lässt deine Burg ausbauen: %s (Burgstufe %d)" % [
+				DataDB.castle_level_name(castle_level), castle_level])
 	# Aufstieg (Schritt Wertepunkte): ein Krieger ohne Rang steigt auf, einmal je Partie
 	var promote := int(s.get("promote", 0))
 	if promote > 0 and not granted.has(id + ":promote") and k != null:

@@ -63,7 +63,7 @@ der Gegenseite. Bleib unentdeckt, solange du schwach bist, und besiege sie, bevo
 - Mauern, Tore, Türme, Belagerung und Handelswege mit Karawanen.
 
 **Speichern**
-- Benannte Spielstände, Schnellspeichern (F5/F8), Autospeichern; vier Schwierigkeitsgrade; Tutorial in 35 Schritten.
+- Benannte Spielstände, Schnellspeichern (F5/F8), Autospeichern; vier Schwierigkeitsgrade; Tutorial in 37 Schritten.
 
 ## Schnellstart
 

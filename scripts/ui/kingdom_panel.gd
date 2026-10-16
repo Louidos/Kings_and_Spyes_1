@@ -13,6 +13,8 @@
 ##   Tageszeit, Zeit bis zum Wechsel, Geländetabelle und globale Nachtwerte.
 ## - "Handel" (Phase 9): Handelswege, Karawanen und Versorgung (TradeRouteList, dieselbe
 ##   Liste wie im Diplomatiefenster, Reiter "Handelswege").
+## - "Burg": Burgstufe, Bedingungen der nächsten Stufe mit ✓/✗, Knopf "Burg ausbauen" und was
+##   jede Burgstufe freischaltet (BuildingSystem.level_requirements, dieselben Regeln wie die KI).
 ## Im F3-Modus erscheinen Debug-Knöpfe (Ereignis auslösen, Alle beenden,
 ## Monsterstreifzug, Zufriedenheit ±30, Überläufer, Verrat, Tageszeit erzwingen).
 ## Zeigt nur an und ruft die Systeme mit dem Spieler-Reich auf (dieselben Funktionen
@@ -28,6 +30,7 @@ const TAB_EVENTS := "events"
 const TAB_PEOPLE := "people"
 ## Handelswege und Versorgung (Phase 9)
 const TAB_TRADE := "trade"
+const TAB_CASTLE := "castle"
 const DESIGN_WIDTH := 1048.0
 const TOP := 92.0
 const PAGE_HEIGHT := 600.0
@@ -75,6 +78,10 @@ var _people_text: RichTextLabel
 var _people_debug: HBoxContainer
 # Handel (Phase 9)
 var trade_list: TradeRouteList
+# Burg (Burgstufen)
+var _castle_text: RichTextLabel
+var _castle_button: Button
+var _unlock_text: RichTextLabel
 
 
 func _ready() -> void:
@@ -187,7 +194,8 @@ func _build() -> void:
 	for entry in [[TAB_SATISFACTION, "Zufriedenheit", "Zufriedenheit der Bewohner: Ursachen, Folgen, Feste"],
 			[TAB_EVENTS, "Ereignisse", "Laufende Ereignisse, Flüchtlinge und Wanderer, Verlauf"],
 			[TAB_PEOPLE, "Volk & Tageszeit", "Stärken und Schwächen deines Volks, Tag und Nacht, Gelände"],
-			[TAB_TRADE, "Handel", "Handelswege, Karawanen, gesichtete fremde Wege und Versorgung"]]:
+			[TAB_TRADE, "Handel", "Handelswege, Karawanen, gesichtete fremde Wege und Versorgung"],
+			[TAB_CASTLE, "Burg", "Burgstufe, Bedingungen für die nächste Stufe und was sie freischaltet"]]:
 		var b := _make_tab(str(entry[1]), group)
 		b.tooltip_text = str(entry[2])
 		b.pressed.connect(show_tab.bind(str(entry[0])))
@@ -209,6 +217,8 @@ func _build() -> void:
 				_build_people(page)
 			TAB_TRADE:
 				_build_trade(page)
+			TAB_CASTLE:
+				_build_castle(page)
 	root.add_child(pages)
 	_footer = _label(15, COLOR_DIM)
 	_footer.text = "Zufriedenheit: Nahrung, Wohnraum, Sicherheit, Taverne und Tempel, Feste  ·  L / Esc: schliessen"
@@ -312,6 +322,19 @@ func _build_trade(page: VBoxContainer) -> void:
 	trade_list.jump_requested.connect(func(pos: Vector2) -> void: game.camera.focus_on(pos))
 
 
+func _build_castle(page: VBoxContainer) -> void:
+	_castle_text = _rich(16)
+	page.add_child(_castle_text)
+	var row := HBoxContainer.new()
+	page.add_child(row)
+	_castle_button = _small_button("Burg ausbauen", "")
+	_castle_button.pressed.connect(_on_castle_pressed)
+	row.add_child(_castle_button)
+	page.add_child(_section("Freischaltungen je Burgstufe"))
+	_unlock_text = _rich(15)
+	page.add_child(_unlock_text)
+
+
 func _build_people(page: VBoxContainer) -> void:
 	_people_text = _rich(16)
 	page.add_child(_people_text)
@@ -342,6 +365,8 @@ func _refresh() -> void:
 			_refresh_events()
 		TAB_PEOPLE:
 			_refresh_people()
+		TAB_CASTLE:
+			_refresh_castle()
 		TAB_TRADE:
 			if trade_list != null:
 				trade_list.refresh()
@@ -560,6 +585,70 @@ func _rebuild_debug_targets() -> void:
 		_debug_target_ids.append(kk.id)
 		if kk.id == keep:
 			_debug_target_option.select(_debug_target_option.item_count - 1)
+
+
+func _refresh_castle() -> void:
+	var k: Kingdom = game.player
+	var bs: BuildingSystem = game.building_system
+	var tip := ResearchTipButton
+	var castle := k.castle
+	var level := k.get_castle_level()
+	var max_level := DataDB.get_castle_max_level()
+	var lines: PackedStringArray = []
+	lines.append("[font_size=22]Burgstufe %s – %s[/font_size]" % [DataDB.level_numeral(level), DataDB.castle_level_name(level)])
+	if not is_instance_valid(castle):
+		lines.append(tip.colored("Deine Burg ist gefallen.", COLOR_BAD))
+		_castle_button.visible = false
+	elif level >= max_level:
+		lines.append(tip.colored("Höchste Burgstufe erreicht – alle Gebäude sind freigeschaltet.", COLOR_GOOD))
+		_castle_button.visible = false
+	else:
+		var next := level + 1
+		var entry := DataDB.get_building_level_entry("castle", next)
+		lines.append("[b]Nächste Stufe: %s – %s[/b]" % [DataDB.level_numeral(next), DataDB.castle_level_name(next)])
+		var missing := k.missing_text(entry.get("cost", {}))
+		lines.append("Kosten: %s · %d s Arbeit der Bauarbeiter%s" % [DataDB.cost_to_text(entry.get("cost", {})),
+				roundi(float(entry.get("build_time", 0.0))), "" if missing.is_empty() else " · " + tip.colored(missing, COLOR_BAD)])
+		lines.append("Bedingungen:")
+		for req in BuildingSystem.level_requirements(entry, k):
+			lines.append("  " + tip.colored(("✓ " if bool(req["ok"]) else "✗ ") + str(req["text"]),
+					COLOR_GOOD if bool(req["ok"]) else COLOR_BAD))
+		var unlocked := DataDB.buildings_unlocked_at(next, k.faction_id)
+		if not unlocked.is_empty():
+			lines.append("Schaltet frei: " + ", ".join(unlocked))
+		_castle_button.visible = true
+		if castle.is_upgrading():
+			lines.append(tip.colored("Wird ausgebaut: %d %%" % roundi(castle.get_upgrade_ratio() * 100.0), COLOR_WARN))
+			_castle_button.text = "Ausbau abbrechen"
+			_castle_button.disabled = false
+			_castle_button.tooltip_text = "Ausbau der Burg abbrechen – die Kosten kommen zurück."
+		else:
+			var reason := bs.can_upgrade(castle)
+			_castle_button.text = "Burg ausbauen: %s" % DataDB.castle_level_name(next)
+			_castle_button.disabled = not reason.is_empty()
+			_castle_button.tooltip_text = "Die Bauarbeiter bauen die Burg aus; sie arbeitet dabei weiter." if reason.is_empty() \
+					else "Noch nicht möglich: " + reason
+	_set_rich(_castle_text, "\n".join(lines))
+	var rows: PackedStringArray = []
+	for lv in range(1, max_level + 1):
+		var names := DataDB.buildings_unlocked_at(lv, k.faction_id)
+		var head := "%s %s – %s" % ["✓" if lv <= level else "·", DataDB.level_numeral(lv), DataDB.castle_level_name(lv)]
+		var text := ", ".join(names) if not names.is_empty() else "–"
+		if lv == 3:
+			text += "; Gebäude auf Stufe III"
+		rows.append("%s: %s" % [tip.colored(head, COLOR_GOOD if lv <= level else COLOR_DIM), tip.esc(text)])
+	_set_rich(_unlock_text, "\n".join(rows))
+
+
+func _on_castle_pressed() -> void:
+	var castle := (game.player as Kingdom).castle
+	if not is_instance_valid(castle):
+		return
+	if castle.is_upgrading():
+		game.building_system.cancel_upgrade(castle)
+	else:
+		game.building_system.start_upgrade(castle)
+	_refresh()
 
 
 func _refresh_people() -> void:
