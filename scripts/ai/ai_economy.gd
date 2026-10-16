@@ -535,6 +535,18 @@ static func job_targets(b: AIBrain, workers: int, problems: Variant = null) -> D
 		mana = mini(mana_cap, maxi(1, ceili(rest * 0.25)))
 	targets["mana_worker"] = mana
 	rest -= mana
+	# Mindestbesetzung (jobs.min_jobs): solange die Ressource unter dem Ziellager liegt, bekommt
+	# der Beruf so viele Bewohner vorab – sonst fehlt bei kleinem Volk z. B. jeder Steinhauer
+	var minimum := {}
+	var min_jobs: Dictionary = DataDB.ai("jobs.min_jobs", {})
+	var stock_all: Dictionary = DataDB.ai("jobs.target_stock", {})
+	for job in min_jobs:
+		var res_id := str(DataDB.get_job(str(job)).get("resource", ""))
+		if rest < 2 or not _has_gather_site(b, str(job)) or k.get_amount(res_id) >= float(stock_all.get(res_id, 100.0)):
+			continue
+		var n := mini(int(min_jobs[job]), rest - 1)
+		minimum[str(job)] = n
+		rest -= n
 	# Sammler nach Gewicht × (1 + Mangel)
 	var weights: Dictionary = DataDB.ai("jobs.weights", {})
 	var stock: Dictionary = DataDB.ai("jobs.target_stock", {})
@@ -576,6 +588,8 @@ static func job_targets(b: AIBrain, workers: int, problems: Variant = null) -> D
 		targets[job] = int(targets[job]) + 1
 		assigned += 1
 		i += 1
+	for job in minimum:
+		targets[job] = int(targets.get(job, 0)) + int(minimum[job])
 	return targets
 
 
