@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/Louidos/Kings_and_Spyes_1/actions/workflows/tests.yml/badge.svg?branch=ccr-eab978f9-9dj810)](https://github.com/Louidos/Kings_and_Spyes_1/actions/workflows/tests.yml)
 ![Godot 4.4+](https://img.shields.io/badge/Godot-4.4%2B-478cbf?logo=godotengine&logoColor=white)
-![Version 1.0.0](https://img.shields.io/badge/Version-1.0.0-c9a640)
+![Version 1.1.0](https://img.shields.io/badge/Version-1.1.0-c9a640)
 
 **2D-Echtzeit-Strategie- und Aufbauspiel in Godot 4 (GDScript), Ansicht von oben.** Du bist ein König, wählst die
 Seite des Lichts oder der Finsternis und dein Volk (sechs je Seite), baust aus fünf Bewohnern ein Dorf auf, beschwörst
@@ -38,8 +38,10 @@ der Gegenseite. Bleib unentdeckt, solange du schwach bist, und besiege sie, bevo
 
 **Dorf & Wirtschaft**
 - Fünf Ressourcen (Holz, Stein, Erz, Nahrung, Mana), über 20 Gebäude, Strassen, Gebiet, das mit jedem Gebäude wächst.
-- Bewohner mit Berufen, Wachstum, Hungersnot – und **Zufriedenheit**: Taverne, Tempel und Feste halten die Leute bei
-  Laune, sonst laufen sie über.
+- **Gebäude ausbauen** auf Stufe II und III; die **Königsburg** wächst vom Weiler über Dorf und Stadt zum Königssitz
+  und schaltet dabei Gebäude frei.
+- **Bewerber** mit Namen, Wunschberuf und eigenen Bedingungen statt automatischem Zuwachs; Bewohner mit Berufen,
+  Hungersnot – und **Zufriedenheit**: Taverne, Tempel und Feste halten die Leute bei Laune, sonst laufen sie über.
 
 **Truppen & Kampf**
 - Je Fraktion zwölf Truppentypen in sechs Klassen mit **Kontern** (Speer schlägt Reiter, Reiter überrennen Schützen …),
@@ -48,7 +50,7 @@ der Gegenseite. Bleib unentdeckt, solange du schwach bist, und besiege sie, bevo
 - Armeen 1–9, Formationen, **Haltungen** (aggressiv, verteidigend, passiv) und das **Armeefenster** für Befehle an alle.
 
 **Helden & Magie**
-- Drei Helden je Fraktion mit Fähigkeiten, Stufen, Talenten, Führung und Wiederbelebung.
+- Drei Helden je Fraktion mit eigenen Anwerbe-Bedingungen, Fähigkeiten, Stufen, Talenten, Führung und Wiederbelebung.
 - Forschungsbaum mit vier Zweigen; der König zaubert Segen, Flüche, Heilung, Tarnung, Wetter und Beschwörungen.
 
 **Diplomatie & Spionage**
@@ -114,8 +116,9 @@ Alle Tasten: [docs/steuerung.md](docs/steuerung.md) – im Spiel auch unter **F1
 
 ## Projektstand
 
-**Version 1.0.0 – spielbar und vollständig.** Alle zehn geplanten Ausbaustufen sind fertig, dazu Armeefenster,
-Truppen-Erweiterung, Tutorial und eine aufgeräumte Oberfläche (Details im [Changelog](CHANGELOG.md)).
+**Version 1.1.0 – spielbar und vollständig.** Alle zehn geplanten Ausbaustufen sind fertig, dazu Armeefenster,
+Truppen-Erweiterung, Tutorial und eine aufgeräumte Oberfläche. Neu in 1.1.0: Gebäudestufen, Burgstufen, Bewerber und
+Helden mit eigenen Bedingungen – das Reich wächst langsamer und über Stufen (Details im [Changelog](CHANGELOG.md)).
 
 - [x] Phase 1 – Projekt-Setup, Kamera, prozedurale Karte mit Biomen, Spieltempo und Pause
 - [x] Phase 2 – Dorf: Gebäude, Ressourcen, Bewohner, Arbeitsverteilung
@@ -128,6 +131,7 @@ Truppen-Erweiterung, Tutorial und eine aufgeräumte Oberfläche (Details im [Cha
 - [x] Phase 9 – Belagerungen und Handelswege
 - [x] Phase 10 – Speichern/Laden, Schwierigkeitsgrade, UI-Feinschliff, Balancing
 - [x] Armeefenster, Truppen (Klassen, Schmiede, Ränge, Aussehen), Tutorial, aufgeräumte Oberfläche
+- [x] 1.1.0 – Gebäudestufen, Burgstufen mit Freischaltungen, Bewerber statt automatischem Wachstum, Helden-Bedingungen
 
 **Noch offen:**
 

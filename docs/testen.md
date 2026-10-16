@@ -446,7 +446,7 @@ Tipp: F3 an, F9 = Rohstoffe.
    Warteschlangen, Sammelpunkte, Helden, Zauberzonen, Monsterlager).
 2. **Esc → Speichern** mit Namen; noch einmal mit gleichem Namen → Rückfrage „überschreiben?“.
 3. **Hauptmenü → Laden**: Liste mit Datum, Spielzeit, Fraktion, Schwierigkeit, Karte, Seed; Löschen mit Rückfrage;
-   „Fortsetzen“ lädt den neuesten Spielstand. Unten rechts steht „Version 1.0.0 · Godot 4.x.y“.
+   „Fortsetzen“ lädt den neuesten Spielstand. Unten rechts steht „Version 1.1.0 · Godot 4.x.y“.
 4. **Einstellungen**: Autospeichern 5 min → nach 5 min Hinweis „Automatisch gespeichert“ oben rechts, höchstens
    3 Autospeicherstände.
 5. Grösse der Oberfläche **125 %** und **150 %** → HUD, Zauberleiste, alle Fenster (Forschung, Helden, Armee,

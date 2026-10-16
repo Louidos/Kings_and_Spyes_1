@@ -15,7 +15,7 @@ config/description="2D-Echtzeit-Strategie- und Aufbauspiel"
 run/main_scene="res://scenes/main_menu.tscn"
 config/features=PackedStringArray("4.4", "GL Compatibility")
 config/icon="res://icon.svg"
-config/version="1.0.0"
+config/version="1.1.0"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="Koenigreiche"
 
