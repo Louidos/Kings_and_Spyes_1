@@ -416,6 +416,8 @@ func _hero_test() -> void:
 			_shot("7_zielmodus")
 			if g.spell_targeting.is_active():
 				if is_instance_valid(_test_wolf) and _test_wolf.is_alive():
+					# Der Held kann die Fähigkeit inzwischen selbst ausgelöst haben (Abklingzeit)
+					hs.debug_reset_cooldowns(k, _hero_id)
 					g.spell_targeting._try_ability(_test_wolf.position)
 					_hero_check(not g.spell_targeting.is_active(), "Zielmodus nach dem Wirken noch aktiv (%s)" % str(g.spell_targeting.get("_reason")))
 				else:

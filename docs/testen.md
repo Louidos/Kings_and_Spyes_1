@@ -131,6 +131,12 @@ Spielstunden (10 800 s), Karte *medium*, GUT/BÖSE × Normal/Schwer, parallel (`
 `build/balance`. Umgebung: `DIFFS` („normal hard“), `TIME_SCALE` (4; höher verwirft Schritte), `IMMORTAL=1` (Burg und
 König des Spielers unverwundbar: Lauf über die volle Dauer, wiederholte Wellen). Ergebnisse: [Balancing](balancing.md).
 
+Feste Prüfungen (Zeilen `[balance] PRÜFUNG OK/FEHLER`, ein Fehler lässt den Lauf scheitern): nach 10 Spielminuten hat
+kein KI-Reich Gebäude ab Burgstufe 3, nach 30 Minuten hat mindestens eines ein ausgebautes Gebäude, nach 40 Minuten
+mindestens eines Burgstufe 3 und jedes mindestens doppelt so viele Bewohner wie zu Beginn. Mit `recruits=off` (ohne
+Bewerber, direkt über `smoke_test.tscn`) prüft der Lauf stattdessen, dass das natürliche Wachstum allein für
+Burgstufe 2 reicht. Je Probe gibt der Lauf ausserdem die Gebäude je Typ und die Berufe jedes KI-Reichs aus.
+
 ### Alle Argumente des Rauchtests
 
 Argumente stehen nach `--` (bei `run_smoke.sh` einfach hinten anhängen):

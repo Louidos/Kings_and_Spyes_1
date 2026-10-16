@@ -211,6 +211,21 @@ func _check_milestones(t: float) -> void:
 		for k in game.kingdoms:
 			if (k as Kingdom).controller == "ai" and not (k as Kingdom).defeated:
 				best = maxi(best, (k as Kingdom).get_castle_level())
+		# KI wächst weiterhin (langsamer als mit dem alten 45-s-Wachstum): mindestens doppelt so viele
+		# Bewohner wie zu Beginn
+		var start_pop := int(DataDB.eco("start.villagers", 5))
+		var small: PackedStringArray = []
+		var pops: PackedStringArray = []
+		for k in game.kingdoms:
+			var kk: Kingdom = k
+			if kk.controller == "ai" and not kk.defeated:
+				pops.append("%s %d" % [kk.display_name, kk.get_population()])
+				if kk.get_population() < start_pop * 2:
+					small.append(kk.display_name)
+		if small.is_empty():
+			print("[balance] PRÜFUNG OK t=2400: KI wächst (%s Bewohner, Start %d)" % [", ".join(pops), start_pop])
+		else:
+			push_error("[balance] PRÜFUNG FEHLER t=2400: KI wächst kaum (%s Bewohner, Start %d)" % [", ".join(pops), start_pop])
 		# Ohne Bewerber (recruits=off): das natürliche Wachstum allein reicht für Burgstufe 2
 		if game.get("recruit_system") != null and not game.recruit_system.enabled:
 			if best >= 2:

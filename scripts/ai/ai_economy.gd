@@ -711,6 +711,9 @@ static func tick_building_upgrades(b: AIBrain, now: float) -> void:
 				return
 			b.st["castle_skip_until"] = now + float(cfg.get("castle_skip_seconds", 240))
 			b.st["castle_saving_since"] = -1.0
+		# Auch in der Pause: keine anderen Ausbauten, solange die Burg ausgebaut werden darf
+		# (die Pause gibt nur Mana und Erz für die Armee frei)
+		return
 	if cfg.is_empty() or not b.time_ok(now, float(cfg.get("min_minute", 8))):
 		return
 	# Auf ein neues Gebäude wird gespart: das geht vor
