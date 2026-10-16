@@ -663,6 +663,9 @@ static func tick_building_upgrades(b: AIBrain, now: float) -> void:
 	var cfg: Dictionary = DataDB.ai("upgrades", {})
 	var bs: BuildingSystem = b.game.building_system
 	# Burgstufe zuerst: sind die Bedingungen erfüllt, wird darauf gespart (reserve_cost)
+	# Höchstens castle_save_seconds am Stück, danach castle_skip_seconds Pause (die Armee braucht
+	# dasselbe Mana)
+	var was_saving := bool(b.st.get("castle_saving", false))
 	b.st["castle_saving"] = false
 	var castle := b.k.castle
 	if not cfg.is_empty() and is_instance_valid(castle) and b.time_ok(now, float(cfg.get("castle_min_minute", 0))) \
@@ -670,9 +673,16 @@ static func tick_building_upgrades(b: AIBrain, now: float) -> void:
 		if b.can_spend(castle.get_next_level_entry().get("cost", {})):
 			if bs.start_upgrade(castle):
 				b.log_first("first_castle_upgrade", now)
+				b.st["castle_saving_since"] = -1.0
 			return
-		b.st["castle_saving"] = true
-		return
+		if now >= float(b.st.get("castle_skip_until", -1.0)):
+			if not was_saving or float(b.st.get("castle_saving_since", -1.0)) < 0.0:
+				b.st["castle_saving_since"] = now
+			if now - float(b.st["castle_saving_since"]) <= float(cfg.get("castle_save_seconds", 240)):
+				b.st["castle_saving"] = true
+				return
+			b.st["castle_skip_until"] = now + float(cfg.get("castle_skip_seconds", 240))
+			b.st["castle_saving_since"] = -1.0
 	if cfg.is_empty() or not b.time_ok(now, float(cfg.get("min_minute", 8))):
 		return
 	# Auf ein neues Gebäude wird gespart: das geht vor

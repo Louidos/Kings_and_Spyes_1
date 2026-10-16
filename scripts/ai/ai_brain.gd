@@ -84,6 +84,7 @@ static func default_state(personality_id: String) -> Dictionary:
 		"scouts": {}, "next_patrol": -1.0, "village_next": -1.0,
 		"gift_value_hour": {"hour": -1, "value": 0.0}, "spy_next": -1.0,
 		"upgrade_flip": false, "debug_army_min": 0, "hero_saving": "", "castle_saving": false,
+		"castle_saving_since": -1.0, "castle_skip_until": -1.0,
 		"siege": AISiege.default_state(),
 		"log": {"first_building": -1.0, "first_barracks": -1.0, "first_summon": -1.0, "first_research": -1.0,
 				"first_spy": -1.0, "first_spy_player": -1.0, "first_rumour_player": -1.0, "first_discovered_player": -1.0,
