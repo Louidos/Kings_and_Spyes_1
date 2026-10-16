@@ -209,7 +209,9 @@ Je Forschung: `faction`, `branch` (`military`, `magic`, `economy`, `mana`), `tie
 
 `settings` (`max_heroes`, Kosten je weiterem Held `cost_per_owned`, Erfahrung `levels`, Teilung `xp_share`,
 `training`, Wiederbelebung `revive_*`, Führung `leadership`, Talente `generic_talents`, Namen), `heroes` (Werte unter
-`stats`, `cost`, `abilities`, `leadership`, `talents`) und `abilities` (Werte je Rang I–III).
+`stats`, `cost`, `abilities`, `leadership`, `talents`, `requirements` = Bedingungen vor dem Anwerben wie bei den
+Bewerbern: `castle_level`, `building` (mit `level`), `research`, `kills`, `lairs`, `satisfaction`, `population`) und
+`abilities` (Werte je Rang I–III).
 
 ### diplomacy.json
 

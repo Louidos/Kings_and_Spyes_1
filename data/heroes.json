@@ -6,6 +6,7 @@
 		"Je Stufe: growth (hp/attack, multiplikativ), level_heal (Anteil geheilt). Stufenaufstieg: Wahl zwischen einer Fähigkeitsstufe (rank_min_level: ab welcher Heldenstufe Rang 1/2/3) und einem Talent des Helden (talents, sonst generic_talents).",
 		"stats: Werte wie in units.json. abilities: erste ist ab Stufe 1 gelernt. leadership: zusätzliche Führungswirkung (Truppen im Umkreis settings.leadership.radius; dazu immer +attack_base + attack_per_level × Stufe Angriff).",
 		"Fähigkeiten: kind active/passive; target enemy (eine Einheit), point (Stelle), self, none (um den Helden). range/radius in Feldern, cooldown in Sekunden; autocast = löst von selbst aus (abschaltbar). ranks: Werte je Rang (damage, heal, unit_effects mit side/key/mult/add und duration, self_effects, summon {unit, count} mit duration, teleport, range, aura {filter, effects}, stat {key: {add/mult}}, mana_cap, mana_regen).",
+		"requirements: Bedingungen, bevor sich der Held anwerben lässt (alle müssen erfüllt sein; im Heldenfenster mit ✓/✗). Bausteine wie bei den Bewerbern (Requirements): castle_level {min}, building {building, level}, research {research}, kills {count} (besiegte Feinde), lairs {count} (zerstörte Monsterhöhlen), satisfaction {min}, population {min}, upgraded {count}. Der erste Held jeder Fraktion ist ab Burgstufe 3 mit einfachen Bedingungen erreichbar, die übrigen deutlich später. Die KI hält sich an dieselben Bedingungen.",
 		"Talente: stat {key: {add/mult}} oder ability + damage_mult / cooldown_mult / radius_add / range_add / count_add / effect_mult, oder leadership {key, mult/add}."
 	],
 	"settings": {
@@ -138,6 +139,7 @@
 				"mana": 60
 			},
 			"recruit_time": 30,
+			"requirements": [{"type": "castle_level", "min": 3}, {"type": "building", "building": "barracks"}],
 			"stats": {
 				"hp": 420,
 				"attack": 26,
@@ -223,6 +225,7 @@
 				"mana": 60
 			},
 			"recruit_time": 30,
+			"requirements": [{"type": "castle_level", "min": 3}, {"type": "building", "building": "library", "level": 2}, {"type": "research", "research": "good_blessing"}],
 			"stats": {
 				"hp": 340,
 				"attack": 24,
@@ -310,6 +313,7 @@
 				"mana": 60
 			},
 			"recruit_time": 30,
+			"requirements": [{"type": "castle_level", "min": 3}, {"type": "lairs", "count": 2}, {"type": "kills", "count": 30}],
 			"stats": {
 				"hp": 360,
 				"attack": 22,
@@ -400,6 +404,7 @@
 				"mana": 60
 			},
 			"recruit_time": 30,
+			"requirements": [{"type": "castle_level", "min": 3}, {"type": "building", "building": "library", "level": 2}, {"type": "research", "research": "evil_curse"}],
 			"stats": {
 				"hp": 360,
 				"attack": 24,
@@ -484,6 +489,7 @@
 				"mana": 60
 			},
 			"recruit_time": 30,
+			"requirements": [{"type": "castle_level", "min": 3}, {"type": "building", "building": "barracks"}],
 			"stats": {
 				"hp": 460,
 				"attack": 30,
@@ -573,6 +579,7 @@
 				"mana": 60
 			},
 			"recruit_time": 30,
+			"requirements": [{"type": "castle_level", "min": 4}, {"type": "building", "building": "spy_den"}, {"type": "kills", "count": 40}],
 			"stats": {
 				"hp": 300,
 				"attack": 28,

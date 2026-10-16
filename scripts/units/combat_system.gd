@@ -960,6 +960,9 @@ func _destroy_building(b: Variant, killer: Kingdom) -> void:
 		if points > 0:
 			text += " (+%d Kampfpunkte)" % points
 		killer.notify(text, "good", b.position)
+		# Zerstörte Monsterhöhlen zählen (Bedingung mancher Helden)
+		if game.monster_system.lairs.has(b):
+			killer.add_stat("lairs_destroyed")
 	if k.is_player:
 		k.notify("%s wurde zerstört!" % b.get_display_name(), "danger", b.position)
 	building_destroyed.emit(b, killer)

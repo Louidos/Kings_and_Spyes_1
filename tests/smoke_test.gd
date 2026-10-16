@@ -43,6 +43,8 @@ const SmokeLevels := preload("res://tests/smoke_levels.gd")
 const SmokeCastle := preload("res://tests/smoke_castle.gd")
 ## Bewerber: Bedingungen, Bewerberfenster, Aufnehmen/Abweisen, Taverne, Speichern
 const SmokeRecruits := preload("res://tests/smoke_recruits.gd")
+## Helden-Bedingungen: Heldenfenster mit ✓/✗, Bedingungen erfüllen schaltet frei
+const SmokeHeroReqs := preload("res://tests/smoke_hero_reqs.gd")
 ## Bildschirmfotos der Oberfläche (ui_shots=1 shots=<ordner> win=1600x900)
 const UiShots := preload("res://tests/ui_shots.gd")
 
@@ -72,6 +74,7 @@ var _troops: RefCounted = null
 var _levels: RefCounted = null
 var _castle: RefCounted = null
 var _recruits: RefCounted = null
+var _hero_reqs: RefCounted = null
 ## Bildschirmfotos der Oberfläche (ui_shots=1)
 var _ui_shots: RefCounted = null
 
@@ -169,6 +172,7 @@ func _process(_delta: float) -> void:
 				# Zuerst: Burgstufen prüfen und die Burg auf Stufe IV setzen (alle Gebäude frei)
 				_castle = SmokeCastle.new(_game)
 				_recruits = SmokeRecruits.new(_game)
+				_hero_reqs = SmokeHeroReqs.new(_game)
 				_p6 = SmokePhase6.new(_game)
 				_pa = SmokeArmy.new(_game)
 				if _game.get("siege_system") != null:
@@ -227,6 +231,8 @@ func _process(_delta: float) -> void:
 			_levels.tick(GameClock.game_time)
 		if _recruits != null:
 			_recruits.tick(GameClock.game_time)
+		if _hero_reqs != null:
+			_hero_reqs.tick(GameClock.game_time, _hero_step < 0 or _hero_step > 1)
 		if _p10 != null:
 			_p10.tick(GameClock.game_time, _hero_step < 0)
 		if _balance != null and GameClock.game_time >= _sim_seconds - 50.0:
@@ -276,6 +282,8 @@ func _report() -> void:
 		_castle.report()
 	if _recruits != null:
 		_recruits.report()
+	if _hero_reqs != null:
+		_hero_reqs.report()
 
 
 # ---------------------------------------------------------------------------
@@ -319,7 +327,17 @@ func _hero_test() -> void:
 			_hero_check(panel.is_open() and panel.get_tab() == HeroPanel.TAB_RECRUIT, "Heldenfenster (Anwerben) nicht offen")
 			var offers := hs.get_offers(k)
 			_hero_check(not offers.is_empty(), "keine Heldenangebote")
-			var type_id := str((offers[0] as Dictionary)["id"])
+			# Jeder Held hat eigene Bedingungen: direkt nach dem Bau der Halle ist höchstens einer anwerbbar
+			var type_id := ""
+			var recruitable := 0
+			for o in offers:
+				if panel.recruit_reason(str((o as Dictionary)["id"])).is_empty():
+					recruitable += 1
+					if type_id.is_empty():
+						type_id = str((o as Dictionary)["id"])
+			_hero_check(recruitable == 1, "Nach dem Bau der Heldenhalle genau ein Held anwerbbar (%d)" % recruitable)
+			if type_id.is_empty():
+				type_id = str((offers[0] as Dictionary)["id"])
 			_hero_check(panel.recruit_reason(type_id).is_empty(), "Anwerben gesperrt: " + panel.recruit_reason(type_id))
 			panel._on_recruit_pressed(type_id)
 			_hero_check(hall.summon_queue.size() == 1, "Anwerben hat nichts eingereiht")

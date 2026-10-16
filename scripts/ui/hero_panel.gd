@@ -885,6 +885,15 @@ func _rebuild_offers(ids: PackedStringArray) -> void:
 		side.alignment = BoxContainer.ALIGNMENT_CENTER
 		side.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		row.add_child(side)
+		# Bedingungen des Helden (heroes.json → requirements) mit ✓/✗
+		var reqs := RichTextLabel.new()
+		reqs.bbcode_enabled = true
+		reqs.fit_content = true
+		reqs.scroll_active = false
+		reqs.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		reqs.add_theme_font_size_override("normal_font_size", 14)
+		reqs.add_theme_color_override("default_color", COLOR_TEXT)
+		side.add_child(reqs)
 		var cost := RichTextLabel.new()
 		cost.bbcode_enabled = true
 		cost.fit_content = true
@@ -901,7 +910,7 @@ func _rebuild_offers(ids: PackedStringArray) -> void:
 		side.add_child(button)
 		var reason := _wrap_label(14, COLOR_BAD)
 		side.add_child(reason)
-		_offer_entries[type_id] = {"cost": cost, "time": time, "button": button, "reason": reason}
+		_offer_entries[type_id] = {"cost": cost, "time": time, "button": button, "reason": reason, "reqs": reqs}
 
 
 func _refresh_offer(k: Kingdom, type_id: String) -> void:
@@ -913,6 +922,15 @@ func _refresh_offer(k: Kingdom, type_id: String) -> void:
 		cost.text = cost_text
 	var seconds := float(DataDB.get_unit_type(type_id).get("summon_time", 30.0)) / maxf(k.mod("summon"), 0.01)
 	_set_text(e["time"], "Dauer: %d s" % ceili(seconds), COLOR_DIM)
+	var req_lines: PackedStringArray = []
+	for res in Requirements.check_all(hs.get_requirements(type_id), k, game):
+		req_lines.append(ResearchTipButton.colored(("✓ " if bool(res["ok"]) else "✗ ") + str(res["text"]),
+				COLOR_GOOD if bool(res["ok"]) else COLOR_BAD))
+	var req_text := ("Bedingungen:\n" + "\n".join(req_lines)) if not req_lines.is_empty() else ""
+	var reqs: RichTextLabel = e["reqs"]
+	if reqs.text != req_text:
+		reqs.text = req_text
+	reqs.visible = not req_text.is_empty()
 	var reason := recruit_reason(type_id)
 	var button: ResearchTipButton = e["button"]
 	if button.disabled == reason.is_empty():
@@ -978,6 +996,8 @@ func _offer_tip(type_id: String) -> String:
 	var lines: PackedStringArray = ["[b]%s[/b] anwerben" % ResearchTipButton.esc(str(htype.get("name", type_id)))]
 	lines.append("Kosten: " + HeroUI.cost_bbcode(k, hs.recruit_cost(k, type_id)))
 	lines.append("Jeder weitere Held kostet mehr. Höchstens %d Helden." % hs.max_heroes(k))
+	for line in Requirements.lines(hs.get_requirements(type_id), k, game):
+		lines.append(ResearchTipButton.colored(line, COLOR_GOOD if line.begins_with("✓") else COLOR_BAD))
 	var reason := recruit_reason(type_id)
 	if not reason.is_empty():
 		lines.append(ResearchTipButton.colored(reason, COLOR_BAD))
