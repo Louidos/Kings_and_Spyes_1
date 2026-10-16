@@ -22,6 +22,7 @@
 ## ohne Helden- und Phasentests); ohne tutorial=1 prüft der Lauf nur, dass das Tutorial aus ist
 ## Oberfläche fotografieren: ui_shots=1 shots=<ordner> win=1600x900 ui_scale=1.25 (tests/ui_shots.gd, unter xvfb-run)
 ## Balancing (Phase 10): balance=1 sample=600 (tests/balance_phase10.gd; setzt p7/p8=natural, passive=1, p10=off)
+## recruits=off: keine Bewerber (prüft, dass das natürliche Wachstum allein für Burgstufe 2 reicht)
 extends Node
 
 ## Prüfungen der Phase 6 (Dörfer, Diplomatie, Boten) in eigener Datei
@@ -40,6 +41,8 @@ const SmokeTroops := preload("res://tests/smoke_troops.gd")
 const SmokeLevels := preload("res://tests/smoke_levels.gd")
 ## Burgstufen: Sperren im Baumenü, Bedingungen, Ausbau zum Dorf; danach Burgstufe IV für die übrigen Tests
 const SmokeCastle := preload("res://tests/smoke_castle.gd")
+## Bewerber: Bedingungen, Bewerberfenster, Aufnehmen/Abweisen, Taverne, Speichern
+const SmokeRecruits := preload("res://tests/smoke_recruits.gd")
 ## Bildschirmfotos der Oberfläche (ui_shots=1 shots=<ordner> win=1600x900)
 const UiShots := preload("res://tests/ui_shots.gd")
 
@@ -68,6 +71,7 @@ var _tut: RefCounted = null
 var _troops: RefCounted = null
 var _levels: RefCounted = null
 var _castle: RefCounted = null
+var _recruits: RefCounted = null
 ## Bildschirmfotos der Oberfläche (ui_shots=1)
 var _ui_shots: RefCounted = null
 
@@ -129,6 +133,8 @@ func _process(_delta: float) -> void:
 			_levels.tick_after_load(_game, str(_p10.get("_rt_state")))
 		if _castle != null:
 			_castle.tick_after_load(_game, str(_p10.get("_rt_state")))
+		if _recruits != null:
+			_recruits.tick_after_load(_game, str(_p10.get("_rt_state")))
 		if _p10.get("finished") == true:
 			_phase = 4
 			_p10.report()
@@ -145,6 +151,9 @@ func _process(_delta: float) -> void:
 			Engine.physics_ticks_per_second = 60
 			if _game.has_method("smoke_test_setup"):
 				_game.smoke_test_setup()
+			if str(_args.get("recruits", "on")) == "off" and _game.get("recruit_system") != null:
+				_game.recruit_system.enabled = false
+				print("[smoke] Bewerber abgeschaltet (recruits=off)")
 			if _tutorial:
 				_hero_step = -1
 				_tut = SmokeTutorial.new(self, _game, _args)
@@ -159,6 +168,7 @@ func _process(_delta: float) -> void:
 			else:
 				# Zuerst: Burgstufen prüfen und die Burg auf Stufe IV setzen (alle Gebäude frei)
 				_castle = SmokeCastle.new(_game)
+				_recruits = SmokeRecruits.new(_game)
 				_p6 = SmokePhase6.new(_game)
 				_pa = SmokeArmy.new(_game)
 				if _game.get("siege_system") != null:
@@ -215,6 +225,8 @@ func _process(_delta: float) -> void:
 			_troops.tick(GameClock.game_time)
 		if _levels != null:
 			_levels.tick(GameClock.game_time)
+		if _recruits != null:
+			_recruits.tick(GameClock.game_time)
 		if _p10 != null:
 			_p10.tick(GameClock.game_time, _hero_step < 0)
 		if _balance != null and GameClock.game_time >= _sim_seconds - 50.0:
@@ -262,6 +274,8 @@ func _report() -> void:
 		_levels.report()
 	if _castle != null:
 		_castle.report()
+	if _recruits != null:
+		_recruits.report()
 
 
 # ---------------------------------------------------------------------------
@@ -402,8 +416,10 @@ func _hero_test() -> void:
 			_shot("7_zielmodus")
 			if g.spell_targeting.is_active():
 				if is_instance_valid(_test_wolf) and _test_wolf.is_alive():
+					# Der Held kann die Fähigkeit inzwischen selbst ausgelöst haben (Abklingzeit)
+					hs.debug_reset_cooldowns(k, _hero_id)
 					g.spell_targeting._try_ability(_test_wolf.position)
-					_hero_check(not g.spell_targeting.is_active(), "Zielmodus nach dem Wirken noch aktiv")
+					_hero_check(not g.spell_targeting.is_active(), "Zielmodus nach dem Wirken noch aktiv (%s)" % str(g.spell_targeting.get("_reason")))
 				else:
 					# Der Wolf ist schon tot (z. B. selbst ausgelöster Lichtschlag): nur abbrechen
 					g.spell_targeting.cancel()

@@ -265,8 +265,44 @@ Die BÖSE Fraktion hat für viele Gebäude eigene Namen (z. B. *Dunkles Archiv* 
 ## 6. Bewohner und Berufe
 
 Bewohner arbeiten selbstständig in ihrem Beruf. In der **Arbeitsverteilung** (J) teilst du sie mit „+“ und „−“ zu.
-Alle 45 Sekunden kommt ein neuer Bewohner dazu, wenn **Wohnraum** frei ist und mindestens 30 Nahrung im Lager liegt
-(er kostet 10 Nahrung). Neue Bewohner sind *unbeschäftigt* – gib ihnen Arbeit.
+
+### Bewerber
+
+Neue Bewohner kommen vor allem als **Bewerber**. Alle zwei bis vier Minuten taucht jemand am Rand deines Gebiets auf
+und wartet dort zwei Minuten. Jeder Bewerber hat einen Namen, einen **Wunschberuf** und eigene **Bedingungen**:
+immer einen freien Wohnplatz, dazu zum Beispiel ein Begrüssungsgeschenk, ein fertiges Gebäude („Ich bin Schmied, ich
+komme nur, wenn es eine Schmiede gibt“), eine Mindest-Zufriedenheit, eine Burgstufe, ein ausgebautes Gebäude oder
+keine Hungersnot. **Fachleute** arbeiten in ihrem Wunschberuf 20 % schneller, stellen aber strengere Bedingungen.
+
+Klicke auf die Meldung oder den Bewerber selbst: Das **Bewerberfenster** zeigt jede Bedingung mit ✓ oder ✗.
+„Aufnehmen“ geht erst, wenn alle erfüllt sind; dann wird der Bewerber dein Bewohner und beginnt gleich in seinem
+Wunschberuf (Geschenke werden dabei bezahlt). „Abweisen“ geht immer. Läuft die Zeit ab, zieht er weiter. Alle
+wartenden Bewerber stehen auch im **Reichsfenster (L), Reiter „Bewerber“**. Eine **Taverne** lockt mehr Bewerber an,
+ausgebaut noch mehr. Höchstens zwei Bewerber warten gleichzeitig. Die Gegner bekommen ihre Bewohner nach denselben
+Regeln.
+
+<!-- AUTO:bewerber -->
+
+| Bewerber | Wunschberuf | Bedingungen immer | dazu | ab Burgstufe | Anteil |
+|---|---|---|---|---|---|
+| **Holzfäller** | Holzfäller | Wohnplatz | +0–1 weitere | 1 | 16,7 % |
+| **Beerensammler** | Sammler & Jäger | Wohnplatz | +0–1 weitere | 1 | 16,7 % |
+| **Bauer** | Bauern | Wohnplatz, Bauernhof | +1 weitere | 1 | 16,7 % |
+| **Steinhauer** | Steinhauer | Wohnplatz | +1–2 weitere | 1 | 11,1 % |
+| **Zimmermann** | Bauarbeiter | Wohnplatz | +1–2 weitere | 1 | 11,1 % |
+| **Bergmann** | Bergleute | Wohnplatz, Erzmine | +1 weitere | 2 | 11,1 % |
+| **Manawirker** | Manawirker | Wohnplatz, Manabrunnen | +1 weitere | 2 | 5,6 % |
+| **Schmied** | Bauarbeiter | Wohnplatz, Schmiede | +1 weitere | 3 | 5,6 % |
+| **Schankwirt** | Sammler & Jäger | Wohnplatz, Taverne Stufe 2 | +1 weitere | 2 | 5,6 % |
+
+Höchstens 3 Bedingungen je Bewerber (der Wohnplatz zählt mit). Weitere Bedingungen: Geschenk (Nahrung, Holz, Stein), Zufriedenheit 45–55, keine Hungersnot. Fachleute (Chance 25 %, je Tavernenstufe +10 %) arbeiten im Wunschberuf 20 % schneller und ziehen zuerst eine strengere: Geschenk (Nahrung, Holz, Stein, Erz), Zufriedenheit 60–70, Burgstufe 2, 1 Gebäude auf Stufe II. Wartezeit bis zum nächsten Bewerber: 120–240 s, mit Taverne Stufe I/II/III ×0,7 / ×0,55 / ×0,45.
+
+<!-- /AUTO:bewerber -->
+
+Von allein wächst das Volk nur noch selten: etwa alle vier Minuten ein Bewohner, wenn Wohnraum frei ist, mindestens
+30 Nahrung im Lager liegt (er kostet 10 Nahrung) und die Bewohner im Schnitt mindestens zufrieden sind (50). Höhere
+Burgstufen beschleunigen das ein wenig. Flüchtlinge und Wanderer (Ereignisse) gibt es weiterhin. Neue Bewohner aus dem
+natürlichen Zuwachs sind *unbeschäftigt* – gib ihnen Arbeit.
 
 <!-- AUTO:berufe -->
 

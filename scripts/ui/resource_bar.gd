@@ -318,13 +318,16 @@ func _refresh_population(k: Kingdom) -> void:
 	match state:
 		EconomySystem.Growth.GROWING:
 			var secs: float = game.economy_system.get_seconds_to_growth(k)
-			lines.append("Nächster Bewohner in %d s" % ceili(secs))
+			lines.append("Natürlicher Zuwachs: nächster Bewohner in %d s" % ceili(secs))
 		EconomySystem.Growth.HOUSING_FULL:
 			lines.append("Wachstum gestoppt: Wohnraum voll – baue Wohnhäuser")
 		EconomySystem.Growth.LOW_FOOD:
 			lines.append("Wachstum gestoppt: weniger als %d Nahrung" % int(DataDB.eco("population.growth_food_min", 30)))
 		EconomySystem.Growth.STARVING:
 			lines.append("Wachstum gestoppt: Hungersnot")
+		EconomySystem.Growth.LOW_SATISFACTION:
+			lines.append("Wachstum gestoppt: Zufriedenheit unter %d" % int(DataDB.eco("population.growth_min_satisfaction", 50)))
+	lines.append("Neue Bewohner kommen vor allem als Bewerber (Reichsfenster L, Reiter Bewerber).")
 	var entry: Control = _entries.get("_population")
 	if entry != null:
 		entry.tooltip_text = "\n".join(lines)

@@ -77,6 +77,10 @@ Prüfpunkt. Geprüft werden unter anderem:
   Golem, Speichern der Haltung, Fenstergrösse bei 100/150 %, Tooltips.
 - **Truppen** (`smoke_troops.gd`): jede neue Truppe beschwören, Konter, Schmiede, Rang und Wertepunkte, Aussehen und
   dessen Erhalt im Speichern-Laden-Rundlauf.
+- **Bewerber** (`smoke_recruits.gd`): langsames Wachstum, Taverne verkürzt die Wartezeit, Bewerber mit Bedingungen,
+  Aufnehmen im Bewerberfenster gesperrt und wieder frei, Bewohner +1, Geschenk, Fachkraft schneller, Abweisen,
+  wartender Bewerber im Speichern-Laden-Rundlauf. `recruits=off` schaltet die Bewerber ab (Balancing: das
+  natürliche Wachstum allein reicht für Burgstufe 2).
 - **Ausbaustufen** (`smoke_levels.gd`): Ausbau gesperrt ohne Rohstoffe, Ausbau beginnen und abbrechen, Bauarbeiter
   bauen Hof und Haus aus, Werte steigen (Nahrung, Wohnraum, Leben), Abriss erstattet Ausbauten anteilig, Spielstand
   ohne Stufe lädt auf Stufe I, Stufen bleiben im Speichern-Laden-Rundlauf erhalten.
@@ -126,6 +130,12 @@ Echte KI, passiver Spieler, ohne Fenster im Zeitraffer (`balance=1`, Modul `test
 Spielstunden (10 800 s), Karte *medium*, GUT/BÖSE × Normal/Schwer, parallel (`JOBS`, Standard 3), Ausgabe nach
 `build/balance`. Umgebung: `DIFFS` („normal hard“), `TIME_SCALE` (4; höher verwirft Schritte), `IMMORTAL=1` (Burg und
 König des Spielers unverwundbar: Lauf über die volle Dauer, wiederholte Wellen). Ergebnisse: [Balancing](balancing.md).
+
+Feste Prüfungen (Zeilen `[balance] PRÜFUNG OK/FEHLER`, ein Fehler lässt den Lauf scheitern): nach 10 Spielminuten hat
+kein KI-Reich Gebäude ab Burgstufe 3, nach 30 Minuten hat mindestens eines ein ausgebautes Gebäude, nach 40 Minuten
+mindestens eines Burgstufe 3 und jedes mindestens doppelt so viele Bewohner wie zu Beginn. Mit `recruits=off` (ohne
+Bewerber, direkt über `smoke_test.tscn`) prüft der Lauf stattdessen, dass das natürliche Wachstum allein für
+Burgstufe 2 reicht. Je Probe gibt der Lauf ausserdem die Gebäude je Typ und die Berufe jedes KI-Reichs aus.
 
 ### Alle Argumente des Rauchtests
 
@@ -188,7 +198,9 @@ Stufe (siehe [Steuerung](steuerung.md#testhilfen-debug)).
 2. Oben steigen Holz und Nahrung langsam an (der Tooltip über der Zahl zeigt den Ertrag pro Minute).
 3. **Wohnhaus** im Baumenü wählen, im Gebiet platzieren → Baustelle, die Bauarbeiter bauen sie. Danach steigt
    „Bewohner P/H“ um 4 Wohnplätze, das Gebiet wächst etwas.
-4. Alle ~45 Sekunden kommt ein neuer Bewohner (wenn Wohnraum frei ist und ≥ 30 Nahrung da ist). Er ist
+4. Nach etwa drei Minuten wartet ein **Bewerber** am Gebietsrand (Meldung anklicken): das Bewerberfenster zeigt
+   seine Bedingungen mit ✓/✗, „Aufnehmen“ geht erst, wenn alle erfüllt sind; er arbeitet dann gleich im Wunschberuf.
+   Von selbst kommt nur etwa alle 4 Minuten ein Bewohner (Wohnraum frei, ≥ 30 Nahrung, Zufriedenheit ≥ 50); er ist
    *unbeschäftigt* – in der Arbeitsverteilung mit „+“ einem Beruf zuweisen.
 5. **Strasse** wählen und mit gedrückter Maustaste ziehen → Bauarbeiter legen sie an; Bewohner laufen darauf
    schneller und nutzen sie für ihre Wege.

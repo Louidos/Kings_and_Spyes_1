@@ -284,7 +284,12 @@ func work_factor(kingdom: Kingdom, job: Dictionary, u: Unit = null) -> float:
 	var f := 1.0
 	if kingdom.starving and not job.get("food_job", false):
 		f = float(DataDB.eco("starvation.work_factor", 0.5))
-	return f * (u.work_mult if u != null else 1.0)
+	if u == null:
+		return f
+	# Fachkraft im Wunschberuf (Bewerber)
+	if not u.skill_job.is_empty() and u.skill_job == str(job.get("id", "")):
+		f *= 1.0 + u.skill_bonus
+	return f * u.work_mult
 
 
 # ---------------------------------------------------------------------------

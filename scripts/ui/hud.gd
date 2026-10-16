@@ -105,6 +105,8 @@ var _kingdom_layer: CanvasLayer
 var _kingdom_button: ResearchTipButton
 var event_banner: EventBanner
 var refugee_dialog: RefugeeDialog
+## Bewerberfenster (RecruitSystem), in der Ebene der Flüchtlinge
+var recruit_dialog: RecruitDialog
 var _refugee_layer: CanvasLayer
 var day_clock: DayClock
 ## Armeefenster (Taste T) und sein Button oben
@@ -280,6 +282,8 @@ func open_link(link: Dictionary) -> void:
 			open_kingdom(str(link.get("tab", "")))
 		"refugees":
 			open_refugee_dialog(int(link.get("offer_id", 0)))
+		"recruit":
+			open_recruit_dialog(int(link.get("recruit_id", 0)))
 		"trade":
 			open_trade()
 
@@ -510,6 +514,9 @@ func _input(event: InputEvent) -> void:
 	if refugee_dialog != null and refugee_dialog.is_open():
 		refugee_dialog.close()
 		get_viewport().set_input_as_handled()
+	elif recruit_dialog != null and recruit_dialog.is_open():
+		recruit_dialog.close()
+		get_viewport().set_input_as_handled()
 	elif is_army_open():
 		troop_panel.close()
 		get_viewport().set_input_as_handled()
@@ -543,6 +550,9 @@ func close_top_panel() -> bool:
 		return true
 	if refugee_dialog != null and refugee_dialog.is_open():
 		refugee_dialog.close()
+		return true
+	if recruit_dialog != null and recruit_dialog.is_open():
+		recruit_dialog.close()
 		return true
 	if is_log_open():
 		message_log.close()
@@ -996,6 +1006,10 @@ func _setup_kingdom() -> void:
 	refugee_dialog.name = "RefugeeDialog"
 	_refugee_layer.add_child(refugee_dialog)
 	refugee_dialog.setup(game)
+	recruit_dialog = RecruitDialog.new()
+	recruit_dialog.name = "RecruitDialog"
+	_refugee_layer.add_child(recruit_dialog)
+	recruit_dialog.setup(game)
 	visibility_changed.connect(func() -> void:
 		_kingdom_layer.visible = visible
 		_refugee_layer.visible = visible)
@@ -1061,8 +1075,19 @@ func is_kingdom_open() -> bool:
 
 ## Flüchtlingsdialog für ein Angebot öffnen
 func open_refugee_dialog(offer_id: int) -> void:
+	if recruit_dialog != null and recruit_dialog.is_open():
+		recruit_dialog.close()
 	if refugee_dialog != null:
 		refugee_dialog.open(offer_id)
+
+
+## Bewerberfenster (RecruitSystem); schliesst den Flüchtlingsdialog (gleiche Stelle)
+func open_recruit_dialog(recruit_id: int) -> void:
+	if recruit_dialog == null:
+		return
+	if refugee_dialog != null and refugee_dialog.is_open():
+		refugee_dialog.close()
+	recruit_dialog.open(recruit_id)
 
 
 func _on_kingdom_toggled(open: bool) -> void:

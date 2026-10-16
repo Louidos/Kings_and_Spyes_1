@@ -138,11 +138,37 @@ func _sample(t: float) -> void:
 		var army := brain.army_units().size() if brain != null else 0
 		var target := AIMilitary.army_target(brain, t) if brain != null else 0
 		var log_d: Dictionary = kk.ai_state.get("log", {})
-		print("[balance] t=%5.0f KI %d %s: Burgstufe %d, Gebäude %d (ausgebaut %d), Einheiten %d, Armee %d/%d, Wellen %d (Spieler ab %s), Forschung %d, Helden %d, Zufr. %.0f, %s" % [
-				t, kk.id, kk.display_name, kk.get_castle_level(), kk.buildings.size(), (g.building_system as BuildingSystem).count_buildings_at_level(kk, "", 2),
+		print("[balance] t=%5.0f KI %d %s: Burgstufe %d, Bewohner %d (Bewerber %d), Gebäude %d (ausgebaut %d), Einheiten %d, Armee %d/%d, Wellen %d (Spieler ab %s), Forschung %d, Helden %d, Zufr. %.0f, %s" % [
+				t, kk.id, kk.display_name, kk.get_castle_level(), kk.get_population(), int(kk.stats.get("recruits_accepted", 0)), kk.buildings.size(), (g.building_system as BuildingSystem).count_buildings_at_level(kk, "", 2),
 				kk.units.size(), army, target, int(kk.ai_state.get("waves_sent", 0)),
 				str(log_d.get("first_player_wave", "-")), kk.researched.size(), kk.heroes.size(), sat.get_average(kk),
 				DataDB.cost_to_text(kk.resources)])
+	# Zusammensetzung der KI-Reiche (Gebäude je Typ ohne Mauern, Berufe, Sammelprobleme)
+	for k in g.kingdoms:
+		var kk: Kingdom = k
+		if kk.controller != "ai" or kk.defeated:
+			continue
+		var types := {}
+		for bld in kk.buildings:
+			if not bld.is_segment:
+				types[bld.get_def_id()] = int(types.get(bld.get_def_id(), 0)) + 1
+		var jobs := {}
+		var problems: PackedStringArray = []
+		for j in DataDB.jobs:
+			var jid := str((j as Dictionary)["id"])
+			var n: int = g.work_system.get_job_count(kk, jid)
+			if n > 0:
+				jobs[jid] = n
+			var p: String = g.work_system.get_job_problem(kk, jid)
+			if not p.is_empty():
+				problems.append("%s: %s" % [jid, p])
+		var idle_info: PackedStringArray = []
+		for u in kk.units:
+			if u.job_id == "idle" and u.role == "worker":
+				idle_info.append("%s/%s/%s" % [u.command, str(u.state), u.problem])
+		print("[balance] t=%5.0f KI %d Aufbau: %s | Berufe %s%s%s" % [t, kk.id, str(types), str(jobs),
+				"" if problems.is_empty() else " | Probleme " + "; ".join(problems),
+				"" if idle_info.is_empty() else " | Unbeschäftigt " + ", ".join(idle_info)])
 	var think: Dictionary = g.ai_system.stats
 	var dn := int(think["thinks"]) - int(_think_prev["thinks"])
 	var du := int(think["think_usec_total"]) - int(_think_prev["usec"])
@@ -185,7 +211,28 @@ func _check_milestones(t: float) -> void:
 		for k in game.kingdoms:
 			if (k as Kingdom).controller == "ai" and not (k as Kingdom).defeated:
 				best = maxi(best, (k as Kingdom).get_castle_level())
-		if best >= 3:
+		# KI wächst weiterhin (langsamer als mit dem alten 45-s-Wachstum): mindestens doppelt so viele
+		# Bewohner wie zu Beginn
+		var start_pop := int(DataDB.eco("start.villagers", 5))
+		var small: PackedStringArray = []
+		var pops: PackedStringArray = []
+		for k in game.kingdoms:
+			var kk: Kingdom = k
+			if kk.controller == "ai" and not kk.defeated:
+				pops.append("%s %d" % [kk.display_name, kk.get_population()])
+				if kk.get_population() < start_pop * 2:
+					small.append(kk.display_name)
+		if small.is_empty():
+			print("[balance] PRÜFUNG OK t=2400: KI wächst (%s Bewohner, Start %d)" % [", ".join(pops), start_pop])
+		else:
+			push_error("[balance] PRÜFUNG FEHLER t=2400: KI wächst kaum (%s Bewohner, Start %d)" % [", ".join(pops), start_pop])
+		# Ohne Bewerber (recruits=off): das natürliche Wachstum allein reicht für Burgstufe 2
+		if game.get("recruit_system") != null and not game.recruit_system.enabled:
+			if best >= 2:
+				print("[balance] PRÜFUNG OK t=2400: ohne Bewerber erreicht die KI Burgstufe 2 (%s)" % _castle_levels())
+			else:
+				push_error("[balance] PRÜFUNG FEHLER t=2400: ohne Bewerber keine Burgstufe 2 (%s)" % _castle_levels())
+		elif best >= 3:
 			print("[balance] PRÜFUNG OK t=2400: KI erreicht Burgstufe 3 (%s)" % _castle_levels())
 		else:
 			push_error("[balance] PRÜFUNG FEHLER t=2400: kein KI-Reich auf Burgstufe 3 (%s)" % _castle_levels())

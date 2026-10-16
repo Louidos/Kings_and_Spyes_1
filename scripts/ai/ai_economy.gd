@@ -477,8 +477,22 @@ static func tick_jobs(b: AIBrain) -> void:
 		changes += 1
 	if not rebalance:
 		return
-	var min_gap := maxi(int(DataDB.ai("jobs.rebalance_min_gap", 2)), 1)
 	var moves := 0
+	# Wichtige Berufe (jobs.enforce_jobs: Steinhauer, Manawirker) auch bei einer Lücke von eins besetzen
+	for job in DataDB.ai("jobs.enforce_jobs", []):
+		var jid := str(job)
+		if int(targets.get(jid, 0)) <= int(counts.get(jid, 0)):
+			continue
+		var from := _largest_surplus(targets, counts, jid)
+		if from.is_empty() or not ws.unassign_job(k, from):
+			continue
+		counts[from] = int(counts.get(from, 0)) - 1
+		moves += 1
+		if ws.assign_job(k, jid):
+			counts[jid] = int(counts.get(jid, 0)) + 1
+		else:
+			counts["idle"] = int(counts.get("idle", 0)) + 1
+	var min_gap := maxi(int(DataDB.ai("jobs.rebalance_min_gap", 2)), 1)
 	var max_moves := int(DataDB.ai("jobs.max_rebalance", 2))
 	while moves < max_moves:
 		var to := _largest_deficit(targets, counts, "", min_gap)
@@ -525,16 +539,32 @@ static func job_targets(b: AIBrain, workers: int, problems: Variant = null) -> D
 	builders = mini(builders, maxi(workers - 2, 1))
 	targets["builder"] = builders
 	var rest := workers - builders
-	# Höfe voll besetzen, aber immer mindestens zwei Sammler (Holz) lassen
-	var farmers := mini(maxi(ws.get_job_capacity(k, "farmer"), 0), maxi(rest - 2, 0))
-	targets["farmer"] = farmers
-	rest -= farmers
+	# Manawirker vor den Bauern (Mana ist bei kleinem Volk sonst nie besetzt)
 	var mana_cap := maxi(ws.get_job_capacity(k, "mana_worker"), 0)
 	var mana := 0
-	if rest >= 3 and mana_cap > 0:
+	if rest >= 2 and mana_cap > 0:
 		mana = mini(mana_cap, maxi(1, ceili(rest * 0.25)))
 	targets["mana_worker"] = mana
 	rest -= mana
+	# Höfe voll besetzen, aber immer mindestens zwei Sammler (Holz) lassen; bei Nahrungsüberschuss
+	# (jobs.food_surplus) nur jobs.farmers_on_surplus Bauern
+	var farmers := mini(maxi(ws.get_job_capacity(k, "farmer"), 0), maxi(rest - 2, 0))
+	if k.get_amount("food") >= float(DataDB.ai("jobs.food_surplus", 600)):
+		farmers = mini(farmers, int(DataDB.ai("jobs.farmers_on_surplus", 2)))
+	targets["farmer"] = farmers
+	rest -= farmers
+	# Mindestbesetzung (jobs.min_jobs): solange die Ressource unter dem Ziellager liegt, bekommt
+	# der Beruf so viele Bewohner vorab – sonst fehlt bei kleinem Volk z. B. jeder Steinhauer
+	var minimum := {}
+	var min_jobs: Dictionary = DataDB.ai("jobs.min_jobs", {})
+	var stock_all: Dictionary = DataDB.ai("jobs.target_stock", {})
+	for job in min_jobs:
+		var res_id := str(DataDB.get_job(str(job)).get("resource", ""))
+		if rest < 2 or not _has_gather_site(b, str(job)) or k.get_amount(res_id) >= float(stock_all.get(res_id, 100.0)):
+			continue
+		var n := mini(int(min_jobs[job]), rest - 1)
+		minimum[str(job)] = n
+		rest -= n
 	# Sammler nach Gewicht × (1 + Mangel)
 	var weights: Dictionary = DataDB.ai("jobs.weights", {})
 	var stock: Dictionary = DataDB.ai("jobs.target_stock", {})
@@ -576,6 +606,8 @@ static func job_targets(b: AIBrain, workers: int, problems: Variant = null) -> D
 		targets[job] = int(targets[job]) + 1
 		assigned += 1
 		i += 1
+	for job in minimum:
+		targets[job] = int(targets.get(job, 0)) + int(minimum[job])
 	return targets
 
 
@@ -683,6 +715,9 @@ static func tick_building_upgrades(b: AIBrain, now: float) -> void:
 				return
 			b.st["castle_skip_until"] = now + float(cfg.get("castle_skip_seconds", 240))
 			b.st["castle_saving_since"] = -1.0
+		# Auch in der Pause: keine anderen Ausbauten, solange die Burg ausgebaut werden darf
+		# (die Pause gibt nur Mana und Erz für die Armee frei)
+		return
 	if cfg.is_empty() or not b.time_ok(now, float(cfg.get("min_minute", 8))):
 		return
 	# Auf ein neues Gebäude wird gespart: das geht vor

@@ -89,7 +89,7 @@ static func default_state(personality_id: String) -> Dictionary:
 		"log": {"first_building": -1.0, "first_barracks": -1.0, "first_summon": -1.0, "first_research": -1.0,
 				"first_spy": -1.0, "first_spy_player": -1.0, "first_rumour_player": -1.0, "first_discovered_player": -1.0,
 				"first_wave": -1.0, "first_player_wave": -1.0, "first_lair": -1.0, "first_hero": -1.0, "first_cloak": -1.0,
-				"first_upgrade": -1.0, "first_castle_upgrade": -1.0},
+				"first_upgrade": -1.0, "first_castle_upgrade": -1.0, "first_recruit": -1.0},
 	}
 
 
@@ -132,6 +132,8 @@ func think(now: float) -> void:
 		t0 = _measure("fortify", t0)
 	# Berufe: Unbeschäftigte sofort, Umverteilung gedrosselt (AIEconomy.tick_jobs)
 	AIEconomy.tick_jobs(self)
+	# Bewerber (gleiche Regeln wie beim Spieler)
+	AIRecruits.tick(self, now)
 	t0 = _measure("jobs", t0)
 	if n % 2 == 0:
 		AIEconomy.tick_research(self, now)
@@ -371,6 +373,16 @@ func reserve_cost() -> Dictionary:
 		var cost: Dictionary = DataDB.get_building(str(waiting.get("building", ""))).get("cost", {})
 		for res in cost:
 			total[res] = float(total.get(res, 0.0)) + float(cost[res])
+	# Wichtige Gebäude (build.save_for, z. B. die Kaserne): solange keins steht, es aber gebaut
+	# werden darf, bleiben seine Kosten liegen (Forschung, Ausbau und Spione warten)
+	var bs: BuildingSystem = game.building_system
+	for id in DataDB.ai("build.save_for", []):
+		var def := DataDB.get_building(str(id))
+		if def.is_empty() or bs.count_buildings(k, str(id), false) > 0 or not bs.can_build_type(def, k).is_empty():
+			continue
+		var save_cost: Dictionary = def.get("cost", {})
+		for res in save_cost:
+			total[res] = float(total.get(res, 0.0)) + float(save_cost[res])
 	# Burgstufe (AIEconomy.tick_building_upgrades): Bedingungen erfüllt, es fehlt nur Geld
 	if bool(st.get("castle_saving", false)) and is_instance_valid(k.castle):
 		var castle_cost: Dictionary = k.castle.get_next_level_entry().get("cost", {})

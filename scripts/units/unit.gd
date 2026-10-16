@@ -185,6 +185,9 @@ var last_hit_by := 0
 var satisfaction := -1.0
 ## Faktor auf die Arbeitsleistung (Zufriedenheit, Seuche, aufgehaltener Überläufer). Abgeleitet (SatisfactionSystem), nicht speichern.
 var work_mult := 1.0
+## Fachkraft (Bewerber, recruits.json → skilled): in diesem Beruf um skill_bonus schneller
+var skill_job := ""
+var skill_bonus := 0.0
 ## Geländeboni des Volks auf dem Biom unter der Einheit: Schlüssel -> Faktor. Abgeleitet (PeopleSystem), nicht speichern.
 ## Gemeinsame, nur lesbare Dictionaries – nie verändern.
 var terrain_mods: Dictionary = {}
@@ -469,7 +472,7 @@ func get_status_text() -> String:
 ## Zufriedenheit, Phase 9 Rammbock-Ziel, Armeefenster: Haltung und Patrouille, Truppen:
 ## Erfahrung, Rang, Wertepunkte, Aussehen). Wiederhergestellt über UnitSystem.restore_unit.
 const SAVE_OPTIONAL := ["satisfaction", "resume_target_uid", "stance", "patrol_from",
-		"vet_xp", "vet_rank", "stat_points", "stat_alloc", "skin"]
+		"vet_xp", "vet_rank", "stat_points", "stat_alloc", "skin", "skill_job", "skill_bonus"]
 
 
 ## Gespeicherter Zustand: einfache Werte, Verweise als uid, Weg nur wenn unterwegs
