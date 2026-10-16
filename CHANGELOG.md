@@ -5,6 +5,10 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 ## Unveröffentlicht
 
+## 1.1.0 – 2026-10-16
+
+Alte Spielstände (1.0.0) laden weiter: Gebäude stehen auf Stufe 1, die Burg auf Burgstufe 1.
+
 ### Hinzugefügt
 
 - Gebäude lassen sich auf Stufe 2 und 3 ausbauen und werden dabei stärker: Knopf „Ausbauen“ im Auswahlfenster,
