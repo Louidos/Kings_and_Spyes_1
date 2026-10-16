@@ -1312,8 +1312,12 @@ func _update_info() -> void:
 	if is_instance_valid(building) and building is Building:
 		var bld := building as Building
 		var text := bld.get_display_name()
+		if bld.constructed and bld.get_max_level() > 1:
+			text += " %s" % DataDB.level_numeral(bld.level)
 		if not bld.constructed:
 			text += " (Baustelle %d %%)" % roundi(bld.get_progress_ratio() * 100.0)
+		elif bld.is_upgrading():
+			text += " (Ausbau %d %%)" % roundi(bld.get_upgrade_ratio() * 100.0)
 		elif bld.hp < bld.max_hp or bld.kingdom != game.player:
 			text += "  ·  Leben %d/%d" % [ceili(bld.hp), roundi(bld.max_hp)]
 		lines.append(text)

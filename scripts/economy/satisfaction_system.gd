@@ -553,7 +553,9 @@ func _compute_parts(k: Kingdom, st: Dictionary, now: float) -> Array:
 		if fort_v >= 0.5:
 			parts.append(["Schutz durch Mauern und Türme", fort_v, "safety"])
 	# Gebäude (Taverne, Tempel): Plätze aller fertigen Gebäude je Typ
+	# Ausgebaute Gebäude: mehr Plätze, der höchste Bonus des Typs zählt
 	var caps := {}
+	var bonus := {}
 	for b in k.buildings:
 		if not is_instance_valid(b) or not b.constructed:
 			continue
@@ -562,11 +564,11 @@ func _compute_parts(k: Kingdom, st: Dictionary, now: float) -> Array:
 			continue
 		var bid := str(b.def.get("id", ""))
 		caps[bid] = int(caps.get(bid, 0)) + int(sat.get("capacity", 0))
+		bonus[bid] = maxf(float(bonus.get(bid, 0.0)), float(sat.get("bonus", 0)))
 	for bid in caps:
 		var def := DataDB.get_building(str(bid))
-		var sat: Dictionary = def.get("satisfaction", {})
 		var cover := minf(1.0, float(caps[bid]) / maxf(float(_inhabitant_count(k)), 1.0))
-		parts.append([DataDB.get_building_name(def, k.faction_id), float(sat.get("bonus", 0)) * cover, "building"])
+		parts.append([DataDB.get_building_name(def, k.faction_id), float(bonus[bid]) * cover, "building"])
 	# Idle: persönlich; Ereignisse
 	var es: Variant = game.get("event_system")
 	if es != null:

@@ -342,7 +342,18 @@ func get_forge_cost(k: Kingdom, upgrade_id: String) -> Dictionary:
 	var up := DataDB.get_forge_upgrade(upgrade_id)
 	var level := get_forge_level(k, upgrade_id)
 	var costs: Array = up.get("cost", [])
-	return costs[level] if level < costs.size() else {}
+	if level >= costs.size():
+		return {}
+	# Ausgebaute Schmiede (buildings.json → forge_discount): günstiger
+	var discount := 0.0
+	var forge := get_forge(k)
+	if forge != null:
+		discount = clampf(float(forge.def.get("forge_discount", 0.0)), 0.0, 0.9)
+	var cost: Dictionary = (costs[level] as Dictionary).duplicate()
+	if discount > 0.0:
+		for res_id in cost:
+			cost[res_id] = roundf(float(cost[res_id]) * (1.0 - discount))
+	return cost
 
 
 ## Fertige Schmiede des Reichs (oder null)

@@ -36,6 +36,8 @@ var _wild_start := 0
 var _lairs_start := 0
 ## Rechenzeit je Empfänger von GameClock.sim_tick: Name -> [Summe µs, Höchstwert µs]
 var _tick_cost: Dictionary = {}
+## Meilensteine (Spielsekunde -> geprüft): Ausbaustufen der KI
+var _milestones_done := {}
 
 
 func _init(p_game: Node, args: Dictionary) -> void:
@@ -113,6 +115,7 @@ func tick(t: float) -> void:
 	if t >= _next_sample:
 		_next_sample += sample
 		_sample(t)
+	_check_milestones(t)
 	if _sizes_half.is_empty() and t >= _seconds * 0.5:
 		_sizes_half = _collect_sizes()
 
@@ -135,8 +138,9 @@ func _sample(t: float) -> void:
 		var army := brain.army_units().size() if brain != null else 0
 		var target := AIMilitary.army_target(brain, t) if brain != null else 0
 		var log_d: Dictionary = kk.ai_state.get("log", {})
-		print("[balance] t=%5.0f KI %d %s: Gebäude %d, Einheiten %d, Armee %d/%d, Wellen %d (Spieler ab %s), Forschung %d, Helden %d, Zufr. %.0f, %s" % [
-				t, kk.id, kk.display_name, kk.buildings.size(), kk.units.size(), army, target, int(kk.ai_state.get("waves_sent", 0)),
+		print("[balance] t=%5.0f KI %d %s: Gebäude %d (ausgebaut %d), Einheiten %d, Armee %d/%d, Wellen %d (Spieler ab %s), Forschung %d, Helden %d, Zufr. %.0f, %s" % [
+				t, kk.id, kk.display_name, kk.buildings.size(), (g.building_system as BuildingSystem).count_buildings_at_level(kk, "", 2),
+				kk.units.size(), army, target, int(kk.ai_state.get("waves_sent", 0)),
 				str(log_d.get("first_player_wave", "-")), kk.researched.size(), kk.heroes.size(), sat.get_average(kk),
 				DataDB.cost_to_text(kk.resources)])
 	var think: Dictionary = g.ai_system.stats
@@ -155,6 +159,26 @@ func _sample(t: float) -> void:
 			str((g.monster_system as MonsterSystem).raid_stats.get("raids", 0)),
 			float(du) / maxi(dn, 1) / 1000.0, float(tu) / maxi(tn, 1) / 1000.0, GameClock.tick_usec_max / 1000.0,
 			float(_frame_usec_sum) / maxi(_frame_n, 1) / 1000.0, GameClock.dropped_ticks])
+
+
+## Prüfungen zu festen Spielzeiten (Fehler als push_error, run_balance.sh meldet sie):
+## nach 30 Minuten hat mindestens ein KI-Reich ein ausgebautes Gebäude
+func _check_milestones(t: float) -> void:
+	if t >= 1800.0 and not _milestones_done.has(1800):
+		_milestones_done[1800] = true
+		var best := 0
+		var names: PackedStringArray = []
+		for k in game.kingdoms:
+			var kk: Kingdom = k
+			if kk.controller != "ai" or kk.defeated:
+				continue
+			var n := (game.building_system as BuildingSystem).count_buildings_at_level(kk, "", 2)
+			best = maxi(best, n)
+			names.append("%s %d" % [kk.display_name, n])
+		if best > 0:
+			print("[balance] PRÜFUNG OK t=1800: ausgebaute Gebäude der KI (%s)" % ", ".join(names))
+		else:
+			push_error("[balance] PRÜFUNG FEHLER t=1800: kein KI-Reich hat ein ausgebautes Gebäude (%s)" % ", ".join(names))
 
 
 ## Grösse aller Listen/Wörterbücher (Skriptvariablen) der Systeme und von Notify

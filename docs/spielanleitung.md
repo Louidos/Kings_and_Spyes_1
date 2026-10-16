@@ -168,7 +168,7 @@ Umschalttaste setzt du mehrere. Es entsteht eine **Baustelle**, die deine Bauarb
 **Strassen** und **Mauern** zieht man mit gedrückter Maustaste. Auf Strassen laufen alle 60 % schneller.
 
 - **Abreissen** (X): Strassen und Mauern anklicken oder überziehen; ein Gebäude auswählen → „Abreissen“ (zweimal
-  klicken). Du bekommst die Hälfte der Kosten zurück, eine abgebrochene Baustelle alles.
+  klicken). Du bekommst die Hälfte der Kosten (mit Ausbauten) zurück, eine abgebrochene Baustelle alles.
 - **Sammelhütten** (Holzfäller-, Steinmetz-, Jägerhütte, Erzmine) nahe an die Vorkommen bauen: die Sammler liefern
   dort ab (kürzere Wege) und arbeiten 25 % schneller.
 - Der **Bauernhof** liefert auf Ebene am meisten, im Wald 70 %, in der Wüste nur 35 %.
@@ -204,6 +204,36 @@ Umschalttaste setzt du mehrere. Es entsteht eine **Baustelle**, die deine Bauarb
 Nicht baubar, aber auf der Karte: **Königsburg** (Sitz des Königs. Lager für alle Ressourcen und Wohnraum.), **Monsterhöhle** (Ein Unterschlupf wilder Monster. Zerstöre ihn, um die Gegend zu sichern und Beute zu machen.), **Dorfzentrum** (Mittelpunkt eines neutralen Dorfs. Wird es erobert oder das Dorf aufgenommen, wird es zum Aussenposten mit Lager und Gebiet.), **Hütte** (Wohnhütte eines Dorfs (nach der Aufnahme Wohnraum für 2).)
 
 <!-- /AUTO:gebaeude -->
+
+### Gebäude ausbauen
+
+Viele fertige Gebäude lassen sich im **Auswahlfenster** mit „Ausbauen“ auf **Stufe II** und **Stufe III** bringen.
+Der Ausbau kostet Rohstoffe (Stufe II etwa das Anderthalbfache, Stufe III etwa das Zweieinhalbfache der Baukosten)
+und braucht Arbeit deiner **Bauarbeiter** wie eine Baustelle. Währenddessen arbeitet das Gebäude normal weiter.
+Jede Stufe macht es um etwa ein Drittel besser (mehr Wohnraum, Ertrag, Sammeltempo, Turmangriff, Zufriedenheit …)
+und gibt ihm mehr Leben. Die Stufe steht im Auswahlfenster und als kleines Schild (I, II, III) oben links am Gebäude.
+„Ausbau abbrechen“ erstattet die Ausbaukosten ganz; beim Abreissen zählen fertige Ausbauten zur Hälfte mit.
+
+<!-- AUTO:ausbau -->
+
+| Gebäude | Stufe II (Kosten · Arbeit · Wirkung) | Stufe III |
+|---|---|---|
+| **Wohnhaus** | 30 Holz, 8 Stein · 18 s · Wohnraum 5, Leben 375 | 45 Holz, 18 Stein · 28 s · Wohnraum 7, Leben 450 |
+| **Lager** | 45 Holz, 30 Stein · 25 s · Sammelradius 16, Leben 375 | 70 Holz, 55 Stein · 40 s · Sammelradius 20, Leben 450 |
+| **Holzfällerhütte** | 35 Holz, 10 Stein · 18 s · Sammeltempo +35 %, Sammelradius 16, Leben 375 | 55 Holz, 20 Stein · 28 s · Sammeltempo +45 %, Sammelradius 18, Leben 450 |
+| **Steinmetzhütte** | 40 Holz, 12 Stein · 22 s · Sammeltempo +35 %, Sammelradius 16, Leben 375 | 60 Holz, 28 Stein · 35 s · Sammeltempo +45 %, Sammelradius 18, Leben 450 |
+| **Erzmine** | 50 Holz, 40 Stein · 30 s · Sammeltempo +35 %, Sammelradius 16, Leben 375 | 80 Holz, 70 Stein · 48 s · Sammeltempo +45 %, Sammelradius 18, Leben 450 |
+| **Jägerhütte** | 30 Holz, 8 Stein · 18 s · Sammeltempo +35 %, Sammelradius 16, Leben 375 | 45 Holz, 18 Stein · 28 s · Sammeltempo +45 %, Sammelradius 18, Leben 450 |
+| **Bauernhof** | 45 Holz, 15 Stein · 25 s · Ertrag ×1,35, Leben 375 | 70 Holz, 30 Stein · 40 s · Ertrag ×1,8, Leben 450 |
+| **Manabrunnen** | 35 Holz, 55 Stein · 35 s · Ertrag ×1,35, Grundertrag ×1,35, Leben 375 | 60 Holz, 90 Stein · 55 s · Ertrag ×1,8, Grundertrag ×1,8, Leben 450 |
+| **Kaserne** | 80 Holz, 70 Stein, 30 Mana · 40 s · Leben 810, Beschwörungstempo +35 %, Rüstung 15 % | 140 Holz, 110 Stein, 20 Erz, 50 Mana · 60 s · Leben 1080, Beschwörungstempo +80 %, Rüstung 25 % |
+| **Bibliothek** | 60 Holz, 120 Stein, 20 Mana · 45 s · Leben 650, Forschungstempo +35 % | 100 Holz, 200 Stein, 30 Mana · 70 s · Leben 800, Forschungstempo +80 % |
+| **Taverne** | 80 Holz, 40 Stein, 40 Nahrung · 30 s · versorgt 28, Zufriedenheit 12, Leben 455 | 130 Holz, 70 Stein, 60 Nahrung · 50 s · versorgt 36, Zufriedenheit 14, Leben 560 |
+| **Tempel des Lichts** | 120 Holz, 180 Stein, 60 Mana · 60 s · versorgt 40, Zufriedenheit 10, Leben 910, Seuchen ×0,6, Entdeckung +35 % | 200 Holz, 300 Stein, 100 Mana · 95 s · versorgt 54, Zufriedenheit 12, Leben 1120, Seuchen ×0,5, Entdeckung +45 % |
+| **Wachturm** | 60 Holz, 160 Stein · 45 s · Angriff 18,9, Reichweite 8, Leben 1170, Rüstung 45 % | 100 Holz, 250 Stein, 20 Erz · 70 s · Angriff 25,2, Reichweite 9,1, Leben 1440, Rüstung 50 % |
+| **Schmiede** | 90 Holz, 100 Stein, 40 Erz · 40 s · Leben 845, Schmiede günstiger 15 % | 150 Holz, 160 Stein, 70 Erz · 65 s · Leben 1040, Schmiede günstiger 30 % |
+
+<!-- /AUTO:ausbau -->
 
 Die BÖSE Fraktion hat für viele Gebäude eigene Namen (z. B. *Dunkles Archiv* statt Bibliothek, *Blutschmiede*,
 *Wolfszwinger*, *Hexenturm*, *Schattenschrein*); Werte und Kosten sind gleich.

@@ -87,7 +87,8 @@ static func default_state(personality_id: String) -> Dictionary:
 		"siege": AISiege.default_state(),
 		"log": {"first_building": -1.0, "first_barracks": -1.0, "first_summon": -1.0, "first_research": -1.0,
 				"first_spy": -1.0, "first_spy_player": -1.0, "first_rumour_player": -1.0, "first_discovered_player": -1.0,
-				"first_wave": -1.0, "first_player_wave": -1.0, "first_lair": -1.0, "first_hero": -1.0, "first_cloak": -1.0},
+				"first_wave": -1.0, "first_player_wave": -1.0, "first_lair": -1.0, "first_hero": -1.0, "first_cloak": -1.0,
+				"first_upgrade": -1.0},
 	}
 
 
@@ -134,6 +135,7 @@ func think(now: float) -> void:
 	if n % 2 == 0:
 		AIEconomy.tick_research(self, now)
 		AIEconomy.tick_upgrades(self)
+		AIEconomy.tick_building_upgrades(self, now)
 		AIMilitary.tick_forge(self, now)
 		t0 = _measure("research", t0)
 	AIMilitary.tick_summon(self, now)

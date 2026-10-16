@@ -18,7 +18,7 @@ class_name SaveGame
 extends RefCounted
 
 ## Inhaltsschema (erhöhen nur, wenn alte Werte umgedeutet werden müssen; siehe SaveMigration)
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2
 
 ## Register: [Schlüssel im Spielstand, Eigenschaft an der Spielszene]; Reihenfolge von from_dict
 const SYSTEMS := [["building", "building_system"], ["unit", "unit_system"], ["work", "work_system"],
@@ -400,11 +400,13 @@ static func metrics(game: Node) -> Dictionary:
 	for k in game.kingdoms:
 		var by_def := {}
 		var constructed := 0
+		var levels := 0
 		for b in k.buildings:
 			var id := str(b.def.get("id", ""))
 			by_def[id] = int(by_def.get(id, 0)) + 1
 			if b.constructed:
 				constructed += 1
+			levels += b.level - 1 + (1 if b.upgrading else 0)
 		var by_type := {}
 		var hp_sum := 0.0
 		for u in k.units:
@@ -420,6 +422,7 @@ static func metrics(game: Node) -> Dictionary:
 		researched.sort()
 		var wave: Dictionary = k.ai_state.get("wave", {})
 		ks[k.id] = {"controller": k.controller, "defeated": k.defeated, "buildings": by_def, "constructed": constructed,
+				"levels": levels,
 				"units": by_type, "hp_sum": hp_sum, "resources": k.resources.duplicate(), "researched": researched,
 				"research_queue": k.research_queue.duplicate(), "kill_points": k.kill_points,
 				"relations": k.relations.duplicate(), "armies": k.armies.duplicate(true), "heroes": heroes,

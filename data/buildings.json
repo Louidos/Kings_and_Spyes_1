@@ -18,7 +18,9 @@
 		"spy_den: true = Spionagehaus (Spione beginnen eine Stufe höher, +1 Spion, Wachsamkeit siehe espionage.json). people_sprites bei der Burg: Grafik je Volk (nur wenn die Datei existiert, sonst Fraktionsgrafik).",
 		"segment: true = Mauerstück/Tor (kein eigenes Gebäude für Meldungen, Entdeckung, KI-Zählung, Ruinen). fortification: wall/gate/tower. replaces: darf auf eigene Gebäude dieser ids gesetzt werden (Tor auf Mauer). allow_on_road: darf auf eine eigene Strasse. line_gate: beim Ziehen einer Mauer über eine eigene Strasse wird stattdessen dieses Gebäude gesetzt. max_builders: höchstens so viele Bauarbeiter je Baustelle.",
 		"tower: {attack, interval, range (Felder), projectile, priority (Faktor je Stufe/Rolle, kleiner = bevorzugt)} – schiesst selbsttätig auf feindliche Einheiten (Forschung: Modifikator tower_attack, Zuschlag tower_range). menu: Reiter im Baumenü (economy = Dorf, military = Militär & Wissen, defense = Verteidigung; Standard economy). repairable: false = Bauarbeiter reparieren nicht (Standard true). armor: Rüstung eines Gebäudes (0.3 = 30 % weniger Schaden).",
-		"forge: true = Schmiede: im Auswahlfenster Waffen- und Rüstungsstufen je Truppenklasse kaufen (troops.json → forge). Reitstall (stable) und Magierturm (mage_tower) beschwören die neuen Truppen (summons cavalry bzw. battlemage) und müssen erforscht werden."
+		"forge: true = Schmiede: im Auswahlfenster Waffen- und Rüstungsstufen je Truppenklasse kaufen (troops.json → forge). Reitstall (stable) und Magierturm (mage_tower) beschwören die neuen Truppen (summons cavalry bzw. battlemage) und müssen erforscht werden.",
+		"levels: Ausbaustufen ab Stufe 2 (Liste, erster Eintrag = Stufe 2). Je Stufe: cost = Ausbaukosten, build_time = Ausbauarbeit der Bauarbeiter (wie eine Baustelle; das Gebäude arbeitet währenddessen weiter), optional requires (Forschung), requires_buildings (fertige Gebäude) und requires_castle_level (Mindest-Burgstufe). mult = Faktor auf den Wert der Stufe 1 (Punkt-Pfade wie tower.attack, satisfaction.capacity, heal_aura.hp_per_sec; bei production/base_production gilt der Faktor für jede Ressource; Ganzzahlen wie housing, workers, gather_radius werden gerundet). set = Wert ersetzen (Objekte wie satisfaction werden zusammengeführt). Werte jeder Stufe beziehen sich auf Stufe 1, nicht auf die Stufe davor. Abbrechen erstattet cancel_refund, beim Abreissen zählen die Ausbaukosten mit demolish_refund mit.",
+		"summon_speed: Faktor auf das Beschwörungstempo in diesem Gebäude (Standard 1.0, Kaserne ab Stufe 2). research_speed: Faktor auf das Forschungstempo (Standard 1.0; zählt die beste Forschungsstätte, jede weitere +25 %). forge_discount: Rabatt auf die Schmiede-Verbesserungen (0.15 = 15 % billiger)."
 	],
 
 	"buildings": [
@@ -52,6 +54,10 @@
 			"description": "Wohnraum für 4 Bewohner. Erweitert das Gebiet.",
 			"size": [2, 2], "cost": { "wood": 25 }, "build_time": 20,
 			"housing": 4, "territory_radius": 5,
+			"levels": [
+				{"cost": {"wood": 30, "stone": 8}, "build_time": 18, "mult": {"housing": 1.35, "hp": 1.25}},
+				{"cost": {"wood": 45, "stone": 18}, "build_time": 28, "mult": {"housing": 1.8, "hp": 1.5}}
+			],
 			"color": "#b5835a",
 			"sprites": { "good": "res://assets/sprites/buildings/house_good.png", "evil": "res://assets/sprites/buildings/house_evil.png" }
 		},
@@ -61,6 +67,10 @@
 			"size": [2, 2], "cost": { "wood": 40, "stone": 10 }, "build_time": 30,
 			"territory_radius": 4,
 			"dropoff": ["wood", "stone", "ore", "food"], "gather_radius": 12,
+			"levels": [
+				{"cost": {"wood": 45, "stone": 30}, "build_time": 25, "mult": {"gather_radius": 1.35, "hp": 1.25}},
+				{"cost": {"wood": 70, "stone": 55}, "build_time": 40, "mult": {"gather_radius": 1.7, "hp": 1.5}}
+			],
 			"color": "#8d7a5c",
 			"sprites": { "good": "res://assets/sprites/buildings/storehouse_good.png", "evil": "res://assets/sprites/buildings/storehouse_evil.png" }
 		},
@@ -70,6 +80,10 @@
 			"size": [2, 2], "cost": { "wood": 30 }, "build_time": 20,
 			"territory_radius": 4,
 			"dropoff": ["wood"], "gather_radius": 14, "gather_bonus": 0.25,
+			"levels": [
+				{"cost": {"wood": 35, "stone": 10}, "build_time": 18, "mult": {"gather_bonus": 1.4, "gather_radius": 1.15, "hp": 1.25}},
+				{"cost": {"wood": 55, "stone": 20}, "build_time": 28, "mult": {"gather_bonus": 1.8, "gather_radius": 1.3, "hp": 1.5}}
+			],
 			"color": "#7a5230",
 			"sprites": { "good": "res://assets/sprites/buildings/lumberyard_good.png", "evil": "res://assets/sprites/buildings/lumberyard_evil.png" }
 		},
@@ -79,6 +93,10 @@
 			"size": [2, 2], "cost": { "wood": 35 }, "build_time": 25,
 			"territory_radius": 4,
 			"dropoff": ["stone"], "gather_radius": 14, "gather_bonus": 0.25,
+			"levels": [
+				{"cost": {"wood": 40, "stone": 12}, "build_time": 22, "mult": {"gather_bonus": 1.4, "gather_radius": 1.15, "hp": 1.25}},
+				{"cost": {"wood": 60, "stone": 28}, "build_time": 35, "mult": {"gather_bonus": 1.8, "gather_radius": 1.3, "hp": 1.5}}
+			],
 			"color": "#8a8a8a",
 			"sprites": { "good": "res://assets/sprites/buildings/quarry_good.png", "evil": "res://assets/sprites/buildings/quarry_evil.png" }
 		},
@@ -88,6 +106,10 @@
 			"size": [2, 2], "cost": { "wood": 40, "stone": 20 }, "build_time": 35,
 			"territory_radius": 4,
 			"dropoff": ["ore"], "gather_radius": 14, "gather_bonus": 0.25,
+			"levels": [
+				{"cost": {"wood": 50, "stone": 40}, "build_time": 30, "mult": {"gather_bonus": 1.4, "gather_radius": 1.15, "hp": 1.25}},
+				{"cost": {"wood": 80, "stone": 70}, "build_time": 48, "mult": {"gather_bonus": 1.8, "gather_radius": 1.3, "hp": 1.5}}
+			],
 			"color": "#4f6a8a",
 			"sprites": { "good": "res://assets/sprites/buildings/mine_good.png", "evil": "res://assets/sprites/buildings/mine_evil.png" }
 		},
@@ -97,6 +119,10 @@
 			"size": [2, 2], "cost": { "wood": 25 }, "build_time": 20,
 			"territory_radius": 4,
 			"dropoff": ["food"], "gather_radius": 14, "gather_bonus": 0.25,
+			"levels": [
+				{"cost": {"wood": 30, "stone": 8}, "build_time": 18, "mult": {"gather_bonus": 1.4, "gather_radius": 1.15, "hp": 1.25}},
+				{"cost": {"wood": 45, "stone": 18}, "build_time": 28, "mult": {"gather_bonus": 1.8, "gather_radius": 1.3, "hp": 1.5}}
+			],
 			"color": "#6b7d3a",
 			"sprites": { "good": "res://assets/sprites/buildings/hunter_good.png", "evil": "res://assets/sprites/buildings/hunter_evil.png" }
 		},
@@ -107,6 +133,10 @@
 			"territory_radius": 4,
 			"workers": 3, "job": "farmer", "production": { "food": 0.4 },
 			"biome_efficiency": { "plains": 1.0, "forest": 0.7, "desert": 0.35 },
+			"levels": [
+				{"cost": {"wood": 45, "stone": 15}, "build_time": 25, "mult": {"production": 1.35, "hp": 1.25}},
+				{"cost": {"wood": 70, "stone": 30}, "build_time": 40, "mult": {"production": 1.8, "hp": 1.5}}
+			],
 			"color": "#c8b04a",
 			"sprites": { "good": "res://assets/sprites/buildings/farm_good.png", "evil": "res://assets/sprites/buildings/farm_evil.png" }
 		},
@@ -117,6 +147,10 @@
 			"territory_radius": 4,
 			"workers": 2, "job": "mana_worker", "production": { "mana": 0.08 }, "base_production": { "mana": 0.03 },
 			"requires_deposit": "mana_spring",
+			"levels": [
+				{"cost": {"wood": 35, "stone": 55}, "build_time": 35, "mult": {"production": 1.35, "base_production": 1.35, "hp": 1.25}},
+				{"cost": {"wood": 60, "stone": 90}, "build_time": 55, "mult": {"production": 1.8, "base_production": 1.8, "hp": 1.5}}
+			],
 			"color": "#7d55d6",
 			"sprites": { "good": "res://assets/sprites/buildings/mana_well_good.png", "evil": "res://assets/sprites/buildings/mana_well_evil.png" }
 		},
@@ -126,6 +160,10 @@
 			"size": [2, 2], "cost": { "wood": 60, "stone": 40, "mana": 30 }, "build_time": 45,
 			"territory_radius": 4, "hp": 600,
 			"summons": ["fighter", "spearman", "archer", "crossbow", "heavy", "elite"],
+			"levels": [
+				{"cost": {"wood": 80, "stone": 70, "mana": 30}, "build_time": 40, "set": {"summon_speed": 1.35, "armor": 0.15}, "mult": {"hp": 1.35}},
+				{"cost": {"wood": 140, "stone": 110, "ore": 20, "mana": 50}, "build_time": 60, "set": {"summon_speed": 1.8, "armor": 0.25}, "mult": {"hp": 1.8}}
+			],
 			"menu": "military", "color": "#8c3b3b",
 			"sprites": { "good": "res://assets/sprites/buildings/barracks_good.png", "evil": "res://assets/sprites/buildings/barracks_evil.png" }
 		},
@@ -146,6 +184,10 @@
 			"description": "Forschungsstätte: hier wird geforscht (Forschung mit R). Jede weitere forscht 25 % schneller.",
 			"size": [2, 2], "cost": { "wood": 40, "stone": 80, "mana": 10 }, "build_time": 50,
 			"territory_radius": 4, "hp": 500, "research": true,
+			"levels": [
+				{"cost": {"wood": 60, "stone": 120, "mana": 20}, "build_time": 45, "set": {"research_speed": 1.35}, "mult": {"hp": 1.3}},
+				{"cost": {"wood": 100, "stone": 200, "mana": 30}, "build_time": 70, "set": {"research_speed": 1.8}, "mult": {"hp": 1.6}}
+			],
 			"menu": "military", "color": "#5d6fb3",
 			"sprites": { "good": "res://assets/sprites/buildings/library_good.png", "evil": "res://assets/sprites/buildings/library_evil.png" }
 		},
@@ -176,6 +218,10 @@
 			"size": [2, 2], "cost": { "wood": 60, "stone": 20, "food": 30 }, "build_time": 35,
 			"territory_radius": 4, "hp": 350,
 			"satisfaction": { "bonus": 10, "capacity": 20, "cause": "Taverne" },
+			"levels": [
+				{"cost": {"wood": 80, "stone": 40, "food": 40}, "build_time": 30, "mult": {"satisfaction.capacity": 1.4, "satisfaction.bonus": 1.2, "hp": 1.3}},
+				{"cost": {"wood": 130, "stone": 70, "food": 60}, "build_time": 50, "mult": {"satisfaction.capacity": 1.8, "satisfaction.bonus": 1.4, "hp": 1.6}}
+			],
 			"color": "#b5651d",
 			"sprites": { "good": "res://assets/sprites/buildings/tavern_good.png", "evil": "res://assets/sprites/buildings/tavern_evil.png" }
 		},
@@ -187,6 +233,10 @@
 			"size": [3, 3], "cost": { "wood": 80, "stone": 120, "mana": 40 }, "build_time": 70,
 			"territory_radius": 5, "hp": 700,
 			"satisfaction": { "bonus": 8, "capacity": 30, "cause": "Tempel", "plague_spread_mult": 0.7, "discover_bonus": 0.25 },
+			"levels": [
+				{"cost": {"wood": 120, "stone": 180, "mana": 60}, "build_time": 60, "set": {"satisfaction": {"plague_spread_mult": 0.6, "discover_bonus": 0.35}}, "mult": {"satisfaction.capacity": 1.35, "satisfaction.bonus": 1.25, "hp": 1.3}},
+				{"cost": {"wood": 200, "stone": 300, "mana": 100}, "build_time": 95, "set": {"satisfaction": {"plague_spread_mult": 0.5, "discover_bonus": 0.45}}, "mult": {"satisfaction.capacity": 1.8, "satisfaction.bonus": 1.5, "hp": 1.6}}
+			],
 			"color": "#e8e0c8",
 			"sprites": { "good": "res://assets/sprites/buildings/temple_good.png", "evil": "res://assets/sprites/buildings/temple_evil.png" }
 		},
@@ -260,6 +310,10 @@
 			"hp": 900, "armor": 0.4, "sight": 10, "loot": { "stone": 20 }, "kill_points": 3, "menu": "defense",
 			"tower": { "attack": 14, "interval": 1.4, "range": 7.0, "projectile": "arrow",
 			           "priority": { "ram": 0.5, "catapult": 0.6, "worker": 1.6, "caravan": 0.8 } },
+			"levels": [
+				{"cost": {"wood": 60, "stone": 160}, "build_time": 45, "set": {"armor": 0.45}, "mult": {"tower.attack": 1.35, "tower.range": 1.15, "hp": 1.3}},
+				{"cost": {"wood": 100, "stone": 250, "ore": 20}, "build_time": 70, "set": {"armor": 0.5}, "mult": {"tower.attack": 1.8, "tower.range": 1.3, "hp": 1.6}}
+			],
 			"color": "#9a8f7a",
 			"sprites": { "good": "res://assets/sprites/buildings/tower_good.png", "evil": "res://assets/sprites/buildings/tower_evil.png" }
 		},
@@ -279,6 +333,10 @@
 			"requires_buildings": ["barracks"], "max_per_kingdom": 1,
 			"size": [2, 2], "cost": { "wood": 70, "stone": 60, "ore": 20 }, "build_time": 45,
 			"territory_radius": 4, "hp": 650, "forge": true,
+			"levels": [
+				{"cost": {"wood": 90, "stone": 100, "ore": 40}, "build_time": 40, "set": {"forge_discount": 0.15}, "mult": {"hp": 1.3}},
+				{"cost": {"wood": 150, "stone": 160, "ore": 70}, "build_time": 65, "set": {"forge_discount": 0.3}, "mult": {"hp": 1.6}}
+			],
 			"menu": "military", "color": "#7a4b2a",
 			"sprites": { "good": "res://assets/sprites/buildings/forge_good.png", "evil": "res://assets/sprites/buildings/forge_evil.png" }
 		},

@@ -15,6 +15,10 @@ signal building_removed(building: Building)
 signal roads_changed
 ## Ein Gebäude hat den Besitzer gewechselt (Aufnahme, Eroberung; ab Phase 8 Verrat)
 signal building_transferred(building: Building, from_kingdom: Kingdom, to_kingdom: Kingdom)
+## Ausbau bezahlt und begonnen bzw. abgebrochen; fertig (building.level ist die neue Stufe)
+signal building_upgrade_started(building: Building)
+signal building_upgrade_cancelled(building: Building)
+signal building_upgraded(building: Building)
 
 var game: Node
 var world: WorldData
@@ -112,6 +116,7 @@ func place_building(def: Dictionary, cell: Vector2i, kingdom: Kingdom, instant: 
 	game.entities.add_child(b)
 	game.register_entity(b)
 	b.finished.connect(_on_building_finished)
+	b.upgraded.connect(_on_building_upgraded)
 	building_placed.emit(b)
 	if instant or float(def.get("build_time", 0.0)) <= 0.0:
 		b.complete()
@@ -157,6 +162,10 @@ func restore_building(d: Dictionary) -> Building:
 	b.setup(def, kingdom, d.get("cell", Vector2i.ZERO), world, int(d.get("uid", 0)))
 	b.constructed = bool(d.get("constructed", false))
 	b.progress = float(d.get("progress", 0.0))
+	# Ausbaustufe (ältere Spielstände: Stufe 1, siehe SaveMigration)
+	b.set_level(int(d.get("level", 1)))
+	b.upgrading = b.constructed and bool(d.get("upgrading", false)) and b.level < b.get_max_level()
+	b.upgrade_progress = float(d.get("upgrade_progress", 0.0)) if b.upgrading else 0.0
 	b.max_hp = maxf(float(d.get("max_hp", b.max_hp)), 1.0)
 	b.hp = float(d.get("hp", b.max_hp))
 	b.last_damaged_at = float(d.get("last_damaged_at", -1000.0))
@@ -178,6 +187,7 @@ func restore_building(d: Dictionary) -> Building:
 	game.entities.add_child(b)
 	game.register_entity(b)
 	b.finished.connect(_on_building_finished)
+	b.upgraded.connect(_on_building_upgraded)
 	return b
 
 
@@ -434,13 +444,134 @@ func add_repair_work(b: Building, amount: float) -> String:
 	return ""
 
 
-## Offene Gebäude-Baustellen eines Reichs
+## Offene Gebäude-Baustellen eines Reichs (auch laufende Ausbauten)
 func get_building_sites(kingdom: Kingdom) -> Array:
 	var sites: Array = []
 	for b in kingdom.buildings:
-		if not b.constructed:
+		if not b.constructed or b.upgrading:
 			sites.append(b)
 	return sites
+
+
+# ---------------------------------------------------------------------------
+# Ausbaustufen (buildings.json → levels)
+# ---------------------------------------------------------------------------
+
+## Darf das Gebäude jetzt auf die nächste Stufe ausgebaut werden? "" = ja, sonst der Grund.
+## check_cost = false: nur Bedingungen (Stufe, Forschung, Gebäude), nicht die Kosten.
+func can_upgrade(b: Building, check_cost: bool = true) -> String:
+	if not is_instance_valid(b) or b.kingdom == null:
+		return "Kein Gebäude"
+	if not b.constructed:
+		return "Erst fertig bauen"
+	if b.upgrading:
+		return "Wird schon ausgebaut"
+	if b.level >= b.get_max_level():
+		return "Höchste Stufe erreicht" if b.get_max_level() > 1 else "Kann nicht ausgebaut werden"
+	var reason := level_requirement_reason(b.get_next_level_entry(), b.kingdom)
+	if not reason.is_empty():
+		return reason
+	return b.kingdom.missing_text(b.get_next_level_entry().get("cost", {})) if check_cost else ""
+
+
+## Bedingungen eines levels-Eintrags (Forschung, fertige Gebäude). "" = erfüllt
+func level_requirement_reason(entry: Dictionary, kingdom: Kingdom) -> String:
+	var requires: Array = entry.get("requires", [])
+	if not kingdom.has_all_unlocks(requires):
+		return "Benötigt Forschung: %s" % DataDB.describe_requirement(requires, kingdom.faction_id)
+	for bid in entry.get("requires_buildings", []):
+		if count_buildings(kingdom, str(bid), true) == 0:
+			return "Benötigt: %s" % DataDB.get_building_name(DataDB.get_building(str(bid)), kingdom.faction_id)
+	return ""
+
+
+## Ausbau bezahlen und beginnen: die Bauarbeiter kommen wie zu einer Baustelle, das Gebäude
+## arbeitet weiter. false, wenn es nicht geht (can_upgrade).
+func start_upgrade(b: Building) -> bool:
+	if not can_upgrade(b).is_empty():
+		return false
+	if not b.kingdom.spend(b.get_next_level_entry().get("cost", {})):
+		return false
+	b.upgrading = true
+	b.upgrade_progress = 0.0
+	b.queue_redraw()
+	game.work_system.request_wake(b.kingdom)
+	building_upgrade_started.emit(b)
+	return true
+
+
+## Laufenden Ausbau abbrechen: Kosten zurück (cancel_refund), Stufe bleibt.
+func cancel_upgrade(b: Building) -> void:
+	if not is_instance_valid(b) or not b.is_upgrading():
+		return
+	b.kingdom.refund(b.get_next_level_entry().get("cost", {}), float(DataDB.eco("cancel_refund", 1.0)))
+	b.upgrading = false
+	b.upgrade_progress = 0.0
+	b.queue_redraw()
+	building_upgrade_cancelled.emit(b)
+
+
+## Anzahl fertiger Gebäude eines Reichs mit mindestens dieser Stufe (def_id "" = alle Typen)
+func count_buildings_at_level(kingdom: Kingdom, def_id: String, min_level: int) -> int:
+	var n := 0
+	for b in kingdom.buildings:
+		if b.constructed and b.level >= min_level and (def_id.is_empty() or b.get_def_id() == def_id):
+			n += 1
+	return n
+
+
+## Was sich von Werten a zu Werten b ändert (Zeilen für Tooltips: "Wohnraum 4 → 5" …)
+static func level_change_lines(a: Dictionary, b: Dictionary) -> PackedStringArray:
+	var lines: PackedStringArray = []
+	var pairs := [["housing", "Wohnraum", false], ["workers", "Arbeitsplätze", false],
+			["gather_radius", "Sammelradius (Felder)", false], ["gather_bonus", "Sammeltempo", true],
+			["hp", "Leben", false], ["armor", "Rüstung", true], ["summon_speed", "Beschwörungstempo", true],
+			["research_speed", "Forschungstempo", true], ["forge_discount", "Rabatt in der Schmiede", true]]
+	for p in pairs:
+		var key := str(p[0])
+		var default_value := 1.0 if key.ends_with("_speed") else 0.0
+		var va := float(a.get(key, default_value))
+		var vb := float(b.get(key, default_value))
+		if is_equal_approx(va, vb):
+			continue
+		lines.append("%s: %s → %s" % [p[1], _level_value(va, bool(p[2])), _level_value(vb, bool(p[2]))])
+	for table_key in ["production", "base_production"]:
+		var ta: Dictionary = a.get(table_key, {})
+		var tb: Dictionary = b.get(table_key, {})
+		for res_id in tb:
+			var va := float(ta.get(res_id, 0.0)) * 60.0
+			var vb := float(tb[res_id]) * 60.0
+			if not is_equal_approx(va, vb):
+				lines.append("%s %s: %s → %s pro Minute" % ["Ertrag je Arbeiter" if table_key == "production" else "Grundertrag",
+						str(DataDB.get_resource(str(res_id)).get("name", res_id)), _level_value(va, false), _level_value(vb, false)])
+	var tw_a: Dictionary = a.get("tower", {})
+	var tw_b: Dictionary = b.get("tower", {})
+	if not tw_b.is_empty():
+		if not is_equal_approx(float(tw_a.get("attack", 0.0)), float(tw_b.get("attack", 0.0))):
+			lines.append("Turm-Angriff: %s → %s" % [_level_value(float(tw_a.get("attack", 0.0)), false),
+					_level_value(float(tw_b.get("attack", 0.0)), false)])
+		if not is_equal_approx(float(tw_a.get("range", 0.0)), float(tw_b.get("range", 0.0))):
+			lines.append("Reichweite: %s → %s Felder" % [_level_value(float(tw_a.get("range", 0.0)), false),
+					_level_value(float(tw_b.get("range", 0.0)), false)])
+	var sat_a: Dictionary = a.get("satisfaction", {})
+	var sat_b: Dictionary = b.get("satisfaction", {})
+	if not sat_b.is_empty():
+		if int(sat_a.get("capacity", 0)) != int(sat_b.get("capacity", 0)):
+			lines.append("Versorgt Bewohner: %d → %d" % [int(sat_a.get("capacity", 0)), int(sat_b.get("capacity", 0))])
+		if not is_equal_approx(float(sat_a.get("bonus", 0.0)), float(sat_b.get("bonus", 0.0))):
+			lines.append("Zufriedenheit: %+d → %+d" % [roundi(float(sat_a.get("bonus", 0.0))), roundi(float(sat_b.get("bonus", 0.0)))])
+	var aura_a: Dictionary = a.get("heal_aura", {})
+	var aura_b: Dictionary = b.get("heal_aura", {})
+	if not aura_b.is_empty() and not is_equal_approx(float(aura_a.get("hp_per_sec", 0.0)), float(aura_b.get("hp_per_sec", 0.0))):
+		lines.append("Heilung: %s → %s Leben/s" % [_level_value(float(aura_a.get("hp_per_sec", 0.0)), false),
+				_level_value(float(aura_b.get("hp_per_sec", 0.0)), false)])
+	return lines
+
+
+static func _level_value(v: float, percent_value: bool) -> String:
+	if percent_value:
+		return "%d %%" % roundi(v * 100.0)
+	return str(roundi(v)) if is_equal_approx(v, roundf(v)) else String.num(v, 1).replace(".", ",")
 
 
 ## Geplante Strassen eines Reichs (Kacheln)
@@ -472,7 +603,10 @@ func remove_building(b: Building, refund_factor: float = 0.0, destroyed: bool = 
 	var kingdom := b.kingdom
 	b.destroyed = destroyed
 	if refund_factor > 0.0:
-		kingdom.refund(b.def.get("cost", {}), refund_factor)
+		# Bau- und Ausbaukosten anteilig; ein laufender Ausbau wird wie eine Baustelle erstattet
+		kingdom.refund(b.get_invested_cost() if b.constructed else b.def.get("cost", {}), refund_factor)
+		if b.is_upgrading():
+			kingdom.refund(b.get_next_level_entry().get("cost", {}), float(DataDB.eco("cancel_refund", 1.0)))
 	var fp := b.get_footprint()
 	for y in range(fp.position.y, fp.end.y):
 		for x in range(fp.position.x, fp.end.x):
@@ -523,6 +657,16 @@ func _on_building_finished(b: Building) -> void:
 			text += " – auswählen, um Einheiten zu beschwören"
 		kingdom.notify(text, "good", b.get_center())
 	building_completed.emit(b)
+
+
+## Ausbau fertig: Wohnraum und Arbeitsplätze neu, Meldung
+func _on_building_upgraded(b: Building) -> void:
+	var kingdom := b.kingdom
+	if int(b.def.get("housing", 0)) > 0:
+		kingdom.population_changed.emit()
+	kingdom.add_stat("buildings_upgraded")
+	kingdom.notify("%s auf Stufe %s ausgebaut" % [b.get_display_name(), DataDB.level_numeral(b.level)], "good", b.get_center())
+	building_upgraded.emit(b)
 
 
 ## Wald o. Ä. unter einem Gebäude oder einer Strasse roden (Biom wird z. B. Ebene).

@@ -35,7 +35,7 @@ printf '%s\n' "${runs[@]}" | xargs -P "$JOBS" -L 1 bash -c 'run_one $0 $1'
 fail=0
 for f in "$OUT"/*_"$SIZE".txt; do
 	echo "== $(basename "$f")"
-	grep -E "^\[balance\] (ERGEBNIS|LEISTUNG|LISTEN|Spieler gefallen)" "$f"
+	grep -E "^\[balance\] (ERGEBNIS|LEISTUNG|LISTEN|PRÜFUNG|Spieler gefallen)" "$f"
 	grep -E "^\[balance\] t=.*KI" "$f" | tail -2
 	if grep -qE "SCRIPT ERROR|^ERROR:" "$f"; then
 		echo "FEHLER in $f:"

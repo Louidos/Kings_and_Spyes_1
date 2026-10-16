@@ -18,6 +18,7 @@
 		"satisfaction (Phase 8): unter build_below Ø-Zufriedenheit baut die KI Taverne bzw. Tempel, unter feast_below feiert sie ein Fest.",
 		"fortify (Phase 9): Befestigung bei Bedrohung (Alarm, höchstens einer je 60 s, gilt threat_memory s) oder ab min_minute, wenn ein feindliches Reich das KI-Reich entdeckt hat. towers = Türme je Schwierigkeit (+1 je tower_per_pop Bewohner, höchstens doppelt), Ring tower_ring [innen, aussen] Kacheln um die Burg. Mauerring ab ring_threat Alarmen oder ring_minute (je Schwierigkeit, −1 = nie), Radius ring_radius, höchstens ring_segments_per_think Stücke je Denkvorgang, ring_gates Tore zuerst; reserve bleibt übrig; repair_builders = so viele Bauarbeiter mehr für Reparaturen.",
 		"siege: Belagerungswaffen gegen befestigte Ziele (ab fortified_walls Mauerstücken oder fortified_towers Türmen): max_units + per_wave je bisheriger Welle, höchstens cap; attack_radius = Befestigungen in diesem Umkreis (Kacheln) um das Wellenziel werden angegriffen.",
+		"upgrades (Ausbaustufen, buildings.json → levels): ab min_minute baut die KI Gebäude aus, höchstens max_parallel gleichzeitig und nur, wenn die Ausbaukosten × surplus_factor über der Reserve übrig sind und nicht auf ein neues Gebäude gespart wird. Reihenfolge der Typen nach order (Wirtschaft zuerst; je Typ zuerst das niedrigste Gebäude); höchste Stufe je Spielminute aus max_level_by_minute (Paare [Minute, Stufe]).",
 		"forge (Truppen): Schmiede-Stufen ab min_minute kaufen, höchstens max_level_by_minute (Paare [Minute, Stufe]); bevorzugt die Klasse mit den meisten eigenen Truppen; gekauft wird erst, wenn reserve_factor × Kosten (plus Reserve) im Lager sind – die Truppen gehen vor. Wertepunkte verteilt die KI automatisch (Kingdom.auto_stat_points). Neue Truppen in army.composition: spearman, crossbow, heavy, cavalry, battlemage.",
 		"routes: Handelswege der KI – ab start_trade_minute einmal ein Handelsvertrag mit dem nächsten freien Dorf (bis start_trade_max_distance Kacheln); prefer_trade_first = Handel vor Bündnis, solange kein Handelsweg besteht; Geleitschutz für abgeschnittene Wege (escort_share des Heimbestands, mindestens escort_min Einheiten, bis escort_distance Kacheln, höchstens alle escort_cooldown s)."
 	],
@@ -65,6 +66,10 @@
 	"build": {"wait_seconds": 90, "max_sites_base": 2, "max_sites_per_builders": 1, "max_sites": 4,
 	          "growth": {"house_per_pop": 4, "farm_per_pop": 9, "storehouse_per_pop": 25, "lumberyard_per_pop": 30, "max_buildings": 90},
 	          "reactive": {"housing_margin": 2, "food_margin_per_min": 2.0, "food_low": 30}},
+	"upgrades": {"min_minute": 8, "max_parallel": 1, "surplus_factor": 1.5,
+	             "max_level_by_minute": [[0, 2], [30, 3]],
+	             "order": ["farm", "lumberyard", "quarry", "hunter", "mine", "mana_well", "storehouse", "house", "library",
+	                       "tavern", "barracks", "forge", "temple", "tower"]},
 	"placement": {"max_checks": 400, "margin": 1, "resource_search_radius": 26, "deposit_cluster_min": 3, "farm_min_efficiency": 0.9},
 	"jobs": {"builders_min": 1, "builders_per_site": 1, "builders_max": 4, "max_changes": 4,
 	         "rebalance_every": 6, "rebalance_min_gap": 2, "max_rebalance": 2, "targets_seconds": 20,

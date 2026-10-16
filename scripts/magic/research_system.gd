@@ -133,7 +133,12 @@ func get_speed(k: Kingdom) -> float:
 	var n := count_research_buildings(k)
 	if n == 0:
 		return 0.0
-	return (1.0 + EXTRA_BUILDING_SPEED * (n - 1)) * k.mod("research")
+	# Die beste Forschungsstätte zählt mit ihrer Stufe (buildings.json → research_speed)
+	var best := 1.0
+	for b in k.buildings:
+		if b.constructed and bool(b.def.get("research", false)):
+			best = maxf(best, float(b.def.get("research_speed", 1.0)))
+	return (best + EXTRA_BUILDING_SPEED * (n - 1)) * k.mod("research")
 
 
 ## Kurzbeschreibung der Wirkungen ("Schaltet frei: Ritter", "+10 % Angriff (Kämpfer)" …)

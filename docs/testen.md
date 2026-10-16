@@ -77,6 +77,9 @@ Prüfpunkt. Geprüft werden unter anderem:
   Golem, Speichern der Haltung, Fenstergrösse bei 100/150 %, Tooltips.
 - **Truppen** (`smoke_troops.gd`): jede neue Truppe beschwören, Konter, Schmiede, Rang und Wertepunkte, Aussehen und
   dessen Erhalt im Speichern-Laden-Rundlauf.
+- **Ausbaustufen** (`smoke_levels.gd`): Ausbau gesperrt ohne Rohstoffe, Ausbau beginnen und abbrechen, Bauarbeiter
+  bauen Hof und Haus aus, Werte steigen (Nahrung, Wohnraum, Leben), Abriss erstattet Ausbauten anteilig, Spielstand
+  ohne Stufe lädt auf Stufe I, Stufen bleiben im Speichern-Laden-Rundlauf erhalten.
 - Ohne `tutorial=1`: das Tutorial ist aus und schützt nicht.
 
 > **Mindestens 600 Spielsekunden.** Mit weniger (z. B. 300) wird der Phase-7-Test nicht fertig und meldet
