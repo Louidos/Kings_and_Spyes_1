@@ -2,7 +2,8 @@
 ##
 ## Laufende Wirtschaft aller Reiche:
 ## - Nahrungsverbrauch der Einheiten und Hungersnot
-## - Bevölkerungswachstum (Wohnraum + Nahrung nötig)
+## - natürliches Bevölkerungswachstum (selten: Wohnraum, Nahrung und Zufriedenheit nötig, die Burgstufe
+##   beschleunigt es; neue Bewohner kommen vor allem als Bewerber, RecruitSystem)
 ## - Ertrag pro Minute je Ressource (für die Anzeige)
 ## - stündliches Nachwachsen geernteter Vorkommen (Beeren, Wild)
 ## - Mana der Burg (Kampfpunkt-Verbesserungen) und laufende Kosten (Kingdom.upkeep,
@@ -18,7 +19,7 @@ signal upkeep_unpaid(kingdom: Kingdom, source: String)
 const RATE_INTERVAL := 6.0
 
 ## Warum gerade kein Wachstum stattfindet
-enum Growth { GROWING, HOUSING_FULL, LOW_FOOD, STARVING }
+enum Growth { GROWING, HOUSING_FULL, LOW_FOOD, STARVING, LOW_SATISFACTION }
 
 var game: Node
 var world: WorldData
@@ -41,6 +42,8 @@ func get_growth_state(kingdom: Kingdom) -> int:
 		return Growth.HOUSING_FULL
 	if kingdom.get_amount("food") < float(DataDB.eco("population.growth_food_min", 30)):
 		return Growth.LOW_FOOD
+	if Requirements.satisfaction_of(kingdom, game) < float(DataDB.eco("population.growth_min_satisfaction", 0)):
+		return Growth.LOW_SATISFACTION
 	return Growth.GROWING
 
 
@@ -55,7 +58,11 @@ func get_food_consumption_per_minute(kingdom: Kingdom) -> float:
 
 
 func _growth_interval(kingdom: Kingdom) -> float:
-	return float(DataDB.eco("population.growth_interval", 45.0)) / maxf(kingdom.mod("growth"), 0.01)
+	var mults: Array = DataDB.eco("population.growth_castle_mult", [1.0])
+	var castle := 1.0
+	if not mults.is_empty():
+		castle = float(mults[clampi(kingdom.get_castle_level() - 1, 0, mults.size() - 1)])
+	return float(DataDB.eco("population.growth_interval", 240.0)) / maxf(kingdom.mod("growth") * castle, 0.01)
 
 
 func _on_sim_tick(dt: float) -> void:

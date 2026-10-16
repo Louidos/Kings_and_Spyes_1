@@ -268,6 +268,45 @@ def level_effects(b, entry):
     return ", ".join(parts)
 
 
+def sec_bewerber():
+    rc = load("recruits")
+    job_names = {j["id"]: j.get("name", j["id"]) for j in JOBS}
+    names = {"gift": "Geschenk", "satisfaction": "Zufriedenheit", "castle_level": "Burgstufe", "upgraded": "ausgebautes Gebäude",
+             "no_famine": "keine Hungersnot"}
+
+    def block(key):
+        b = rc["requirements"][key]
+        t = b["type"]
+        if t == "gift":
+            return "Geschenk (%s)" % ", ".join(RES_NAMES.get(r, r) for r in b["cost"])
+        if t == "satisfaction":
+            return "Zufriedenheit %d–%d" % tuple(b["min"])
+        if t == "castle_level":
+            return "Burgstufe %d" % b["min"]
+        if t == "upgraded":
+            return "%d Gebäude auf Stufe II" % b.get("count", 1)
+        return names.get(t, t)
+    total = sum(t.get("weight", 1) for t in rc["templates"])
+    rows = []
+    for t in rc["templates"]:
+        need = "Wohnplatz"
+        if t.get("building"):
+            need += ", " + faction_name(BUILDING_BY_ID[t["building"]], "good")
+            if t.get("building_level", 1) > 1:
+                need += " Stufe %d" % t["building_level"]
+        rows.append(["**%s**" % t["name"], job_names.get(t["job"], t["job"]), need,
+                     "+%d–%d weitere" % tuple(t.get("count", [1, 2])), str(t.get("min_castle_level", 1)),
+                     pct(t.get("weight", 1) / total)])
+    out = table(["Bewerber", "Wunschberuf", "Bedingungen immer", "dazu", "ab Burgstufe", "Anteil"], rows)
+    out += "\n\nWeitere Bedingungen: %s. Fachleute (Chance %s, je Tavernenstufe +%s) arbeiten im Wunschberuf %s schneller und " \
+           "stellen zusätzlich: %s." % (", ".join(block(k) for k in rc["pool"]), pct(rc["skilled"]["chance"]),
+                                        pct(rc["skilled"].get("chance_per_tavern_level", 0)), pct(rc["skilled"]["work_bonus"]),
+                                        ", ".join(block(k) for k in rc["strict"]))
+    out += " Wartezeit bis zum nächsten Bewerber: %d–%d s, mit Taverne Stufe I/II/III ×%s." % (
+        rc["interval"][0], rc["interval"][1], " / ×".join(num(x) for x in rc["tavern_interval_mult"][1:]))
+    return out
+
+
 def sec_burgstufen():
     castle = BUILDING_BY_ID["castle"]
     names = castle.get("level_names", [])
@@ -508,7 +547,7 @@ def sec_monster():
 
 
 SECTIONS = {
-    "voelker": sec_voelker, "gebaeude": sec_gebaeude, "ausbau": sec_ausbau, "burgstufen": sec_burgstufen, "berufe": sec_berufe, "truppen": sec_truppen,
+    "voelker": sec_voelker, "gebaeude": sec_gebaeude, "ausbau": sec_ausbau, "burgstufen": sec_burgstufen, "bewerber": sec_bewerber, "berufe": sec_berufe, "truppen": sec_truppen,
     "konter": sec_konter, "raenge": sec_raenge, "schmiede": sec_schmiede, "skins": sec_skins,
     "forschung": sec_forschung, "zauber": sec_zauber, "helden": sec_helden, "ereignisse": sec_ereignisse,
     "schwierigkeit": sec_schwierigkeit, "monster": sec_monster,

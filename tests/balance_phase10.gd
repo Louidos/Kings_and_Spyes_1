@@ -138,8 +138,8 @@ func _sample(t: float) -> void:
 		var army := brain.army_units().size() if brain != null else 0
 		var target := AIMilitary.army_target(brain, t) if brain != null else 0
 		var log_d: Dictionary = kk.ai_state.get("log", {})
-		print("[balance] t=%5.0f KI %d %s: Burgstufe %d, Gebäude %d (ausgebaut %d), Einheiten %d, Armee %d/%d, Wellen %d (Spieler ab %s), Forschung %d, Helden %d, Zufr. %.0f, %s" % [
-				t, kk.id, kk.display_name, kk.get_castle_level(), kk.buildings.size(), (g.building_system as BuildingSystem).count_buildings_at_level(kk, "", 2),
+		print("[balance] t=%5.0f KI %d %s: Burgstufe %d, Bewohner %d (Bewerber %d), Gebäude %d (ausgebaut %d), Einheiten %d, Armee %d/%d, Wellen %d (Spieler ab %s), Forschung %d, Helden %d, Zufr. %.0f, %s" % [
+				t, kk.id, kk.display_name, kk.get_castle_level(), kk.get_population(), int(kk.stats.get("recruits_accepted", 0)), kk.buildings.size(), (g.building_system as BuildingSystem).count_buildings_at_level(kk, "", 2),
 				kk.units.size(), army, target, int(kk.ai_state.get("waves_sent", 0)),
 				str(log_d.get("first_player_wave", "-")), kk.researched.size(), kk.heroes.size(), sat.get_average(kk),
 				DataDB.cost_to_text(kk.resources)])
@@ -185,7 +185,13 @@ func _check_milestones(t: float) -> void:
 		for k in game.kingdoms:
 			if (k as Kingdom).controller == "ai" and not (k as Kingdom).defeated:
 				best = maxi(best, (k as Kingdom).get_castle_level())
-		if best >= 3:
+		# Ohne Bewerber (recruits=off): das natürliche Wachstum allein reicht für Burgstufe 2
+		if game.get("recruit_system") != null and not game.recruit_system.enabled:
+			if best >= 2:
+				print("[balance] PRÜFUNG OK t=2400: ohne Bewerber erreicht die KI Burgstufe 2 (%s)" % _castle_levels())
+			else:
+				push_error("[balance] PRÜFUNG FEHLER t=2400: ohne Bewerber keine Burgstufe 2 (%s)" % _castle_levels())
+		elif best >= 3:
 			print("[balance] PRÜFUNG OK t=2400: KI erreicht Burgstufe 3 (%s)" % _castle_levels())
 		else:
 			push_error("[balance] PRÜFUNG FEHLER t=2400: kein KI-Reich auf Burgstufe 3 (%s)" % _castle_levels())

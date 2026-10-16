@@ -83,6 +83,8 @@ var trade_cfg: Dictionary = {}
 var help_cfg: Dictionary = {}
 ## Tutorial (tutorial.json): Partie, Einstellungen, Schritte
 var tutorial_cfg: Dictionary = {}
+## Bewerber (recruits.json)
+var recruits_cfg: Dictionary = {}
 ## Truppen (troops.json): Klassen und Konter, Schmiede, Erfahrung und Ränge, Aussehen
 var troops_cfg: Dictionary = {}
 ## Schmiede-Verbesserung (troops.json → forge.upgrades) nach ID
@@ -132,6 +134,7 @@ func reload() -> void:
 	daynight_cfg = _load_json("daynight.json")
 	help_cfg = _load_json("help.json")
 	tutorial_cfg = _load_json("tutorial.json")
+	recruits_cfg = _load_json("recruits.json")
 	_validate_peoples()
 	data_fingerprint = _compute_fingerprint()
 
@@ -242,6 +245,11 @@ func trade(path: String, default_value: Variant = null) -> Variant:
 
 
 ## Wert aus tutorial.json über Punkt-Pfad, z. B. "settings.grace_minutes"
+## Bewerber (recruits.json)
+func rec(path: String, default_value: Variant = null) -> Variant:
+	return _dig(recruits_cfg, path, default_value)
+
+
 func tut(path: String, default_value: Variant = null) -> Variant:
 	return _dig(tutorial_cfg, path, default_value)
 

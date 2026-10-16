@@ -1,4 +1,4 @@
-[gd_scene load_steps=43 format=3]
+[gd_scene load_steps=44 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/world/world_map.gd" id="2_worldmap"]
@@ -41,6 +41,7 @@
 [ext_resource type="Script" path="res://scripts/economy/supply_system.gd" id="p9_supply"]
 [ext_resource type="Script" path="res://scripts/view/trade_route_view.gd" id="p9_route_view"]
 [ext_resource type="Script" path="res://scripts/units/troop_system.gd" id="tr_troops"]
+[ext_resource type="Script" path="res://scripts/economy/recruit_system.gd" id="rc_recruits"]
 [ext_resource type="Script" path="res://scripts/tutorial/tutorial_system.gd" id="tut_system"]
 
 [node name="Game" type="Node2D"]
@@ -165,6 +166,9 @@ script = ExtResource("p9_supply")
 
 [node name="TroopSystem" type="Node" parent="Systems"]
 script = ExtResource("tr_troops")
+
+[node name="RecruitSystem" type="Node" parent="Systems"]
+script = ExtResource("rc_recruits")
 
 [node name="TutorialSystem" type="Node" parent="Systems"]
 script = ExtResource("tut_system")

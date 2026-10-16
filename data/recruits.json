@@ -1,0 +1,58 @@
+{
+	"_hinweis": [
+		"Bewerber (RecruitSystem): Neue Bewohner kommen vor allem als Bewerber. Zeiten in Spielsekunden.",
+		"first_after: frühestens so viele Sekunden nach Spielbeginn kommt der erste Bewerber. interval: [von, bis] Sekunden bis zum nächsten Bewerber (zufällig). tavern_interval_mult: Faktor auf die Wartezeit je Stufe der besten Taverne (Index 0 = keine Taverne, 1 = Stufe I …) – die Taverne lockt mehr Bewerber an, ihr Ausbau noch mehr.",
+		"max_waiting: höchstens so viele Bewerber warten gleichzeitig bei einem Reich (unterwegs mitgezählt). decision_seconds: so lange wartet ein Bewerber am Gebietsrand, dann zieht er weiter. spawn_distance: [von, bis] Kacheln von der Burg, wo er auftaucht (ausserhalb des Gebiets); unit: Einheitentyp unterwegs (units.json).",
+		"skilled: Fachleute – chance (0–1, je Taverne-Stufe + chance_per_tavern_level) arbeiten im Wunschberuf um work_bonus schneller (0.2 = +20 %) und stellen extra_requirements Bedingungen mehr, aus strict statt aus pool.",
+		"templates: Vorlagen mit id, name (Berufsbezeichnung), job (Wunschberuf aus jobs.json), weight (Häufigkeit), count [von, bis] Bedingungen ohne den Wohnplatz, pool (Namen aus requirements), optional building (Pflicht-Bedingung „fertiges Gebäude“, z. B. die Schmiede beim Schmied; building_level für eine Stufe) und min_castle_level (erscheint erst ab dieser Burgstufe).",
+		"requirements: Bausteine der Bedingungen. type wie in Requirements (housing, gift, building, satisfaction, castle_level, upgraded, no_famine); gift: cost je Ressource [von, bis], kinds = so viele Ressourcen; satisfaction: min [von, bis]; castle_level: min; upgraded: count. Der freie Wohnplatz gilt immer.",
+		"names: Vornamen je Fraktion. start_satisfaction: Zufriedenheit des neuen Bewohners.",
+		"ai_accept (KI, AIRecruits): think_seconds [von, bis] bis zur ersten Entscheidung, danach alle recheck_seconds erneut; die KI nimmt auf, wenn alle Bedingungen erfüllt sind, das Geschenk über der Reserve bezahlt werden kann und danach noch min_food Nahrung bleiben. Sonst lässt sie den Bewerber weiterziehen."
+	],
+
+	"first_after": 150,
+	"interval": [120, 240],
+	"tavern_interval_mult": [1.0, 0.7, 0.55, 0.45],
+	"max_waiting": 2,
+	"decision_seconds": 120,
+	"spawn_distance": [24, 34],
+	"unit": "wanderer",
+	"start_satisfaction": 60,
+
+	"skilled": { "chance": 0.25, "chance_per_tavern_level": 0.1, "work_bonus": 0.2, "extra_requirements": 1 },
+
+	"names": {
+		"good": ["Anna", "Bertold", "Clara", "Dietrich", "Elsa", "Friedrich", "Gertrud", "Hanno", "Ida", "Jakob", "Kunigunde",
+		         "Lorenz", "Margarethe", "Nikolaus", "Ottilie", "Peter", "Regula", "Sebastian", "Theresa", "Ulrich", "Verena", "Walter"],
+		"evil": ["Agrona", "Brakk", "Cyra", "Drogo", "Esmera", "Fenrik", "Grimhild", "Hagor", "Iskra", "Jorvik", "Kalla",
+		         "Lurtz", "Morwen", "Nagash", "Orla", "Pyrrha", "Ragna", "Skarn", "Thyra", "Urgot", "Vex", "Wulfgar"]
+	},
+
+	"requirements": {
+		"gift_small": { "type": "gift", "cost": { "food": [10, 25], "wood": [10, 30], "stone": [5, 20] }, "kinds": 1 },
+		"gift_large": { "type": "gift", "cost": { "food": [30, 60], "wood": [30, 60], "stone": [20, 50], "ore": [15, 40] }, "kinds": 2 },
+		"satisfaction_low": { "type": "satisfaction", "min": [45, 55] },
+		"satisfaction_high": { "type": "satisfaction", "min": [60, 70] },
+		"castle_2": { "type": "castle_level", "min": 2 },
+		"castle_3": { "type": "castle_level", "min": 3 },
+		"upgraded": { "type": "upgraded", "count": 1 },
+		"no_famine": { "type": "no_famine" }
+	},
+
+	"pool": ["gift_small", "satisfaction_low", "no_famine"],
+	"strict": ["gift_large", "satisfaction_high", "castle_2", "upgraded"],
+
+	"templates": [
+		{ "id": "woodcutter", "name": "Holzfäller", "job": "woodcutter", "weight": 3, "count": [0, 1] },
+		{ "id": "gatherer", "name": "Beerensammler", "job": "gatherer", "weight": 3, "count": [0, 1] },
+		{ "id": "farmer", "name": "Bauer", "job": "farmer", "weight": 3, "count": [1, 2], "building": "farm" },
+		{ "id": "stonecutter", "name": "Steinhauer", "job": "stonecutter", "weight": 2, "count": [1, 2] },
+		{ "id": "builder", "name": "Zimmermann", "job": "builder", "weight": 2, "count": [1, 2] },
+		{ "id": "miner", "name": "Bergmann", "job": "miner", "weight": 2, "count": [1, 2], "building": "mine", "min_castle_level": 2 },
+		{ "id": "mana", "name": "Manawirker", "job": "mana_worker", "weight": 1, "count": [1, 2], "building": "mana_well", "min_castle_level": 2 },
+		{ "id": "smith", "name": "Schmied", "job": "builder", "weight": 1, "count": [1, 2], "building": "forge", "min_castle_level": 3 },
+		{ "id": "brewer", "name": "Schankwirt", "job": "gatherer", "weight": 1, "count": [1, 2], "building": "tavern", "building_level": 2, "min_castle_level": 2 }
+	],
+
+	"ai_accept": { "think_seconds": [10, 30], "recheck_seconds": 10, "min_food": 30 }
+}

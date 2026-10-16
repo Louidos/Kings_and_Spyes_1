@@ -116,9 +116,18 @@ Neutrale Völker zusätzlich: `village_title`, `village_names`, `produces` (je M
 
 ### economy.json
 
-`start` (Startressourcen, Bewohner, Berufe), `population` (`growth_interval` 45 s, `growth_food_min`,
-`growth_food_cost`), `starvation.work_factor` (0.5), `road.speed_mult` (1.6), `demolish_refund` (0.5),
-`cancel_refund` (1.0).
+`start` (Startressourcen, Bewohner, Berufe), `population` (`growth_interval` 240 s, `growth_food_min`,
+`growth_food_cost`, `growth_min_satisfaction` 50, `growth_castle_mult` je Burgstufe), `starvation.work_factor`
+(0.5), `road.speed_mult` (1.6), `demolish_refund` (0.5), `cancel_refund` (1.0).
+
+### recruits.json
+
+Bewerber: `first_after`, `interval` ([von, bis] Sekunden), `tavern_interval_mult` (Faktor je Stufe der besten
+Taverne), `max_waiting`, `decision_seconds`, `spawn_distance`, `skilled` (Fachleute: `chance`, `work_bonus`,
+`extra_requirements`), `names` je Fraktion, `requirements` (Bausteine: `gift`, `satisfaction`, `castle_level`,
+`upgraded`, `no_famine`), `pool` und `strict` (welche Bausteine normale bzw. Fachleute ziehen), `templates`
+(Beruf, Wunschberuf `job`, `weight`, `count`, Pflicht-Gebäude `building`/`building_level`, `min_castle_level`) und
+`ai_accept` für die KI.
 
 ### buildings.json
 

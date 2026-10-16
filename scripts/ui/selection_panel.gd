@@ -151,6 +151,9 @@ var _mood_icon: MoodIcon
 var _mood_label: Label
 var _refugee_row: HBoxContainer
 var _refugee_offer_id := 0
+## Bewerber (RecruitSystem): Knopf "Bewerbung ansehen"
+var _recruit_row: HBoxContainer
+var _recruit_id := 0
 ## Restzeit der Abriss-Bestätigung (Echtzeit, 0 = keine Bestätigung offen)
 var _confirm_left := 0.0
 var _timer := 0.0
@@ -270,6 +273,7 @@ func _ready() -> void:
 	_spy_row.add_child(_spy_button)
 
 	_build_refugee_row(vbox)
+	_build_recruit_row(vbox)
 
 	_gate_row = HBoxContainer.new()
 	_gate_row.visible = false
@@ -475,6 +479,7 @@ func _show_building(b: Building) -> void:
 	_actions.visible = false
 	_mood_row.visible = false
 	_refugee_row.visible = false
+	_recruit_row.visible = false
 
 	# Leben: fremde Gebäude, beschädigte und solche, die Einheiten beschwören (Befestigungen immer)
 	var summons: Array = b.get_summon_tiers()
@@ -1877,6 +1882,24 @@ func _build_refugee_row(parent: Control) -> void:
 	_refugee_row.add_child(reject)
 
 
+func _build_recruit_row(parent: Control) -> void:
+	_recruit_row = HBoxContainer.new()
+	_recruit_row.add_theme_constant_override("separation", 6)
+	_recruit_row.visible = false
+	parent.add_child(_recruit_row)
+	var label := Label.new()
+	label.text = "Bewirbt sich bei dir:"
+	label.add_theme_font_size_override("font_size", FONT_SIZE)
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_recruit_row.add_child(label)
+	var open_button := _make_compact_button("Bewerbung ansehen", FONT_SIZE)
+	open_button.tooltip_text = "Bedingungen des Bewerbers mit ✓/✗, Aufnehmen oder Abweisen"
+	open_button.pressed.connect(func() -> void:
+		if _recruit_id > 0:
+			game.hud.open_recruit_dialog(_recruit_id))
+	_recruit_row.add_child(open_button)
+
+
 ## "Wald (Hochelfen): +10 % Angriff" (Geländebonus des Volks) oder ""
 func _terrain_text(u: Unit) -> String:
 	var ps: Variant = game.get("people_system")
@@ -1919,11 +1942,23 @@ func _show_unit_phase8(u: Unit, own: bool) -> void:
 			_refugee_offer_id = int(offer["id"])
 			_refugee_row.visible = true
 			_set_text(_facts, str(es.get_offer_text(offer, game.player)))
+	# Bewerber (RecruitSystem)
+	_recruit_row.visible = false
+	_recruit_id = 0
+	var rs: Variant = game.get("recruit_system")
+	if rs != null and not own:
+		var rec: Dictionary = rs.get_recruit_of_unit(u)
+		if not rec.is_empty() and int(rec["target_id"]) == game.player.id and str(rec["state"]) != "leaving":
+			_recruit_id = int(rec["id"])
+			_recruit_row.visible = true
+			_set_text(_title, "Bewerber: " + str(rs.describe(rec)))
+			_set_text(_facts, "%s\n%s" % [str(rs.job_text(rec)), "\n".join(Requirements.lines(rec["reqs"], game.player, game))])
 
 
 ## Mehrere Einheiten: Ø-Zufriedenheit der Bewohner darunter
 func _show_units_mood(units: Array) -> void:
 	_refugee_row.visible = false
+	_recruit_row.visible = false
 	var total := 0.0
 	var n := 0
 	for o in units:

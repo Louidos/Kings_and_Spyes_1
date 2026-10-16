@@ -89,7 +89,7 @@ static func default_state(personality_id: String) -> Dictionary:
 		"log": {"first_building": -1.0, "first_barracks": -1.0, "first_summon": -1.0, "first_research": -1.0,
 				"first_spy": -1.0, "first_spy_player": -1.0, "first_rumour_player": -1.0, "first_discovered_player": -1.0,
 				"first_wave": -1.0, "first_player_wave": -1.0, "first_lair": -1.0, "first_hero": -1.0, "first_cloak": -1.0,
-				"first_upgrade": -1.0, "first_castle_upgrade": -1.0},
+				"first_upgrade": -1.0, "first_castle_upgrade": -1.0, "first_recruit": -1.0},
 	}
 
 
@@ -132,6 +132,8 @@ func think(now: float) -> void:
 		t0 = _measure("fortify", t0)
 	# Berufe: Unbeschäftigte sofort, Umverteilung gedrosselt (AIEconomy.tick_jobs)
 	AIEconomy.tick_jobs(self)
+	# Bewerber (gleiche Regeln wie beim Spieler)
+	AIRecruits.tick(self, now)
 	t0 = _measure("jobs", t0)
 	if n % 2 == 0:
 		AIEconomy.tick_research(self, now)

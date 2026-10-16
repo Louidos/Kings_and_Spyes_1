@@ -18,6 +18,11 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 ### Geändert
 
+- Neue Bewohner kommen nicht mehr von selbst: Bewerber stellen eigene Bedingungen, und man entscheidet, wen man
+  aufnimmt. Jeder Bewerber hat Namen, Wunschberuf und 1–3 Bedingungen (✓/✗ im Bewerberfenster und im Reichsfenster,
+  Reiter „Bewerber“), Fachleute arbeiten im Wunschberuf 20 % schneller. Die Taverne lockt mehr Bewerber an. Das
+  natürliche Wachstum ist selten geworden (etwa alle 4 Minuten, nur bei zufriedenen Bewohnern). Die KI nimmt Bewerber
+  nach denselben Regeln auf (#6).
 - Heldenhalle, Tempel, Schmiede, Reitstall, Magierturm und Belagerungswerkstatt kosten rund 40 % mehr und brauchen
   länger zum Bauen (#5).
 

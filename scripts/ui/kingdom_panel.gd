@@ -13,6 +13,8 @@
 ##   Tageszeit, Zeit bis zum Wechsel, Geländetabelle und globale Nachtwerte.
 ## - "Handel" (Phase 9): Handelswege, Karawanen und Versorgung (TradeRouteList, dieselbe
 ##   Liste wie im Diplomatiefenster, Reiter "Handelswege").
+## - "Bewerber": wartende Bewerber mit Bedingungen (✓/✗), Aufnehmen/Abweisen/Ansehen, wann der
+##   nächste kommt, Wirkung der Taverne und das (seltene) natürliche Wachstum (RecruitSystem).
 ## - "Burg": Burgstufe, Bedingungen der nächsten Stufe mit ✓/✗, Knopf "Burg ausbauen" und was
 ##   jede Burgstufe freischaltet (BuildingSystem.level_requirements, dieselben Regeln wie die KI).
 ## Im F3-Modus erscheinen Debug-Knöpfe (Ereignis auslösen, Alle beenden,
@@ -31,6 +33,7 @@ const TAB_PEOPLE := "people"
 ## Handelswege und Versorgung (Phase 9)
 const TAB_TRADE := "trade"
 const TAB_CASTLE := "castle"
+const TAB_RECRUITS := "recruits"
 const DESIGN_WIDTH := 1048.0
 const TOP := 92.0
 const PAGE_HEIGHT := 600.0
@@ -78,6 +81,12 @@ var _people_text: RichTextLabel
 var _people_debug: HBoxContainer
 # Handel (Phase 9)
 var trade_list: TradeRouteList
+# Bewerber
+var _recruit_info: RichTextLabel
+var _recruit_box: VBoxContainer
+## Signatur der angezeigten Bewerber (ids), Zeilen: id -> {"text", "accept"}
+var _recruit_sig := ""
+var _recruit_rows: Dictionary = {}
 # Burg (Burgstufen)
 var _castle_text: RichTextLabel
 var _castle_button: Button
@@ -195,6 +204,7 @@ func _build() -> void:
 			[TAB_EVENTS, "Ereignisse", "Laufende Ereignisse, Flüchtlinge und Wanderer, Verlauf"],
 			[TAB_PEOPLE, "Volk & Tageszeit", "Stärken und Schwächen deines Volks, Tag und Nacht, Gelände"],
 			[TAB_TRADE, "Handel", "Handelswege, Karawanen, gesichtete fremde Wege und Versorgung"],
+			[TAB_RECRUITS, "Bewerber", "Wartende Bewerber mit ihren Bedingungen, Taverne und natürliches Wachstum"],
 			[TAB_CASTLE, "Burg", "Burgstufe, Bedingungen für die nächste Stufe und was sie freischaltet"]]:
 		var b := _make_tab(str(entry[1]), group)
 		b.tooltip_text = str(entry[2])
@@ -219,6 +229,8 @@ func _build() -> void:
 				_build_trade(page)
 			TAB_CASTLE:
 				_build_castle(page)
+			TAB_RECRUITS:
+				_build_recruits(page)
 	root.add_child(pages)
 	_footer = _label(15, COLOR_DIM)
 	_footer.text = "Zufriedenheit: Nahrung, Wohnraum, Sicherheit, Taverne und Tempel, Feste  ·  L / Esc: schliessen"
@@ -322,6 +334,16 @@ func _build_trade(page: VBoxContainer) -> void:
 	trade_list.jump_requested.connect(func(pos: Vector2) -> void: game.camera.focus_on(pos))
 
 
+func _build_recruits(page: VBoxContainer) -> void:
+	page.add_child(_section("Wartende Bewerber"))
+	_recruit_box = VBoxContainer.new()
+	_recruit_box.add_theme_constant_override("separation", 8)
+	page.add_child(_recruit_box)
+	page.add_child(_section("Wie neue Bewohner kommen"))
+	_recruit_info = _rich(15)
+	page.add_child(_recruit_info)
+
+
 func _build_castle(page: VBoxContainer) -> void:
 	_castle_text = _rich(16)
 	page.add_child(_castle_text)
@@ -367,6 +389,8 @@ func _refresh() -> void:
 			_refresh_people()
 		TAB_CASTLE:
 			_refresh_castle()
+		TAB_RECRUITS:
+			_refresh_recruits()
 		TAB_TRADE:
 			if trade_list != null:
 				trade_list.refresh()
@@ -585,6 +609,91 @@ func _rebuild_debug_targets() -> void:
 		_debug_target_ids.append(kk.id)
 		if kk.id == keep:
 			_debug_target_option.select(_debug_target_option.item_count - 1)
+
+
+func _refresh_recruits() -> void:
+	var k: Kingdom = game.player
+	var rs: RecruitSystem = game.recruit_system
+	var tip := ResearchTipButton
+	var list := rs.get_recruits(k)
+	var sig := ""
+	for r in list:
+		sig += "%d," % int(r["id"])
+	if sig != _recruit_sig:
+		_recruit_sig = sig
+		_recruit_rows.clear()
+		for c in _recruit_box.get_children():
+			c.queue_free()
+		if list.is_empty():
+			var none := _label(15, COLOR_DIM)
+			none.text = "Gerade wartet niemand."
+			_recruit_box.add_child(none)
+		for r in list:
+			var id := int(r["id"])
+			var row := HBoxContainer.new()
+			row.add_theme_constant_override("separation", 8)
+			_recruit_box.add_child(row)
+			var text := _rich(15)
+			row.add_child(text)
+			var accept := _small_button("Aufnehmen", "")
+			accept.pressed.connect(func() -> void:
+				var reason: String = rs.accept(k, id)
+				if not reason.is_empty():
+					Notify.warning(reason)
+				_refresh())
+			row.add_child(accept)
+			var reject := _small_button("Abweisen", "Der Bewerber zieht weiter")
+			reject.pressed.connect(func() -> void:
+				rs.reject(k, id)
+				_refresh())
+			row.add_child(reject)
+			var view := _small_button("Ansehen", "Bewerberfenster öffnen")
+			view.pressed.connect(func() -> void: game.hud.open_recruit_dialog(id))
+			row.add_child(view)
+			_recruit_rows[id] = {"text": text, "accept": accept}
+	for r in list:
+		var row: Dictionary = _recruit_rows.get(int(r["id"]), {})
+		if row.is_empty():
+			continue
+		var lines: PackedStringArray = ["[b]%s[/b] – %s" % [tip.esc(rs.describe(r)), tip.esc(rs.job_text(r))]]
+		for res in Requirements.check_all(r["reqs"], k, game):
+			lines.append(tip.colored(("✓ " if bool(res["ok"]) else "✗ ") + str(res["text"]), COLOR_GOOD if bool(res["ok"]) else COLOR_BAD))
+		if str(r["state"]) == "waiting":
+			lines.append(tip.colored("Wartet noch %d s" % ceili(maxf(float(r["expires"]) - GameClock.game_time, 0.0)), COLOR_DIM))
+		else:
+			lines.append(tip.colored("Unterwegs zum Gebietsrand", COLOR_DIM))
+		_set_rich(row["text"], "\n".join(lines))
+		var reason := rs.can_accept(k, int(r["id"]))
+		var accept: Button = row["accept"]
+		accept.disabled = not reason.is_empty()
+		accept.tooltip_text = "Wird dein Bewohner im Wunschberuf" if reason.is_empty() else "Noch nicht möglich – " + reason
+	var info: PackedStringArray = []
+	var next := rs.seconds_to_next(k)
+	if next >= 0.0:
+		info.append("Nächster Bewerber in etwa %d s (höchstens %d warten gleichzeitig)." % [ceili(next), int(DataDB.rec("max_waiting", 2))])
+	var tav := rs.tavern_level(k)
+	if tav > 0:
+		info.append(tip.colored("Deine Taverne (Stufe %s) lockt Bewerber an: Wartezeit ×%s." % [DataDB.level_numeral(tav),
+				String.num(rs.interval_mult(k), 2).replace(".", ",")], COLOR_GOOD))
+	else:
+		info.append("Eine Taverne lockt mehr Bewerber an, ausgebaut noch mehr.")
+	info.append("Fachleute arbeiten in ihrem Wunschberuf %d %% schneller, stellen aber strengere Bedingungen." % roundi(
+			float(DataDB.rec("skilled.work_bonus", 0.2)) * 100.0))
+	var es: EconomySystem = game.economy_system
+	var growth := "Natürlicher Zuwachs (selten): "
+	match es.get_growth_state(k):
+		EconomySystem.Growth.GROWING:
+			growth += "nächster Bewohner in %d s" % ceili(es.get_seconds_to_growth(k))
+		EconomySystem.Growth.HOUSING_FULL:
+			growth += "gestoppt – Wohnraum voll"
+		EconomySystem.Growth.LOW_FOOD:
+			growth += "gestoppt – zu wenig Nahrung"
+		EconomySystem.Growth.STARVING:
+			growth += "gestoppt – Hungersnot"
+		EconomySystem.Growth.LOW_SATISFACTION:
+			growth += "gestoppt – Zufriedenheit unter %d" % int(DataDB.eco("population.growth_min_satisfaction", 50))
+	info.append(growth)
+	_set_rich(_recruit_info, "\n".join(info))
 
 
 func _refresh_castle() -> void:

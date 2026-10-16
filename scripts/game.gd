@@ -62,6 +62,7 @@ signal formation_changed(formation: String)
 @onready var supply_system: SupplySystem = $Systems/SupplySystem
 ## Truppen: Erfahrung, Wertepunkte, Schmiede, Aussehen (troops.json)
 @onready var troop_system: TroopSystem = $Systems/TroopSystem
+@onready var recruit_system: RecruitSystem = $Systems/RecruitSystem
 @onready var trade_route_view: TradeRouteView = $TradeRoutes
 ## Tutorial (Schritte, Schutz vor Gegnern und Ereignissen, Oberfläche)
 @onready var tutorial_system: TutorialSystem = $Systems/TutorialSystem
@@ -261,6 +262,8 @@ func _setup_world_and_systems() -> void:
 	supply_system.setup(self)
 	# Truppen nach Kampf, Einheiten und Helden (hört auf Treffer, Tod, Stufenaufstieg)
 	troop_system.setup(self)
+	# Bewerber nach Ereignissen (Reich "Wanderer"), Arbeit, Befehlen und Zufriedenheit
+	recruit_system.setup(self)
 	# Tutorial nach allen Systemen und vor der Auswahl (hört auf deren Befehle)
 	tutorial_system.setup(self)
 	placement.setup(self)

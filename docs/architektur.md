@@ -167,6 +167,7 @@ Speicher-Schnittstelle `to_dict` / `from_dict` / `rebuild_runtime` ([Speichern](
 | `VictorySystem` | Niederlage der Reiche, Ruinen, Sieg |
 | `PeopleSystem`, `DayNightSystem` | Volksboni und Geländeboni, Tageszeiten |
 | `SatisfactionSystem`, `EventSystem` | Zufriedenheit, Überlaufen, Verrat, Feste; Zufallsereignisse |
+| `RecruitSystem` | Bewerber (`recruits.json`): erscheinen am Gebietsrand, Bedingungen über `Requirements` (gemeinsam mit den Helden), Aufnehmen/Abweisen für Spieler (`RecruitDialog`) und KI (`AIRecruits`) |
 | `SiegeSystem`, `TradeRouteSystem`, `SupplySystem` | Mauern, Tore, Türme; Handelswege; Versorgung |
 | `TroopSystem` | Erfahrung, Ränge, Wertepunkte, Schmiede, Aussehen |
 | `TutorialSystem` | Schritte, Bedingungen, Schutz, Spielstand des Tutorials |
