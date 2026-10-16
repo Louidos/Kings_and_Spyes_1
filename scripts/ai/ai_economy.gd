@@ -477,8 +477,22 @@ static func tick_jobs(b: AIBrain) -> void:
 		changes += 1
 	if not rebalance:
 		return
-	var min_gap := maxi(int(DataDB.ai("jobs.rebalance_min_gap", 2)), 1)
 	var moves := 0
+	# Mindestbesetzung (jobs.min_jobs) auch bei einer Lücke von eins umsetzen
+	for job in DataDB.ai("jobs.min_jobs", {}):
+		var jid := str(job)
+		if int(targets.get(jid, 0)) <= int(counts.get(jid, 0)):
+			continue
+		var from := _largest_surplus(targets, counts, jid)
+		if from.is_empty() or not ws.unassign_job(k, from):
+			continue
+		counts[from] = int(counts.get(from, 0)) - 1
+		moves += 1
+		if ws.assign_job(k, jid):
+			counts[jid] = int(counts.get(jid, 0)) + 1
+		else:
+			counts["idle"] = int(counts.get("idle", 0)) + 1
+	var min_gap := maxi(int(DataDB.ai("jobs.rebalance_min_gap", 2)), 1)
 	var max_moves := int(DataDB.ai("jobs.max_rebalance", 2))
 	while moves < max_moves:
 		var to := _largest_deficit(targets, counts, "", min_gap)

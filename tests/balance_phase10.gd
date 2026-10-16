@@ -143,6 +143,32 @@ func _sample(t: float) -> void:
 				kk.units.size(), army, target, int(kk.ai_state.get("waves_sent", 0)),
 				str(log_d.get("first_player_wave", "-")), kk.researched.size(), kk.heroes.size(), sat.get_average(kk),
 				DataDB.cost_to_text(kk.resources)])
+	# Zusammensetzung der KI-Reiche (Gebäude je Typ ohne Mauern, Berufe, Sammelprobleme)
+	for k in g.kingdoms:
+		var kk: Kingdom = k
+		if kk.controller != "ai" or kk.defeated:
+			continue
+		var types := {}
+		for bld in kk.buildings:
+			if not bld.is_segment:
+				types[bld.get_def_id()] = int(types.get(bld.get_def_id(), 0)) + 1
+		var jobs := {}
+		var problems: PackedStringArray = []
+		for j in DataDB.jobs:
+			var jid := str((j as Dictionary)["id"])
+			var n: int = g.work_system.get_job_count(kk, jid)
+			if n > 0:
+				jobs[jid] = n
+			var p: String = g.work_system.get_job_problem(kk, jid)
+			if not p.is_empty():
+				problems.append("%s: %s" % [jid, p])
+		var idle_info: PackedStringArray = []
+		for u in kk.units:
+			if u.job_id == "idle" and u.role == "worker":
+				idle_info.append("%s/%s/%s" % [u.command, str(u.state), u.problem])
+		print("[balance] t=%5.0f KI %d Aufbau: %s | Berufe %s%s%s" % [t, kk.id, str(types), str(jobs),
+				"" if problems.is_empty() else " | Probleme " + "; ".join(problems),
+				"" if idle_info.is_empty() else " | Unbeschäftigt " + ", ".join(idle_info)])
 	var think: Dictionary = g.ai_system.stats
 	var dn := int(think["thinks"]) - int(_think_prev["thinks"])
 	var du := int(think["think_usec_total"]) - int(_think_prev["usec"])
