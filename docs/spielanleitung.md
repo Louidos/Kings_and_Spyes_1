@@ -287,15 +287,15 @@ Regeln.
 |---|---|---|---|---|---|
 | **Holzfäller** | Holzfäller | Wohnplatz | +0–1 weitere | 1 | 16,7 % |
 | **Beerensammler** | Sammler & Jäger | Wohnplatz | +0–1 weitere | 1 | 16,7 % |
-| **Bauer** | Bauern | Wohnplatz, Bauernhof | +1–2 weitere | 1 | 16,7 % |
+| **Bauer** | Bauern | Wohnplatz, Bauernhof | +1 weitere | 1 | 16,7 % |
 | **Steinhauer** | Steinhauer | Wohnplatz | +1–2 weitere | 1 | 11,1 % |
 | **Zimmermann** | Bauarbeiter | Wohnplatz | +1–2 weitere | 1 | 11,1 % |
-| **Bergmann** | Bergleute | Wohnplatz, Erzmine | +1–2 weitere | 2 | 11,1 % |
-| **Manawirker** | Manawirker | Wohnplatz, Manabrunnen | +1–2 weitere | 2 | 5,6 % |
-| **Schmied** | Bauarbeiter | Wohnplatz, Schmiede | +1–2 weitere | 3 | 5,6 % |
-| **Schankwirt** | Sammler & Jäger | Wohnplatz, Taverne Stufe 2 | +1–2 weitere | 2 | 5,6 % |
+| **Bergmann** | Bergleute | Wohnplatz, Erzmine | +1 weitere | 2 | 11,1 % |
+| **Manawirker** | Manawirker | Wohnplatz, Manabrunnen | +1 weitere | 2 | 5,6 % |
+| **Schmied** | Bauarbeiter | Wohnplatz, Schmiede | +1 weitere | 3 | 5,6 % |
+| **Schankwirt** | Sammler & Jäger | Wohnplatz, Taverne Stufe 2 | +1 weitere | 2 | 5,6 % |
 
-Weitere Bedingungen: Geschenk (Nahrung, Holz, Stein), Zufriedenheit 45–55, keine Hungersnot. Fachleute (Chance 25 %, je Tavernenstufe +10 %) arbeiten im Wunschberuf 20 % schneller und stellen zusätzlich: Geschenk (Nahrung, Holz, Stein, Erz), Zufriedenheit 60–70, Burgstufe 2, 1 Gebäude auf Stufe II. Wartezeit bis zum nächsten Bewerber: 120–240 s, mit Taverne Stufe I/II/III ×0,7 / ×0,55 / ×0,45.
+Höchstens 3 Bedingungen je Bewerber (der Wohnplatz zählt mit). Weitere Bedingungen: Geschenk (Nahrung, Holz, Stein), Zufriedenheit 45–55, keine Hungersnot. Fachleute (Chance 25 %, je Tavernenstufe +10 %) arbeiten im Wunschberuf 20 % schneller und ziehen zuerst eine strengere: Geschenk (Nahrung, Holz, Stein, Erz), Zufriedenheit 60–70, Burgstufe 2, 1 Gebäude auf Stufe II. Wartezeit bis zum nächsten Bewerber: 120–240 s, mit Taverne Stufe I/II/III ×0,7 / ×0,55 / ×0,45.
 
 <!-- /AUTO:bewerber -->
 

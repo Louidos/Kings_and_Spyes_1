@@ -294,12 +294,15 @@ def sec_bewerber():
             need += ", " + faction_name(BUILDING_BY_ID[t["building"]], "good")
             if t.get("building_level", 1) > 1:
                 need += " Stufe %d" % t["building_level"]
+        fixed = 2 if t.get("building") else 1
+        free = rc.get("max_requirements", 3) - fixed
+        lo, hi = (min(x, free) for x in t.get("count", [1, 2]))
         rows.append(["**%s**" % t["name"], job_names.get(t["job"], t["job"]), need,
-                     "+%d–%d weitere" % tuple(t.get("count", [1, 2])), str(t.get("min_castle_level", 1)),
+                     ("+%d weitere" % hi if lo == hi else "+%d–%d weitere" % (lo, hi)), str(t.get("min_castle_level", 1)),
                      pct(t.get("weight", 1) / total)])
     out = table(["Bewerber", "Wunschberuf", "Bedingungen immer", "dazu", "ab Burgstufe", "Anteil"], rows)
-    out += "\n\nWeitere Bedingungen: %s. Fachleute (Chance %s, je Tavernenstufe +%s) arbeiten im Wunschberuf %s schneller und " \
-           "stellen zusätzlich: %s." % (", ".join(block(k) for k in rc["pool"]), pct(rc["skilled"]["chance"]),
+    out += "\n\nHöchstens %d Bedingungen je Bewerber (der Wohnplatz zählt mit). Weitere Bedingungen: %s. Fachleute (Chance %s, je Tavernenstufe +%s) arbeiten im Wunschberuf %s schneller und " \
+           "ziehen zuerst eine strengere: %s." % (rc.get("max_requirements", 3), ", ".join(block(k) for k in rc["pool"]), pct(rc["skilled"]["chance"]),
                                         pct(rc["skilled"].get("chance_per_tavern_level", 0)), pct(rc["skilled"]["work_bonus"]),
                                         ", ".join(block(k) for k in rc["strict"]))
     out += " Wartezeit bis zum nächsten Bewerber: %d–%d s, mit Taverne Stufe I/II/III ×%s." % (

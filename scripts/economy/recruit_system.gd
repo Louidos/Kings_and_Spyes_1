@@ -330,18 +330,21 @@ func _pick_template(k: Kingdom, template_id: String) -> Dictionary:
 	return candidates[candidates.size() - 1]
 
 
-## Wohnplatz immer, Pflicht-Gebäude der Vorlage, dann count Bausteine aus pool (Fachkraft: dazu
-## extra_requirements aus strict); jeder Baustein höchstens einmal
+## Wohnplatz immer, Pflicht-Gebäude der Vorlage, dann Bausteine: Fachkräfte zuerst
+## extra_requirements aus strict, dann count aus pool – zusammen höchstens max_requirements;
+## jeder Baustein höchstens einmal
 func _make_requirements(template: Dictionary, skilled: bool) -> Array:
 	var reqs: Array = [{"type": "housing"}]
 	var building := str(template.get("building", ""))
 	if not building.is_empty():
 		reqs.append({"type": "building", "building": building, "level": int(template.get("building_level", 1))})
+	var max_reqs := maxi(int(DataDB.rec("max_requirements", 3)), reqs.size())
 	var count_range: Array = template.get("count", [1, 2])
 	var used := {}
-	_pick_blocks(reqs, DataDB.rec("pool", []), _rng.randi_range(int(count_range[0]), int(count_range[1])), used)
 	if skilled:
-		_pick_blocks(reqs, DataDB.rec("strict", []), int(DataDB.rec("skilled.extra_requirements", 1)), used)
+		_pick_blocks(reqs, DataDB.rec("strict", []), mini(int(DataDB.rec("skilled.extra_requirements", 1)), max_reqs - reqs.size()), used)
+	var n := _rng.randi_range(int(count_range[0]), int(count_range[1]))
+	_pick_blocks(reqs, DataDB.rec("pool", []), mini(n, max_reqs - reqs.size()), used)
 	return reqs
 
 
