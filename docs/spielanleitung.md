@@ -65,7 +65,7 @@ Hauptmenü → **Neues Spiel**:
 - **Tipps/Tutorial anzeigen** – startet das Tutorial in dieser Partie.
 
 **Tutorial:** Wer das Spiel zum ersten Mal spielt, wählt im Hauptmenü **Tutorial**. Es startet eine feste,
-freundliche Partie (Seed „Lernreich“, kleine Karte, Leicht, ein Gegnerreich) und führt in **35 Schritten** durch
+freundliche Partie (Seed „Lernreich“, kleine Karte, Leicht, ein Gegnerreich) und führt in **37 Schritten** durch
 acht Kapitel: Erste Schritte · Dein Dorf · Einheiten · Armee und Truppen · Wissen und Magie · Helden · Reich und
 Nachbarn · Speichern und Hilfe. Ein goldener Rahmen zeigt den Knopf, ein Pfeil die Stelle in der Welt. Lange
 Schritte lassen sich überspringen, der Hofschatzmeister schenkt dir die nötigen Rohstoffe, und solange das
@@ -181,29 +181,50 @@ Umschalttaste setzt du mehrere. Es entsteht eine **Baustelle**, die deine Bauarb
 | **Lager** | Dorf | 40 Holz, 10 Stein | 30 s | 2×2 | 300 | – | Annahmestelle für Holz, Stein, Erz und Nahrung. Verkürzt die Wege der Sammler. |
 | **Holzfällerhütte** | Dorf | 30 Holz | 20 s | 2×2 | 300 | – | Holzfäller liefern hier ab und arbeiten 25 % schneller. Am besten nahe am Wald bauen. |
 | **Steinmetzhütte** | Dorf | 35 Holz | 25 s | 2×2 | 300 | – | Steinhauer liefern hier ab und arbeiten 25 % schneller. Nahe an Steinbrocken bauen. |
-| **Erzmine** | Dorf | 40 Holz, 20 Stein | 35 s | 2×2 | 300 | – | Bergleute liefern hier ab und arbeiten 25 % schneller. Nahe an Erzadern bauen. |
+| **Erzmine** | Dorf | 40 Holz, 20 Stein | 35 s | 2×2 | 300 | Burgstufe 2 | Bergleute liefern hier ab und arbeiten 25 % schneller. Nahe an Erzadern bauen. |
 | **Jägerhütte** | Dorf | 25 Holz | 20 s | 2×2 | 300 | – | Sammler und Jäger liefern hier Nahrung ab und arbeiten 25 % schneller. |
 | **Bauernhof** | Dorf | 40 Holz | 30 s | 2×2 | 300 | – | Bis zu 3 Bauern erzeugen dauerhaft Nahrung. Am besten auf Ebene, schlecht in der Wüste. *(3 Arbeitsplätze)* |
-| **Manabrunnen** | Dorf | 30 Holz, 30 Stein | 40 s | 2×2 | 300 | auf einer Manaquelle | Muss auf einer Manaquelle stehen. Erzeugt etwas Mana, mit Manawirkern deutlich mehr. *(2 Arbeitsplätze)* |
-| **Kaserne** | Militär & Wissen | 60 Holz, 40 Stein, 30 Mana | 45 s | 2×2 | 600 | – | Hier beschwört der König Schwertkämpfer, Bogenschützen und – nach Forschung – Speerträger, Armbrustschützen, schwere Fusstruppen und Elitekrieger. Wird mit Mana errichtet. |
-| **Krankenstation** | Militär & Wissen | 50 Holz, 20 Stein, 25 Mana | 40 s | 2×2 | 400 | Forschung Heilkunde / Dunkle Heilkunst | Beschwört Heiler. Eigene Einheiten in der Nähe erholen sich schneller. Wird mit Mana errichtet. Muss erforscht werden (Forschung R, Magie: Heilkunde). |
-| **Bibliothek / Dunkles Archiv** | Militär & Wissen | 40 Holz, 80 Stein, 10 Mana | 50 s | 2×2 | 500 | – | Forschungsstätte: hier wird geforscht (Forschung mit R). Jede weitere forscht 25 % schneller. |
-| **Heldenhalle / Halle der Schatten** | Militär & Wissen | 120 Holz, 150 Stein, 40 Erz, 40 Mana | 70 s | 3×3 | 900 | Kaserne | Hier werden Helden angeworben (Heldenfenster mit G) und ausgebildet. Nur eine pro Reich, braucht eine Kaserne. *(höchstens 1)* |
-| **Kundschafterhaus / Schattenloge** | Militär & Wissen | 60 Holz, 50 Stein, 30 Mana | 45 s | 2×2 | 450 | Forschung Spionagenetz / Schattennetz | Bildet Spione aus: sie beginnen eine Stufe höher. Erhöht die Wachsamkeit gegen fremde Spione und erlaubt einen Spion mehr. Nur eines pro Reich. *(höchstens 1)* |
-| **Taverne / Schenke** | Dorf | 60 Holz, 20 Stein, 30 Nahrung | 35 s | 2×2 | 350 | – | Hier treffen sich die Bewohner nach der Arbeit: +10 Zufriedenheit für bis zu 20 Bewohner (für mehr Bewohner weitere bauen). |
-| **Tempel des Lichts / Schattenschrein** | Dorf | 80 Holz, 120 Stein, 40 Mana | 70 s | 3×3 | 700 | Bibliothek | Ort des Glaubens: +8 Zufriedenheit für bis zu 30 Bewohner. Seuchen breiten sich langsamer aus, Verräter und eingeschleuste Spione fallen eher auf. Braucht eine Forschungsstätte. |
+| **Manabrunnen** | Dorf | 30 Holz, 30 Stein | 40 s | 2×2 | 300 | Burgstufe 2, auf einer Manaquelle | Muss auf einer Manaquelle stehen. Erzeugt etwas Mana, mit Manawirkern deutlich mehr. *(2 Arbeitsplätze)* |
+| **Kaserne** | Militär & Wissen | 60 Holz, 40 Stein, 30 Mana | 45 s | 2×2 | 600 | Burgstufe 2 | Hier beschwört der König Schwertkämpfer, Bogenschützen und – nach Forschung – Speerträger, Armbrustschützen, schwere Fusstruppen und Elitekrieger. Wird mit Mana errichtet. |
+| **Krankenstation** | Militär & Wissen | 50 Holz, 20 Stein, 25 Mana | 40 s | 2×2 | 400 | Burgstufe 3, Forschung Heilkunde / Dunkle Heilkunst | Beschwört Heiler. Eigene Einheiten in der Nähe erholen sich schneller. Wird mit Mana errichtet. Muss erforscht werden (Forschung R, Magie: Heilkunde). |
+| **Bibliothek / Dunkles Archiv** | Militär & Wissen | 40 Holz, 80 Stein, 10 Mana | 50 s | 2×2 | 500 | Burgstufe 2 | Forschungsstätte: hier wird geforscht (Forschung mit R). Jede weitere forscht 25 % schneller. |
+| **Heldenhalle / Halle der Schatten** | Militär & Wissen | 170 Holz, 210 Stein, 55 Erz, 55 Mana | 100 s | 3×3 | 900 | Burgstufe 3, Kaserne | Hier werden Helden angeworben (Heldenfenster mit G) und ausgebildet. Nur eine pro Reich, braucht eine Kaserne. *(höchstens 1)* |
+| **Kundschafterhaus / Schattenloge** | Militär & Wissen | 60 Holz, 50 Stein, 30 Mana | 45 s | 2×2 | 450 | Burgstufe 3, Forschung Spionagenetz / Schattennetz | Bildet Spione aus: sie beginnen eine Stufe höher. Erhöht die Wachsamkeit gegen fremde Spione und erlaubt einen Spion mehr. Nur eines pro Reich. *(höchstens 1)* |
+| **Taverne / Schenke** | Dorf | 60 Holz, 20 Stein, 30 Nahrung | 35 s | 2×2 | 350 | Burgstufe 2 | Hier treffen sich die Bewohner nach der Arbeit: +10 Zufriedenheit für bis zu 20 Bewohner (für mehr Bewohner weitere bauen). |
+| **Tempel des Lichts / Schattenschrein** | Dorf | 110 Holz, 170 Stein, 55 Mana | 100 s | 3×3 | 700 | Burgstufe 3, Bibliothek | Ort des Glaubens: +8 Zufriedenheit für bis zu 30 Bewohner. Seuchen breiten sich langsamer aus, Verräter und eingeschleuste Spione fallen eher auf. Braucht eine Forschungsstätte. |
 | **Steinmauer / Dornenwall** | Verteidigung | 1 Holz, 5 Stein | 6 s | 1×1 | 500 | – | Mauerstück: hält Feinde auf, bis sie es zerstören. Mit gedrückter Maustaste ziehen (wie Strassen). Über eigene Strassen wird automatisch ein Tor gesetzt. Bauarbeiter reparieren beschädigte Mauern. |
-| **Burgtor / Schattentor** | Verteidigung | 30 Holz, 25 Stein | 20 s | 1×1 | 1000 | – | Durchgang in der Mauer: eigene und verbündete Einheiten gehen hindurch, Feinde müssen es aufbrechen. Auf ein eigenes Mauerstück oder eine eigene Strasse setzen. Im Auswahlfenster verriegeln (dann nur noch eigene und Verbündete). |
-| **Wachturm / Dornenturm** | Verteidigung | 60 Holz, 90 Stein | 50 s | 2×2 | 900 | – | Schiesst selbsttätig auf Feinde in Reichweite (auch Monster) und hält nach fremden Spionen Ausschau. Gegen Katapulte (grössere Reichweite) hilft er wenig. |
-| **Belagerungswerkstatt / Kriegsschmiede** | Militär & Wissen | 150 Holz, 80 Stein, 40 Erz, 30 Mana | 60 s | 3×3 | 800 | Forschung Belagerungskunst / Kriegsmaschinen, Kaserne | Hier entstehen Rammböcke und Katapulte. Muss erforscht werden (Militär: Belagerungskunst) und braucht eine Kaserne. Wird mit Mana errichtet. |
-| **Schmiede / Blutschmiede** | Militär & Wissen | 70 Holz, 60 Stein, 20 Erz | 45 s | 2×2 | 650 | Kaserne | Hier werden Waffen und Rüstungen der Truppen verbessert: je Truppenklasse drei Stufen (Auswahlfenster der Schmiede). Braucht eine Kaserne, nur eine pro Reich. *(höchstens 1)* |
-| **Reitstall / Wolfszwinger** | Militär & Wissen | 90 Holz, 40 Stein, 40 Nahrung, 20 Mana | 55 s | 3×2 | 700 | Forschung Ritterorden / Schreckensorden, Kaserne | Hier entstehen schnelle Reiter (GUT: Lanzenreiter, BÖSE: Wolfsreiter). Muss erforscht werden (Militär: Ritterorden bzw. Schreckensorden) und braucht eine Kaserne. |
-| **Magierturm / Hexenturm** | Militär & Wissen | 50 Holz, 90 Stein, 40 Mana | 60 s | 2×2 | 650 | Forschung Lichtsegen / Fluch der Schwäche, Bibliothek | Bildet Kampfmagier (BÖSE: Hexer) aus, die Gruppen mit Flächenschaden treffen. Muss erforscht werden (Magie: Lichtsegen bzw. Fluch der Schwäche) und braucht eine Forschungsstätte. |
+| **Burgtor / Schattentor** | Verteidigung | 30 Holz, 25 Stein | 20 s | 1×1 | 1000 | Burgstufe 2 | Durchgang in der Mauer: eigene und verbündete Einheiten gehen hindurch, Feinde müssen es aufbrechen. Auf ein eigenes Mauerstück oder eine eigene Strasse setzen. Im Auswahlfenster verriegeln (dann nur noch eigene und Verbündete). |
+| **Wachturm / Dornenturm** | Verteidigung | 60 Holz, 90 Stein | 50 s | 2×2 | 900 | Burgstufe 2 | Schiesst selbsttätig auf Feinde in Reichweite (auch Monster) und hält nach fremden Spionen Ausschau. Gegen Katapulte (grössere Reichweite) hilft er wenig. |
+| **Belagerungswerkstatt / Kriegsschmiede** | Militär & Wissen | 210 Holz, 110 Stein, 55 Erz, 40 Mana | 85 s | 3×3 | 800 | Burgstufe 4, Forschung Belagerungskunst / Kriegsmaschinen, Kaserne | Hier entstehen Rammböcke und Katapulte. Muss erforscht werden (Militär: Belagerungskunst) und braucht eine Kaserne. Wird mit Mana errichtet. |
+| **Schmiede / Blutschmiede** | Militär & Wissen | 100 Holz, 85 Stein, 30 Erz | 65 s | 2×2 | 650 | Burgstufe 3, Kaserne | Hier werden Waffen und Rüstungen der Truppen verbessert: je Truppenklasse drei Stufen (Auswahlfenster der Schmiede). Braucht eine Kaserne, nur eine pro Reich. *(höchstens 1)* |
+| **Reitstall / Wolfszwinger** | Militär & Wissen | 125 Holz, 55 Stein, 55 Nahrung, 30 Mana | 80 s | 3×2 | 700 | Burgstufe 3, Forschung Ritterorden / Schreckensorden, Kaserne | Hier entstehen schnelle Reiter (GUT: Lanzenreiter, BÖSE: Wolfsreiter). Muss erforscht werden (Militär: Ritterorden bzw. Schreckensorden) und braucht eine Kaserne. |
+| **Magierturm / Hexenturm** | Militär & Wissen | 70 Holz, 125 Stein, 55 Mana | 85 s | 2×2 | 650 | Burgstufe 4, Forschung Lichtsegen / Fluch der Schwäche, Bibliothek | Bildet Kampfmagier (BÖSE: Hexer) aus, die Gruppen mit Flächenschaden treffen. Muss erforscht werden (Magie: Lichtsegen bzw. Fluch der Schwäche) und braucht eine Forschungsstätte. |
 | **Strasse** | Dorf | 1 Stein | 2 s | 1×1 | 300 | – | Bewohner laufen auf Strassen schneller. Mit gedrückter Maustaste ziehen. |
 
 Nicht baubar, aber auf der Karte: **Königsburg** (Sitz des Königs. Lager für alle Ressourcen und Wohnraum.), **Monsterhöhle** (Ein Unterschlupf wilder Monster. Zerstöre ihn, um die Gegend zu sichern und Beute zu machen.), **Dorfzentrum** (Mittelpunkt eines neutralen Dorfs. Wird es erobert oder das Dorf aufgenommen, wird es zum Aussenposten mit Lager und Gebiet.), **Hütte** (Wohnhütte eines Dorfs (nach der Aufnahme Wohnraum für 2).)
 
 <!-- /AUTO:gebaeude -->
+
+### Burgstufen
+
+Deine **Königsburg** wächst in vier Stufen: **Weiler**, **Dorf**, **Stadt** und **Königssitz**. Viele Gebäude gibt es
+erst ab einer bestimmten Burgstufe, und Gebäude auf **Stufe III** brauchen die Stadt. Im Baumenü bleiben gesperrte
+Gebäude sichtbar, aber grau; der Tooltip nennt die nötige Burgstufe und was dir für die nächste noch fehlt (z. B.
+„Braucht Burgstufe 3 (Stadt) · für Dorf: noch 4 Bewohner“). Ausgebaut wird die Burg im Auswahlfenster der Burg oder
+im **Reichsfenster (L), Reiter „Burg“**. Dort stehen auch alle Bedingungen mit ✓ und ✗. Jede Burgstufe kostet viele
+Rohstoffe und Arbeit der Bauarbeiter und braucht genug Bewohner und bestimmte fertige Gebäude. Dafür wächst das
+Gebiet um die Burg, und sie bietet mehr Wohnraum und Leben. Die Gegner halten sich an dieselben Regeln.
+
+<!-- AUTO:burgstufen -->
+
+| Burgstufe | Kosten · Arbeit | Bedingungen | Burg | Schaltet frei |
+|---|---|---|---|---|
+| **I – Weiler** | Start | – | – | Wohnhaus, Lager, Holzfällerhütte, Steinmetzhütte, Jägerhütte, Bauernhof, Steinmauer, Strasse |
+| **II – Dorf** | 150 Holz, 120 Stein, 60 Nahrung · 60 s | 10 Bewohner, Lager, Bauernhof | Leben 2500, Wohnraum 8, Gebiet 16 | Erzmine, Manabrunnen, Kaserne, Bibliothek, Taverne, Burgtor, Wachturm |
+| **III – Stadt** | 300 Holz, 320 Stein, 80 Erz, 60 Mana · 120 s | 20 Bewohner, Kaserne, Bibliothek, Taverne, 1 Gebäude auf Stufe II | Leben 3000, Wohnraum 10, Gebiet 18, Rüstung 35 % | Krankenstation, Heldenhalle, Kundschafterhaus, Tempel des Lichts, Schmiede, Reitstall, Gebäudestufe III |
+| **IV – Königssitz** | 550 Holz, 600 Stein, 200 Erz, 200 Nahrung, 90 Mana · 200 s | 35 Bewohner, Tempel des Lichts, Schmiede, 3 Gebäude auf Stufe II | Leben 4000, Wohnraum 12, Gebiet 20, Rüstung 40 % | Belagerungswerkstatt, Magierturm |
+
+<!-- /AUTO:burgstufen -->
 
 ### Gebäude ausbauen
 
@@ -218,20 +239,21 @@ und gibt ihm mehr Leben. Die Stufe steht im Auswahlfenster und als kleines Schil
 
 | Gebäude | Stufe II (Kosten · Arbeit · Wirkung) | Stufe III |
 |---|---|---|
-| **Wohnhaus** | 30 Holz, 8 Stein · 18 s · Wohnraum 5, Leben 375 | 45 Holz, 18 Stein · 28 s · Wohnraum 7, Leben 450 |
-| **Lager** | 45 Holz, 30 Stein · 25 s · Sammelradius 16, Leben 375 | 70 Holz, 55 Stein · 40 s · Sammelradius 20, Leben 450 |
-| **Holzfällerhütte** | 35 Holz, 10 Stein · 18 s · Sammeltempo +35 %, Sammelradius 16, Leben 375 | 55 Holz, 20 Stein · 28 s · Sammeltempo +45 %, Sammelradius 18, Leben 450 |
-| **Steinmetzhütte** | 40 Holz, 12 Stein · 22 s · Sammeltempo +35 %, Sammelradius 16, Leben 375 | 60 Holz, 28 Stein · 35 s · Sammeltempo +45 %, Sammelradius 18, Leben 450 |
-| **Erzmine** | 50 Holz, 40 Stein · 30 s · Sammeltempo +35 %, Sammelradius 16, Leben 375 | 80 Holz, 70 Stein · 48 s · Sammeltempo +45 %, Sammelradius 18, Leben 450 |
-| **Jägerhütte** | 30 Holz, 8 Stein · 18 s · Sammeltempo +35 %, Sammelradius 16, Leben 375 | 45 Holz, 18 Stein · 28 s · Sammeltempo +45 %, Sammelradius 18, Leben 450 |
-| **Bauernhof** | 45 Holz, 15 Stein · 25 s · Ertrag ×1,35, Leben 375 | 70 Holz, 30 Stein · 40 s · Ertrag ×1,8, Leben 450 |
-| **Manabrunnen** | 35 Holz, 55 Stein · 35 s · Ertrag ×1,35, Grundertrag ×1,35, Leben 375 | 60 Holz, 90 Stein · 55 s · Ertrag ×1,8, Grundertrag ×1,8, Leben 450 |
-| **Kaserne** | 80 Holz, 70 Stein, 30 Mana · 40 s · Leben 810, Beschwörungstempo +35 %, Rüstung 15 % | 140 Holz, 110 Stein, 20 Erz, 50 Mana · 60 s · Leben 1080, Beschwörungstempo +80 %, Rüstung 25 % |
-| **Bibliothek** | 60 Holz, 120 Stein, 20 Mana · 45 s · Leben 650, Forschungstempo +35 % | 100 Holz, 200 Stein, 30 Mana · 70 s · Leben 800, Forschungstempo +80 % |
-| **Taverne** | 80 Holz, 40 Stein, 40 Nahrung · 30 s · versorgt 28, Zufriedenheit 12, Leben 455 | 130 Holz, 70 Stein, 60 Nahrung · 50 s · versorgt 36, Zufriedenheit 14, Leben 560 |
-| **Tempel des Lichts** | 120 Holz, 180 Stein, 60 Mana · 60 s · versorgt 40, Zufriedenheit 10, Leben 910, Seuchen ×0,6, Entdeckung +35 % | 200 Holz, 300 Stein, 100 Mana · 95 s · versorgt 54, Zufriedenheit 12, Leben 1120, Seuchen ×0,5, Entdeckung +45 % |
-| **Wachturm** | 60 Holz, 160 Stein · 45 s · Angriff 18,9, Reichweite 8, Leben 1170, Rüstung 45 % | 100 Holz, 250 Stein, 20 Erz · 70 s · Angriff 25,2, Reichweite 9,1, Leben 1440, Rüstung 50 % |
-| **Schmiede** | 90 Holz, 100 Stein, 40 Erz · 40 s · Leben 845, Schmiede günstiger 15 % | 150 Holz, 160 Stein, 70 Erz · 65 s · Leben 1040, Schmiede günstiger 30 % |
+| **Königsburg** | 150 Holz, 120 Stein, 60 Nahrung · 60 s · Leben 2500, Wohnraum 8, Gebiet 16 | 300 Holz, 320 Stein, 80 Erz, 60 Mana · 120 s · Leben 3000, Wohnraum 10, Gebiet 18, Rüstung 35 % |
+| **Wohnhaus** | 30 Holz, 8 Stein · 18 s · Wohnraum 5, Leben 375 | 45 Holz, 18 Stein · 28 s · Wohnraum 7, Leben 450 · ab Burgstufe 3 |
+| **Lager** | 45 Holz, 30 Stein · 25 s · Sammelradius 16, Leben 375 | 70 Holz, 55 Stein · 40 s · Sammelradius 20, Leben 450 · ab Burgstufe 3 |
+| **Holzfällerhütte** | 35 Holz, 10 Stein · 18 s · Sammeltempo +35 %, Sammelradius 16, Leben 375 | 55 Holz, 20 Stein · 28 s · Sammeltempo +45 %, Sammelradius 18, Leben 450 · ab Burgstufe 3 |
+| **Steinmetzhütte** | 40 Holz, 12 Stein · 22 s · Sammeltempo +35 %, Sammelradius 16, Leben 375 | 60 Holz, 28 Stein · 35 s · Sammeltempo +45 %, Sammelradius 18, Leben 450 · ab Burgstufe 3 |
+| **Erzmine** | 50 Holz, 40 Stein · 30 s · Sammeltempo +35 %, Sammelradius 16, Leben 375 | 80 Holz, 70 Stein · 48 s · Sammeltempo +45 %, Sammelradius 18, Leben 450 · ab Burgstufe 3 |
+| **Jägerhütte** | 30 Holz, 8 Stein · 18 s · Sammeltempo +35 %, Sammelradius 16, Leben 375 | 45 Holz, 18 Stein · 28 s · Sammeltempo +45 %, Sammelradius 18, Leben 450 · ab Burgstufe 3 |
+| **Bauernhof** | 45 Holz, 15 Stein · 25 s · Ertrag ×1,35, Leben 375 | 70 Holz, 30 Stein · 40 s · Ertrag ×1,8, Leben 450 · ab Burgstufe 3 |
+| **Manabrunnen** | 35 Holz, 55 Stein · 35 s · Ertrag ×1,35, Grundertrag ×1,35, Leben 375 | 60 Holz, 90 Stein · 55 s · Ertrag ×1,8, Grundertrag ×1,8, Leben 450 · ab Burgstufe 3 |
+| **Kaserne** | 80 Holz, 70 Stein, 30 Mana · 40 s · Leben 810, Beschwörungstempo +35 %, Rüstung 15 % | 140 Holz, 110 Stein, 20 Erz, 50 Mana · 60 s · Leben 1080, Beschwörungstempo +80 %, Rüstung 25 % · ab Burgstufe 3 |
+| **Bibliothek** | 60 Holz, 120 Stein, 20 Mana · 45 s · Leben 650, Forschungstempo +35 % | 100 Holz, 200 Stein, 30 Mana · 70 s · Leben 800, Forschungstempo +80 % · ab Burgstufe 3 |
+| **Taverne** | 80 Holz, 40 Stein, 40 Nahrung · 30 s · versorgt 28, Zufriedenheit 12, Leben 455 | 130 Holz, 70 Stein, 60 Nahrung · 50 s · versorgt 36, Zufriedenheit 14, Leben 560 · ab Burgstufe 3 |
+| **Tempel des Lichts** | 120 Holz, 180 Stein, 60 Mana · 60 s · versorgt 40, Zufriedenheit 10, Leben 910, Seuchen ×0,6, Entdeckung +35 % | 200 Holz, 300 Stein, 100 Mana · 95 s · versorgt 54, Zufriedenheit 12, Leben 1120, Seuchen ×0,5, Entdeckung +45 % · ab Burgstufe 3 |
+| **Wachturm** | 60 Holz, 160 Stein · 45 s · Angriff 18,9, Reichweite 8, Leben 1170, Rüstung 45 % | 100 Holz, 250 Stein, 20 Erz · 70 s · Angriff 25,2, Reichweite 9,1, Leben 1440, Rüstung 50 % · ab Burgstufe 3 |
+| **Schmiede** | 90 Holz, 100 Stein, 40 Erz · 40 s · Leben 845, Schmiede günstiger 15 % | 150 Holz, 160 Stein, 70 Erz · 65 s · Leben 1040, Schmiede günstiger 30 % · ab Burgstufe 3 |
 
 <!-- /AUTO:ausbau -->
 

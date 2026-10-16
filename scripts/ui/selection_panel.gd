@@ -462,6 +462,8 @@ func _show_building(b: Building) -> void:
 	var title := b.get_display_name()
 	if not b.constructed:
 		title += " (Baustelle)"
+	elif b == b.kingdom.castle and b.get_max_level() > 1:
+		title += " · Stufe %s (%s)" % [DataDB.level_numeral(b.level), DataDB.castle_level_name(b.level)]
 	elif b.get_max_level() > 1:
 		title += " · Stufe %s" % DataDB.level_numeral(b.level)
 	_set_text(_title, title)
@@ -588,12 +590,24 @@ func _show_upgrade(b: Building, own: bool) -> void:
 		return
 	var next := b.level + 1
 	var entry := b.get_next_level_entry()
-	_set_button_text(_upgrade_button, "Ausbauen auf Stufe %s" % DataDB.level_numeral(next))
+	var is_castle := b == b.kingdom.castle
+	_set_button_text(_upgrade_button, ("Burg ausbauen: %s" % DataDB.castle_level_name(next)) if is_castle
+			else "Ausbauen auf Stufe %s" % DataDB.level_numeral(next))
 	var reason := bs.can_upgrade(b)
 	_upgrade_button.disabled = not reason.is_empty()
 	var lines: PackedStringArray = ["Ausbau auf Stufe %s: %s · %d s Arbeit der Bauarbeiter" % [DataDB.level_numeral(next),
 			DataDB.cost_to_text(entry.get("cost", {})), roundi(float(entry.get("build_time", 0.0)))]]
+	var reqs := BuildingSystem.level_requirements(entry, b.kingdom)
+	if not reqs.is_empty():
+		lines.append("Bedingungen:")
+		for req in reqs:
+			lines.append("  %s %s" % ["✓" if bool(req["ok"]) else "✗", str(req["text"])])
 	lines.append_array(BuildingSystem.level_change_lines(b.def, DataDB.get_building_at_level(b.get_def_id(), next)))
+	if is_castle:
+		var unlocked := DataDB.buildings_unlocked_at(next, b.kingdom.faction_id)
+		if not unlocked.is_empty():
+			lines.append("Schaltet frei: " + ", ".join(unlocked))
+		lines.append("Bedingungen und Freischaltungen: Reichsfenster (L), Reiter Burg")
 	lines.append("Das Gebäude arbeitet während des Ausbaus weiter.")
 	if not reason.is_empty():
 		lines.append("Gesperrt: " + reason)

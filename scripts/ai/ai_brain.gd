@@ -83,12 +83,13 @@ static func default_state(personality_id: String) -> Dictionary:
 		"wave": {}, "waves_sent": 0, "player_waves": 0, "last_wave_end": -1.0, "wave_counter": 0,
 		"scouts": {}, "next_patrol": -1.0, "village_next": -1.0,
 		"gift_value_hour": {"hour": -1, "value": 0.0}, "spy_next": -1.0,
-		"upgrade_flip": false, "debug_army_min": 0, "hero_saving": "",
+		"upgrade_flip": false, "debug_army_min": 0, "hero_saving": "", "castle_saving": false,
+		"castle_saving_since": -1.0, "castle_skip_until": -1.0,
 		"siege": AISiege.default_state(),
 		"log": {"first_building": -1.0, "first_barracks": -1.0, "first_summon": -1.0, "first_research": -1.0,
 				"first_spy": -1.0, "first_spy_player": -1.0, "first_rumour_player": -1.0, "first_discovered_player": -1.0,
 				"first_wave": -1.0, "first_player_wave": -1.0, "first_lair": -1.0, "first_hero": -1.0, "first_cloak": -1.0,
-				"first_upgrade": -1.0},
+				"first_upgrade": -1.0, "first_castle_upgrade": -1.0},
 	}
 
 
@@ -370,6 +371,11 @@ func reserve_cost() -> Dictionary:
 		var cost: Dictionary = DataDB.get_building(str(waiting.get("building", ""))).get("cost", {})
 		for res in cost:
 			total[res] = float(total.get(res, 0.0)) + float(cost[res])
+	# Burgstufe (AIEconomy.tick_building_upgrades): Bedingungen erfüllt, es fehlt nur Geld
+	if bool(st.get("castle_saving", false)) and is_instance_valid(k.castle):
+		var castle_cost: Dictionary = k.castle.get_next_level_entry().get("cost", {})
+		for res in castle_cost:
+			total[res] = float(total.get(res, 0.0)) + float(castle_cost[res])
 	var hero := str(st.get("hero_saving", ""))
 	if not hero.is_empty():
 		var hero_cost: Dictionary = game.hero_system.recruit_cost(k, hero)

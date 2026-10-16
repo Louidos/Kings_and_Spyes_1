@@ -11,6 +11,15 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
   Bauarbeiter erledigen den Ausbau, das Gebäude arbeitet weiter; Stufe als Schild I/II/III auf der Karte. Haus, Lager,
   Sammelhütten, Bauernhof, Manabrunnen, Kaserne, Bibliothek, Taverne, Tempel, Wachturm und Schmiede. Die KI baut
   ebenfalls aus, Wirtschaftsgebäude zuerst (#4).
+- Die Königsburg wächst in vier Stufen (Weiler, Dorf, Stadt, Königssitz); viele Gebäude werden erst mit höherer
+  Burgstufe freigeschaltet, Gebäude auf Stufe 3 erst ab der Stadt. Jede Burgstufe braucht Rohstoffe, Bewohner und
+  bestimmte Gebäude. Gesperrte Gebäude bleiben im Baumenü sichtbar und nennen, was fehlt; das Reichsfenster hat den
+  neuen Reiter „Burg“. Das Tutorial baut die Burg als Geschenk aus, die KI hält sich an dieselben Regeln (#5).
+
+### Geändert
+
+- Heldenhalle, Tempel, Schmiede, Reitstall, Magierturm und Belagerungswerkstatt kosten rund 40 % mehr und brauchen
+  länger zum Bauen (#5).
 
 ### Dokumentation und Repository
 

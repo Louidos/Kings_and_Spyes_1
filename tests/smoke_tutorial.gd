@@ -213,6 +213,11 @@ func _act(ts: TutorialSystem, id: String) -> bool:
 		"welcome", "resources", "finish":
 			_complete_step(ts, id)
 			return false
+		"castle", "castle_city":
+			var want := 2 if id == "castle" else 3
+			_check(k.get_castle_level() >= want, "Burgstufe %d als Geschenk (jetzt %d)" % [want, k.get_castle_level()])
+			_complete_step(ts, id)
+			return false
 		"camera":
 			game.camera.focus_on(k.castle.get_center() + Vector2(900, 300))
 		"zoom":

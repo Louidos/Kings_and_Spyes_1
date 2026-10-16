@@ -316,6 +316,28 @@ func get_building_level_entry(id: String, level: int) -> Dictionary:
 	return levels[level - 2]
 
 
+## Name einer Burgstufe (buildings.json → castle.level_names), z. B. "Dorf"
+func castle_level_name(level: int) -> String:
+	var names: Array = get_building("castle").get("level_names", [])
+	if level >= 1 and level <= names.size():
+		return str(names[level - 1])
+	return "Stufe %s" % level_numeral(level)
+
+
+## Höchste Burgstufe (1 + Einträge in castle.levels)
+func get_castle_max_level() -> int:
+	return get_building_max_level("castle")
+
+
+## Gebäude, die genau ab dieser Burgstufe gebaut werden dürfen (Namen für die Fraktion)
+func buildings_unlocked_at(castle_level: int, faction_id: String) -> PackedStringArray:
+	var names: PackedStringArray = []
+	for b in buildings:
+		if bool(b.get("player_buildable", true)) and int(b.get("requires_castle_level", 1)) == castle_level:
+			names.append(get_building_name(b, faction_id))
+	return names
+
+
 ## Stufe als römische Zahl (I, II, III, IV …)
 func level_numeral(level: int) -> String:
 	const NUMERALS := ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
@@ -766,6 +788,7 @@ func _load_buildings() -> void:
 		b["allow_on_road"] = bool(b.get("allow_on_road", false))
 		b["menu"] = str(b.get("menu", "economy"))
 		b["max_builders"] = int(b.get("max_builders", 0))
+		b["requires_castle_level"] = maxi(int(b.get("requires_castle_level", 1)), 1)
 		b["repairable"] = bool(b.get("repairable", b["player_buildable"] or str(b.get("id", "")) == "castle"))
 		if b.get("tower", null) is Dictionary:
 			var tw: Dictionary = b["tower"]
@@ -798,6 +821,8 @@ func _prepare_levels(b: Dictionary) -> void:
 		entry["cost"] = cost
 		entry["build_time"] = maxf(float(entry.get("build_time", b.get("build_time", 10.0))), 0.01)
 		entry["requires_castle_level"] = int(entry.get("requires_castle_level", 0))
+		entry["requires_population"] = int(entry.get("requires_population", 0))
+		entry["requires_upgraded_buildings"] = int(entry.get("requires_upgraded_buildings", 0))
 		levels[i] = entry
 		var d: Dictionary = b.duplicate(true)
 		d.erase("levels")
@@ -811,6 +836,7 @@ func _prepare_levels(b: Dictionary) -> void:
 		d["housing"] = int(d.get("housing", 0))
 		d["workers"] = int(d.get("workers", 0))
 		d["gather_radius"] = int(d.get("gather_radius", 0))
+		d["territory_radius"] = int(d.get("territory_radius", 0))
 		list.append(d)
 	if not list.is_empty():
 		building_level_defs[b["id"]] = list

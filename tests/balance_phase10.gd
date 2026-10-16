@@ -138,8 +138,8 @@ func _sample(t: float) -> void:
 		var army := brain.army_units().size() if brain != null else 0
 		var target := AIMilitary.army_target(brain, t) if brain != null else 0
 		var log_d: Dictionary = kk.ai_state.get("log", {})
-		print("[balance] t=%5.0f KI %d %s: Gebäude %d (ausgebaut %d), Einheiten %d, Armee %d/%d, Wellen %d (Spieler ab %s), Forschung %d, Helden %d, Zufr. %.0f, %s" % [
-				t, kk.id, kk.display_name, kk.buildings.size(), (g.building_system as BuildingSystem).count_buildings_at_level(kk, "", 2),
+		print("[balance] t=%5.0f KI %d %s: Burgstufe %d, Gebäude %d (ausgebaut %d), Einheiten %d, Armee %d/%d, Wellen %d (Spieler ab %s), Forschung %d, Helden %d, Zufr. %.0f, %s" % [
+				t, kk.id, kk.display_name, kk.get_castle_level(), kk.buildings.size(), (g.building_system as BuildingSystem).count_buildings_at_level(kk, "", 2),
 				kk.units.size(), army, target, int(kk.ai_state.get("waves_sent", 0)),
 				str(log_d.get("first_player_wave", "-")), kk.researched.size(), kk.heroes.size(), sat.get_average(kk),
 				DataDB.cost_to_text(kk.resources)])
@@ -162,8 +162,33 @@ func _sample(t: float) -> void:
 
 
 ## Prüfungen zu festen Spielzeiten (Fehler als push_error, run_balance.sh meldet sie):
-## nach 30 Minuten hat mindestens ein KI-Reich ein ausgebautes Gebäude
+## nach 10 Minuten hat kein KI-Reich Gebäude ab Burgstufe 3, nach 30 Minuten mindestens eines ein
+## ausgebautes Gebäude, nach 40 Minuten mindestens eines Burgstufe 3
 func _check_milestones(t: float) -> void:
+	if t >= 600.0 and not _milestones_done.has(600):
+		_milestones_done[600] = true
+		var early: PackedStringArray = []
+		for k in game.kingdoms:
+			var kk: Kingdom = k
+			if kk.controller != "ai":
+				continue
+			for b in kk.buildings:
+				if int(b.def.get("requires_castle_level", 1)) >= 3 or (b != kk.castle and b.level >= 3):
+					early.append("%s: %s" % [kk.display_name, b.get_display_name()])
+		if early.is_empty():
+			print("[balance] PRÜFUNG OK t=600: kein KI-Reich hat Gebäude ab Burgstufe 3 (Burgstufen %s)" % _castle_levels())
+		else:
+			push_error("[balance] PRÜFUNG FEHLER t=600: Gebäude ab Burgstufe 3 zu früh (%s)" % ", ".join(early))
+	if t >= 2400.0 and not _milestones_done.has(2400):
+		_milestones_done[2400] = true
+		var best := 0
+		for k in game.kingdoms:
+			if (k as Kingdom).controller == "ai" and not (k as Kingdom).defeated:
+				best = maxi(best, (k as Kingdom).get_castle_level())
+		if best >= 3:
+			print("[balance] PRÜFUNG OK t=2400: KI erreicht Burgstufe 3 (%s)" % _castle_levels())
+		else:
+			push_error("[balance] PRÜFUNG FEHLER t=2400: kein KI-Reich auf Burgstufe 3 (%s)" % _castle_levels())
 	if t >= 1800.0 and not _milestones_done.has(1800):
 		_milestones_done[1800] = true
 		var best := 0
@@ -179,6 +204,16 @@ func _check_milestones(t: float) -> void:
 			print("[balance] PRÜFUNG OK t=1800: ausgebaute Gebäude der KI (%s)" % ", ".join(names))
 		else:
 			push_error("[balance] PRÜFUNG FEHLER t=1800: kein KI-Reich hat ein ausgebautes Gebäude (%s)" % ", ".join(names))
+
+
+## "Reich 2, Reich 3" mit Burgstufe je KI-Reich
+func _castle_levels() -> String:
+	var parts: PackedStringArray = []
+	for k in game.kingdoms:
+		var kk: Kingdom = k
+		if kk.controller == "ai":
+			parts.append("%s %d%s" % [kk.display_name, kk.get_castle_level(), " (gefallen)" if kk.defeated else ""])
+	return ", ".join(parts)
 
 
 ## Grösse aller Listen/Wörterbücher (Skriptvariablen) der Systeme und von Notify

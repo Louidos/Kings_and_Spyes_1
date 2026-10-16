@@ -6,8 +6,9 @@
 ## bricht sie ab. Der Button des aktiven Bauvorhabens bleibt eingedrückt.
 ## Gebäude, die gerade nicht bezahlbar sind, werden rötlich getönt – sie
 ## bleiben anklickbar, die Vorschau nennt dann den Grund.
-## Gebäude, die erst erforscht werden müssen (def.requires), sehen gesperrt aus
-## (grau mit Schloss); ein Klick nennt nur den Grund statt die Vorschau zu starten.
+## Gebäude, die erst erforscht werden müssen (def.requires) oder eine höhere Burgstufe brauchen
+## (def.requires_castle_level), sehen gesperrt aus (grau mit Schloss); der Tooltip nennt, was
+## fehlt, ein Klick nennt nur den Grund statt die Vorschau zu starten.
 ## Phase 9: Reiter "Dorf", "Militär & Wissen", "Verteidigung" (def.menu); "Abreissen (X)"
 ## steht in jedem Reiter. Startet eine Platzierung von anderswo, springt der Reiter mit.
 class_name BuildMenu
@@ -204,12 +205,23 @@ func _on_research_completed(k: Kingdom, _id: String) -> void:
 		_refresh()
 
 
-## "Benötigt Forschung: Heilkunde" (wie BuildingSystem.can_place), "" = freigeschaltet
+## "Braucht Burgstufe 3 (Stadt) · für Dorf: noch 4 Bewohner" oder "Benötigt Forschung: Heilkunde"
+## (wie BuildingSystem.can_build_type), "" = freigeschaltet
 static func lock_reason(def: Dictionary, k: Kingdom) -> String:
+	var castle_reason := BuildingSystem.castle_lock_reason(int(def.get("requires_castle_level", 1)), k, true)
+	if not castle_reason.is_empty():
+		return castle_reason
 	var requires: Array = def.get("requires", [])
 	if requires.is_empty() or k.has_all_unlocks(requires):
 		return ""
 	return "Benötigt Forschung: %s" % DataDB.describe_requirement(requires, k.faction_id)
+
+
+## Wo man die Sperre aufhebt
+static func _lock_hint(reason: String) -> String:
+	if reason.begins_with("Braucht Burgstufe"):
+		return "Burg ausbauen: Burg auswählen oder Reichsfenster (L), Reiter Burg"
+	return "Forschungsfenster: R"
 
 
 ## Gesperrt: sieht aus wie ein abgeschalteter Button (mit Platz für das
@@ -240,7 +252,7 @@ func _build_tip(id: String) -> String:
 	var reason := lock_reason(def, k)
 	if not reason.is_empty():
 		lines.append(ResearchTipButton.colored(reason, COLOR_BAD))
-		lines.append(ResearchTipButton.colored("Forschungsfenster: R", COLOR_HINT))
+		lines.append(ResearchTipButton.colored(_lock_hint(reason), COLOR_HINT))
 	lines.append(ResearchTipButton.esc(str(_base_tooltips.get(id, ""))))
 	var missing := k.missing_text(def.get("cost", {}))
 	if not missing.is_empty():
@@ -266,7 +278,7 @@ func _on_build_pressed(def: Dictionary) -> void:
 	# Noch nicht erforscht: nur den Grund nennen, keine Vorschau
 	var reason := lock_reason(def, game.player)
 	if not reason.is_empty():
-		Notify.warning("%s: %s (Forschungsfenster: R)" % [DataDB.get_building_name(def, game.player.faction_id), reason])
+		Notify.warning("%s: %s (%s)" % [DataDB.get_building_name(def, game.player.faction_id), reason, _lock_hint(reason)])
 		_sync_pressed()
 		return
 	var placement: PlacementController = game.placement
@@ -322,6 +334,12 @@ static func build_tooltip(def: Dictionary) -> String:
 		cost_text += " je Feld"
 	lines.append(cost_text)
 	lines.append("Bauzeit: %d s" % roundi(float(def.get("build_time", 0.0))))
+	var castle_level := int(def.get("requires_castle_level", 1))
+	if castle_level > 1:
+		lines.append("Ab Burgstufe %d (%s)" % [castle_level, DataDB.castle_level_name(castle_level)])
+	var max_level := DataDB.get_building_max_level(str(def.get("id", "")))
+	if max_level > 1:
+		lines.append("Ausbaubar bis Stufe %s (Auswahlfenster)" % DataDB.level_numeral(max_level))
 	var housing := int(def.get("housing", 0))
 	if housing > 0:
 		lines.append("Wohnraum: +%d" % housing)

@@ -191,6 +191,8 @@ def sec_gebaeude():
         if evil and evil != b.get("names", {}).get("good", name):
             name = "%s / %s" % (b.get("names", {}).get("good", name), evil)
         req = []
+        if b.get("requires_castle_level", 1) > 1:
+            req.append("Burgstufe %d" % b["requires_castle_level"])
         for r in b.get("requires", []):
             if r.startswith("building:"):
                 req.append("Forschung " + " / ".join(research_unlocking(r)))
@@ -215,7 +217,7 @@ def sec_gebaeude():
         if b.get("player_buildable", True) is False)
 
 
-LEVEL_LABELS = {"housing": "Wohnraum", "workers": "Arbeitsplätze", "gather_radius": "Sammelradius",
+LEVEL_LABELS = {"housing": "Wohnraum", "territory_radius": "Gebiet", "workers": "Arbeitsplätze", "gather_radius": "Sammelradius",
                 "gather_bonus": "Sammeltempo", "production": "Ertrag", "base_production": "Grundertrag", "hp": "Leben",
                 "armor": "Rüstung", "tower.attack": "Angriff", "tower.range": "Reichweite",
                 "satisfaction.capacity": "versorgt", "satisfaction.bonus": "Zufriedenheit",
@@ -264,6 +266,33 @@ def level_effects(b, entry):
         else:
             parts.append("%s %s" % (label, num(value)))
     return ", ".join(parts)
+
+
+def sec_burgstufen():
+    castle = BUILDING_BY_ID["castle"]
+    names = castle.get("level_names", [])
+    rows = []
+    for lv in range(1, len(castle.get("levels", [])) + 2):
+        name = names[lv - 1] if lv - 1 < len(names) else str(lv)
+        unlocks = [faction_name(b, "good") for b in BUILDINGS
+                   if b.get("player_buildable", True) is not False and b.get("requires_castle_level", 1) == lv]
+        if lv == 3:
+            unlocks.append("Gebäudestufe III")
+        if lv == 1:
+            rows.append(["**I – %s**" % name, "Start", "–", "–", ", ".join(unlocks)])
+            continue
+        e = castle["levels"][lv - 2]
+        cond = []
+        if e.get("requires_population"):
+            cond.append("%d Bewohner" % e["requires_population"])
+        cond += [faction_name(BUILDING_BY_ID[x], "good") for x in e.get("requires_buildings", [])]
+        if e.get("requires_upgraded_buildings"):
+            cond.append("%d Gebäude auf Stufe II" % e["requires_upgraded_buildings"])
+        effect = level_effects(castle, e)
+        rows.append(["**%s – %s**" % (["I", "II", "III", "IV", "V"][lv - 1], name),
+                     "%s · %s s" % (cost(e.get("cost", {})), num(e.get("build_time", 0))), ", ".join(cond),
+                     effect, ", ".join(unlocks)])
+    return table(["Burgstufe", "Kosten · Arbeit", "Bedingungen", "Burg", "Schaltet frei"], rows)
 
 
 def sec_ausbau():
@@ -479,7 +508,7 @@ def sec_monster():
 
 
 SECTIONS = {
-    "voelker": sec_voelker, "gebaeude": sec_gebaeude, "ausbau": sec_ausbau, "berufe": sec_berufe, "truppen": sec_truppen,
+    "voelker": sec_voelker, "gebaeude": sec_gebaeude, "ausbau": sec_ausbau, "burgstufen": sec_burgstufen, "berufe": sec_berufe, "truppen": sec_truppen,
     "konter": sec_konter, "raenge": sec_raenge, "schmiede": sec_schmiede, "skins": sec_skins,
     "forschung": sec_forschung, "zauber": sec_zauber, "helden": sec_helden, "ereignisse": sec_ereignisse,
     "schwierigkeit": sec_schwierigkeit, "monster": sec_monster,

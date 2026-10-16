@@ -336,7 +336,7 @@ Jedes Dorf ist ein eigenes `Kingdom` (`controller = "neutral"`, Feld `people_id`
 
 `scripts/tutorial/tutorial_system.gd`, `scripts/ui/tutorial_overlay.gd`, `data/tutorial.json`:
 
-- Das **`TutorialSystem`** (Node unter *Systems*, im Spielstand als `"tutorial"`) führt durch die 35 Schritte der
+- Das **`TutorialSystem`** (Node unter *Systems*, im Spielstand als `"tutorial"`) führt durch die 37 Schritte der
   Datei. Bedingungen wie `building_placed:house` oder `window_opened:heroes` liest es alle 0,25 echte Sekunden aus dem
   Zustand des Spiels (läuft auch in der Pause); Aktionen ohne bleibenden Zustand (Bewegungsbefehl, Speichern, Tempo)
   merkt es sich über Signale (`SelectionController.command_issued`, `SaveManager.save_finished`,

@@ -20,6 +20,7 @@
 		"tower: {attack, interval, range (Felder), projectile, priority (Faktor je Stufe/Rolle, kleiner = bevorzugt)} – schiesst selbsttätig auf feindliche Einheiten (Forschung: Modifikator tower_attack, Zuschlag tower_range). menu: Reiter im Baumenü (economy = Dorf, military = Militär & Wissen, defense = Verteidigung; Standard economy). repairable: false = Bauarbeiter reparieren nicht (Standard true). armor: Rüstung eines Gebäudes (0.3 = 30 % weniger Schaden).",
 		"forge: true = Schmiede: im Auswahlfenster Waffen- und Rüstungsstufen je Truppenklasse kaufen (troops.json → forge). Reitstall (stable) und Magierturm (mage_tower) beschwören die neuen Truppen (summons cavalry bzw. battlemage) und müssen erforscht werden.",
 		"levels: Ausbaustufen ab Stufe 2 (Liste, erster Eintrag = Stufe 2). Je Stufe: cost = Ausbaukosten, build_time = Ausbauarbeit der Bauarbeiter (wie eine Baustelle; das Gebäude arbeitet währenddessen weiter), optional requires (Forschung), requires_buildings (fertige Gebäude) und requires_castle_level (Mindest-Burgstufe). mult = Faktor auf den Wert der Stufe 1 (Punkt-Pfade wie tower.attack, satisfaction.capacity, heal_aura.hp_per_sec; bei production/base_production gilt der Faktor für jede Ressource; Ganzzahlen wie housing, workers, gather_radius werden gerundet). set = Wert ersetzen (Objekte wie satisfaction werden zusammengeführt). Werte jeder Stufe beziehen sich auf Stufe 1, nicht auf die Stufe davor. Abbrechen erstattet cancel_refund, beim Abreissen zählen die Ausbaukosten mit demolish_refund mit.",
+		"requires_castle_level: Mindest-Burgstufe für den Bau (Standard 1), in levels für eine Ausbaustufe. Gebäudestufe III braucht Burgstufe 3. Die Königsburg selbst hat levels (Burgstufen 2–4) mit den Bedingungen requires_population (Mindestzahl Bewohner), requires_buildings (fertige Gebäude) und requires_upgraded_buildings (so viele Gebäude mindestens auf Stufe II, die Burg zählt nicht); level_names = Namen der Burgstufen (Weiler, Dorf, Stadt, Königssitz). Ein grösserer territory_radius der Burg vergrössert das Gebiet beim Ausbau.",
 		"summon_speed: Faktor auf das Beschwörungstempo in diesem Gebäude (Standard 1.0, Kaserne ab Stufe 2). research_speed: Faktor auf das Forschungstempo (Standard 1.0; zählt die beste Forschungsstätte, jede weitere +25 %). forge_discount: Rabatt auf die Schmiede-Verbesserungen (0.15 = 15 % billiger)."
 	],
 
@@ -29,6 +30,18 @@
 			"description": "Sitz des Königs. Lager für alle Ressourcen und Wohnraum.",
 			"size": [4, 4], "cost": {}, "build_time": 0, "player_buildable": false,
 			"housing": 6, "territory_radius": 14, "hp": 2000, "armor": 0.3, "sight": 9, "summons": ["scout"],
+			"level_names": ["Weiler", "Dorf", "Stadt", "Königssitz"],
+			"levels": [
+				{"cost": {"wood": 150, "stone": 120, "food": 60}, "build_time": 60, "requires_population": 10,
+				 "requires_buildings": ["storehouse", "farm"],
+				 "set": {"housing": 8, "territory_radius": 16}, "mult": {"hp": 1.25}},
+				{"cost": {"wood": 300, "stone": 320, "ore": 80, "mana": 60}, "build_time": 120, "requires_population": 20,
+				 "requires_buildings": ["barracks", "library", "tavern"], "requires_upgraded_buildings": 1,
+				 "set": {"housing": 10, "territory_radius": 18, "armor": 0.35}, "mult": {"hp": 1.5}},
+				{"cost": {"wood": 550, "stone": 600, "ore": 200, "food": 200, "mana": 90}, "build_time": 200, "requires_population": 35,
+				 "requires_buildings": ["temple", "forge"], "requires_upgraded_buildings": 3,
+				 "set": {"housing": 12, "territory_radius": 20, "armor": 0.4}, "mult": {"hp": 2.0}}
+			],
 			"dropoff": ["wood", "stone", "ore", "food", "mana"], "gather_radius": 10,
 			"color": "#c9a640",
 			"sprites": { "good": "res://assets/sprites/buildings/castle_good.png", "evil": "res://assets/sprites/buildings/castle_evil.png" },
@@ -56,7 +69,7 @@
 			"housing": 4, "territory_radius": 5,
 			"levels": [
 				{"cost": {"wood": 30, "stone": 8}, "build_time": 18, "mult": {"housing": 1.35, "hp": 1.25}},
-				{"cost": {"wood": 45, "stone": 18}, "build_time": 28, "mult": {"housing": 1.8, "hp": 1.5}}
+				{"requires_castle_level": 3, "cost": {"wood": 45, "stone": 18}, "build_time": 28, "mult": {"housing": 1.8, "hp": 1.5}}
 			],
 			"color": "#b5835a",
 			"sprites": { "good": "res://assets/sprites/buildings/house_good.png", "evil": "res://assets/sprites/buildings/house_evil.png" }
@@ -69,7 +82,7 @@
 			"dropoff": ["wood", "stone", "ore", "food"], "gather_radius": 12,
 			"levels": [
 				{"cost": {"wood": 45, "stone": 30}, "build_time": 25, "mult": {"gather_radius": 1.35, "hp": 1.25}},
-				{"cost": {"wood": 70, "stone": 55}, "build_time": 40, "mult": {"gather_radius": 1.7, "hp": 1.5}}
+				{"requires_castle_level": 3, "cost": {"wood": 70, "stone": 55}, "build_time": 40, "mult": {"gather_radius": 1.7, "hp": 1.5}}
 			],
 			"color": "#8d7a5c",
 			"sprites": { "good": "res://assets/sprites/buildings/storehouse_good.png", "evil": "res://assets/sprites/buildings/storehouse_evil.png" }
@@ -82,7 +95,7 @@
 			"dropoff": ["wood"], "gather_radius": 14, "gather_bonus": 0.25,
 			"levels": [
 				{"cost": {"wood": 35, "stone": 10}, "build_time": 18, "mult": {"gather_bonus": 1.4, "gather_radius": 1.15, "hp": 1.25}},
-				{"cost": {"wood": 55, "stone": 20}, "build_time": 28, "mult": {"gather_bonus": 1.8, "gather_radius": 1.3, "hp": 1.5}}
+				{"requires_castle_level": 3, "cost": {"wood": 55, "stone": 20}, "build_time": 28, "mult": {"gather_bonus": 1.8, "gather_radius": 1.3, "hp": 1.5}}
 			],
 			"color": "#7a5230",
 			"sprites": { "good": "res://assets/sprites/buildings/lumberyard_good.png", "evil": "res://assets/sprites/buildings/lumberyard_evil.png" }
@@ -95,7 +108,7 @@
 			"dropoff": ["stone"], "gather_radius": 14, "gather_bonus": 0.25,
 			"levels": [
 				{"cost": {"wood": 40, "stone": 12}, "build_time": 22, "mult": {"gather_bonus": 1.4, "gather_radius": 1.15, "hp": 1.25}},
-				{"cost": {"wood": 60, "stone": 28}, "build_time": 35, "mult": {"gather_bonus": 1.8, "gather_radius": 1.3, "hp": 1.5}}
+				{"requires_castle_level": 3, "cost": {"wood": 60, "stone": 28}, "build_time": 35, "mult": {"gather_bonus": 1.8, "gather_radius": 1.3, "hp": 1.5}}
 			],
 			"color": "#8a8a8a",
 			"sprites": { "good": "res://assets/sprites/buildings/quarry_good.png", "evil": "res://assets/sprites/buildings/quarry_evil.png" }
@@ -103,12 +116,12 @@
 		{
 			"id": "mine", "name": "Erzmine", "label": "Mine",
 			"description": "Bergleute liefern hier ab und arbeiten 25 % schneller. Nahe an Erzadern bauen.",
-			"size": [2, 2], "cost": { "wood": 40, "stone": 20 }, "build_time": 35,
+			"requires_castle_level": 2, "size": [2, 2], "cost": { "wood": 40, "stone": 20 }, "build_time": 35,
 			"territory_radius": 4,
 			"dropoff": ["ore"], "gather_radius": 14, "gather_bonus": 0.25,
 			"levels": [
 				{"cost": {"wood": 50, "stone": 40}, "build_time": 30, "mult": {"gather_bonus": 1.4, "gather_radius": 1.15, "hp": 1.25}},
-				{"cost": {"wood": 80, "stone": 70}, "build_time": 48, "mult": {"gather_bonus": 1.8, "gather_radius": 1.3, "hp": 1.5}}
+				{"requires_castle_level": 3, "cost": {"wood": 80, "stone": 70}, "build_time": 48, "mult": {"gather_bonus": 1.8, "gather_radius": 1.3, "hp": 1.5}}
 			],
 			"color": "#4f6a8a",
 			"sprites": { "good": "res://assets/sprites/buildings/mine_good.png", "evil": "res://assets/sprites/buildings/mine_evil.png" }
@@ -121,7 +134,7 @@
 			"dropoff": ["food"], "gather_radius": 14, "gather_bonus": 0.25,
 			"levels": [
 				{"cost": {"wood": 30, "stone": 8}, "build_time": 18, "mult": {"gather_bonus": 1.4, "gather_radius": 1.15, "hp": 1.25}},
-				{"cost": {"wood": 45, "stone": 18}, "build_time": 28, "mult": {"gather_bonus": 1.8, "gather_radius": 1.3, "hp": 1.5}}
+				{"requires_castle_level": 3, "cost": {"wood": 45, "stone": 18}, "build_time": 28, "mult": {"gather_bonus": 1.8, "gather_radius": 1.3, "hp": 1.5}}
 			],
 			"color": "#6b7d3a",
 			"sprites": { "good": "res://assets/sprites/buildings/hunter_good.png", "evil": "res://assets/sprites/buildings/hunter_evil.png" }
@@ -135,7 +148,7 @@
 			"biome_efficiency": { "plains": 1.0, "forest": 0.7, "desert": 0.35 },
 			"levels": [
 				{"cost": {"wood": 45, "stone": 15}, "build_time": 25, "mult": {"production": 1.35, "hp": 1.25}},
-				{"cost": {"wood": 70, "stone": 30}, "build_time": 40, "mult": {"production": 1.8, "hp": 1.5}}
+				{"requires_castle_level": 3, "cost": {"wood": 70, "stone": 30}, "build_time": 40, "mult": {"production": 1.8, "hp": 1.5}}
 			],
 			"color": "#c8b04a",
 			"sprites": { "good": "res://assets/sprites/buildings/farm_good.png", "evil": "res://assets/sprites/buildings/farm_evil.png" }
@@ -143,13 +156,13 @@
 		{
 			"id": "mana_well", "name": "Manabrunnen", "label": "Mana",
 			"description": "Muss auf einer Manaquelle stehen. Erzeugt etwas Mana, mit Manawirkern deutlich mehr.",
-			"size": [2, 2], "cost": { "wood": 30, "stone": 30 }, "build_time": 40,
+			"requires_castle_level": 2, "size": [2, 2], "cost": { "wood": 30, "stone": 30 }, "build_time": 40,
 			"territory_radius": 4,
 			"workers": 2, "job": "mana_worker", "production": { "mana": 0.08 }, "base_production": { "mana": 0.03 },
 			"requires_deposit": "mana_spring",
 			"levels": [
 				{"cost": {"wood": 35, "stone": 55}, "build_time": 35, "mult": {"production": 1.35, "base_production": 1.35, "hp": 1.25}},
-				{"cost": {"wood": 60, "stone": 90}, "build_time": 55, "mult": {"production": 1.8, "base_production": 1.8, "hp": 1.5}}
+				{"requires_castle_level": 3, "cost": {"wood": 60, "stone": 90}, "build_time": 55, "mult": {"production": 1.8, "base_production": 1.8, "hp": 1.5}}
 			],
 			"color": "#7d55d6",
 			"sprites": { "good": "res://assets/sprites/buildings/mana_well_good.png", "evil": "res://assets/sprites/buildings/mana_well_evil.png" }
@@ -157,12 +170,12 @@
 		{
 			"id": "barracks", "name": "Kaserne", "label": "Kas.",
 			"description": "Hier beschwört der König Schwertkämpfer, Bogenschützen und – nach Forschung – Speerträger, Armbrustschützen, schwere Fusstruppen und Elitekrieger. Wird mit Mana errichtet.",
-			"size": [2, 2], "cost": { "wood": 60, "stone": 40, "mana": 30 }, "build_time": 45,
+			"requires_castle_level": 2, "size": [2, 2], "cost": { "wood": 60, "stone": 40, "mana": 30 }, "build_time": 45,
 			"territory_radius": 4, "hp": 600,
 			"summons": ["fighter", "spearman", "archer", "crossbow", "heavy", "elite"],
 			"levels": [
 				{"cost": {"wood": 80, "stone": 70, "mana": 30}, "build_time": 40, "set": {"summon_speed": 1.35, "armor": 0.15}, "mult": {"hp": 1.35}},
-				{"cost": {"wood": 140, "stone": 110, "ore": 20, "mana": 50}, "build_time": 60, "set": {"summon_speed": 1.8, "armor": 0.25}, "mult": {"hp": 1.8}}
+				{"requires_castle_level": 3, "cost": {"wood": 140, "stone": 110, "ore": 20, "mana": 50}, "build_time": 60, "set": {"summon_speed": 1.8, "armor": 0.25}, "mult": {"hp": 1.8}}
 			],
 			"menu": "military", "color": "#8c3b3b",
 			"sprites": { "good": "res://assets/sprites/buildings/barracks_good.png", "evil": "res://assets/sprites/buildings/barracks_evil.png" }
@@ -171,7 +184,7 @@
 			"id": "infirmary", "name": "Krankenstation", "label": "Heil",
 			"description": "Beschwört Heiler. Eigene Einheiten in der Nähe erholen sich schneller. Wird mit Mana errichtet. Muss erforscht werden (Forschung R, Magie: Heilkunde).",
 			"requires": ["building:infirmary"],
-			"size": [2, 2], "cost": { "wood": 50, "stone": 20, "mana": 25 }, "build_time": 40,
+			"requires_castle_level": 3, "size": [2, 2], "cost": { "wood": 50, "stone": 20, "mana": 25 }, "build_time": 40,
 			"territory_radius": 4, "hp": 400,
 			"summons": ["medic"],
 			"heal_aura": { "radius": 4, "hp_per_sec": 3 },
@@ -182,11 +195,11 @@
 			"id": "library", "name": "Bibliothek", "names": { "good": "Bibliothek", "evil": "Dunkles Archiv" },
 			"label": "Bib.", "labels": { "good": "Bib.", "evil": "Archiv" },
 			"description": "Forschungsstätte: hier wird geforscht (Forschung mit R). Jede weitere forscht 25 % schneller.",
-			"size": [2, 2], "cost": { "wood": 40, "stone": 80, "mana": 10 }, "build_time": 50,
+			"requires_castle_level": 2, "size": [2, 2], "cost": { "wood": 40, "stone": 80, "mana": 10 }, "build_time": 50,
 			"territory_radius": 4, "hp": 500, "research": true,
 			"levels": [
 				{"cost": {"wood": 60, "stone": 120, "mana": 20}, "build_time": 45, "set": {"research_speed": 1.35}, "mult": {"hp": 1.3}},
-				{"cost": {"wood": 100, "stone": 200, "mana": 30}, "build_time": 70, "set": {"research_speed": 1.8}, "mult": {"hp": 1.6}}
+				{"requires_castle_level": 3, "cost": {"wood": 100, "stone": 200, "mana": 30}, "build_time": 70, "set": {"research_speed": 1.8}, "mult": {"hp": 1.6}}
 			],
 			"menu": "military", "color": "#5d6fb3",
 			"sprites": { "good": "res://assets/sprites/buildings/library_good.png", "evil": "res://assets/sprites/buildings/library_evil.png" }
@@ -196,7 +209,7 @@
 			"label": "Helden", "labels": { "good": "Helden", "evil": "Schatten" },
 			"description": "Hier werden Helden angeworben (Heldenfenster mit G) und ausgebildet. Nur eine pro Reich, braucht eine Kaserne.",
 			"requires_buildings": ["barracks"], "max_per_kingdom": 1,
-			"size": [3, 3], "cost": { "wood": 120, "stone": 150, "ore": 40, "mana": 40 }, "build_time": 70,
+			"requires_castle_level": 3, "size": [3, 3], "cost": { "wood": 170, "stone": 210, "ore": 55, "mana": 55 }, "build_time": 100,
 			"territory_radius": 4, "hp": 900, "hero_hall": true,
 			"menu": "military", "color": "#b8860b",
 			"sprites": { "good": "res://assets/sprites/buildings/hero_hall_good.png", "evil": "res://assets/sprites/buildings/hero_hall_evil.png" }
@@ -206,7 +219,7 @@
 			"label": "Spione", "labels": { "good": "Kundsch.", "evil": "Loge" },
 			"description": "Bildet Spione aus: sie beginnen eine Stufe höher. Erhöht die Wachsamkeit gegen fremde Spione und erlaubt einen Spion mehr. Nur eines pro Reich.",
 			"requires": ["building:spy_den"], "max_per_kingdom": 1,
-			"size": [2, 2], "cost": { "wood": 60, "stone": 50, "mana": 30 }, "build_time": 45,
+			"requires_castle_level": 3, "size": [2, 2], "cost": { "wood": 60, "stone": 50, "mana": 30 }, "build_time": 45,
 			"territory_radius": 4, "hp": 450, "summons": ["spy"], "spy_den": true,
 			"menu": "military", "color": "#4a4a6a",
 			"sprites": { "good": "res://assets/sprites/buildings/spy_den_good.png", "evil": "res://assets/sprites/buildings/spy_den_evil.png" }
@@ -215,12 +228,12 @@
 			"id": "tavern", "name": "Taverne", "names": { "good": "Taverne", "evil": "Schenke" },
 			"label": "Taverne", "labels": { "good": "Taverne", "evil": "Schenke" },
 			"description": "Hier treffen sich die Bewohner nach der Arbeit: +10 Zufriedenheit für bis zu 20 Bewohner (für mehr Bewohner weitere bauen).",
-			"size": [2, 2], "cost": { "wood": 60, "stone": 20, "food": 30 }, "build_time": 35,
+			"requires_castle_level": 2, "size": [2, 2], "cost": { "wood": 60, "stone": 20, "food": 30 }, "build_time": 35,
 			"territory_radius": 4, "hp": 350,
 			"satisfaction": { "bonus": 10, "capacity": 20, "cause": "Taverne" },
 			"levels": [
 				{"cost": {"wood": 80, "stone": 40, "food": 40}, "build_time": 30, "mult": {"satisfaction.capacity": 1.4, "satisfaction.bonus": 1.2, "hp": 1.3}},
-				{"cost": {"wood": 130, "stone": 70, "food": 60}, "build_time": 50, "mult": {"satisfaction.capacity": 1.8, "satisfaction.bonus": 1.4, "hp": 1.6}}
+				{"requires_castle_level": 3, "cost": {"wood": 130, "stone": 70, "food": 60}, "build_time": 50, "mult": {"satisfaction.capacity": 1.8, "satisfaction.bonus": 1.4, "hp": 1.6}}
 			],
 			"color": "#b5651d",
 			"sprites": { "good": "res://assets/sprites/buildings/tavern_good.png", "evil": "res://assets/sprites/buildings/tavern_evil.png" }
@@ -230,12 +243,12 @@
 			"label": "Tempel", "labels": { "good": "Tempel", "evil": "Schrein" },
 			"description": "Ort des Glaubens: +8 Zufriedenheit für bis zu 30 Bewohner. Seuchen breiten sich langsamer aus, Verräter und eingeschleuste Spione fallen eher auf. Braucht eine Forschungsstätte.",
 			"requires_buildings": ["library"],
-			"size": [3, 3], "cost": { "wood": 80, "stone": 120, "mana": 40 }, "build_time": 70,
+			"requires_castle_level": 3, "size": [3, 3], "cost": { "wood": 110, "stone": 170, "mana": 55 }, "build_time": 100,
 			"territory_radius": 5, "hp": 700,
 			"satisfaction": { "bonus": 8, "capacity": 30, "cause": "Tempel", "plague_spread_mult": 0.7, "discover_bonus": 0.25 },
 			"levels": [
 				{"cost": {"wood": 120, "stone": 180, "mana": 60}, "build_time": 60, "set": {"satisfaction": {"plague_spread_mult": 0.6, "discover_bonus": 0.35}}, "mult": {"satisfaction.capacity": 1.35, "satisfaction.bonus": 1.25, "hp": 1.3}},
-				{"cost": {"wood": 200, "stone": 300, "mana": 100}, "build_time": 95, "set": {"satisfaction": {"plague_spread_mult": 0.5, "discover_bonus": 0.45}}, "mult": {"satisfaction.capacity": 1.8, "satisfaction.bonus": 1.5, "hp": 1.6}}
+				{"requires_castle_level": 3, "cost": {"wood": 200, "stone": 300, "mana": 100}, "build_time": 95, "set": {"satisfaction": {"plague_spread_mult": 0.5, "discover_bonus": 0.45}}, "mult": {"satisfaction.capacity": 1.8, "satisfaction.bonus": 1.5, "hp": 1.6}}
 			],
 			"color": "#e8e0c8",
 			"sprites": { "good": "res://assets/sprites/buildings/temple_good.png", "evil": "res://assets/sprites/buildings/temple_evil.png" }
@@ -298,7 +311,7 @@
 		{
 			"id": "gate", "name": "Tor", "names": { "good": "Burgtor", "evil": "Schattentor" }, "label": "Tor",
 			"description": "Durchgang in der Mauer: eigene und verbündete Einheiten gehen hindurch, Feinde müssen es aufbrechen. Auf ein eigenes Mauerstück oder eine eigene Strasse setzen. Im Auswahlfenster verriegeln (dann nur noch eigene und Verbündete).",
-			"size": [1, 1], "cost": { "wood": 30, "stone": 25 }, "build_time": 20, "segment": true, "fortification": "gate",
+			"requires_castle_level": 2, "size": [1, 1], "cost": { "wood": 30, "stone": 25 }, "build_time": 20, "segment": true, "fortification": "gate",
 			"replaces": ["wall"], "allow_on_road": true, "hp": 1000, "armor": 0.5, "territory_radius": 0, "max_builders": 2,
 			"menu": "defense", "color": "#7a5a3a",
 			"sprites": { "good": "res://assets/sprites/buildings/gate_good.png", "evil": "res://assets/sprites/buildings/gate_evil.png" }
@@ -306,13 +319,13 @@
 		{
 			"id": "tower", "name": "Wachturm", "names": { "good": "Wachturm", "evil": "Dornenturm" }, "label": "Turm",
 			"description": "Schiesst selbsttätig auf Feinde in Reichweite (auch Monster) und hält nach fremden Spionen Ausschau. Gegen Katapulte (grössere Reichweite) hilft er wenig.",
-			"size": [2, 2], "cost": { "wood": 60, "stone": 90 }, "build_time": 50, "fortification": "tower", "territory_radius": 3,
+			"requires_castle_level": 2, "size": [2, 2], "cost": { "wood": 60, "stone": 90 }, "build_time": 50, "fortification": "tower", "territory_radius": 3,
 			"hp": 900, "armor": 0.4, "sight": 10, "loot": { "stone": 20 }, "kill_points": 3, "menu": "defense",
 			"tower": { "attack": 14, "interval": 1.4, "range": 7.0, "projectile": "arrow",
 			           "priority": { "ram": 0.5, "catapult": 0.6, "worker": 1.6, "caravan": 0.8 } },
 			"levels": [
 				{"cost": {"wood": 60, "stone": 160}, "build_time": 45, "set": {"armor": 0.45}, "mult": {"tower.attack": 1.35, "tower.range": 1.15, "hp": 1.3}},
-				{"cost": {"wood": 100, "stone": 250, "ore": 20}, "build_time": 70, "set": {"armor": 0.5}, "mult": {"tower.attack": 1.8, "tower.range": 1.3, "hp": 1.6}}
+				{"requires_castle_level": 3, "cost": {"wood": 100, "stone": 250, "ore": 20}, "build_time": 70, "set": {"armor": 0.5}, "mult": {"tower.attack": 1.8, "tower.range": 1.3, "hp": 1.6}}
 			],
 			"color": "#9a8f7a",
 			"sprites": { "good": "res://assets/sprites/buildings/tower_good.png", "evil": "res://assets/sprites/buildings/tower_evil.png" }
@@ -321,8 +334,8 @@
 			"id": "siege_workshop", "name": "Belagerungswerkstatt", "names": { "good": "Belagerungswerkstatt", "evil": "Kriegsschmiede" },
 			"label": "Werkst.", "labels": { "good": "Werkst.", "evil": "Schmiede" },
 			"description": "Hier entstehen Rammböcke und Katapulte. Muss erforscht werden (Militär: Belagerungskunst) und braucht eine Kaserne. Wird mit Mana errichtet.",
-			"requires": ["building:siege_workshop"], "requires_buildings": ["barracks"], "size": [3, 3],
-			"cost": { "wood": 150, "stone": 80, "ore": 40, "mana": 30 }, "build_time": 60, "territory_radius": 4, "hp": 800,
+			"requires": ["building:siege_workshop"], "requires_buildings": ["barracks"], "requires_castle_level": 4, "size": [3, 3],
+			"cost": { "wood": 210, "stone": 110, "ore": 55, "mana": 40 }, "build_time": 85, "territory_radius": 4, "hp": 800,
 			"summons": ["ram", "catapult"], "menu": "military", "color": "#6b4f2e",
 			"sprites": { "good": "res://assets/sprites/buildings/siege_workshop_good.png", "evil": "res://assets/sprites/buildings/siege_workshop_evil.png" }
 		},
@@ -331,11 +344,11 @@
 			"label": "Schmiede", "labels": { "good": "Schmiede", "evil": "Blutsch." },
 			"description": "Hier werden Waffen und Rüstungen der Truppen verbessert: je Truppenklasse drei Stufen (Auswahlfenster der Schmiede). Braucht eine Kaserne, nur eine pro Reich.",
 			"requires_buildings": ["barracks"], "max_per_kingdom": 1,
-			"size": [2, 2], "cost": { "wood": 70, "stone": 60, "ore": 20 }, "build_time": 45,
+			"requires_castle_level": 3, "size": [2, 2], "cost": { "wood": 100, "stone": 85, "ore": 30 }, "build_time": 65,
 			"territory_radius": 4, "hp": 650, "forge": true,
 			"levels": [
 				{"cost": {"wood": 90, "stone": 100, "ore": 40}, "build_time": 40, "set": {"forge_discount": 0.15}, "mult": {"hp": 1.3}},
-				{"cost": {"wood": 150, "stone": 160, "ore": 70}, "build_time": 65, "set": {"forge_discount": 0.3}, "mult": {"hp": 1.6}}
+				{"requires_castle_level": 3, "cost": {"wood": 150, "stone": 160, "ore": 70}, "build_time": 65, "set": {"forge_discount": 0.3}, "mult": {"hp": 1.6}}
 			],
 			"menu": "military", "color": "#7a4b2a",
 			"sprites": { "good": "res://assets/sprites/buildings/forge_good.png", "evil": "res://assets/sprites/buildings/forge_evil.png" }
@@ -345,7 +358,7 @@
 			"label": "Stall", "labels": { "good": "Stall", "evil": "Zwinger" },
 			"description": "Hier entstehen schnelle Reiter (GUT: Lanzenreiter, BÖSE: Wolfsreiter). Muss erforscht werden (Militär: Ritterorden bzw. Schreckensorden) und braucht eine Kaserne.",
 			"requires": ["building:stable"], "requires_buildings": ["barracks"],
-			"size": [3, 2], "cost": { "wood": 90, "stone": 40, "food": 40, "mana": 20 }, "build_time": 55,
+			"requires_castle_level": 3, "size": [3, 2], "cost": { "wood": 125, "stone": 55, "food": 55, "mana": 30 }, "build_time": 80,
 			"territory_radius": 4, "hp": 700,
 			"summons": ["cavalry"],
 			"menu": "military", "color": "#8a6d3b",
@@ -356,7 +369,7 @@
 			"label": "Magier", "labels": { "good": "Magier", "evil": "Hexer" },
 			"description": "Bildet Kampfmagier (BÖSE: Hexer) aus, die Gruppen mit Flächenschaden treffen. Muss erforscht werden (Magie: Lichtsegen bzw. Fluch der Schwäche) und braucht eine Forschungsstätte.",
 			"requires": ["building:mage_tower"], "requires_buildings": ["library"],
-			"size": [2, 2], "cost": { "wood": 50, "stone": 90, "mana": 40 }, "build_time": 60,
+			"requires_castle_level": 4, "size": [2, 2], "cost": { "wood": 70, "stone": 125, "mana": 55 }, "build_time": 85,
 			"territory_radius": 4, "hp": 650, "sight": 8,
 			"summons": ["battlemage"],
 			"menu": "military", "color": "#4b5fa8",

@@ -344,6 +344,11 @@ func missing_text(cost: Dictionary) -> String:
 	return "Es fehlen: " + DataDB.cost_to_text(missing)
 
 
+## Burgstufe (Stufe der Königsburg; ohne Burg 1)
+func get_castle_level() -> int:
+	return castle.level if is_instance_valid(castle) else 1
+
+
 ## Wohnplätze aller fertigen Gebäude
 func get_housing() -> int:
 	var total := 0

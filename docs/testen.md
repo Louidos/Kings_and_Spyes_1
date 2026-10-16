@@ -92,7 +92,7 @@ Prüfpunkt. Geprüft werden unter anderem:
 GODOT=/pfad/zu/godot tests/run_smoke.sh 900 tutorial=1
 ```
 
-Startet je Fraktion eine Tutorial-Partie und spielt alle 35 Schritte über dieselben Schnittstellen wie die
+Startet je Fraktion eine Tutorial-Partie und spielt alle 37 Schritte über dieselben Schnittstellen wie die
 Oberfläche durch (Gebäude setzen, Berufe, Beschwören, Befehle, Forschung, Zauber, Helden, Armeefenster, Haltung,
 Schmiede, Wertepunkte, Fenster, Geschenk, Schnellspeichern, Hilfe; `smoke_tutorial.gd`). Geprüft werden: „Weiter“ ist
 vor der Aufgabe gesperrt, jede Bedingung wird erfüllt, Rahmen und Pfeil finden ihr Ziel, Geschenke, der Schutz
@@ -508,7 +508,7 @@ Rauchtest: `tests/run_smoke.sh 900` (enthält `tests/smoke_army.gd`).
 ### Tutorial
 
 1. Hauptmenü → **Tutorial**: feste Partie (Seed „Lernreich“, kleine Karte, *Leicht*, ein Gegnerreich) mit der zuletzt
-   gewählten Fraktion. Rechts erscheint das Tutorial-Fenster mit Kapitel, „Schritt 1/35“, Titel, Text und Aufgabe.
+   gewählten Fraktion. Rechts erscheint das Tutorial-Fenster mit Kapitel, „Schritt 1/37“, Titel, Text und Aufgabe.
 2. Ein pulsierender goldener Rahmen zeigt das Bedienelement (Baumenü-Knopf – liegt er in einem anderen Reiter, wird der
    Reiter gezeigt –, Knöpfe oben, Arbeitsverteilung, Minikarte, Auswahlfenster, Zauberleiste …), ein Pfeil die Stelle
    in der Welt (Burg, Manaquelle, nächstes Dorf; ausserhalb des Bildes am Rand). Klicks gehen durch Rahmen und Pfeil.
@@ -517,7 +517,7 @@ Rauchtest: `tests/run_smoke.sh 900` (enthält `tests/smoke_army.gd`).
    lassen sich **überspringen**.
 4. Bei einigen Schritten schenkt der Hofschatzmeister die nötigen Rohstoffe (einmal je Partie, auch nach „von vorn“
    nicht doppelt). Beim Schritt „Ränge und Wertepunkte“ steigt ein Krieger einmal auf.
-5. Kapitel (35 Schritte): Erste Schritte (Kamera, Zoom/Minikarte, Pause, Tempo) · Dein Dorf (Vorräte, Wohnhaus,
+5. Kapitel (37 Schritte): Erste Schritte (Kamera, Zoom/Minikarte, Pause, Tempo) · Dein Dorf (Vorräte, Wohnhaus,
    Bauernhof, Strassen, Berufe mit J, Manabrunnen) · Einheiten (Späher aus der Burg, Auswählen, Bewegen, Kaserne,
    Truppen, Armee mit Strg+1, Angriff-Vorrücken) · Armee und Truppen (Armeefenster mit T, alle Krieger mit Strg+A,
    Haltung, Schmiede mit einer Waffenstufe, Rang-Aufstieg und Wertepunkt) · Wissen und Magie (Bibliothek, Forschung
