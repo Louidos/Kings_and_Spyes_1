@@ -417,7 +417,7 @@ func _hero_test() -> void:
 			if g.spell_targeting.is_active():
 				if is_instance_valid(_test_wolf) and _test_wolf.is_alive():
 					g.spell_targeting._try_ability(_test_wolf.position)
-					_hero_check(not g.spell_targeting.is_active(), "Zielmodus nach dem Wirken noch aktiv")
+					_hero_check(not g.spell_targeting.is_active(), "Zielmodus nach dem Wirken noch aktiv (%s)" % str(g.spell_targeting.get("_reason")))
 				else:
 					# Der Wolf ist schon tot (z. B. selbst ausgelöster Lichtschlag): nur abbrechen
 					g.spell_targeting.cancel()
