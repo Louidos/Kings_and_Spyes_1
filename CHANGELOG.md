@@ -18,6 +18,10 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 ### Geändert
 
+- Jeder Held stellt eigene Bedingungen, bevor er sich anwerben lässt (Burgstufe, Gebäude, Forschung, besiegte Feinde,
+  zerstörte Monsterhöhlen). Gesperrte Helden stehen mit ✓/✗ je Bedingung im Heldenfenster; der erste Held jeder
+  Fraktion ist mit der Heldenhalle erreichbar, die übrigen deutlich später. Die KI hält sich an dieselben Bedingungen
+  (#7).
 - Neue Bewohner kommen nicht mehr von selbst: Bewerber stellen eigene Bedingungen, und man entscheidet, wen man
   aufnimmt. Jeder Bewerber hat Namen, Wunschberuf und 1–3 Bedingungen (✓/✗ im Bewerberfenster und im Reichsfenster,
   Reiter „Bewerber“), Fachleute arbeiten im Wunschberuf 20 % schneller. Die Taverne lockt mehr Bewerber an. Das

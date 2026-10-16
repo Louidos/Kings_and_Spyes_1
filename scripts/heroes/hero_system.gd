@@ -148,8 +148,18 @@ func recruit_cost(k: Kingdom, type_id: String) -> Dictionary:
 	return cost
 
 
-## "" = kann angeworben werden (Halle, Platz, Typ), sonst der Grund. Kosten und
-## Warteschlange prüft das SummonSystem.
+## Bedingungen des Heldentyps (heroes.json → requirements, Bausteine wie Requirements)
+func get_requirements(type_id: String) -> Array:
+	return DataDB.get_hero_type(type_id).get("requirements", [])
+
+
+## Sind alle Bedingungen des Heldentyps erfüllt?
+func requirements_met(k: Kingdom, type_id: String) -> bool:
+	return Requirements.all_met(get_requirements(type_id), k, game)
+
+
+## "" = kann angeworben werden (Halle, Platz, Typ, Bedingungen des Helden), sonst der Grund.
+## Kosten und Warteschlange prüft das SummonSystem.
 func can_recruit(k: Kingdom, type_id: String) -> String:
 	var h := DataDB.get_hero_type(type_id)
 	if h.is_empty():
@@ -166,6 +176,9 @@ func can_recruit(k: Kingdom, type_id: String) -> String:
 				return "Dieser Held dient dir bereits"
 		if _queued(k).has(type_id):
 			return "Dieser Held wird gerade angeworben"
+	var missing := Requirements.first_missing(get_requirements(type_id), k, game)
+	if not missing.is_empty():
+		return "Bedingung fehlt – " + missing.trim_prefix("Fehlt: ")
 	return ""
 
 

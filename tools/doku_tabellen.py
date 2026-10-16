@@ -504,8 +504,31 @@ def sec_helden():
         ab = "<br>".join("**%s** – %s" % (abil[a]["name"], abil[a].get("description", "")) for a in h["abilities"])
         st = h.get("stats", {})
         rows.append(["**%s**" % h["name"], fac, h.get("title", ""), "%s / %s" % (num(st.get("hp", 0)),
-                     num(st.get("attack", 0))), h.get("leadership_text", "–"), ab])
-    return table(["Held", "Fraktion", "Rolle", "Leben / Angriff", "Führung", "Fähigkeiten (C / V / B)"], rows)
+                     num(st.get("attack", 0))), hero_requirements(h), h.get("leadership_text", "–"), ab])
+    return table(["Held", "Fraktion", "Rolle", "Leben / Angriff", "Bedingungen", "Führung", "Fähigkeiten (C / V / B)"], rows)
+
+
+def hero_requirements(h):
+    research_names = {r["id"]: r["name"] for r in RESEARCH["research"]} if "research" in RESEARCH else {}
+    parts = []
+    for r in h.get("requirements", []):
+        t = r.get("type")
+        if t == "castle_level":
+            parts.append("Burgstufe %d" % r["min"])
+        elif t == "building":
+            name = faction_name(BUILDING_BY_ID[r["building"]], h["faction"] if h["faction"] in ("good", "evil") else "good")
+            parts.append(name + (" Stufe %d" % r["level"] if r.get("level", 1) > 1 else ""))
+        elif t == "research":
+            parts.append("Forschung " + research_names.get(r.get("research", ""), r.get("research", "")))
+        elif t == "kills":
+            parts.append("%d besiegte Feinde" % r["count"])
+        elif t == "lairs":
+            parts.append("%d zerstörte Höhlen" % r["count"])
+        elif t == "satisfaction":
+            parts.append("Zufriedenheit %d" % r["min"])
+        else:
+            parts.append(t)
+    return ", ".join(parts) or "–"
 
 
 def sec_ereignisse():

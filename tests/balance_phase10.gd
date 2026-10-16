@@ -116,6 +116,7 @@ func tick(t: float) -> void:
 		_next_sample += sample
 		_sample(t)
 	_check_milestones(t)
+	_check_heroes(t)
 	if _sizes_half.is_empty() and t >= _seconds * 0.5:
 		_sizes_half = _collect_sizes()
 
@@ -251,6 +252,25 @@ func _check_milestones(t: float) -> void:
 			print("[balance] PRÜFUNG OK t=1800: ausgebaute Gebäude der KI (%s)" % ", ".join(names))
 		else:
 			push_error("[balance] PRÜFUNG FEHLER t=1800: kein KI-Reich hat ein ausgebautes Gebäude (%s)" % ", ".join(names))
+
+
+## Nach 60 Minuten (nur in langen Läufen): mindestens ein KI-Reich hat einen Helden angeworben
+## (die Helden stellen eigene Bedingungen, heroes.json → requirements)
+func _check_heroes(t: float) -> void:
+	if t < 3600.0 or _milestones_done.has(3600):
+		return
+	_milestones_done[3600] = true
+	var parts: PackedStringArray = []
+	var best := 0
+	for k in game.kingdoms:
+		var kk: Kingdom = k
+		if kk.controller == "ai" and not kk.defeated:
+			parts.append("%s %d" % [kk.display_name, kk.heroes.size()])
+			best = maxi(best, kk.heroes.size())
+	if best > 0:
+		print("[balance] PRÜFUNG OK t=3600: KI wirbt Helden an (%s)" % ", ".join(parts))
+	else:
+		push_error("[balance] PRÜFUNG FEHLER t=3600: kein KI-Reich hat einen Helden (%s)" % ", ".join(parts))
 
 
 ## "Reich 2, Reich 3" mit Burgstufe je KI-Reich

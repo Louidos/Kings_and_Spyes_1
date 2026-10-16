@@ -574,9 +574,12 @@ Helden sind starke Einzelkämpfer, die mit der Zeit aufsteigen, Fähigkeiten hab
 
 ![Heldenfenster](bilder/helden.jpg)
 
-1. **Heldenhalle** bauen (BÖSE: *Halle der Schatten*; braucht eine Kaserne, eine je Reich).
-2. **G** oder Knopf „Helden“ → Reiter „Anwerben“ (oder die Halle anklicken). Jeder Heldentyp einmal, höchstens drei
-   Helden. Der erste kostet 150 Nahrung, 80 Erz und 60 Mana, jeder weitere 100 Nahrung, 40 Erz und 15 Mana mehr.
+1. **Heldenhalle** bauen (BÖSE: *Halle der Schatten*; ab Burgstufe 3, braucht eine Kaserne, eine je Reich).
+2. **G** oder Knopf „Helden“ → Reiter „Anwerben“ (oder die Halle anklicken). **Jeder Held stellt eigene
+   Bedingungen** (Spalte „Bedingungen“ unten), bevor er sich anwerben lässt: Burgstufe, bestimmte Gebäude, eine
+   Forschung oder Erfolge im Kampf (besiegte Feinde, zerstörte Monsterhöhlen). Im Heldenfenster stehen sie je Held mit
+   ✓ oder ✗; gesperrte Helden bleiben sichtbar. Der erste Held jeder Fraktion (Paladin bzw. Kriegsherr) kommt gleich
+   mit der Heldenhalle, die anderen deutlich später. Jeder Heldentyp einmal, höchstens drei Helden. Der erste kostet 150 Nahrung, 80 Erz und 60 Mana, jeder weitere 100 Nahrung, 40 Erz und 15 Mana mehr.
 3. Der Held erscheint in der **Heldenleiste** links (Klick wählt, Doppelklick springt hin, Rechtsklick öffnet das
    Heldenfenster).
 4. **Fähigkeiten:** C / V / B oder die Knöpfe im Auswahlfenster – auch wenn er mit seiner Armee ausgewählt ist (Tab
@@ -593,14 +596,14 @@ Helden sind starke Einzelkämpfer, die mit der Zeit aufsteigen, Fähigkeiten hab
 
 <!-- AUTO:helden -->
 
-| Held | Fraktion | Rolle | Leben / Angriff | Führung | Fähigkeiten (C / V / B) |
-|---|---|---|---|---|---|
-| **Paladin** | GUT | Heiliger Krieger – hält die Linie und heilt | 420 / 26 | Rüstung +5 % für Truppen in der Nähe | **Lichtschlag** – Ein Schlag aus reinem Licht trifft einen Feind.<br>**Heilige Aura** – Eigene Truppen in der Nähe heilen sich ständig.<br>**Göttlicher Schild** – Der Paladin nimmt eine Weile viel weniger Schaden. |
-| **Sternenmagierin** | GUT | Magierin – Flächenschaden aus der Ferne | 340 / 24 | Erholung +1 Leben/s für Truppen in der Nähe | **Sternenfeuer** – Sternenfeuer fällt auf alle Feinde im Kreis.<br>**Sternensprung** – Die Magierin springt an eine freie Stelle in Reichweite.<br>**Sternenquelle** – Solange die Magierin lebt, fasst das Reich mehr Mana und die Burg erzeugt Mana. |
-| **Waldläuferin** | GUT | Bogenschützin – schnell, weitsichtig, treibt an | 360 / 22 | Tempo +10 % für Truppen in der Nähe | **Pfeilhagel** – Ein Pfeilhagel trifft alle Feinde im Kreis und bremst sie.<br>**Schlachtruf** – Eigene Truppen in der Nähe greifen eine Weile schneller an.<br>**Adlerauge** – Mehr Reichweite und Sicht. |
-| **Nekromant** | BÖSE | Totenbeschwörer – Seelenblitze und Skelette | 360 / 24 | Feinde in der Nähe −5 % Angriff | **Seelenblitz** – Ein Blitz aus gestohlenen Seelen trifft einen Feind.<br>**Totenerweckung** – Skelette erheben sich und kämpfen eine halbe Minute lang.<br>**Fluchaura** – Feinde in der Nähe sind schlechter geschützt. |
-| **Kriegsherr** | BÖSE | Orkhäuptling – Nahkampf, Kriegsschrei | 460 / 30 | Zusätzlich +5 % Angriff für Truppen in der Nähe | **Wirbelwind** – Der Kriegsherr wirbelt herum und trifft alle Feinde um sich.<br>**Kriegsschrei** – Eigene Truppen in der Nähe schlagen eine Weile härter zu.<br>**Blutzoll** – Ein Teil des ausgeteilten Schadens heilt den Kriegsherrn. |
-| **Klingentänzerin** | BÖSE | Blutelfen-Assassine – springt, vergiftet | 300 / 28 | Truppen in der Nähe bemerken Feinde 1 Feld früher | **Schattenschritt** – Springt neben einen Feind und trifft ihn.<br>**Giftklinge** – Vergiftet einen Feind: er verliert eine Weile Leben.<br>**Ausweichen** – Die Klingentänzerin weicht Schlägen aus: mehr Rüstung. |
+| Held | Fraktion | Rolle | Leben / Angriff | Bedingungen | Führung | Fähigkeiten (C / V / B) |
+|---|---|---|---|---|---|---|
+| **Paladin** | GUT | Heiliger Krieger – hält die Linie und heilt | 420 / 26 | Burgstufe 3, Kaserne | Rüstung +5 % für Truppen in der Nähe | **Lichtschlag** – Ein Schlag aus reinem Licht trifft einen Feind.<br>**Heilige Aura** – Eigene Truppen in der Nähe heilen sich ständig.<br>**Göttlicher Schild** – Der Paladin nimmt eine Weile viel weniger Schaden. |
+| **Sternenmagierin** | GUT | Magierin – Flächenschaden aus der Ferne | 340 / 24 | Burgstufe 3, Bibliothek Stufe 2, Forschung Lichtsegen | Erholung +1 Leben/s für Truppen in der Nähe | **Sternenfeuer** – Sternenfeuer fällt auf alle Feinde im Kreis.<br>**Sternensprung** – Die Magierin springt an eine freie Stelle in Reichweite.<br>**Sternenquelle** – Solange die Magierin lebt, fasst das Reich mehr Mana und die Burg erzeugt Mana. |
+| **Waldläuferin** | GUT | Bogenschützin – schnell, weitsichtig, treibt an | 360 / 22 | Burgstufe 3, 2 zerstörte Höhlen, 30 besiegte Feinde | Tempo +10 % für Truppen in der Nähe | **Pfeilhagel** – Ein Pfeilhagel trifft alle Feinde im Kreis und bremst sie.<br>**Schlachtruf** – Eigene Truppen in der Nähe greifen eine Weile schneller an.<br>**Adlerauge** – Mehr Reichweite und Sicht. |
+| **Nekromant** | BÖSE | Totenbeschwörer – Seelenblitze und Skelette | 360 / 24 | Burgstufe 3, Dunkles Archiv Stufe 2, Forschung Fluch der Schwäche | Feinde in der Nähe −5 % Angriff | **Seelenblitz** – Ein Blitz aus gestohlenen Seelen trifft einen Feind.<br>**Totenerweckung** – Skelette erheben sich und kämpfen eine halbe Minute lang.<br>**Fluchaura** – Feinde in der Nähe sind schlechter geschützt. |
+| **Kriegsherr** | BÖSE | Orkhäuptling – Nahkampf, Kriegsschrei | 460 / 30 | Burgstufe 3, Kaserne | Zusätzlich +5 % Angriff für Truppen in der Nähe | **Wirbelwind** – Der Kriegsherr wirbelt herum und trifft alle Feinde um sich.<br>**Kriegsschrei** – Eigene Truppen in der Nähe schlagen eine Weile härter zu.<br>**Blutzoll** – Ein Teil des ausgeteilten Schadens heilt den Kriegsherrn. |
+| **Klingentänzerin** | BÖSE | Blutelfen-Assassine – springt, vergiftet | 300 / 28 | Burgstufe 4, Schattenloge, 40 besiegte Feinde | Truppen in der Nähe bemerken Feinde 1 Feld früher | **Schattenschritt** – Springt neben einen Feind und trifft ihn.<br>**Giftklinge** – Vergiftet einen Feind: er verliert eine Weile Leben.<br>**Ausweichen** – Die Klingentänzerin weicht Schlägen aus: mehr Rüstung. |
 
 <!-- /AUTO:helden -->
 
