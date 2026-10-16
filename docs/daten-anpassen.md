@@ -138,6 +138,8 @@ Neutrale Völker zusätzlich: `village_title`, `village_names`, `produces` (je M
 | `requires` / `requires_buildings` / `requires_deposit` | Forschung, Gebäude, Vorkommen als Voraussetzung |
 | `menu` | Reiter im Baumenü: `economy`, `military`, `defense` |
 | `max_per_kingdom`, `satisfaction`, `heal_aura`, `tower`, `forge`, `research` … | Sonderfunktionen (siehe `_hinweis`) |
+| `levels` | Ausbaustufen ab Stufe II: je Stufe `cost`, `build_time` (Arbeit der Bauarbeiter), `mult` (Faktor auf die Werte der Stufe I, z. B. `{"housing": 1.35, "tower.attack": 1.35}`), `set` (Wert ersetzen), optional `requires`, `requires_buildings`, `requires_castle_level` |
+| `summon_speed`, `research_speed`, `forge_discount` | Beschwörungs- und Forschungstempo (Faktor), Rabatt in der Schmiede – meist nur in `levels.set` |
 | `sprites` / `sprite` | Grafik je Fraktion (siehe [Grafiken](grafiken.md)) |
 
 ### jobs.json
@@ -220,7 +222,8 @@ Je Forschung: `faction`, `branch` (`military`, `magic`, `economy`, `mana`), `tie
 `difficulty.<stufe>` (Anzahl Reiche je Kartengrösse `kingdoms`, erste Welle `first_attack_minutes`,
 `patience_minutes`, `wave_interval`, `wave_min_size`, `first_wave_max`, `army_size_mult`, `awareness_mult`,
 `retreat_ratio`), `build_order`, `jobs`, `research`, `army` (`composition`, `size_by_minute`, `max_units`), `waves`,
-`rivalry` (`war_at`, `peace_at`), `forge`, `fortify`, `siege`, `routes`.
+`rivalry` (`war_at`, `peace_at`), `forge`, `fortify`, `siege`, `routes`, `upgrades` (Gebäude ausbauen: ab
+`min_minute`, Reihenfolge `order`, nur mit Überschuss `surplus_factor`, höchste Stufe je Minute `max_level_by_minute`).
 
 ### difficulties.json
 

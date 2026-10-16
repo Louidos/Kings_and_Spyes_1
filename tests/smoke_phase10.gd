@@ -427,6 +427,15 @@ func tick_roundtrip() -> void:
 				_compare(_quick_metrics, game.last_load_metrics, "Schnellladen")
 				_quick_until = GameClock.game_time + 30.0
 				_rt_state = "after_quick"
+		"continue", "after_quick":
+			# Der Rundlauf prüft das Weiterspielen, nicht den Ausgang von Kämpfen: Burg und König
+			# des Spielers bleiben heil (eine Niederlage hielte die Zeit an, der Test hinge)
+			_keep_player_alive()
+			if (game.player as Kingdom).defeated:
+				_fail("Spieler nach dem Laden gefallen (%s) – Rundlauf abgebrochen" % str(game.player.flags.get("defeat_reason", "?")))
+				_finish()
+				return
+	match _rt_state:
 		"continue":
 			var t := GameClock.game_time
 			if not _cont_checked and t >= _cont_start + 10.0:
@@ -611,6 +620,14 @@ func _s6_start() -> void:
 	if not err.is_empty():
 		_fail("Schnellladen: " + err)
 		_finish()
+
+
+func _keep_player_alive() -> void:
+	var k: Kingdom = game.player
+	if is_instance_valid(k.castle):
+		k.castle.hp = k.castle.max_hp
+	if is_instance_valid(k.king):
+		k.king.hp = k.king.max_hp
 
 
 func _finish() -> void:

@@ -657,6 +657,47 @@ static func _can_research(b: AIBrain, rs: ResearchSystem, id: String) -> bool:
 	return rs.can_start(b.k, id).is_empty() and b.can_spend(DataDB.get_research(id).get("cost", {}))
 
 
+## Gebäude ausbauen (ai.json → upgrades): dieselben Regeln wie beim Spieler
+## (BuildingSystem.can_upgrade/start_upgrade), nur mit übrigem Geld, Wirtschaft zuerst
+static func tick_building_upgrades(b: AIBrain, now: float) -> void:
+	var cfg: Dictionary = DataDB.ai("upgrades", {})
+	if cfg.is_empty() or not b.time_ok(now, float(cfg.get("min_minute", 8))):
+		return
+	# Auf ein neues Gebäude wird gespart: das geht vor
+	if not (b.st["build_waiting"] as Dictionary).is_empty():
+		return
+	var bs: BuildingSystem = b.game.building_system
+	var running := 0
+	for bld in b.k.buildings:
+		if bld.upgrading:
+			running += 1
+	if running >= int(cfg.get("max_parallel", 1)):
+		return
+	var max_level := 1
+	for pair in cfg.get("max_level_by_minute", [[0, 2]]):
+		if b.time_ok(now, float(pair[0])):
+			max_level = maxi(max_level, int(pair[1]))
+	var surplus := maxf(float(cfg.get("surplus_factor", 1.5)), 1.0)
+	for id in cfg.get("order", []):
+		var best: Building = null
+		for bld in b.k.buildings:
+			if bld.get_def_id() != str(id) or bld.level >= max_level or not bs.can_upgrade(bld, false).is_empty():
+				continue
+			if best == null or bld.level < best.level:
+				best = bld
+		if best == null:
+			continue
+		var cost: Dictionary = best.get_next_level_entry().get("cost", {})
+		var with_surplus := {}
+		for res_id in cost:
+			with_surplus[res_id] = float(cost[res_id]) * surplus
+		if not b.can_spend(with_surplus):
+			continue
+		if bs.start_upgrade(best):
+			b.log_first("first_upgrade", now)
+			return
+
+
 ## Kampfpunkte abwechselnd in Manaherz (mana_regen) und Manakristall (mana_cap)
 static func tick_upgrades(b: AIBrain) -> void:
 	if not bool(DataDB.ai("army.kill_point_upgrades", true)):

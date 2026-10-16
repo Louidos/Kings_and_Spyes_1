@@ -38,8 +38,23 @@ static func migrate(data: Dictionary, from_version: int) -> Dictionary:
 	var v := from_version
 	while v < SaveGame.SAVE_VERSION:
 		match v:
-			# Beispiel für spätere Versionen: 1: d = _v1_to_v2(d)
+			1:
+				d = _v1_to_v2(d)
 			_:
 				pass
 		v += 1
+	return d
+
+
+## Version 1 → 2: Ausbaustufen. Gebäude ohne Stufe stehen auf Stufe 1 (die Königsburg damit auf
+## Burgstufe 1), ohne laufenden Ausbau.
+static func _v1_to_v2(d: Dictionary) -> Dictionary:
+	for bd in d.get("buildings", []):
+		if bd is Dictionary:
+			var b: Dictionary = bd
+			if not b.has("level"):
+				b["level"] = 1
+			if not b.has("upgrading"):
+				b["upgrading"] = false
+				b["upgrade_progress"] = 0.0
 	return d

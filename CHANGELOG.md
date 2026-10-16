@@ -5,6 +5,13 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 ## Unveröffentlicht
 
+### Hinzugefügt
+
+- Gebäude lassen sich auf Stufe 2 und 3 ausbauen und werden dabei stärker: Knopf „Ausbauen“ im Auswahlfenster,
+  Bauarbeiter erledigen den Ausbau, das Gebäude arbeitet weiter; Stufe als Schild I/II/III auf der Karte. Haus, Lager,
+  Sammelhütten, Bauernhof, Manabrunnen, Kaserne, Bibliothek, Taverne, Tempel, Wachturm und Schmiede. Die KI baut
+  ebenfalls aus, Wirtschaftsgebäude zuerst.
+
 ### Dokumentation und Repository
 
 - README als übersichtliche Startseite mit Bildschirmfotos, Funktionsüberblick, Schnellstart und wichtigsten Tasten.

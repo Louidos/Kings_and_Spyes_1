@@ -143,6 +143,8 @@ var _gate_row: HBoxContainer
 var _gate_button: Button
 
 var _demolish_button: Button
+## Ausbaustufen: "Ausbauen" bzw. "Ausbau abbrechen" (buildings.json → levels)
+var _upgrade_button: Button
 ## Zufriedenheit eines Bewohners bzw. Ø der Auswahl (Phase 8) und Flüchtlinge aufnehmen
 var _mood_row: ResourceBar.TipBox
 var _mood_icon: MoodIcon
@@ -292,6 +294,14 @@ func _ready() -> void:
 	_research_button.visible = false
 	_research_button.pressed.connect(_on_research_pressed)
 	vbox.add_child(_research_button)
+
+	_upgrade_button = Button.new()
+	_upgrade_button.focus_mode = Control.FOCUS_NONE
+	_upgrade_button.add_theme_font_size_override("font_size", FONT_SIZE)
+	_upgrade_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_upgrade_button.visible = false
+	_upgrade_button.pressed.connect(_on_upgrade_pressed)
+	vbox.add_child(_upgrade_button)
 
 	_demolish_button = Button.new()
 	_demolish_button.focus_mode = Control.FOCUS_NONE
@@ -452,6 +462,8 @@ func _show_building(b: Building) -> void:
 	var title := b.get_display_name()
 	if not b.constructed:
 		title += " (Baustelle)"
+	elif b.get_max_level() > 1:
+		title += " · Stufe %s" % DataDB.level_numeral(b.level)
 	_set_text(_title, title)
 	_show_owner(b.kingdom)
 	_stats_grid.visible = false
@@ -475,6 +487,10 @@ func _show_building(b: Building) -> void:
 		status = "Im Bau: %d %%" % roundi(b.get_progress_ratio() * 100.0)
 		if own and ws.get_job_count(k, "builder") == 0:
 			warn = "Wartet auf Bauarbeiter – weise Bauarbeiter zu (J)"
+	elif b.is_upgrading():
+		status = "Ausbau auf Stufe %s: %d %%" % [DataDB.level_numeral(b.level + 1), roundi(b.get_upgrade_ratio() * 100.0)]
+		if own and ws.get_job_count(k, "builder") == 0:
+			warn = "Ausbau wartet auf Bauarbeiter – weise Bauarbeiter zu (J)"
 	_set_text(_status, status)
 	_set_text(_warn, warn)
 
@@ -536,6 +552,8 @@ func _show_building(b: Building) -> void:
 		_worker_plus.disabled = idle == 0 or not b.has_free_slot()
 		_worker_plus.tooltip_text = tip
 
+	_show_upgrade(b, own)
+
 	# Abreissen / Bau abbrechen (nicht für die Burg)
 	var can_remove := own and b != b.kingdom.castle
 	_demolish_button.visible = can_remove
@@ -545,8 +563,52 @@ func _show_building(b: Building) -> void:
 		else:
 			_set_button_text(_demolish_button, "Abreissen" if b.constructed else "Bau abbrechen")
 		var refund := float(DataDB.eco("demolish_refund", 0.5)) if b.constructed else float(DataDB.eco("cancel_refund", 1.0))
-		_demolish_button.tooltip_text = "%s – du erhältst %d %% der Kosten zurück.\nZum Bestätigen zweimal klicken." % [
-			"Gebäude abreissen" if b.constructed else "Baustelle aufgeben", roundi(refund * 100.0)]
+		_demolish_button.tooltip_text = "%s – du erhältst %d %% der Kosten%s zurück.\nZum Bestätigen zweimal klicken." % [
+			"Gebäude abreissen" if b.constructed else "Baustelle aufgeben", roundi(refund * 100.0),
+			" (mit Ausbauten)" if b.level > 1 else ""]
+
+
+## Knopf "Ausbauen" (eigene, fertige Gebäude mit levels) bzw. "Ausbau abbrechen"
+func _show_upgrade(b: Building, own: bool) -> void:
+	var show_row := own and b.constructed and b.get_max_level() > 1
+	_upgrade_button.visible = show_row
+	if not show_row:
+		return
+	var bs: BuildingSystem = game.building_system
+	if b.is_upgrading():
+		_set_button_text(_upgrade_button, "Ausbau abbrechen")
+		_upgrade_button.disabled = false
+		_upgrade_button.tooltip_text = "Ausbau auf Stufe %s abbrechen – du erhältst %d %% der Ausbaukosten zurück." % [
+				DataDB.level_numeral(b.level + 1), roundi(float(DataDB.eco("cancel_refund", 1.0)) * 100.0)]
+		return
+	if b.level >= b.get_max_level():
+		_set_button_text(_upgrade_button, "Höchste Stufe (%s)" % DataDB.level_numeral(b.level))
+		_upgrade_button.disabled = true
+		_upgrade_button.tooltip_text = "Dieses Gebäude ist voll ausgebaut."
+		return
+	var next := b.level + 1
+	var entry := b.get_next_level_entry()
+	_set_button_text(_upgrade_button, "Ausbauen auf Stufe %s" % DataDB.level_numeral(next))
+	var reason := bs.can_upgrade(b)
+	_upgrade_button.disabled = not reason.is_empty()
+	var lines: PackedStringArray = ["Ausbau auf Stufe %s: %s · %d s Arbeit der Bauarbeiter" % [DataDB.level_numeral(next),
+			DataDB.cost_to_text(entry.get("cost", {})), roundi(float(entry.get("build_time", 0.0)))]]
+	lines.append_array(BuildingSystem.level_change_lines(b.def, DataDB.get_building_at_level(b.get_def_id(), next)))
+	lines.append("Das Gebäude arbeitet während des Ausbaus weiter.")
+	if not reason.is_empty():
+		lines.append("Gesperrt: " + reason)
+	_upgrade_button.tooltip_text = "\n".join(lines)
+
+
+func _on_upgrade_pressed() -> void:
+	var b := _valid_building()
+	if b == null or b.kingdom != game.player:
+		return
+	if b.is_upgrading():
+		game.building_system.cancel_upgrade(b)
+	else:
+		game.building_system.start_upgrade(b)
+	_refresh()
 
 
 ## Wohnraum, Annahme, Sammelradius, Produktion … (Phase-2-Inhalt)
@@ -1015,6 +1077,7 @@ func _show_unit(u: Unit) -> void:
 	_summon_box.visible = false
 	_worker_row.visible = false
 	_demolish_button.visible = false
+	_upgrade_button.visible = false
 	if own:
 		# Das Warnzeichen fehlt in manchen Schriften – "(!)" ist überall lesbar.
 		# Befehlstexte beginnen klein ("hält die Stellung"), als Zeile gross.
@@ -1116,6 +1179,7 @@ func _show_units(units: Array) -> void:
 	_worker_row.visible = false
 	_job_row.visible = false
 	_demolish_button.visible = false
+	_upgrade_button.visible = false
 
 	_actions.visible = true
 	_show_stance(units)

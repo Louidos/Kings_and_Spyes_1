@@ -150,7 +150,7 @@ Speicher-Schnittstelle `to_dict` / `from_dict` / `rebuild_runtime` ([Speichern](
 
 | System | Aufgabe |
 |---|---|
-| `BuildingSystem` | Bauen, Strassen, Linien (Mauern), Produktion, Abreissen, Reparatur, Übergabe von Gebäuden (`transfer_building`) |
+| `BuildingSystem` | Bauen, Strassen, Linien (Mauern), Produktion, Abreissen, Reparatur, Übergabe von Gebäuden (`transfer_building`), Ausbaustufen (`can_upgrade`, `start_upgrade`, `cancel_upgrade`; die Werte je Stufe rechnet `DataDB.get_building_at_level` vorab, `Building.def` zeigt immer auf die aktuelle Stufe) |
 | `UnitSystem` | Einheiten erzeugen, bewegen, Wegberechnung mit Zeitbudget, lange Wege in Abschnitten, Übergabe (`transfer_unit`) |
 | `WorkSystem` | Berufe, Sammeln, Bauen, Abliefern; Zwischenspeicher für erfolglose Vorkommen-Suchen |
 | `EconomySystem` | Nahrung, Hunger, Wachstum, Burg-Mana, laufende Kosten (`set_upkeep`) |
@@ -243,7 +243,7 @@ Jedes Dorf ist ein eigenes `Kingdom` (`controller = "neutral"`, Feld `people_id`
 - **`AIBrain`** hält nur Laufzeit – der Zustand liegt als einfache Werte in `Kingdom.ai_state`. Die Module sind
   statische Funktionen:
   - `AIEconomy` – Bauliste, reaktives Bauen, Bauplatzsuche mit Prüfbudget, Berufe (Soll-Verteilung
-    zwischengespeichert, Umverteilung gedrosselt), Forschung.
+    zwischengespeichert, Umverteilung gedrosselt), Forschung, Gebäude ausbauen (`tick_building_upgrades`).
   - `AIMilitary` – Beschwören, Helden, Zauber, Verteidigung, Lager räumen, Angriffswellen mit Sammeln, Marsch und
     Rückzug; `tick_forge` kauft Schmiede-Stufen.
   - `AIDiplomacy` – Dörfer umwerben, Späher, Spione, Reichstarnung.

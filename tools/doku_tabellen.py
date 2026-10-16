@@ -215,6 +215,77 @@ def sec_gebaeude():
         if b.get("player_buildable", True) is False)
 
 
+LEVEL_LABELS = {"housing": "Wohnraum", "workers": "Arbeitsplätze", "gather_radius": "Sammelradius",
+                "gather_bonus": "Sammeltempo", "production": "Ertrag", "base_production": "Grundertrag", "hp": "Leben",
+                "armor": "Rüstung", "tower.attack": "Angriff", "tower.range": "Reichweite",
+                "satisfaction.capacity": "versorgt", "satisfaction.bonus": "Zufriedenheit",
+                "summon_speed": "Beschwörungstempo", "research_speed": "Forschungstempo",
+                "forge_discount": "Schmiede günstiger", "heal_aura.hp_per_sec": "Heilung"}
+LEVEL_INT = {"housing", "workers", "gather_radius", "territory_radius", "satisfaction.capacity", "heal_aura.radius"}
+LEVEL_PERCENT = {"gather_bonus", "armor", "forge_discount"}
+
+
+def _dig(d, path):
+    for k in path.split("."):
+        if not isinstance(d, dict) or k not in d:
+            return None
+        d = d[k]
+    return d
+
+
+def level_effects(b, entry):
+    """Wirkung einer Ausbaustufe als Text (Werte wie im Spiel: Faktor auf Stufe I, dann set)."""
+    parts = []
+    for path, factor in entry.get("mult", {}).items():
+        base = _dig(b, path)
+        if base is None and path == "hp":
+            base = 300
+        label = LEVEL_LABELS.get(path, path)
+        if isinstance(base, dict) or base is None:
+            parts.append("%s ×%s" % (label, num(factor)))
+        elif path in LEVEL_INT:
+            parts.append("%s %d" % (label, round(base * factor)))
+        elif path in LEVEL_PERCENT:
+            parts.append("%s +%s" % (label, pct(base * factor)))
+        else:
+            parts.append("%s %s" % (label, num(round(base * factor, 1))))
+    for key, value in entry.get("set", {}).items():
+        if isinstance(value, dict):
+            if "plague_spread_mult" in value:
+                parts.append("Seuchen ×%s" % num(value["plague_spread_mult"]))
+            if "discover_bonus" in value:
+                parts.append("Entdeckung +%s" % pct(value["discover_bonus"]))
+            continue
+        label = LEVEL_LABELS.get(key, key)
+        if key.endswith("_speed"):
+            parts.append("%s +%s" % (label, pct(value - 1.0)))
+        elif key in LEVEL_PERCENT:
+            parts.append("%s %s" % (label, pct(value)))
+        else:
+            parts.append("%s %s" % (label, num(value)))
+    return ", ".join(parts)
+
+
+def sec_ausbau():
+    rows = []
+    for b in BUILDINGS:
+        levels = b.get("levels", [])
+        if not levels:
+            continue
+        cols = []
+        for i in range(2):
+            if i >= len(levels):
+                cols.append("–")
+                continue
+            e = levels[i]
+            text = "%s · %s s · %s" % (cost(e.get("cost", {})), num(e.get("build_time", 0)), level_effects(b, e))
+            if e.get("requires_castle_level"):
+                text += " · ab Burgstufe %d" % e["requires_castle_level"]
+            cols.append(text)
+        rows.append(["**%s**" % faction_name(b, "good")] + cols)
+    return table(["Gebäude", "Stufe II (Kosten · Arbeit · Wirkung)", "Stufe III"], rows)
+
+
 def sec_berufe():
     rows = []
     for j in JOBS:
@@ -408,7 +479,7 @@ def sec_monster():
 
 
 SECTIONS = {
-    "voelker": sec_voelker, "gebaeude": sec_gebaeude, "berufe": sec_berufe, "truppen": sec_truppen,
+    "voelker": sec_voelker, "gebaeude": sec_gebaeude, "ausbau": sec_ausbau, "berufe": sec_berufe, "truppen": sec_truppen,
     "konter": sec_konter, "raenge": sec_raenge, "schmiede": sec_schmiede, "skins": sec_skins,
     "forschung": sec_forschung, "zauber": sec_zauber, "helden": sec_helden, "ereignisse": sec_ereignisse,
     "schwierigkeit": sec_schwierigkeit, "monster": sec_monster,

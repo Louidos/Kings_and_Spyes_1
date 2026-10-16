@@ -36,6 +36,8 @@ var deposit_cfg: Dictionary = {}
 ## Gebäude (buildings.json)
 var buildings: Array = []
 var building_by_id: Dictionary = {}
+## Gebäudewerte je Ausbaustufe (buildings.json → levels): id -> [Werte Stufe 2, Werte Stufe 3, …]
+var building_level_defs: Dictionary = {}
 ## Berufe (jobs.json)
 var jobs: Array = []
 var job_by_id: Dictionary = {}
@@ -289,6 +291,35 @@ func get_deposit_by_id(id: String) -> Dictionary:
 
 func get_building(id: String) -> Dictionary:
 	return building_by_id.get(id, {})
+
+
+## Gebäudewerte auf einer Ausbaustufe (1 = Grundwerte aus buildings.json; zu hohe Stufen
+## werden auf die höchste begrenzt). Die Werte sind fertig gerechnet (mult/set angewendet).
+func get_building_at_level(id: String, level: int) -> Dictionary:
+	var list: Array = building_level_defs.get(id, [])
+	if level <= 1 or list.is_empty():
+		return get_building(id)
+	return list[mini(level, list.size() + 1) - 2]
+
+
+## Höchste Ausbaustufe eines Gebäudetyps (1 ohne levels)
+func get_building_max_level(id: String) -> int:
+	return 1 + (building_level_defs.get(id, []) as Array).size()
+
+
+## Eintrag aus levels, der auf diese Stufe führt (Kosten, Bauzeit, Bedingungen); {} für Stufe 1
+## oder unbekannte Stufen
+func get_building_level_entry(id: String, level: int) -> Dictionary:
+	var levels: Array = get_building(id).get("levels", [])
+	if level < 2 or level - 2 >= levels.size():
+		return {}
+	return levels[level - 2]
+
+
+## Stufe als römische Zahl (I, II, III, IV …)
+func level_numeral(level: int) -> String:
+	const NUMERALS := ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
+	return NUMERALS[clampi(level, 1, NUMERALS.size()) - 1] if level <= NUMERALS.size() else str(level)
 
 
 func get_job(id: String) -> Dictionary:
@@ -749,6 +780,76 @@ func _load_buildings() -> void:
 		if not b.has("dropoff"):
 			b["dropoff"] = []
 		building_by_id[b["id"]] = b
+	building_level_defs.clear()
+	for b in buildings:
+		_prepare_levels(b)
+
+
+## Werte je Ausbaustufe vorab berechnen (levels: mult auf die Werte der Stufe 1, dann set)
+func _prepare_levels(b: Dictionary) -> void:
+	var levels: Array = b.get("levels", []) if b.get("levels", []) is Array else []
+	b["levels"] = levels
+	var list: Array = []
+	for i in levels.size():
+		var entry: Dictionary = levels[i] if levels[i] is Dictionary else {}
+		var cost := {}
+		for k in entry.get("cost", {}):
+			cost[k] = float(entry["cost"][k])
+		entry["cost"] = cost
+		entry["build_time"] = maxf(float(entry.get("build_time", b.get("build_time", 10.0))), 0.01)
+		entry["requires_castle_level"] = int(entry.get("requires_castle_level", 0))
+		levels[i] = entry
+		var d: Dictionary = b.duplicate(true)
+		d.erase("levels")
+		d["level"] = i + 2
+		var mult: Dictionary = entry.get("mult", {})
+		for path in mult:
+			_mult_path(d, str(path), float(mult[path]))
+		var set_values: Dictionary = entry.get("set", {})
+		for key in set_values:
+			_merge_value(d, str(key), set_values[key])
+		d["housing"] = int(d.get("housing", 0))
+		d["workers"] = int(d.get("workers", 0))
+		d["gather_radius"] = int(d.get("gather_radius", 0))
+		list.append(d)
+	if not list.is_empty():
+		building_level_defs[b["id"]] = list
+
+
+## Ganzzahlige Gebäudewerte (werden nach einem Faktor gerundet)
+const LEVEL_INT_PATHS := ["housing", "workers", "gather_radius", "territory_radius", "satisfaction.capacity",
+		"heal_aura.radius"]
+
+
+func _mult_path(d: Dictionary, path: String, factor: float) -> void:
+	var keys := path.split(".")
+	var node: Dictionary = d
+	for i in keys.size() - 1:
+		if not (node.get(keys[i], null) is Dictionary):
+			push_warning("Gebäude '%s', levels: unbekannter Wert '%s'" % [d.get("id"), path])
+			return
+		node = node[keys[i]]
+	var last := keys[keys.size() - 1]
+	if not node.has(last):
+		push_warning("Gebäude '%s', levels: unbekannter Wert '%s'" % [d.get("id"), path])
+		return
+	if node[last] is Dictionary:
+		var table: Dictionary = node[last]
+		for res_id in table:
+			table[res_id] = float(table[res_id]) * factor
+	elif LEVEL_INT_PATHS.has(path):
+		node[last] = roundi(float(node[last]) * factor)
+	else:
+		node[last] = float(node[last]) * factor
+
+
+func _merge_value(d: Dictionary, key: String, value: Variant) -> void:
+	if value is Dictionary and d.get(key, null) is Dictionary:
+		var target: Dictionary = d[key]
+		for k in value:
+			_merge_value(target, str(k), value[k])
+	else:
+		d[key] = value.duplicate(true) if (value is Dictionary or value is Array) else value
 
 
 func _load_jobs() -> void:

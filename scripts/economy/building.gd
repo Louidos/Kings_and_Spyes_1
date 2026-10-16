@@ -10,10 +10,19 @@ extends Node2D
 
 ## Wird genau einmal ausgelöst, wenn der Bau fertig ist.
 signal finished(building: Building)
+## Ein Ausbau ist fertig (level ist schon die neue Stufe)
+signal upgraded(building: Building)
 
 ## Eindeutige Nummer innerhalb der Partie (für Spielstände und Reihenfolgen)
 var uid: int = 0
+## Werte der aktuellen Stufe (DataDB.get_building_at_level; Stufe 1 = buildings.json)
 var def: Dictionary = {}
+## Ausbaustufe (1 = Grundstufe, buildings.json → levels)
+var level := 1
+## Ausbau auf level + 1 läuft (bezahlt; die Bauarbeiter leisten upgrade_progress)
+var upgrading := false
+## Geleistete Ausbauarbeit in Sekunden
+var upgrade_progress := 0.0
 var kingdom: Kingdom
 ## Obere linke Kachel der Grundfläche
 var cell := Vector2i.ZERO
@@ -75,6 +84,7 @@ func setup(p_def: Dictionary, p_kingdom: Kingdom, p_cell: Vector2i, world: World
 	_tile_size = world.tile_size
 	name = "%s_%d_%d" % [def.get("id", "building"), cell.x, cell.y]
 	position = get_center()
+	level = 1
 	is_segment = bool(def.get("segment", false))
 	fort_kind = str(def.get("fortification", ""))
 	max_hp = compute_max_hp(kingdom)
@@ -172,9 +182,67 @@ func get_progress_ratio() -> float:
 	return 1.0 if constructed else clampf(progress / get_build_time(), 0.0, 1.0)
 
 
-## Fügt Bauarbeit hinzu. Gibt true zurück, wenn der Bau dadurch fertig wurde.
+# --- Ausbaustufen ---
+
+func get_def_id() -> String:
+	return str(def.get("id", ""))
+
+
+## Höchste Stufe dieses Gebäudetyps (1 = nicht ausbaubar)
+func get_max_level() -> int:
+	return DataDB.get_building_max_level(get_def_id())
+
+
+## Eintrag aus levels für die nächste Stufe ({} = höchste Stufe erreicht)
+func get_next_level_entry() -> Dictionary:
+	return DataDB.get_building_level_entry(get_def_id(), level + 1)
+
+
+## Nötige Ausbauarbeit für die nächste Stufe (Sekunden Arbeit eines Bauarbeiters)
+func get_upgrade_time() -> float:
+	return maxf(float(get_next_level_entry().get("build_time", 1.0)), 0.01)
+
+
+func get_upgrade_ratio() -> float:
+	return clampf(upgrade_progress / get_upgrade_time(), 0.0, 1.0) if upgrading else 0.0
+
+
+## Wird gerade ausgebaut (fertiges Gebäude, Ausbau bezahlt)?
+func is_upgrading() -> bool:
+	return constructed and upgrading
+
+
+## Stufe setzen: Werte der Stufe übernehmen, Leben behält seinen Anteil
+func set_level(new_level: int) -> void:
+	level = clampi(new_level, 1, get_max_level())
+	def = DataDB.get_building_at_level(get_def_id(), level)
+	var ratio := clampf(hp / maxf(max_hp, 1.0), 0.0, 1.0)
+	max_hp = compute_max_hp(kingdom)
+	hp = max_hp * ratio
+	queue_redraw()
+
+
+## Kosten, die bisher in das Gebäude geflossen sind: Baukosten und alle fertigen Ausbauten
+## (für die Rückerstattung beim Abreissen)
+func get_invested_cost() -> Dictionary:
+	var total: Dictionary = (DataDB.get_building(get_def_id()).get("cost", {}) as Dictionary).duplicate()
+	for lv in range(2, level + 1):
+		var cost: Dictionary = DataDB.get_building_level_entry(get_def_id(), lv).get("cost", {})
+		for res_id in cost:
+			total[res_id] = float(total.get(res_id, 0.0)) + float(cost[res_id])
+	return total
+
+
+## Fügt Bauarbeit hinzu. Gibt true zurück, wenn der Bau (oder Ausbau) dadurch fertig wurde.
 func add_work(amount: float) -> bool:
 	if constructed:
+		if not upgrading:
+			return false
+		upgrade_progress += amount
+		queue_redraw()
+		if upgrade_progress >= get_upgrade_time():
+			complete_upgrade()
+			return true
 		return false
 	progress += amount
 	queue_redraw()
@@ -192,6 +260,16 @@ func complete() -> void:
 	progress = get_build_time()
 	queue_redraw()
 	finished.emit(self)
+
+
+## Schliesst den laufenden Ausbau sofort ab (neue Stufe).
+func complete_upgrade() -> void:
+	if not is_upgrading():
+		return
+	upgrading = false
+	upgrade_progress = 0.0
+	set_level(level + 1)
+	upgraded.emit(self)
 
 
 ## Nimmt dieses (fertige) Gebäude die Ressource an?
@@ -247,6 +325,10 @@ func get_status_text() -> String:
 	if not constructed:
 		return "Im Bau: %d %%" % roundi(get_progress_ratio() * 100.0)
 	var parts: PackedStringArray = []
+	if get_max_level() > 1:
+		parts.append("Stufe %s" % DataDB.level_numeral(level))
+	if upgrading:
+		parts.append("Ausbau %d %%" % roundi(get_upgrade_ratio() * 100.0))
 	if fort_kind == "gate":
 		parts.append("verriegelt" if bool(extra.get("locked", false)) else "offen")
 	elif fort_kind == "tower":
@@ -289,6 +371,11 @@ func _draw() -> void:
 		draw_line(Vector2(rect.end.x, rect.position.y), Vector2(rect.position.x, rect.end.y), scaffold, 2.0)
 		SpriteDraw.draw_bar(self, Rect2(rect.position.x + 6, rect.end.y - 14, px.x - 12, 8),
 				get_progress_ratio(), Color(0.95, 0.8, 0.3))
+	if constructed and get_max_level() > 1:
+		_draw_level_badge(rect)
+	if upgrading:
+		SpriteDraw.draw_bar(self, Rect2(rect.position.x + 6, rect.end.y - 24, px.x - 12, 8),
+				get_upgrade_ratio(), Color(0.45, 0.85, 1.0))
 	if hit_flash > 0.0:
 		draw_rect(rect, Color(1, 0.3, 0.2, 0.35), true)
 	if constructed and (hp < max_hp or selected):
@@ -302,6 +389,21 @@ func _draw() -> void:
 		SpriteDraw.draw_bar(self, Rect2(rect.position.x + 6, rect.end.y - 12, px.x - 12, 6), r, Color(0.6, 0.5, 1.0))
 	if selected:
 		draw_rect(rect.grow(3.0), Color(1, 1, 0.6, 0.95), false, 3.0)
+
+
+## Kleines Schild oben links mit der Stufe (I/II/III); beim Ausbau mit Pfeil zur nächsten
+func _draw_level_badge(rect: Rect2) -> void:
+	var font := ThemeDB.fallback_font
+	var font_size := maxi(int(_tile_size * 0.28), 10)
+	var text := DataDB.level_numeral(level)
+	if upgrading:
+		text += "›" + DataDB.level_numeral(level + 1)
+	var text_size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
+	var box := Rect2(rect.position + Vector2(4, 4), text_size + Vector2(8, 2))
+	var gold := Color(0.95, 0.8, 0.35) if level > 1 else Color(0.85, 0.85, 0.85)
+	draw_rect(box, Color(0.08, 0.06, 0.04, 0.8), true)
+	draw_rect(box, gold, false, 1.5)
+	draw_string(font, box.position + Vector2(4, box.size.y - 4), text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, gold)
 
 
 ## Mauerstück oder Tor: Pfeiler mit Bändern zu benachbarten Befestigungen desselben
@@ -376,7 +478,7 @@ func to_dict() -> Dictionary:
 			"last_damaged_at": last_damaged_at, "summon_queue": summon_queue.duplicate(true),
 			"rally_point": rally_point, "has_rally": has_rally, "summon_count": summon_count,
 			"loot_factor": loot_factor, "biome_efficiency": biome_efficiency, "extra": extra.duplicate(true),
-			"worker_uids": worker_uids}
+			"worker_uids": worker_uids, "level": level, "upgrading": upgrading, "upgrade_progress": upgrade_progress}
 
 
 ## Kurz aufblitzen lassen (nach einem Treffer)

@@ -36,6 +36,8 @@ const SmokeArmy := preload("res://tests/smoke_army.gd")
 const SmokeTutorial := preload("res://tests/smoke_tutorial.gd")
 ## Truppen: Klassen, Konter, Schmiede, Ränge, Wertepunkte, Aussehen
 const SmokeTroops := preload("res://tests/smoke_troops.gd")
+## Ausbaustufen der Gebäude: Ausbau, Bauarbeiter, Werte, Abbruch, Abriss, Speichern
+const SmokeLevels := preload("res://tests/smoke_levels.gd")
 ## Bildschirmfotos der Oberfläche (ui_shots=1 shots=<ordner> win=1600x900)
 const UiShots := preload("res://tests/ui_shots.gd")
 
@@ -62,6 +64,7 @@ var _balance: RefCounted = null
 var _tutorial := false
 var _tut: RefCounted = null
 var _troops: RefCounted = null
+var _levels: RefCounted = null
 ## Bildschirmfotos der Oberfläche (ui_shots=1)
 var _ui_shots: RefCounted = null
 
@@ -119,6 +122,8 @@ func _process(_delta: float) -> void:
 		_p10.tick_roundtrip()
 		if _troops != null:
 			_troops.tick_after_load(_game, str(_p10.get("_rt_state")))
+		if _levels != null:
+			_levels.tick_after_load(_game, str(_p10.get("_rt_state")))
 		if _p10.get("finished") == true:
 			_phase = 4
 			_p10.report()
@@ -153,6 +158,7 @@ func _process(_delta: float) -> void:
 					_p9 = SmokePhase9.new(_game)
 				if _game.get("troop_system") != null:
 					_troops = SmokeTroops.new(self, _game)
+				_levels = SmokeLevels.new(self, _game)
 			# Passiv: nur der Bericht, was die KI von den neuen Truppen nutzt
 			if _passive and _game.get("troop_system") != null:
 				_troops = SmokeTroops.new(self, _game)
@@ -200,6 +206,8 @@ func _process(_delta: float) -> void:
 		if _troops != null:
 			_troops.set("ui_ready", _hero_step < 0)
 			_troops.tick(GameClock.game_time)
+		if _levels != null:
+			_levels.tick(GameClock.game_time)
 		if _p10 != null:
 			_p10.tick(GameClock.game_time, _hero_step < 0)
 		if _balance != null and GameClock.game_time >= _sim_seconds - 50.0:
@@ -243,6 +251,8 @@ func _report() -> void:
 		_pa.report()
 	if _troops != null:
 		_troops.report()
+	if _levels != null:
+		_levels.report()
 
 
 # ---------------------------------------------------------------------------

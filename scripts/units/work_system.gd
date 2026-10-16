@@ -79,6 +79,10 @@ func setup(p_game: Node) -> void:
 	building_system.building_completed.connect(func(_b: Building) -> void:
 		_local_version += 1
 		_building_version += 1)
+	# Ausbau fertig: Sammelradius und Arbeitsplätze können sich geändert haben
+	building_system.building_upgraded.connect(func(_b: Building) -> void:
+		_local_version += 1
+		_building_version += 1)
 	building_system.building_removed.connect(on_building_removed)
 	building_system.roads_changed.connect(_wake_all_builders)
 	# Gebiet gewechselt (Dorf aufgenommen, neues Gebäude): Sammelplätze neu suchen
@@ -350,7 +354,9 @@ func _on_arrived(u: Unit) -> void:
 		"build":
 			if _site_valid(u):
 				u.state = Unit.State.BUILDING
-				if u.target_building != null and u.target_building.constructed:
+				if u.target_building != null and u.target_building.is_upgrading():
+					u.activity = "baut aus: %s" % _site_name(u)
+				elif u.target_building != null and u.target_building.constructed:
 					u.activity = "repariert: %s" % _site_name(u)
 				else:
 					u.activity = "%s: %s" % [DataDB.get_job(u.job_id).get("activity", "baut"), _site_name(u)]
@@ -625,6 +631,9 @@ func _tick_build(u: Unit, dt: float) -> void:
 	var finished := false
 	if u.target_road.x >= 0:
 		finished = building_system.add_road_work(u.target_road, amount)
+	elif u.target_building.is_upgrading():
+		# Ausbau (wie eine Baustelle; das Gebäude arbeitet weiter)
+		finished = u.target_building.add_work(amount)
 	elif u.target_building.constructed:
 		# Reparatur (Phase 9): kostet Rohstoffe
 		var res := building_system.add_repair_work(u.target_building, amount)
@@ -647,8 +656,8 @@ func _site_valid(u: Unit) -> bool:
 	var b := u.target_building
 	if b == null or not is_instance_valid(b) or not b.is_inside_tree():
 		return false
-	# Baustelle oder Reparatur (fertig, aber beschädigt)
-	return not b.constructed or b.hp < b.max_hp - 0.01
+	# Baustelle, Ausbau oder Reparatur (fertig, aber beschädigt)
+	return not b.constructed or b.upgrading or b.hp < b.max_hp - 0.01
 
 
 ## Höchstzahl Bauarbeiter je Baustelle (Beruf, kleiner bei def.max_builders)

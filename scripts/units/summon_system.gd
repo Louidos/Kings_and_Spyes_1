@@ -124,7 +124,8 @@ func _on_sim_tick(dt: float) -> void:
 			if b.summon_queue.is_empty() or not b.constructed:
 				continue
 			var entry: Dictionary = b.summon_queue[0]
-			entry["progress"] = float(entry["progress"]) + dt * factor
+			# Ausbaustufe (buildings.json → summon_speed, z. B. Kaserne ab Stufe 2)
+			entry["progress"] = float(entry["progress"]) + dt * factor * float(b.def.get("summon_speed", 1.0))
 			b.queue_redraw()
 			if float(entry["progress"]) >= float(entry["time"]):
 				b.summon_queue.remove_at(0)
