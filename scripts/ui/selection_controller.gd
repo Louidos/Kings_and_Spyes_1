@@ -489,7 +489,8 @@ func _select_box(rect: Rect2, additive: bool) -> void:
 		if not is_instance_valid(o):
 			continue
 		var u: Unit = o
-		if u.inside != null or u.role == "king" or not u.is_alive() or not rect.has_point(u.position):
+		if u.inside != null or u.role == "king" or not u.is_alive() \
+				or not (rect.has_point(u.position) or rect.has_point(u.position + u.pick_offset())):
 			continue
 		all.append(u)
 		if (u.joins_fights or u.can_heal()) and u.job_id == "idle":
@@ -542,8 +543,9 @@ func _pick_unit(world: Vector2, hostile_only: bool = false) -> Unit:
 		var u: Unit = o
 		if u.inside != null or not u.is_alive():
 			continue
-		var r := maxf(base, u.get_radius())
-		var d := u.position.distance_squared_to(world)
+		# Die Figur steht über der Position: von der Mitte des Bilds aus messen
+		var r := maxf(base, u.pick_radius())
+		var d := (u.position + u.pick_offset()).distance_squared_to(world)
 		if d > r * r or d >= best_d:
 			continue
 		if hostile_only and not game.are_hostile(game.player, u.kingdom):

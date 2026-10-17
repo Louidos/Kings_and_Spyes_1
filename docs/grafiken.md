@@ -136,7 +136,10 @@ Einheiten bleibt das Zeichnen so billig wie mit den früheren Scheiben.
 **Echte Grafik einsetzen:** Liegt die Datei aus `sprite`/`sprites` (z. B. `assets/sprites/units/fighter_good.png`,
 `assets/sprites/heroes/hero_paladin.png`) vor, hat sie **immer Vorrang** vor der gezeichneten Figur. Für ein Bild,
 das zu den Figuren passt: 64 × 64, transparent, Figur von vorn, Füsse knapp über dem unteren Rand, Kopf im oberen
-Fünftel. Man kann Einheiten einzeln austauschen – gezeichnete und echte Figuren lassen sich mischen.
+Fünftel. Man kann Einheiten einzeln austauschen – gezeichnete und echte Figuren lassen sich mischen. Eine Heldengrafik
+erscheint ohne eigene Porträtdatei (`portrait` in `heroes.json`) auch im Heldenfenster und in der Heldenleiste.
+Gezeichnete Helden und Porträts werden in höherer Auflösung erzeugt (`figures.hero_size`, `figures.portrait_size`
+in `data/units.json`).
 
 ## Aussehen (Skins)
 

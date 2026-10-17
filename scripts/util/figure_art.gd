@@ -24,6 +24,14 @@ const SS := 2
 const FEET := 0.95
 ## Kopfoberkante einer Figur in Bildhöhen über den Füssen (für Rangabzeichen)
 const HEAD_TOP := 0.84
+## Oberkante je Figurenart, wenn sie von HEAD_TOP abweicht (Tiere, Geräte, Wagen)
+const TOP_BY_KIND := {"mounted": 0.8, "wolf": 0.5, "spider": 0.49, "golem": 0.8, "wyvern": 0.86, "spirit": 0.78,
+		"ram": 0.55, "catapult": 0.72, "caravan": 0.54}
+
+
+## Oberkante der Figur dieser Art in Bildhöhen über den Füssen
+static func head_top(kind: String) -> float:
+	return float(TOP_BY_KIND.get(kind, HEAD_TOP))
 
 const WOOD := Color(0.47, 0.32, 0.18)
 const WOOD_DARK := Color(0.32, 0.21, 0.12)
