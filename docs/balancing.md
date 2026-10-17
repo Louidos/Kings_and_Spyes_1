@@ -78,6 +78,7 @@ Nur Daten, kein Code (Details in [Daten anpassen](daten-anpassen.md)):
 | Startvorsprung der KI-Reiche | `ai.json` → `start_bonus` (Bewohner, Gebäude) |
 | Preise nach Angebot und Nachfrage | `trade.json` → `prices` (`reference_stock`, `elasticity`, `min_factor`, `max_factor`) |
 | Einstellbare Handelsrouten, Ruf je Lieferung | `trade.json` → `order` (`amount_steps`, `interval_steps`), `reputation_per_delivery`; KI: `ai.json` → `routes.order` |
+| Stationierte Truppen bei Verbündeten (Ruf, Abgaben, Hilferufe, KI) | `diplomacy.json` → `station` |
 | Wie schnell die KI den Spieler bemerkt | `espionage.json` → `awareness` (`rise_per_minute`, `rumour`, `discovered`, `patience_floor`) |
 | Stärke und Ertrag der Gegner, Startvorräte | `difficulties.json` |
 | Häufigkeit der Ereignisse | `events.json` (`chance_per_check`, Abstände, Abklingzeiten) |

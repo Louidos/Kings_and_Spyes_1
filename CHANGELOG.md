@@ -12,6 +12,10 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 - Dörfer sind grösser und wachsen im Lauf der Partie; gegnerische Reiche starten grösser und bauen weiter aus (#21).
 - Zwei neue Helden je Fraktion mit eigenen Fähigkeiten und Bedingungen: Meisterspionin und Baumeister (GUT),
   Dämonenruferin und Eisenwall (BÖSE) (#22).
+- Bündnisse: Truppen lassen sich zum Schutz bei Verbündeten stationieren; Verbündete danken mit Ruf und Abgaben.
+  Befehl im Diplomatiefenster (Zeile „Bündnis“) und im Armeefenster, bei Nicht-Verbündeten gesperrt mit Grund. Dazu
+  Hilferufe angegriffener Verbündeter (annehmen oder ablehnen), gemeinsame Ziele und „Miliz anfordern“; die KI
+  stationiert ebenfalls (#27).
 
 ### Geändert
 

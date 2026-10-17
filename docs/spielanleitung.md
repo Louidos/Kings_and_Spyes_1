@@ -566,7 +566,9 @@ Angriffsbefehle gelten in jeder Haltung.
   speichern.
 - **Rechts – Befehle an die Gruppe:** *Sammeln an der Burg* (Marsch in Formation), *Rückzug zur Burg* (läuft ohne zu
   kämpfen hin und erholt sich dort schneller), *Angreifend vorrücken …*, *Bewegen …*, *Patrouille …* (nach dem
-  Knopf ein Ziel auf der Karte anklicken; Esc bricht ab), *Halten*, **Formation** und **Haltung**.
+  Knopf ein Ziel auf der Karte anklicken; Esc bricht ab), *Halten*, *Stationieren …* (bei einem Verbündeten; Liste
+  der Dörfer, siehe [Bündnis: Truppen stationieren](#bündnis-truppen-stationieren)), *Zurückrufen* (Stationierte),
+  **Formation** und **Haltung**.
 
 ## 12. Helden
 
@@ -780,13 +782,34 @@ Verlauf, wie dein Heer gerade wirkt (z. B. „+2,3 je Minute – fühlt sich bes
 | **Handel** | Menge und Ware geben, Ware bekommen; Kurs und Tageslimit stehen darunter, dazu die **Preise** des Dorfs je Ware (verkauft/kauft). Was ein Dorf reichlich hat, gibt es billig ab (grün, „viel“), was ihm fehlt, ist teuer und bringt beim Verkauf mehr (rot, „knapp“). Koboldhändler und Nomaden haben die besten Kurse |
 | **Schutzvertrag** (ab Neutral) | Das Dorf zahlt Tribut. Wird es angegriffen, musst du binnen 60 s Truppen schicken (roter Punkt am Knopf), sonst sinkt der Ruf |
 | **Handelsvertrag** (ab Neutral) | regelmässige Lieferungen, bessere Kurse, höheres Limit, eine Karawane pendelt (siehe [Handelswege](#handelswege)) |
-| **Verteidigungsbündnis** (ab Freundlich) | Milizen helfen dir in der Nähe, der **Volkskrieger** erscheint in deiner Kaserne |
+| **Verteidigungsbündnis** (ab Freundlich) | Milizen helfen dir in der Nähe, der **Volkskrieger** erscheint in deiner Kaserne, und du kannst Truppen beim Dorf stationieren (siehe [Bündnis: Truppen stationieren](#bündnis-truppen-stationieren)) |
 | **Aufnehmen** | ab *Ergeben* – oder ab *Freundlich* mit grossem Geschenk bzw. einer 2,5-mal stärkeren Armee in der Nähe. Das Dorfzentrum wird dein Aussenposten, die Milizen deine Truppen, die Produktion fliesst in dein Lager |
 | **Drohen** | mit genug Truppen vor Ort zahlt das Dorf Tribut, sonst lacht es dich aus. Der Ruf sinkt so oder so |
 | **Krieg** | „Krieg erklären“ oder mit Truppen zweimal Rechtsklick auf eine Miliz oder ein Gebäude des Dorfs (der erste Klick warnt nur). Ein Dorfzentrum auf 0 Leben wird **erobert** (gemindert produktiv, andere Dörfer misstrauen dir). Frieden geht nach 60 s ohne Angriff, wenn der Ruf nicht zu tief ist |
 
 Die Annahme-Chance eines Vertrags steht auf dem Knopf („Schutz (75 %)“), gesperrte Knöpfe nennen den Grund.
 „Vertrag kündigen“ braucht einen zweiten Klick und kostet Ruf.
+
+### Bündnis: Truppen stationieren
+
+Mit einem **Verteidigungsbündnis** kannst du dem Dorf Truppen zum Schutz schicken. Truppen auswählen und im
+Diplomatiefenster beim Dorf (Zeile „Bündnis“) **„Krieger stationieren“** drücken – oder im Armeefenster (T)
+**„Stationieren …“** und das Dorf in der Liste wählen. Die Krieger marschieren kampfbereit hin,
+verteidigen das Dorf selbstständig und bleiben, bis du sie mit **„Zurückrufen“** (Diplomatie- oder
+Armeefenster) oder einem anderen Marschbefehl heimholst. Den Unterhalt zahlst du
+weiter selbst. Bei Dörfern ohne Bündnis ist der Befehl gesperrt, der Grund steht am Knopf und in der Liste.
+
+- Ab **3 Kriegern** am Dorf steigt der **Ruf** alle 2 Minuten (+1,8 bis +3, höchstens bis +75), und das Dorf dankt
+  alle 5 Minuten mit einer kleinen **Abgabe** seiner reichlichsten Ware (2 je Krieger, höchstens 30).
+- Stationierte Truppen zählen zur Verteidigung des Dorfs – gegnerische Reiche greifen es seltener an.
+- **Hilferuf:** Wird ein verbündetes Dorf angegriffen, ohne dass deine Truppen dort stehen, ruft es um Hilfe (Meldung,
+  Zeile im Diplomatiefenster, 2 Minuten Zeit). *Hilfe schicken* schickt die ausgewählten Krieger (sonst die sechs
+  nächsten freien) und bringt +3 Ruf; *Ablehnen* kostet 4 Ruf, ein überhörter Hilferuf 2.
+- **Gemeinsame Ziele:** Reiche, mit denen das Dorf und du im Krieg seid, stehen im Diplomatiefenster.
+- **Truppenaustausch:** Die Milizen des Dorfs helfen dir bei Angriffen in der Nähe, der Volkskrieger kommt in deine
+  Kaserne, und *Miliz anfordern* holt die Miliz zu deiner Burg (−2 Ruf, höchstens alle 10 Minuten).
+- Endet das Bündnis (Kündigung, Ruf zu tief, Seitenwechsel), ziehen deine Truppen ab und kehren zur Burg zurück.
+- Die KI stationiert bei ihren verbündeten Dörfern ebenfalls Truppen und beantwortet Hilferufe.
 
 ### Boten
 

@@ -94,6 +94,10 @@ Prüfpunkt. Geprüft werden unter anderem:
   holzarmen (auch beim Tausch), Preise im Diplomatiefenster; Handelsroute mit Menge und Abstand einstellen, unerlaubte
   Werte abgelehnt, Fluss je Minute im Reiter Handelswege; die Karawane liefert ohne Klicken, der Ruf steigt;
   Einstellung und Route überstehen Speichern und Laden.
+- **Bündnis** (`smoke_alliance.gd`, Modul in `smoke_features.gd`): beim Nicht-Verbündeten gesperrt mit Grund (auch in
+  der Dorfliste des Armeefensters); fünf Krieger beim verbündeten Dorf stationiert, angekommen, zählen zur
+  Verteidigung; Speichern und Laden; Ruf steigt, Abgabe kommt an; Angreifer am Dorf werden angegriffen;
+  Zurückrufen; Hilferuf ablehnen kostet Ruf; Kündigung zieht die Truppen ab; die KI stationiert ebenfalls.
 - **Bewerber** (`smoke_recruits.gd`): langsames Wachstum, Taverne verkürzt die Wartezeit, Bewerber mit Bedingungen,
   Aufnehmen im Bewerberfenster gesperrt und wieder frei, Bewohner +1, Geschenk, Fachkraft schneller, Abweisen,
   wartender Bewerber im Speichern-Laden-Rundlauf. `recruits=off` schaltet die Bewerber ab (Balancing: das

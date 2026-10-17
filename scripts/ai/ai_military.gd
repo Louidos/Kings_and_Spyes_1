@@ -517,7 +517,8 @@ static func _candidates(b: AIBrain, now: float) -> Array:
 			var tiles := home.distance_to(hall.get_center()) / ts
 			if tiles > max_tiles:
 				continue
-			var strength := vs.get_strength(v)
+			# Stationierte Truppen eines Bündnispartners verteidigen mit (StationSystem)
+			var strength := vs.get_strength(v) + (b.game.station_system as StationSystem).guard_power(v)
 			var reason: bool = b.game.are_hostile(k, v)
 			var treaty := ds.get_treaty(v)
 			if not reason and not treaty.is_empty() and str(treaty.get("type", "")) == "alliance":
