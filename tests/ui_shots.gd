@@ -3,7 +3,8 @@
 ## Reitstall, Magierturm, Heldenhalle, je Truppentyp ein paar Einheiten mit Rängen, ein Held) und
 ## fotografiert nacheinander: leere Oberfläche, Kaserne, Schmiede, einzelne Truppe, gemischte
 ## Gruppe, Held, alle Fenster (Forschung, Helden, Diplomatie, Spionage, Reich, Armee, Hilfe,
-## Speichern). Fenstergrösse mit win=<B>x<H> (Standard 1600x900).
+## Speichern), dann je eine Figur jedes Typs (15_figuren) und über 300 Einheiten auf einmal
+## mit gemessener Bildzeit (16_viele_einheiten). Fenstergrösse mit win=<B>x<H> (Standard 1600x900).
 ## Ohne Prüfungen – Fehler erscheinen nur als SCRIPT ERROR.
 extends RefCounted
 
@@ -20,6 +21,8 @@ var _buildings := {}
 var _units: Array = []
 var _hero_wait := 0
 var _prefix := ""
+## Beginn der Zeitmessung mit vielen Einheiten (Echtzeit, µs)
+var _crowd_usec := 0
 
 
 func _init(runner: Node, game: Node, args: Dictionary) -> void:
@@ -102,8 +105,69 @@ func tick() -> void:
 		14:
 			_shot("14_speichern")
 			g.pause_menu.close()
+			_parade()
+		15:
+			_shot("15_figuren")
+			_crowd(300)
+		16:
+			_crowd_usec = Time.get_ticks_usec()
+		17:
+			# Bildzeit mit über 300 zusätzlichen Einheiten (Mittel der letzten WAIT_FRAMES Bilder)
+			var ms := (Time.get_ticks_usec() - _crowd_usec) / 1000.0 / WAIT_FRAMES
+			print("[smoke] Figuren: %d Einheiten im Spiel, Ø %.1f ms je Bild, %d Figurenbilder erzeugt" % [
+					g.unit_system.units.size(), ms, Assets.figure_count()])
+			_shot("16_viele_einheiten")
 			finished = true
 	_step += 1
+
+
+## Je eine Figur jedes Einheitentyps und Berufs vor der Burg (Truppen, Helden, Bewohner, Spione,
+## Milizen, Monster, Fahrzeuge) – zum Anschauen auf dem Bildschirmfoto
+func _parade() -> void:
+	var g := _game
+	var k: Kingdom = g.player
+	var center: Vector2 = k.castle.get_center() + Vector2(0, 330)
+	var ids: Array = []
+	for u in DataDB.units:
+		var f := str((u as Dictionary).get("faction", "any"))
+		if f == k.faction_id or f in ["any", "neutral", "wild"]:
+			ids.append(str(u["id"]))
+	for h in DataDB.hero_types:
+		if str((h as Dictionary)["faction"]) == k.faction_id:
+			ids.append(str(h["id"]))
+	var jobs := ["builder", "woodcutter", "stonecutter", "gatherer", "farmer", "mana_worker"]
+	var i := 0
+	for id in ids + jobs:
+		var type_id: String = "villager" if jobs.has(id) else id
+		var pos := center + Vector2((i % 12) * 52 - 286, floori(i / 12.0) * 64)
+		var u: Unit = g.unit_system.spawn_unit(k, type_id, pos)
+		if u != null:
+			u.command = "hold"
+			u.command_pos = pos
+			if jobs.has(id):
+				u.job_id = id
+		i += 1
+	g.camera.focus_on(center + Vector2(0, 120))
+
+
+## n weitere Truppen rund um die Burg (Leistung bei vielen Einheiten)
+func _crowd(n: int) -> void:
+	var g := _game
+	var k: Kingdom = g.player
+	var center: Vector2 = k.castle.get_center()
+	var types: Array = []
+	for tier in ["fighter", "archer", "spearman", "crossbow", "heavy", "cavalry", "battlemage", "villager"]:
+		var def := DataDB.get_unit_for_tier(k.faction_id, tier)
+		if not def.is_empty():
+			types.append(str(def["id"]))
+	for j in n:
+		var a := TAU * j / 37.0
+		var pos := center + Vector2.from_angle(a) * (220.0 + (j % 37) * 9.0)
+		var u: Unit = g.unit_system.spawn_unit(k, str(types[j % types.size()]), pos)
+		if u != null:
+			u.command = "hold"
+			u.command_pos = pos
+	g.camera.focus_on(center)
 
 
 func _setup() -> void:

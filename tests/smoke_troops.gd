@@ -279,6 +279,21 @@ func _t1() -> void:
 				and spear.get("_emblem") != null, "Aussehen aller %s: %s" % [spear.get_display_name(), TroopRules.skin_name(sid)])
 		_expect["type"] = [spear.type_id, sid]
 		_game.selection.clear()
+	# Gezeichnete Figuren: zwei Aussehen derselben Truppe und das Standard-Aussehen ergeben verschiedene Bilder
+	if skins.size() >= 3:
+		var looks: Array = []
+		for skin_id in [skins[0], skins[1], skins[2]]:
+			var sd := {} if str(skin_id) == "standard" else TroopRules.skin_def(str(skin_id))
+			looks.append(Assets.figure(FigureArt.spec_for(spear.type_def, k.faction_id, k.color, sd)).get_image().get_data())
+		_check(looks[0] != looks[1] and looks[1] != looks[2] and looks[0] != looks[2],
+				"Figuren: %s, %s und %s sehen verschieden aus" % [TroopRules.skin_name(str(skins[0])),
+				TroopRules.skin_name(str(skins[1])), TroopRules.skin_name(str(skins[2]))])
+	var bare := 0
+	for u in _game.unit_system.units:
+		if u.get("_figure") == null and u.get("_texture") == null:
+			bare += 1
+	_check(bare == 0, "Figuren: alle %d Einheiten haben eine Figur oder Grafik (%d Figurenbilder)" % [
+			_game.unit_system.units.size(), Assets.figure_count()])
 	_check(not ts.set_unit_skin(xbow, "hero_banner"), "Heldenbanner vor dem Rang Elite gesperrt")
 	ts.debug_add_xp(xbow, 400.0)
 	ts.auto_distribute(xbow)

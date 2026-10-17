@@ -56,6 +56,8 @@ var research_by_id: Dictionary = {}
 var spells: Array = []
 var spell_by_id: Dictionary = {}
 var magic: Dictionary = {}
+## Gezeichnete Spielfiguren (units.json → figures, FigureArt)
+var figures_cfg: Dictionary = {}
 ## Helden (heroes.json): Einstellungen, Heldentypen (auch als Einheitentyp in
 ## unit_by_id, Rolle "hero"), Fähigkeiten
 var hero_data: Dictionary = {}
@@ -372,6 +374,11 @@ func get_unit_for_tier(faction_id: String, tier: String) -> Dictionary:
 		if u.get("faction", "any") == "any":
 			fallback = u
 	return fallback
+
+
+## Gezeichnete Spielfiguren (units.json → figures)
+func unit_figures() -> Dictionary:
+	return figures_cfg
 
 
 ## Grafikpfad eines Einheitentyps für eine Fraktion ("" wenn keiner)
@@ -957,6 +964,7 @@ func _prepare_diplomacy() -> void:
 func _load_units() -> void:
 	var data := _load_json("units.json")
 	units = data.get("units", [])
+	figures_cfg = data.get("figures", {})
 	unit_by_id.clear()
 	for u in units:
 		_normalize_unit(u)

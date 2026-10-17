@@ -153,59 +153,8 @@ static func _pattern_lava(img: Image, _base: Color, rng: RandomNumberGenerator, 
 # Einheiten
 # ---------------------------------------------------------------------------
 
-## Platzhalter-Spielfigur: farbige Scheibe ("circle") oder Raute ("diamond",
-## Monster) mit dunklem Rand, Glanzlicht und Schatten. Wird einmal je Farbe
-## erzeugt und dann für alle Einheiten wiederverwendet (ein Zeichenaufruf).
-static func make_unit_token(color: Color, shape: String, size: int = 48) -> Image:
-	var s := size * _SS
-	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0, 0, 0, 0))
-	var c := Vector2(s, s) * 0.5
-	var r := s * 0.44
-	var border := color.darkened(0.5)
-	var light := color.lightened(0.25)
-	if shape == "diamond":
-		var outer := PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)])
-		_polygon(img, _offset_poly(outer, Vector2(s * 0.02, s * 0.04)), Color(0, 0, 0, 0.3))
-		_polygon(img, outer, border)
-		_polygon(img, _scale_poly(outer, c, 0.86), color)
-		_polygon(img, _offset_poly(_scale_poly(outer, c, 0.4), Vector2(-r * 0.18, -r * 0.18)), light)
-	else:
-		_circle(img, c + Vector2(s * 0.02, s * 0.04), r, Color(0, 0, 0, 0.3))
-		_circle(img, c, r, border)
-		_circle(img, c, r * 0.88, color)
-		_ellipse(img, c + Vector2(-r * 0.25, -r * 0.3), Vector2(r * 0.38, r * 0.26), color.lerp(light, 0.55))
-	return _downsample(img, size, _SS)
-
-
-## Platzhalter-Spielfigur eines Skins (troops.json → skins): wie make_unit_token, aber mit
-## breitem Rand in der Farbe trim und einem feinen inneren Ring (Wappenrock-Saum).
-static func make_unit_skin_token(color: Color, shape: String, trim: Color, size: int = 48) -> Image:
-	var s := size * _SS
-	var img := Image.create(s, s, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0, 0, 0, 0))
-	var c := Vector2(s, s) * 0.5
-	var r := s * 0.44
-	var dark := trim.darkened(0.55)
-	var light := color.lightened(0.25)
-	if shape == "diamond":
-		var outer := PackedVector2Array([c + Vector2(0, -r), c + Vector2(r, 0), c + Vector2(0, r), c + Vector2(-r, 0)])
-		_polygon(img, _offset_poly(outer, Vector2(s * 0.02, s * 0.04)), Color(0, 0, 0, 0.3))
-		_polygon(img, outer, dark)
-		_polygon(img, _scale_poly(outer, c, 0.92), trim)
-		_polygon(img, _scale_poly(outer, c, 0.78), color)
-		_polygon(img, _offset_poly(_scale_poly(outer, c, 0.36), Vector2(-r * 0.18, -r * 0.18)), light)
-	else:
-		_circle(img, c + Vector2(s * 0.02, s * 0.04), r, Color(0, 0, 0, 0.3))
-		_circle(img, c, r, dark)
-		_circle(img, c, r * 0.93, trim)
-		_circle(img, c, r * 0.78, color)
-		_ring(img, c, Vector2(r * 0.62, r * 0.62), r * 0.05, Color(trim, 0.55))
-		_ellipse(img, c + Vector2(-r * 0.22, -r * 0.28), Vector2(r * 0.32, r * 0.22), color.lerp(light, 0.55))
-	return _downsample(img, size, _SS)
-
-
 ## Abzeichen eines Skins: runde Plakette in dunkler Farbe mit Symbol in trim.
+## (Die Spielfiguren selbst zeichnet FigureArt.)
 ## kind: crown, sun, skull, fang, star, moon, shield (unbekannt = Punkt)
 static func make_emblem(kind: String, trim: Color, size: int = 24) -> Image:
 	var s := size * _SS

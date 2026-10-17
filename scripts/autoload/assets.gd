@@ -26,27 +26,6 @@ func texture(path: String) -> Texture2D:
 	return tex
 
 
-## Platzhalter-Spielfigur in dieser Farbe und Form (einmal erzeugt, dann gemerkt)
-func unit_token(color: Color, shape: String) -> Texture2D:
-	var key := "token:%s:%s" % [color.to_html(), shape]
-	if _cache.has(key):
-		return _cache[key]
-	var tex := ImageTexture.create_from_image(PlaceholderArt.make_unit_token(color, shape))
-	_cache[key] = tex
-	return tex
-
-
-## Platzhalter-Spielfigur eines Skins: Farbe (schon getönt) mit breitem Rand in trim
-## (einmal je Kombination erzeugt, dann gemerkt)
-func unit_skin_token(color: Color, shape: String, trim: Color) -> Texture2D:
-	var key := "skin_token:%s:%s:%s" % [color.to_html(), shape, trim.to_html()]
-	if _cache.has(key):
-		return _cache[key]
-	var tex := ImageTexture.create_from_image(PlaceholderArt.make_unit_skin_token(color, shape, trim))
-	_cache[key] = tex
-	return tex
-
-
 ## Abzeichen eines Skins (crown, sun, skull, fang, star, moon, shield) in der Farbe trim;
 ## null ohne Abzeichen
 func emblem(kind: String, trim: Color) -> Texture2D:
@@ -58,6 +37,28 @@ func emblem(kind: String, trim: Color) -> Texture2D:
 	var tex := ImageTexture.create_from_image(PlaceholderArt.make_emblem(kind, trim))
 	_cache[key] = tex
 	return tex
+
+
+## Gezeichnete Spielfigur (FigureArt) zu einer Beschreibung (FigureArt.spec_for); einmal je
+## Beschreibung erzeugt, dann gemerkt – viele Einheiten teilen sich wenige Bilder
+func figure(spec: Dictionary, size: int = 0) -> Texture2D:
+	if size <= 0:
+		size = int(DataDB.unit_figures().get("size", 64))
+	var key := FigureArt.spec_key(spec, size)
+	if _cache.has(key):
+		return _cache[key]
+	var tex := ImageTexture.create_from_image(FigureArt.make_figure(spec, size))
+	_cache[key] = tex
+	return tex
+
+
+## Anzahl der erzeugten Figurenbilder (Rauchtest, Leistung)
+func figure_count() -> int:
+	var n := 0
+	for key in _cache:
+		if str(key).begins_with("figure:"):
+			n += 1
+	return n
 
 
 func clear_cache() -> void:
