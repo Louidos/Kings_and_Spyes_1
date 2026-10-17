@@ -466,7 +466,7 @@ eine **Goldene Ader**, die Bergleuten eine Weile mehr Erz bringt – in `data/ev
 | Ruf schneller verbessern | `diplomacy.json` → `gifts.value_per_point` senken; Lieblingswaren `peoples.json` → `gift_preferences` |
 | Verträge leichter | `diplomacy.json` → `treaties.<protection/trade/alliance>.min_reputation` |
 | Bessere Handelskurse | `diplomacy.json` → `trade.base_margin`; je Volk `peoples.json` → `trade_rates`, `trade_bonus` |
-| Spätere erste Welle | `ai.json` → `difficulty.normal.first_attack_minutes` 45 → 60 |
+| Spätere erste Welle | `ai.json` → `difficulty.normal.first_attack_minutes` 67.5 → 90 |
 | Spione schwerer zu entdecken | `espionage.json` → `spies.detect_base` 0.03 → 0.02 |
 | Neues Volk | `peoples.json`: Eintrag mit `"faction": "neutral"`, `village_title`, `village_names`, `produces`, `militia_unit` und `special_unit` (beide in `units.json` anlegen) – Dörfer dieses Volks entstehen dann automatisch |
 

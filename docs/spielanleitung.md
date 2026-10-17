@@ -842,7 +842,7 @@ Spione, die in deinem Gebiet stehen (ein Spion 1 Minute, ein Späher 4 Minuten a
 und vor allem **Angriffe** auf das Gegnerreich – danach bist du sofort entdeckt. Auch ein stilles Reich bleibt nicht
 ewig verborgen: Nach einer Wartezeit (Normal 90 Minuten) halten die Gegner ihre Aufmerksamkeit bei Gerüchten und
 schicken Spione. Angriffe kommen erst, wenn du **entdeckt** bist **und** die Wartezeit der Schwierigkeit vorbei ist
-(Normal: frühestens nach 45 Minuten). *Reichsschleier* / *Reichsschatten* senkt den Entdeckungswert um 40 %.
+(Normal: frühestens nach 67,5 Minuten). *Reichsschleier* / *Reichsschatten* senkt den Entdeckungswert um 40 %.
 
 ![Spionagefenster](bilder/spionage.jpg)
 
@@ -993,10 +993,10 @@ Fern vom eigenen bzw. verbündeten Gebiet und von offenen Handelswegen erholen s
 
 | Stufe | Beschreibung | KI-Reiche (klein / mittel / gross) | erste Welle frühestens | KI Ertrag / Stärke | Monster | deine Startvorräte |
 |---|---|---|---|---|---|---|
-| **Leicht** | Gemütlich: schwächere und langsamere Gegner, sanfte Monster, mehr Startvorräte. | 1 / 1 / 1 | 75 min | ×0,7 / ×0,8 | ×0,8 | ×1,25 |
-| **Normal** | Ausgewogen: Gegner wachsen wie du, erste Angriffe nach einer Dreiviertelstunde. | 1 / 2 / 2 | 45 min | ×1 / ×1 | ×1 | ×1 |
-| **Schwer** | Fordernd: die Gegner wirtschaften besser, greifen früher und öfter an. | 2 / 2 / 2 | 30 min | ×1,3 / ×1,15 | ×1,15 | ×1 |
-| **Episch** | Für Kenner: starke, schnelle und angriffslustige Gegner, gefährliche Monster. | 2 / 2 / 2 | 20 min | ×1,7 / ×1,3 | ×1,3 | ×1 |
+| **Leicht** | Gemütlich: schwächere und langsamere Gegner, sanfte Monster, mehr Startvorräte. | 1 / 1 / 1 | 112,5 min | ×0,7 / ×0,8 | ×0,8 | ×1,25 |
+| **Normal** | Ausgewogen: Gegner wachsen wie du, erste Angriffe frühestens nach gut einer Stunde. | 1 / 2 / 2 | 67,5 min | ×1 / ×1 | ×1 | ×1 |
+| **Schwer** | Fordernd: die Gegner wirtschaften besser, greifen früher und öfter an. | 2 / 2 / 2 | 45 min | ×1,3 / ×1,15 | ×1,15 | ×1 |
+| **Episch** | Für Kenner: starke, schnelle und angriffslustige Gegner, gefährliche Monster. | 2 / 2 / 2 | 30 min | ×1,7 / ×1,3 | ×1,3 | ×1 |
 
 <!-- /AUTO:schwierigkeit -->
 

@@ -30,6 +30,9 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 - Gegnerische Reiche entdecken dich langsamer: Die Aufmerksamkeit steigt langsamer, Gerüchte und Entdeckung brauchen
   mehr, Späher müssen länger in deinem Gebiet bleiben, und ein stilles Reich fällt erst später auf. Bei normaler
   Schwierigkeit kommt die Entdeckung rund 50–70 % später; Angriffe entdecken dich weiterhin sofort (#29).
+- Partien dauern länger: Die Gegner greifen später an und rüsten langsamer auf. Die erste Angriffswelle kommt rund
+  die Hälfte später (Normal frühestens nach 67,5 statt 45 Minuten), Dörfer werden später angegriffen, und jede Welle
+  wächst um 2 statt 3 Einheiten. Die Länge eines Spieltags bleibt gleich (#31).
 
 ### Behoben
 

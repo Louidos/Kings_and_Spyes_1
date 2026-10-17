@@ -13,6 +13,8 @@ var finished := false
 ## immortal=1: Burg und König des Spielers werden jeden Frame geheilt – der Lauf geht über die volle
 ## Dauer weiter (Wachstum der KI, wiederholte Wellen, Leistung), auch wenn der passive Spieler sonst fiele
 var immortal := false
+## discovered=1: alle KI-Reiche haben den Spieler von Anfang an entdeckt
+var discovered := false
 
 var _next_sample := 0.0
 var _events_player := 0
@@ -44,6 +46,7 @@ func _init(p_game: Node, args: Dictionary) -> void:
 	game = p_game
 	sample = float(args.get("sample", "600"))
 	immortal = str(args.get("immortal", "0")) == "1"
+	discovered = str(args.get("discovered", "0")) == "1"
 	_seconds = float(args.get("seconds", "10800"))
 	var ev: EventSystem = game.event_system
 	ev.event_started.connect(_on_event_started)
@@ -103,6 +106,11 @@ func tick(t: float) -> void:
 	_frame_n += 1
 	_frame_usec_max = maxi(_frame_usec_max, frame_usec)
 	var player: Kingdom = game.player
+	if discovered:
+		# Wie ein aktiver Spieler, den die KI früh entdeckt: die erste Welle hängt dann nur an
+		# first_attack_minutes und am Aufbau der KI
+		for k in (game.ai_system as AISystem).get_ai_kingdoms():
+			(game.espionage_system as EspionageSystem).raise_awareness_to(k, player, 100.0, "Balancing")
 	if immortal:
 		if is_instance_valid(player.castle):
 			player.castle.hp = player.castle.max_hp
