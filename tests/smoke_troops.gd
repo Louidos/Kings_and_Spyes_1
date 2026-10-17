@@ -294,6 +294,17 @@ func _t1() -> void:
 			bare += 1
 	_check(bare == 0, "Figuren: alle %d Einheiten haben eine Figur oder Grafik (%d Figurenbilder)" % [
 			_game.unit_system.units.size(), Assets.figure_count()])
+	# Anklicken: die Figur steht über der Position – ein Klick auf Kopf und Bauch trifft sie
+	var lone_pos: Vector2 = k.castle.get_center() + Vector2(40.0, 30.0) * float(_game.world.tile_size)
+	var lone: Unit = _game.unit_system.spawn_unit(k, spear.type_id, lone_pos)
+	if lone != null:
+		var head := lone.position + Vector2(0.0, lone.visual_top() + lone.get_radius() * 0.3)
+		var belly := lone.position + lone.pick_offset()
+		var picked_head: Unit = _game.selection._pick_unit(head)
+		var picked_belly: Unit = _game.selection._pick_unit(belly)
+		_check(picked_head == lone and picked_belly == lone, "Figuren: Klick auf Kopf und Körper trifft die Einheit (Kopf %d px über den Füssen)" %
+				roundi(-lone.visual_top()))
+		_game.unit_system.remove_unit(lone)
 	_check(not ts.set_unit_skin(xbow, "hero_banner"), "Heldenbanner vor dem Rang Elite gesperrt")
 	ts.debug_add_xp(xbow, 400.0)
 	ts.auto_distribute(xbow)

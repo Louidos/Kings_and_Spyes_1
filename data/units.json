@@ -27,14 +27,14 @@
 
 	"figures": {
 		"_hinweis": [
-			"Gezeichnete Spielfiguren (FigureArt), solange unter assets/sprites/ keine Datei liegt. size = Bildgrösse in Pixeln (einmal je Aussehen erzeugt). draw_scale = Breite der Figur auf der Karte in Radien, feet = Füsse so viele Radien unter dem Mittelpunkt, hero_scale = Helden so viel grösser.",
+			"Gezeichnete Spielfiguren (FigureArt), solange unter assets/sprites/ keine Datei liegt. size = Bildgrösse in Pixeln (einmal je Aussehen erzeugt), hero_size für Helden (grösser gezeichnet), portrait_size für Heldenporträts ohne eigene Porträtdatei. draw_scale = Breite der Figur auf der Karte in Radien, feet = Füsse so viele Radien unter dem Mittelpunkt, hero_scale = Helden so viel grösser.",
 			"tiers: Teile je Stufe (default gilt für alle, dann die Stufe, dann figure am Typ bzw. Helden; by_faction ergänzt je Fraktion). kind: humanoid, mounted (Reiter, mount horse/wolf), wolf, spider, golem, wyvern, skeleton, spirit (Geist ohne Beine), ram, catapult, caravan.",
 			"outfit: soldier, villager, king, hero, spy, messenger, refugee, militia, mage, healer. armor: light, heavy (Metallbrust, Schulterstücke), cloth, robe (langes Gewand), cloak (Umhang über dem Körper). head: none, helmet, hood, cap, hat (Spitzhut), brim (Krempenhut), crown, hair, horns, beard (Helm mit Bart).",
 			"gear (rechte Hand): sword, greatsword, dagger, spear, lance, bow, crossbow, staff, staff_heal, staff_dark, sceptre, mace, club, axe, hammer, pick, sickle, basket, orb, scroll, sling, bomb, bundle, none. offhand: zweite Waffe in der linken Hand. shield: round, kite, tower.",
 			"cape: Umhangfarbe (\"#rrggbb\"), mark: aura (Leuchten in der Saumfarbe trim), halo (Heiligenschein), crown. trim: Saumfarbe (sonst aus der Reichsfarbe), pattern: Muster auf dem Wappenrock (stripes, chevron, quartered, sash, border) – Skins (troops.json) setzen tint, trim und pattern. skin_color: Hautfarbe, align: good/evil/neutral (Licht oder Finsternis).",
 			"tool_by_job: Werkzeug nach Beruf aus jobs (Bewohner). factions: Haut, Metall, Augen je Licht (good), Finsternis (evil, glühende Augen, Hörner), neutral und wild."
 		],
-		"size": 64, "draw_scale": 3.4, "feet": 0.72, "hero_scale": 1.25,
+		"size": 64, "hero_size": 96, "portrait_size": 160, "draw_scale": 3.4, "feet": 0.72, "hero_scale": 1.25,
 		"tiers": {
 			"default": {"kind": "humanoid", "outfit": "soldier", "armor": "light", "head": "helmet", "gear": "sword"},
 			"villager": {"outfit": "villager", "armor": "cloth", "head": "cap", "tool_by_job": true},

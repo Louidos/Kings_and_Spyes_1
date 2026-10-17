@@ -1,8 +1,9 @@
 ## HeroPortrait
 ##
 ## Bild eines Helden für Fenster und die Heldenleiste: das Porträt aus
-## heroes.json ("portrait", 128 × 128); fehlt die Datei, die gezeichnete Heldenfigur
-## wie auf der Karte vor einem Hintergrund in der Heldenfarbe.
+## heroes.json ("portrait", 128 × 128); fehlt die Datei, das Bild des Helden wie auf der
+## Karte (eigene Grafik "sprite", sonst die gezeichnete Heldenfigur in hoher Auflösung) vor
+## einem Hintergrund in der Heldenfarbe.
 ## Gefallene Helden erscheinen grau. Optional die Stufe als Abzeichen unten
 ## rechts und eine goldene Markierung oben rechts (offene Stufenwahl).
 class_name HeroPortrait
@@ -27,7 +28,12 @@ func setup(hero_type: Dictionary) -> void:
 	_figure = null
 	if _texture == null:
 		var unit_def := DataDB.get_unit_type(str(hero_type.get("id", "")))
-		_figure = Assets.figure(FigureArt.spec_for(unit_def, str(hero_type.get("faction", "good")), _color, {}))
+		var faction := str(hero_type.get("faction", "good"))
+		# Eigene Heldengrafik hat Vorrang vor der gezeichneten Figur (wie auf der Karte)
+		_figure = Assets.texture(DataDB.get_unit_sprite(unit_def, faction))
+		if _figure == null:
+			_figure = Assets.figure(FigureArt.spec_for(unit_def, faction, _color, {}),
+					int(DataDB.unit_figures().get("portrait_size", 160)))
 	queue_redraw()
 
 

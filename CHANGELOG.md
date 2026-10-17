@@ -18,6 +18,9 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
   anfordern“ kostet nur Ruf, wenn wirklich Miliz kommt; Truppen, die fern vom Dorf halten oder angreifen, gelten nicht
   mehr als stationiert; die KI schickt Hilfstruppen nur, wenn genug daheim bleibt, und holt sie nach dem Kampf zurück
   (#36).
+- Figuren: Ein Klick auf Kopf oder Körper wählt die Einheit wieder aus (auch beim Aufziehen eines Rahmens);
+  Rangabzeichen sitzen über jeder Figur, auch über Rammböcken, Wagen und Tieren und über echten Grafiken; Helden und
+  ihre Porträts sind schärfer, und eine eigene Heldengrafik erscheint auch im Porträt (#40).
 
 ## 1.2.0 – 2026-10-17
 

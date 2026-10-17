@@ -236,6 +236,8 @@ var _texture: Texture2D
 var _figure: Texture2D
 ## Beruf, für den _figure erzeugt wurde (Werkzeug der Bewohner)
 var _figure_job := ""
+## Art der gezeichneten Figur (FigureArt: humanoid, wolf, ram …) für ihre Höhe
+var _figure_kind := "humanoid"
 var _radius := 13.0
 ## Aussehen: Tönung einer vorhandenen Grafik ohne eigene Skin-Datei und Abzeichen (oder null)
 var _tint := Color.WHITE
@@ -292,7 +294,13 @@ func refresh_look() -> void:
 			_tint = Color.WHITE.lerp(tint, mix * 0.6)
 	if _texture == null:
 		_figure_job = job_id
-		_figure = Assets.figure(FigureArt.spec_for(type_def, kingdom.faction_id, color, skin_data, job_id))
+		var spec := FigureArt.spec_for(type_def, kingdom.faction_id, color, skin_data, job_id)
+		_figure_kind = str(spec.get("kind", "humanoid"))
+		# Helden werden grösser gezeichnet: Bild in höherer Auflösung, damit es scharf bleibt
+		var px := int(DataDB.unit_figures().get("size", 64))
+		if role == "hero":
+			px = int(DataDB.unit_figures().get("hero_size", 96))
+		_figure = Assets.figure(spec, px)
 	queue_redraw()
 
 
@@ -307,9 +315,30 @@ func figure_size() -> float:
 
 ## Oberkante der Figur relativ zur Position (Rangabzeichen darüber)
 func visual_top() -> float:
+	if _texture != null:
+		return -_radius * 2.25
 	if _figure == null:
 		return -_radius * 1.35
-	return _radius * float(DataDB.unit_figures().get("feet", 0.72)) - figure_size() * FigureArt.HEAD_TOP
+	return _radius * float(DataDB.unit_figures().get("feet", 0.72)) - figure_size() * FigureArt.head_top(_figure_kind)
+
+
+## Unterkante des Bilds relativ zur Position
+func visual_bottom() -> float:
+	if _texture != null:
+		return _radius * 0.75
+	if _figure == null:
+		return _radius
+	return _radius * float(DataDB.unit_figures().get("feet", 0.72))
+
+
+## Mitte des sichtbaren Bilds relativ zur Position (Anklicken: die Figur steht über der Position)
+func pick_offset() -> Vector2:
+	return Vector2(0.0, (visual_top() + visual_bottom()) * 0.5)
+
+
+## Klickradius um pick_offset: halbe Bildhöhe, mindestens der Einheitenradius
+func pick_radius() -> float:
+	return maxf(_radius, (visual_bottom() - visual_top()) * 0.5)
 
 
 ## Wirksames Aussehen: eigenes, sonst das des Typs im Reich, sonst "standard"
