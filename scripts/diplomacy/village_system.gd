@@ -457,18 +457,19 @@ func raise_alarm(v: Kingdom, attacker: Kingdom, pos: Vector2, send_militia: bool
 
 ## Bündnisfall: ein Teil der freien Milizen zieht zum angegriffenen Partner.
 ## Ist der Feind ein Reich, mit dem das Dorf noch Frieden hat, erklärt es ihm den Krieg.
-func dispatch_help(v: Kingdom, pos: Vector2, enemy: Kingdom) -> void:
+## Gibt die Anzahl der losgeschickten Milizen zurück (0 = keine frei oder schon unterwegs).
+func dispatch_help(v: Kingdom, pos: Vector2, enemy: Kingdom) -> int:
 	if not is_village(v):
-		return
+		return 0
 	var rec := get_record(v)
 	var now := GameClock.game_time
 	if float(rec["help_until"]) > now:
-		return
+		return 0
 	if enemy != null and enemy != v and enemy.controller != "wild" and not game.are_hostile(v, enemy):
 		var ds: DiplomacySystem = game.diplomacy_system
 		# Keine Kriege zwischen Dörfern: nur gegen Reiche
 		if not ds.is_party(enemy):
-			return
+			return 0
 		game.set_relation(v, enemy, "war")
 		ds.change_reputation(v, enemy, float(DataDB.diplo("events.alliance_call", -20)), "Bündnisfall")
 		enemy.notify("%s steht seinem Verbündeten bei und ist jetzt dein Feind!" % v.display_name, "danger",
@@ -478,7 +479,7 @@ func dispatch_help(v: Kingdom, pos: Vector2, enemy: Kingdom) -> void:
 		if not is_instance_valid(u.target):
 			free.append(u)
 	if free.is_empty():
-		return
+		return 0
 	free.sort_custom(func(a: Unit, b: Unit) -> bool:
 		return a.position.distance_squared_to(pos) < b.position.distance_squared_to(pos))
 	var share := float(DataDB.diplo("treaties.alliance.help_share", 0.5))
@@ -491,6 +492,7 @@ func dispatch_help(v: Kingdom, pos: Vector2, enemy: Kingdom) -> void:
 	rec["helpers"] = uids
 	rec["help_until"] = now + float(DataDB.diplo("treaties.alliance.help_seconds", 90.0))
 	rec["help_pos"] = pos
+	return list.size()
 
 
 ## Milizen zurück auf ihre Posten (nach Alarm oder Bündnishilfe); only_uids: nur diese,
@@ -728,7 +730,10 @@ func growth_rate(v: Kingdom, rec: Dictionary, now: float) -> float:
 	var rate := float(cfg.get("base", 1.0))
 	var treaty: Dictionary = game.diplomacy_system.get_treaty(v)
 	var kind := str(treaty.get("type", ""))
-	if kind == "trade" or not (treaty.get("route", {}) as Dictionary).is_empty():
+	# Handelsvertrag oder offener Handelsweg (auch der Karawanenweg eines Bündnisses)
+	var partner: Kingdom = game.get_kingdom(int(treaty.get("partner_id", 0))) if not treaty.is_empty() else null
+	var route: Dictionary = game.trade_route_system.get_route_for(partner, v) if partner != null else {}
+	if kind == "trade" or str(route.get("state", "")) == "open":
 		rate += float(cfg.get("trade_bonus", 0.5))
 	if kind == "protection" or kind == "alliance":
 		rate += float(cfg.get("alliance_bonus", 0.25))

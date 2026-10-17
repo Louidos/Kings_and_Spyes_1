@@ -802,7 +802,7 @@ weiter selbst. Bei Dörfern ohne Bündnis ist der Befehl gesperrt, der Grund ste
 - Ab **3 Kriegern** am Dorf steigt der **Ruf** alle 2 Minuten (+1,8 bis +3, höchstens bis +75), und das Dorf dankt
   alle 5 Minuten mit einer kleinen **Abgabe** seiner reichlichsten Ware (2 je Krieger, höchstens 30).
 - Stationierte Truppen zählen zur Verteidigung des Dorfs – gegnerische Reiche greifen es seltener an.
-- **Hilferuf:** Wird ein verbündetes Dorf angegriffen, ohne dass deine Truppen dort stehen, ruft es um Hilfe (Meldung,
+- **Hilferuf:** Wird ein verbündetes Dorf angegriffen (Feinde am Dorf), ohne dass deine Truppen dort stehen, ruft es um Hilfe (Meldung,
   Zeile im Diplomatiefenster, 2 Minuten Zeit). *Hilfe schicken* schickt die ausgewählten Krieger (sonst die sechs
   nächsten freien) und bringt +3 Ruf; *Ablehnen* kostet 4 Ruf, ein überhörter Hilferuf 2.
 - **Gemeinsame Ziele:** Reiche, mit denen das Dorf und du im Krieg seid, stehen im Diplomatiefenster.
@@ -968,7 +968,8 @@ abgeschnitten (rotes ✕). Sind keine Feinde mehr da, öffnet er sich nach einig
 
 Handelswege mit Handelsvertrag sind **dauerhafte Routen**: Sie laufen von selbst weiter, ohne dass du klicken musst,
 und werden mit dem Spielstand gespeichert. Im Reiter „Handelswege“ stellst du je Route die **Menge** (×0,5 bis ×3)
-und den **Abstand** der Lieferungen (alle 60 bis 600 s) ein. Die Bezahlung folgt dem Preis: Hat das Dorf viel von
+und den **Abstand** der Lieferungen (alle 60 bis 600 s) ein; eine Änderung gilt ab der nächsten Fahrt der Karawane.
+Die Bezahlung folgt dem Preis: Hat das Dorf viel von
 seiner Ware, zahlst du weniger. Oben im Reiter steht, was der Handel je Minute bringt und kostet („Handel je
 Minute: Ein … · Aus …“). Jede angekommene Lieferung verbessert den Ruf beim Dorf, und Dörfer mit Handelsvertrag
 wachsen schneller. Die KI richtet ihre Routen nach denselben Regeln ein und kauft mehr, wenn die Ware billig ist.

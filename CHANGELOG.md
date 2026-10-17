@@ -11,6 +11,13 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
   eigenen Truppen lösen nur noch aus, wenn jemand kämpft oder verwundet ist, statt im Leerlauf abzuklingen. KI-Helden
   beschwören jetzt auch (Schattenruf, Totenerwecken) und nutzen Rauchschleier (#37).
 - Spionagebericht: Ein Dorf mit Bündnis steht nicht mehr doppelt unter „Bündnisse“ (#37).
+- Handelsrouten: Die Ware einer Fahrt wird beim Aufbruch der Karawane festgelegt – die Menge danach zu erhöhen bringt
+  auf dieser Fahrt nichts mehr. Ruf je Lieferung zählt anteilig nach Menge und Abstand (#36).
+- Dörfer wachsen mit offenem Handelsweg (auch dem Karawanenweg eines Bündnisses) wie angekündigt schneller (#36).
+- Bündnisse: Hilferufe enden mit dem Bündnis und entstehen nur bei echten Angriffen, nicht bei Boten-Warnungen; „Miliz
+  anfordern“ kostet nur Ruf, wenn wirklich Miliz kommt; Truppen, die fern vom Dorf halten oder angreifen, gelten nicht
+  mehr als stationiert; die KI schickt Hilfstruppen nur, wenn genug daheim bleibt, und holt sie nach dem Kampf zurück
+  (#36).
 
 ## 1.2.0 – 2026-10-17
 

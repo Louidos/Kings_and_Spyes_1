@@ -19,7 +19,8 @@ extends Node
 
 ## Stationierungen eines Reichs bei einem Dorf haben sich geändert
 signal stations_changed(kingdom: Kingdom, host: Kingdom)
-## Hilferuf geöffnet oder beantwortet (state: "open", "accepted", "declined", "expired", "resolved")
+## Hilferuf geöffnet oder beantwortet (state: "open", "accepted", "declined", "expired", "resolved",
+## "ended" = Bündnis beendet)
 signal help_call_changed(host: Kingdom, kingdom: Kingdom, state: String)
 
 var game: Node
@@ -264,8 +265,19 @@ func station(k: Kingdom, units: Array, host: Kingdom) -> String:
 	# Posten etwas vor dem Dorfzentrum, Richtung der ankommenden Truppen
 	game.command_system.order_move(list, post, true, "circle")
 	var now := GameClock.game_time
+	var old_hosts := {}
 	for u in list:
+		var old: Dictionary = stations.get((u as Unit).uid, {})
+		if not old.is_empty() and int(old["host_id"]) != host.id:
+			old_hosts[int(old["host_id"])] = true
 		stations[(u as Unit).uid] = {"kingdom_id": k.id, "host_id": host.id, "since": now, "arrived": false}
+	# Vorher anderswo stationiert: dort aufräumen (Zähler, Fensteranzeige)
+	for hid in old_hosts:
+		var old_host: Kingdom = game.get_kingdom(int(hid))
+		if old_host != null:
+			if get_stationed(k, old_host).is_empty():
+				timers.erase(pair(old_host, k))
+			stations_changed.emit(k, old_host)
 	var key := pair(host, k)
 	if not timers.has(key):
 		timers[key] = {"next_rep": now + float(cfg("reputation_interval", 120)),
@@ -289,6 +301,22 @@ func recall(k: Kingdom, host: Kingdom, reason: String = "") -> int:
 		if not reason.is_empty():
 			text = "%s: %s" % [reason, text]
 		k.notify(text, "info" if reason.is_empty() else "warning", game.village_system.get_center(host))
+	stations_changed.emit(k, host)
+	return units.size()
+
+
+## Einen Teil der Truppen von k bei host heimschicken (KI: Hilfstruppen nach dem Hilferuf).
+## Gibt die Anzahl zurück.
+func release(k: Kingdom, host: Kingdom, count: int) -> int:
+	var units := get_stationed(k, host).slice(0, maxi(count, 0))
+	if units.is_empty():
+		return 0
+	for u in units:
+		stations.erase((u as Unit).uid)
+	if is_instance_valid(k.castle):
+		game.command_system.order_gather(units)
+	if get_stationed(k, host).is_empty():
+		timers.erase(pair(host, k))
 	stations_changed.emit(k, host)
 	return units.size()
 
@@ -323,7 +351,8 @@ func request_militia(k: Kingdom, host: Kingdom) -> String:
 	var vs: VillageSystem = game.village_system
 	var cs: CommandSystem = game.command_system
 	var pos := cs.castle_rally_point(k, vs.get_center(host))
-	vs.dispatch_help(host, pos, null)
+	if vs.dispatch_help(host, pos, null) <= 0:
+		return "Die Miliz von %s ist gerade unterwegs oder im Kampf" % host.display_name
 	cooldowns["militia:" + pair(host, k)] = GameClock.game_time + float(cfg("militia_cooldown", 600))
 	game.diplomacy_system.change_reputation(host, k, float(cfg("militia_reputation", -2)), "Miliz angefordert")
 	k.notify("%s schickt dir Miliz zur Burg." % host.display_name, "good", pos)
@@ -375,10 +404,12 @@ func _tick_units() -> void:
 				or (u as Unit).kingdom.id != int(rec["kingdom_id"]) or not vs.is_village(host)
 		if not drop:
 			var unit: Unit = u
-			# Anderer Marschbefehl weg vom Dorf: Stationierung beendet
+			# Befehl weg vom Dorf (Marsch, Halten, Angriff mit erledigtem Ziel): Stationierung beendet.
+			# Nur die Verfolgung eines lebenden Ziels darf kurz aus dem Umkreis führen.
 			var post_tiles := vs.get_radius_tiles(host) + float(cfg("leave_extra", 12))
 			var away := unit.command_pos.distance_to(vs.get_center(host)) > post_tiles * float(game.world.tile_size)
-			drop = away and CommandSystem.flag(unit.command, "on_arrive") != ""
+			var chasing := unit.command == "attack" and is_instance_valid(unit.target)
+			drop = away and not chasing
 			if not drop and not bool(rec["arrived"]) and _is_present(unit, host):
 				rec["arrived"] = true
 				arrived[pair(host, unit.kingdom)] = [unit.kingdom, host]
@@ -443,6 +474,9 @@ func _tick_help(now: float) -> void:
 		if host == null or k == null or not vs.is_village(host):
 			help_calls.erase(key)
 			continue
+		if game.diplomacy_system.get_treaty_with(host, k) != "alliance":
+			_close_help(host, k, "ended")
+			continue
 		var center := vs.get_center(host)
 		if not get_present(k, host).is_empty() or not vs.has_enemies_near(host, center, vs.get_radius_tiles(host) + 6.0):
 			_close_help(host, k, "resolved")
@@ -484,7 +518,15 @@ func _on_treaty_changed(village: Kingdom, other: Kingdom, treaty_type: String) -
 			continue
 		if game.diplomacy_system.get_treaty_with(village, kk) != "alliance":
 			recall(kk, village, "Bündnis mit %s beendet" % village.display_name)
-			help_calls.erase(pair(village, kk))
+	# Offene Hilferufe gelten nur, solange das Bündnis besteht
+	for key in help_calls.keys():
+		var c: Dictionary = help_calls[key]
+		var kk: Kingdom = game.get_kingdom(int(c["kingdom_id"]))
+		if int(c["host_id"]) == village.id and (kk == null or game.diplomacy_system.get_treaty_with(village, kk) != "alliance"):
+			if kk != null:
+				_close_help(village, kk, "ended")
+			else:
+				help_calls.erase(key)
 
 
 func _on_side_switched(village: Kingdom, _new_ally: Kingdom, against: Kingdom) -> void:
@@ -507,6 +549,10 @@ func _on_village_alarm(village: Kingdom, attacker: Kingdom, pos: Vector2) -> voi
 		return
 	var k: Kingdom = game.get_kingdom(int(t["partner_id"]))
 	if k == null or k == attacker or not ds.is_party(k) or not get_present(k, village).is_empty():
+		return
+	# Nur echte Angriffe: Warnungen durch Boten (kein Feind vor Ort) rufen nicht um Hilfe
+	var vs: VillageSystem = game.village_system
+	if not vs.has_enemies_near(village, vs.get_center(village), vs.get_radius_tiles(village) + 6.0):
 		return
 	var key := pair(village, k)
 	var now := GameClock.game_time

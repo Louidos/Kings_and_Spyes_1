@@ -94,11 +94,13 @@ Prüfpunkt. Geprüft werden unter anderem:
 - **Handel** (`smoke_trade.gd`, Modul in `smoke_features.gd`): Holzpreis im holzreichen Dorf billiger als im
   holzarmen (auch beim Tausch), Preise im Diplomatiefenster; Handelsroute mit Menge und Abstand einstellen, unerlaubte
   Werte abgelehnt, Fluss je Minute im Reiter Handelswege; die Karawane liefert ohne Klicken, der Ruf steigt;
-  Einstellung und Route überstehen Speichern und Laden.
+  die Ware einer Fahrt bleibt, wie sie beim Aufbruch bestellt war; Einstellung und Route überstehen Speichern und Laden.
 - **Bündnis** (`smoke_alliance.gd`, Modul in `smoke_features.gd`): beim Nicht-Verbündeten gesperrt mit Grund (auch in
   der Dorfliste des Armeefensters); fünf Krieger beim verbündeten Dorf stationiert, angekommen, zählen zur
   Verteidigung; Speichern und Laden; Ruf steigt, Abgabe kommt an; Angreifer am Dorf werden angegriffen;
-  Zurückrufen; Hilferuf ablehnen kostet Ruf; Kündigung zieht die Truppen ab; die KI stationiert ebenfalls.
+  Zurückrufen; Boten-Warnung ohne Feind ruft nicht um Hilfe, Hilferuf ablehnen kostet Ruf; Miliz anfordern, während
+  sie unterwegs ist, kostet nichts; Halten fern vom Dorf beendet die Stationierung; Kündigung zieht die Truppen ab und
+  beendet offene Hilferufe; Wachstum mit Bündnis-Karawanenweg; die KI stationiert ebenfalls.
 - **Entdeckung** (`smoke_discovery.gd`, Modul in `smoke_features.gd`): Abstufung nach Schwierigkeit (Faktor steigt,
   Wartezeit sinkt von leicht bis episch), Schwellen (Wartezeit hält über der Gerüchte-Schwelle), Anstieg
   in einer Minute höchstens `rise_per_minute` (ohne Sprünge), ein Angriff entdeckt den Angreifer sofort.

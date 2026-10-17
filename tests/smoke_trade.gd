@@ -85,6 +85,33 @@ func run(r: Node) -> void:
 			GameClock.game_time - (until - 900.0)])
 	r.check(TOPIC, ds.get_reputation(v, player) > rep0, "Handel stärkt den Ruf bei %s: %.1f → %.1f" % [v.display_name,
 			rep0, ds.get_reputation(v, player)])
+	# Die Ware wird beim Aufbruch festgelegt: Menge danach erhöhen bringt auf dieser Fahrt nicht mehr
+	# (langer Abstand, damit keine weitere Lieferung dazwischenkommt; erst warten, bis die
+	# Karawane daheim ist und nichts mehr aussteht)
+	var slow := float(intervals[intervals.size() - 1])
+	ds.set_trade_order(player, v, float(amounts[0]), slow)
+	var trip: Dictionary = trs.get_route_for(player, v)
+	until = GameClock.game_time + 900.0
+	while (str(trip["leg"]) != "idle" or int(trip["pending"]) > 0) and GameClock.game_time < until:
+		await r.wait_game_seconds(2.0)
+	var small: Dictionary = ds.get_delivery(v, player)["give"]
+	var delivered0: Dictionary = (trip["stats"]["delivered"] as Dictionary).duplicate()
+	deliveries0 = int(ds.get_treaty(v).get("deliveries", 0))
+	ds.get_treaty(v)["next_delivery"] = GameClock.game_time
+	while not trip.has("order_give") and GameClock.game_time < until:
+		await r.wait_game_seconds(2.0)
+	var departed := trip.has("order_give")
+	ds.set_trade_order(player, v, float(amounts[amounts.size() - 1]), slow)
+	while int(ds.get_treaty(v).get("deliveries", 0)) <= deliveries0 and GameClock.game_time < until:
+		await r.wait_game_seconds(5.0)
+	var got := {}
+	for res_id in small:
+		got[res_id] = float((trip["stats"]["delivered"] as Dictionary).get(res_id, 0.0)) - float(delivered0.get(res_id, 0.0))
+	var same := departed
+	for res_id in small:
+		same = same and is_equal_approx(float(got[res_id]), float(small[res_id]))
+	r.check(TOPIC, same, "Menge nach der Abfahrt erhöht: geliefert %s wie beim Aufbruch bestellt (%s)" % [str(got), str(small)])
+	ds.set_trade_order(player, v, amount, interval)
 	trs.debug_fast = false
 	# 4. Speichern und Laden: Einstellung und Route bleiben
 	var vid := v.id
