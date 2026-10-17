@@ -101,6 +101,9 @@ Prüfpunkt. Geprüft werden unter anderem:
 - **Entdeckung** (`smoke_discovery.gd`, Modul in `smoke_features.gd`): Abstufung nach Schwierigkeit (Faktor steigt,
   Wartezeit sinkt von leicht bis episch), Schwellen (Wartezeit hält über der Gerüchte-Schwelle), Anstieg
   in einer Minute höchstens `rise_per_minute` (ohne Sprünge), ein Angriff entdeckt den Angreifer sofort.
+- **Welt** (`smoke_world_compat.gd`, Modul in `smoke_features.gd`): derselbe Seed ergibt dieselbe Welt wie in 1.1.0
+  (Fingerabdruck von Biomen, Vorkommen, Plätzen und Start). Sonst laden alte Spielstände nicht mehr. Ändert sich die
+  Welt absichtlich, `WorldGenerator.VERSION` erhöhen und die Werte im Test erneuern.
 - **Bewerber** (`smoke_recruits.gd`): langsames Wachstum, Taverne verkürzt die Wartezeit, Bewerber mit Bedingungen,
   Aufnehmen im Bewerberfenster gesperrt und wieder frei, Bewohner +1, Geschenk, Fachkraft schneller, Abweisen,
   wartender Bewerber im Speichern-Laden-Rundlauf. `recruits=off` schaltet die Bewerber ab (Balancing: das
