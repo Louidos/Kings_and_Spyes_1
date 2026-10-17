@@ -36,6 +36,9 @@ var _start_buildings: Dictionary = {}
 var _castle_cells: Dictionary = {}
 var _attack_seen := false
 var _near_seen := false
+## Grund und Zeitpunkt, wenn die erzwungene Welle endet (Fehlersuche im Rauchtest)
+var _wave_end_reason := ""
+var _wave_start := 0.0
 var _rival_test := false
 var _player_alive_1800 := true
 var _next_sample := SAMPLE_INTERVAL
@@ -556,6 +559,10 @@ func _s4() -> void:
 	g.combat_system.kingdom_attacked.connect(func(victim: Kingdom, attacker: Kingdom, _pos: Vector2) -> void:
 		if victim == g.player and attacker == _ai0:
 			_attack_seen = true)
+	ai.wave_ended.connect(func(k: Kingdom, _target: Kingdom, reason: String) -> void:
+		if k == _ai0 and _wave_end_reason.is_empty():
+			_wave_end_reason = "%s nach %d s" % [reason, roundi(GameClock.game_time - _wave_start)])
+	_wave_start = GameClock.game_time
 	(g.espionage_system as EspionageSystem).enemy_spotted.connect(func(observer: Kingdom, foe: Kingdom, _pos: Vector2,
 			count: int, inside: bool) -> void:
 		if observer == g.player and foe == _ai0:
@@ -576,8 +583,9 @@ func _s5(t: float) -> bool:
 				_near_seen = true
 	if not _attack_seen and not _near_seen and t < 520.0:
 		return false
-	_check(_attack_seen or _near_seen, "Welle von %s erreicht den Spieler (Angriff gemeldet: %s, nahe der Burg: %s, Zustand %s)" % [
-			_ai0.display_name, str(_attack_seen), str(_near_seen), str(wave.get("state", "beendet"))])
+	_check(_attack_seen or _near_seen, "Welle von %s erreicht den Spieler (Angriff gemeldet: %s, nahe der Burg: %s, Zustand %s%s)" % [
+			_ai0.display_name, str(_attack_seen), str(_near_seen), str(wave.get("state", "beendet")),
+			"" if _wave_end_reason.is_empty() else ", Ende: " + _wave_end_reason])
 	_check(int(_spotted[1]) > 0, "Feinde im Gebiet des Spielers gemeldet (bis %d im Gebiet, %d nahe der Grenze)" % [
 			int(_spotted[1]), int(_spotted[0])])
 	ai.debug_recall_wave(_ai0)
