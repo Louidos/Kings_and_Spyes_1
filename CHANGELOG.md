@@ -5,6 +5,13 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 ## Unveröffentlicht
 
+### Behoben
+
+- Helden: Eisenhaltung löst sich mit Selbstauslösung im Kampf von selbst aus; Steinwall und andere Hilfen für die
+  eigenen Truppen lösen nur noch aus, wenn jemand kämpft oder verwundet ist, statt im Leerlauf abzuklingen. KI-Helden
+  beschwören jetzt auch (Schattenruf, Totenerwecken) und nutzen Rauchschleier (#37).
+- Spionagebericht: Ein Dorf mit Bündnis steht nicht mehr doppelt unter „Bündnisse“ (#37).
+
 ## 1.2.0 – 2026-10-17
 
 Alte Spielstände (1.1.0) laden weiter (#33): Dörfer behalten ihre Grösse und wachsen ab jetzt weiter, Handelsrouten

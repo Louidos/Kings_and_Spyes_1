@@ -52,8 +52,51 @@ func run(r: Node) -> void:
 		for aid in DataDB.get_hero_type(str(id)).get("abilities", []):
 			(rec["ranks"] as Dictionary)[str(aid)] = 1
 		hs._apply_hero(rec)
+		_check_autocast(r, u, rec)
 		for aid in DataDB.get_hero_type(str(id)).get("abilities", []):
 			await _test_ability(r, u, rec, str(aid))
+
+
+## Selbstauslösung: Schutz für den Helden nur im Kampf, Hilfe für die eigenen Truppen nur, wenn
+## eine kämpft oder verwundet ist (sonst wäre die Fähigkeit im Kampf gerade im Abklingen)
+func _check_autocast(r: Node, u: Unit, rec: Dictionary) -> void:
+	var g: Node = r.game
+	var hs: HeroSystem = g.hero_system
+	var k: Kingdom = u.kingdom
+	var abilities: Array = hs.get_type(rec).get("abilities", [])
+	for aid in abilities:
+		var def := DataDB.get_ability(str(aid))
+		var target := str(def.get("target", ""))
+		if str(def.get("kind", "")) != "active" or not (target == "self" or (target == "none" and hs.get_ability_side(str(aid)) == "own")):
+			continue
+		for other in abilities:
+			hs.set_autocast(k, int(rec["id"]), str(other), str(other) == str(aid))
+		u.target = null
+		u.hp = u.max_hp
+		# Ruhige Lage: eigene Truppen im Umkreis gesund und ohne Gegner
+		for w in hs.get_ability_targets(u, str(aid), u.position):
+			(w as Unit).hp = (w as Unit).max_hp
+			(w as Unit).target = null
+		var idle: Dictionary = hs.pick_auto_cast(u)
+		var foe: Unit = null
+		var friend: Unit = null
+		if target == "self":
+			foe = _enemy_near(r, u)
+			u.target = foe
+		else:
+			friend = r.spawn_tier(k, "fighter", 1)[0]
+			friend.position = u.position + Vector2(30, 0)
+			friend.hp = friend.max_hp * 0.5
+		var busy: Dictionary = hs.pick_auto_cast(u)
+		r.check(TOPIC, idle.is_empty() and str(busy.get("ability_id", "")) == str(aid),
+				"%s löst %s nur im Ernstfall selbst aus (ruhig: %s, im Kampf/verwundet: %s)" % [hs.get_title(rec), aid,
+				str(idle.get("ability_id", "-")), str(busy.get("ability_id", "-"))])
+		u.target = null
+		for w in [foe, friend]:
+			if w != null and is_instance_valid(w):
+				g.unit_system.remove_unit(w)
+	for other in abilities:
+		hs.set_autocast(k, int(rec["id"]), str(other), false)
 
 
 ## Eine Fähigkeit auslösen bzw. ihre dauerhafte Wirkung prüfen

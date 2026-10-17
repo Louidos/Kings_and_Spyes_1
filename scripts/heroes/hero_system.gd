@@ -489,9 +489,27 @@ func pick_auto_cast(u: Unit) -> Dictionary:
 				if is_instance_valid(t) and t is Unit and can_use(u, ability_id, t).is_empty():
 					return {"ability_id": ability_id, "target": t}
 			"none":
-				if not get_ability_targets(u, ability_id, u.position).is_empty():
+				if _worth_auto_cast(u, ability_id):
+					return {"ability_id": ability_id, "target": null}
+			"self":
+				# Schutz für den Helden selbst: nur im Kampf
+				if is_instance_valid(u.target) and can_use(u, ability_id).is_empty():
 					return {"ability_id": ability_id, "target": null}
 	return {}
+
+
+## Fähigkeit ohne Ziel (Umkreis um den Helden) automatisch auslösen? Gegen Feinde, sobald einer
+## im Umkreis ist; für die eigenen Truppen nur, wenn eine davon kämpft oder verwundet ist – sonst
+## wäre sie beim nächsten Kampf gerade im Abklingen.
+func _worth_auto_cast(u: Unit, ability_id: String) -> bool:
+	var targets := get_ability_targets(u, ability_id, u.position)
+	if get_ability_side(ability_id) != "own":
+		return not targets.is_empty()
+	for w in targets:
+		var unit: Unit = w
+		if is_instance_valid(unit.target) or unit.hp < unit.max_hp:
+			return true
+	return false
 
 
 # ---------------------------------------------------------------------------

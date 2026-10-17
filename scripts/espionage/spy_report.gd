@@ -95,12 +95,14 @@ static func _alliances(game: Node, target: Kingdom, village: bool) -> Array:
 			if partner != null:
 				list.append("%s mit %s" % [DiplomacySystem.treaty_name(str(t["type"])), partner.display_name])
 		return list
+	var listed := {}
 	for t in ds.get_treaties_of(target):
 		list.append("%s mit %s" % [DiplomacySystem.treaty_name(str(t["type"])), (t["village"] as Kingdom).display_name])
+		listed[(t["village"] as Kingdom).id] = true
 	for o in game.kingdoms:
 		var other: Kingdom = o
 		if other != target and not other.defeated and other.controller != "wild" and game.are_allied(target, other) \
-				and not ds.is_party(other):
+				and not ds.is_party(other) and not listed.has(other.id):
 			list.append("Bündnis mit %s" % other.display_name)
 	return list
 
