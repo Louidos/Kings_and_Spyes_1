@@ -38,6 +38,8 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 - Spione erscheinen nicht mehr doppelt: Ein Spion bekommt nur noch einen Eintrag und eine Nummer, auch nach dem
   Laden. Zu Spielbeginn hat kein Reich Spione; ein neuer Test sichert beides ab (#13).
+- Spielstände aus Version 1.1.0 laden wieder: Die grösseren Dörfer hatten die aus dem Seed erzeugte Welt verändert.
+  Ein neuer Test hält die Welt gleich (#33).
 
 ## 1.1.0 – 2026-10-16
 
