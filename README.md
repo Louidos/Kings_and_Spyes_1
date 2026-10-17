@@ -2,7 +2,7 @@
 
 [![Tests](https://github.com/Louidos/Kings_and_Spyes_1/actions/workflows/tests.yml/badge.svg?branch=ccr-eab978f9-9dj810)](https://github.com/Louidos/Kings_and_Spyes_1/actions/workflows/tests.yml)
 ![Godot 4.4+](https://img.shields.io/badge/Godot-4.4%2B-478cbf?logo=godotengine&logoColor=white)
-![Version 1.2.0](https://img.shields.io/badge/Version-1.2.0-c9a640)
+![Version 1.2.1](https://img.shields.io/badge/Version-1.2.1-c9a640)
 
 **2D-Echtzeit-Strategie- und Aufbauspiel in Godot 4 (GDScript), Ansicht von oben.** Du bist ein König, wählst die
 Seite des Lichts oder der Finsternis und dein Volk (sechs je Seite), baust aus fünf Bewohnern ein Dorf auf, beschwörst
@@ -116,11 +116,12 @@ Alle Tasten: [docs/steuerung.md](docs/steuerung.md) – im Spiel auch unter **F1
 
 ## Projektstand
 
-**Version 1.2.0 – spielbar und vollständig.** Alle zehn geplanten Ausbaustufen sind fertig, dazu Armeefenster,
+**Version 1.2.1 – spielbar und vollständig.** Alle zehn geplanten Ausbaustufen sind fertig, dazu Armeefenster,
 Truppen-Erweiterung, Tutorial und eine aufgeräumte Oberfläche. Neu in 1.2.0: gezeichnete Figuren statt Punkten,
 genaue Spionageberichte, wachsende Dörfer, zwei neue Helden je Fraktion, Handel mit Preisen und dauerhaften Routen,
 stationierte Truppen bei Verbündeten, langsamere Entdeckung und längere Partien (Details im
-[Changelog](CHANGELOG.md)).
+[Changelog](CHANGELOG.md)). 1.2.1 behebt Fehler bei Heldenfähigkeiten, Bündnis-Stationierung, Handelsrouten,
+Ruf-Verlauf, Dorfwachstum und beim Anklicken der Figuren.
 
 - [x] Phase 1 – Projekt-Setup, Kamera, prozedurale Karte mit Biomen, Spieltempo und Pause
 - [x] Phase 2 – Dorf: Gebäude, Ressourcen, Bewohner, Arbeitsverteilung
@@ -135,6 +136,7 @@ stationierte Truppen bei Verbündeten, langsamere Entdeckung und längere Partie
 - [x] Armeefenster, Truppen (Klassen, Schmiede, Ränge, Aussehen), Tutorial, aufgeräumte Oberfläche
 - [x] 1.1.0 – Gebäudestufen, Burgstufen mit Freischaltungen, Bewerber statt automatischem Wachstum, Helden-Bedingungen
 - [x] 1.2.0 – Figuren, Spionagebericht, wachsende Dörfer, neue Helden, Handel, Bündnis-Truppen, längere Partien
+- [x] 1.2.1 – Fehlerbehebungen (Helden, Bündnisse, Handel, Ruf-Verlauf, Dörfer, Figuren anklicken)
 
 **Noch offen:**
 
