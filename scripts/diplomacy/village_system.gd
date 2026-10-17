@@ -26,6 +26,8 @@ signal village_founded(village: Kingdom)
 signal settlement_transferred(from_kingdom: Kingdom, to_kingdom: Kingdom, reason: String)
 ## Ein Dorf wurde zerstört (Dorfzentrum gefallen, ohne Eroberer)
 signal village_destroyed(village: Kingdom, by: Kingdom)
+## Ein Dorf ist um eine Hütte gewachsen
+signal village_grew(village: Kingdom, size: int)
 ## Ein Dorf schlägt Alarm (angegriffen oder durch einen Boten gewarnt)
 signal village_alarm(village: Kingdom, attacker: Kingdom, pos: Vector2)
 
@@ -83,7 +85,6 @@ func found_villages() -> void:
 func found_village(site: Dictionary) -> Kingdom:
 	var people := DataDB.get_people(str(site.get("people", "")))
 	var hall_def := DataDB.get_building(str(DataDB.diplo("village.hall", "village_hall")))
-	var hut_def := DataDB.get_building(str(DataDB.diplo("village.hut", "village_hut")))
 	if people.is_empty() or hall_def.is_empty():
 		push_error("VillageSystem: Dorf ohne Volk oder Dorfzentrum (%s)" % str(site))
 		return null
@@ -101,28 +102,20 @@ func found_village(site: Dictionary) -> Kingdom:
 	var hall: Building = game.building_system.place_settlement_center(hall_def, k, center)
 	hall.extra["people_id"] = people_id
 	hall.refresh_look()
-	var village_size := clampi(int(site.get("size", 2)), 1, HUT_OFFSETS.size())
+	var village_size := clampi(int(site.get("size", 2)), 1, maxi(int(DataDB.diplo("village.growth.max_size", 10)), 1))
 	var hut_uids: Array = []
-	if not hut_def.is_empty():
-		for j in HUT_OFFSETS.size():
-			if hut_uids.size() >= village_size:
-				break
-			var off: Vector2i = HUT_OFFSETS[(index + j) % HUT_OFFSETS.size()]
-			var cell: Vector2i = hall.cell + off
-			if not game.building_system.can_place(hut_def, cell, k).is_empty():
-				continue
-			var hut: Building = game.building_system.place_building(hut_def, cell, k, true)
-			if hut == null:
-				continue
-			hut.extra["people_id"] = people_id
-			hut.refresh_look()
-			hut_uids.append(hut.uid)
+	for _j in village_size:
+		var hut := _place_hut(k, hall, index + hut_uids.size())
+		if hut == null:
+			break
+		hut_uids.append(hut.uid)
 	var rec := {"id": k.id, "people_id": people_id, "name": village_name, "site_index": index,
 			"center": center, "size": village_size, "hall_uid": hall.uid, "hut_uids": hut_uids,
 			"status": "active", "owner_id": 0,
 			"population": village_size * int(DataDB.diplo("village.population_per_size", 4)),
 			"production_factor": 1.0, "refill_timer": 0.0, "alarm_until": 0.0, "alarm_pos": Vector2.ZERO,
-			"calm_since": 0.0, "help_until": 0.0, "help_pos": Vector2.ZERO, "helpers": [], "posts": [], "slots": {}}
+			"calm_since": 0.0, "help_until": 0.0, "help_pos": Vector2.ZERO, "helpers": [], "posts": [], "slots": {},
+			"growth": 0.0, "last_attacked": -1.0e9, "tower_uids": []}
 	villages[k.id] = rec
 	order.append(k.id)
 	# Wachposten rund um das Dorfzentrum (nach den Hütten: Posten liegen auf freien Kacheln)
@@ -132,6 +125,40 @@ func found_village(site: Dictionary) -> Kingdom:
 		_spawn_militia(k, rec, i, rec["posts"][i])
 	village_founded.emit(k)
 	return k
+
+
+## Neue Hütte auf einem freien Platz um das Dorfzentrum (zuerst die festen Plätze HUT_OFFSETS,
+## je Dorf gedreht, dann Ringe bis growth.hut_search_radius); null, wenn kein Platz frei ist
+func _place_hut(v: Kingdom, hall: Building, rotate: int) -> Building:
+	var hut_def := DataDB.get_building(str(DataDB.diplo("village.hut", "village_hut")))
+	if hut_def.is_empty() or hall == null:
+		return null
+	var cells: Array = []
+	for j in HUT_OFFSETS.size():
+		cells.append(hall.cell + (HUT_OFFSETS[(rotate + j) % HUT_OFFSETS.size()] as Vector2i))
+	var center := hall.cell + Vector2i(1, 1)
+	for r in range(3, int(DataDB.diplo("village.growth.hut_search_radius", 8)) + 1):
+		for dy in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				if absi(dx) == r or absi(dy) == r:
+					cells.append(center + Vector2i(dx, dy))
+	return _place_village_building(v, hut_def, cells)
+
+
+## Setzt ein Dorfgebäude (fertig, kostenlos) auf die erste passende Kachel der Liste
+func _place_village_building(v: Kingdom, def: Dictionary, cells: Array) -> Building:
+	var bs: BuildingSystem = game.building_system
+	for c in cells:
+		var cell: Vector2i = c
+		if not bs.can_place_free(def, cell, v).is_empty():
+			continue
+		var b: Building = bs.place_building(def, cell, v, true)
+		if b == null:
+			continue
+		b.extra["people_id"] = v.people_id
+		b.refresh_look()
+		return b
+	return null
 
 
 ## Dorfname ohne Doppelte: Name Nummer index (reihum), belegte werden übersprungen
@@ -661,6 +688,7 @@ func _tick_active(v: Kingdom, rec: Dictionary, step: float, now: float) -> void:
 				or now > float(rec["alarm_until"]):
 			rec["alarm_until"] = 0.0
 			_return_to_posts(v, rec)
+	tick_growth(v, rec, step, now)
 	# Bündnishilfe beenden (Zeit um oder keine Feinde mehr am Einsatzort)
 	if float(rec["help_until"]) > 0.0:
 		if now >= float(rec["help_until"]) or not has_enemies_near(v, rec["help_pos"], HELP_ENEMY_RADIUS):
@@ -668,6 +696,75 @@ func _tick_active(v: Kingdom, rec: Dictionary, step: float, now: float) -> void:
 			rec["help_until"] = 0.0
 			rec["helpers"] = []
 			_return_to_posts(v, rec, helpers)
+
+
+## Wachstum (diplomacy.json village.growth): Im Frieden sammelt das Dorf Wachstum (Handel und
+## Bündnisse beschleunigen es); voll ergibt es eine neue Hütte, mehr Bewohner, mehr Milizen und ab
+## towers_at_size einen Wachturm. Krieg mit einem Reich, Alarm oder ein Angriff in den letzten
+## attack_pause_seconds halten es an. Höchstens max_size Hütten.
+func tick_growth(v: Kingdom, rec: Dictionary, step: float, now: float) -> void:
+	var rate := growth_rate(v, rec, now)
+	if rate <= 0.0 or int(rec.get("size", 1)) >= int(DataDB.diplo("village.growth.max_size", 10)):
+		return
+	var interval := maxf(float(DataDB.diplo("village.growth.interval", 600)), 1.0)
+	rec["growth"] = float(rec.get("growth", 0.0)) + rate * step / interval
+	if float(rec["growth"]) >= 1.0:
+		rec["growth"] = float(rec["growth"]) - 1.0
+		grow(v, rec)
+
+
+## Wachstum je growth.interval (0 = angehalten): 1 im Frieden, + trade_bonus mit Handelsvertrag oder
+## Handelsweg, + alliance_bonus mit Schutz- oder Bündnisvertrag
+func growth_rate(v: Kingdom, rec: Dictionary, now: float) -> float:
+	var cfg: Dictionary = DataDB.diplo("village.growth", {})
+	if cfg.is_empty() or not is_village(v) or float(rec.get("alarm_until", 0.0)) > 0.0:
+		return 0.0
+	if now - float(rec.get("last_attacked", -1.0e9)) < float(cfg.get("attack_pause_seconds", 900)):
+		return 0.0
+	for o in game.kingdoms:
+		var k: Kingdom = o
+		if k != v and not k.defeated and k.controller != "wild" and game.diplomacy_system.is_party(k) and game.are_hostile(v, k):
+			return 0.0
+	var rate := float(cfg.get("base", 1.0))
+	var treaty: Dictionary = game.diplomacy_system.get_treaty(v)
+	var kind := str(treaty.get("type", ""))
+	if kind == "trade" or not (treaty.get("route", {}) as Dictionary).is_empty():
+		rate += float(cfg.get("trade_bonus", 0.5))
+	if kind == "protection" or kind == "alliance":
+		rate += float(cfg.get("alliance_bonus", 0.25))
+	return rate
+
+
+## Das Dorf wächst um eine Hütte: Bewohner, Milizplätze, ggf. Wachturm
+func grow(v: Kingdom, rec: Dictionary) -> bool:
+	var hall := get_hall(v)
+	if hall == null:
+		return false
+	var hut := _place_hut(v, hall, int(rec.get("site_index", 0)) + int(rec.get("size", 1)))
+	if hut == null:
+		return false
+	(rec["hut_uids"] as Array).append(hut.uid)
+	rec["size"] = int(rec["size"]) + 1
+	add_population(v, int(DataDB.diplo("village.population_per_size", 4)))
+	# Mehr Milizplätze: Posten neu verteilen, der Vorrat füllt sie nach und nach auf
+	rec["posts"] = _make_posts(hall, get_militia_target(v))
+	_return_to_posts(v, rec)
+	var towers_at: Array = DataDB.diplo("village.growth.towers_at_size", [])
+	var tower_uids: Array = rec.get("tower_uids", [])
+	rec["tower_uids"] = tower_uids
+	if tower_uids.size() < towers_at.size() and int(rec["size"]) >= int(towers_at[tower_uids.size()]):
+		var tower_def := DataDB.get_building(str(DataDB.diplo("village.growth.tower", "tower")))
+		var cells: Array = []
+		var center := hall.cell + Vector2i(1, 1)
+		var angle := TAU * tower_uids.size() / maxf(float(towers_at.size()), 1.0) + 0.8
+		for r in range(4, 9):
+			cells.append(center + Vector2i((Vector2.from_angle(angle) * r).round()))
+			cells.append(center + Vector2i((Vector2.from_angle(angle + 0.5) * r).round()))
+		var tower := _place_village_building(v, tower_def, cells)
+		if tower != null:
+			tower_uids.append(tower.uid)
+	village_grew.emit(v, int(rec["size"]))
+	return true
 
 
 ## Eine Miliz aus dem Dorfvorrat ersetzen (erscheint am Dorfzentrum, läuft zum freien Posten)
@@ -738,6 +835,7 @@ func _destroy_village(v: Kingdom, by: Kingdom) -> void:
 ## Angriff auf ein Dorf: Alarm. Angriff auf einen Bündnispartner in der Nähe: Hilfe.
 func _on_kingdom_attacked(victim: Kingdom, attacker: Kingdom, pos: Vector2) -> void:
 	if is_village(victim):
+		get_record(victim)["last_attacked"] = GameClock.game_time
 		_pending.append(["alarm", victim.id, attacker.id, pos])
 		return
 	var help_radius := float(DataDB.diplo("treaties.alliance.help_radius", 25)) * _ts
@@ -757,7 +855,10 @@ func _on_building_destroyed(b: Building, killer: Kingdom) -> void:
 	if int(rec["hall_uid"]) == b.uid:
 		_pending.append(["destroy", v.id, killer.id if killer != null else 0])
 	else:
+		# Zerstörte Hütte oder Turm: Plünderung hält das Wachstum an
 		(rec["hut_uids"] as Array).erase(b.uid)
+		(rec.get("tower_uids", []) as Array).erase(b.uid)
+		rec["last_attacked"] = GameClock.game_time
 
 
 func _on_unit_removed(u: Unit) -> void:
@@ -779,6 +880,15 @@ func to_dict() -> Dictionary:
 
 func from_dict(d: Dictionary) -> void:
 	villages = (d.get("villages", {}) as Dictionary).duplicate(true)
+	# Spielstände vor dem Dorfwachstum (1.1.0): Felder ergänzen
+	for vid in villages:
+		var rec: Dictionary = villages[vid]
+		if not rec.has("growth"):
+			rec["growth"] = 0.0
+		if not rec.has("last_attacked"):
+			rec["last_attacked"] = -1.0e9
+		if not rec.has("tower_uids"):
+			rec["tower_uids"] = []
 	order = (d.get("order", []) as Array).duplicate()
 	_pending = (d.get("pending", []) as Array).duplicate(true)
 	_tick_acc = float(d.get("tick_acc", 0.0))

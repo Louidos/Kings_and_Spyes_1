@@ -731,6 +731,12 @@ Rund um dein Reich liegen **neutrale Dörfer** (kleine Karte 6, mittlere 10, gro
 ihres Volks und einem Haussymbol auf der Minikarte. Jedes Dorf hat Milizen, produziert Waren in sein Dorflager und hat
 einen **Ruf** dir gegenüber.
 
+**Dörfer wachsen:** Ein Dorf beginnt mit 4–7 Hütten. Im Frieden kommt etwa alle 10 Spielminuten eine Hütte dazu –
+mit einem Handelsvertrag oder Handelsweg schneller (+50 %), mit einem Schutzvertrag oder Bündnis etwas schneller
+(+25 %). Jede Hütte bringt 4 Bewohner und einen Milizplatz mehr (höchstens 10 Milizen); ab 7 und ab 9 Hütten baut das
+Dorf je einen Wachturm. Höchstens 10 Hütten. Krieg mit einem Reich, ein Alarm oder ein Angriff bzw. eine zerstörte
+Hütte in den letzten 15 Minuten halten das Wachstum an. Die Hüttenzahl steht im Diplomatiefenster.
+
 ![Weit herausgezoomt: das eigene Reich und seine Umgebung](bilder/umgebung.jpg)
 
 ![Diplomatiefenster](bilder/diplomatie.jpg)
@@ -784,7 +790,8 @@ auch dort.
 ## 15. Gegnerische Reiche, Entdeckung und Spionage
 
 Je nach Schwierigkeit und Kartengrösse gibt es ein oder zwei **feindliche Königreiche** der Gegenseite, jedes mit
-eigenem Volk. Sie bauen auf wie du, räumen Monsterlager, umwerben Dörfer, forschen, werben Helden an und bauen
+eigenem Volk. Sie starten mit einem kleinen Vorsprung (3 Bewohner sowie Wohnhaus und Holzfällerhütte mehr) und bauen
+auf wie du, räumen Monsterlager, umwerben Dörfer, forschen, werben Helden an und bauen
 Mauern und Türme, wenn sie bedroht werden. Auch untereinander bauen sie Spannung auf bis zum Krieg.
 
 ### Entdeckung

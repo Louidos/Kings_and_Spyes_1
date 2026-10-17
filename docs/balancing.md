@@ -74,6 +74,8 @@ Nur Daten, kein Code (Details in [Daten anpassen](daten-anpassen.md)):
 | Wie früh und hart die KI angreift | `ai.json` → `difficulty.<stufe>`: `first_attack_minutes`, `patience_minutes`, `wave_interval`, `first_wave_max`, `army_size_mult` |
 | Wachstum der KI-Armee über lange Partien | `ai.json` → `army.size_by_minute` (bis 32 h), `army.max_units` |
 | Wie das eigene Heer auf den Ruf der Dörfer wirkt | `diplomacy.json` → `strength_attitude` (`friendly_per_interval`, `friendly_cap`, `hostile_per_interval`, `reference_power`) |
+| Grösse und Wachstum der Dörfer | `worldgen.json` → `villages.size`, `diplomacy.json` → `village.growth`, `village.militia_max` |
+| Startvorsprung der KI-Reiche | `ai.json` → `start_bonus` (Bewohner, Gebäude) |
 | Wie schnell die KI den Spieler bemerkt | `espionage.json` → `awareness` (`rise_per_minute`, `rumour`, `discovered`, `patience_floor`) |
 | Stärke und Ertrag der Gegner, Startvorräte | `difficulties.json` |
 | Häufigkeit der Ereignisse | `events.json` (`chance_per_check`, Abstände, Abklingzeiten) |

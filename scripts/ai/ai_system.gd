@@ -151,9 +151,32 @@ func found_ai_kingdom(site: Dictionary, people_id: String) -> Kingdom:
 		personality_id = "balanced"
 	k.ai_state = AIBrain.default_state(personality_id)
 	_brains[k.id] = AIBrain.new(self, k)
+	_apply_start_bonus(k)
 	order.append(k.id)
 	ai_kingdom_founded.emit(k)
 	return k
+
+
+## Startvorsprung der KI-Reiche (ai.json start_bonus): zusätzliche Bewohner und fertige Gebäude
+## (kostenlos, Platz wie beim normalen Bauen der KI)
+func _apply_start_bonus(k: Kingdom) -> void:
+	var bonus: Dictionary = DataDB.ai("start_bonus", {})
+	var extra := int(bonus.get("villagers", 0))
+	for i in extra:
+		var pos: Vector2 = k.castle.get_approach_point(k.castle.get_center() + Vector2.from_angle(TAU * i / maxf(extra, 1.0) + 0.5) * 1000.0)
+		var u: Unit = game.unit_system.spawn_unit(k, "villager", pos)
+		if u != null:
+			game.work_system.set_unit_job(u, "idle")
+	var brain := get_brain(k)
+	for id in bonus.get("buildings", []):
+		var def := DataDB.get_building(str(id))
+		if def.is_empty() or brain == null:
+			continue
+		brain.checks_left = int(DataDB.ai("placement.max_checks", 400))
+		brain.scan_left = brain.checks_left * AIEconomy.SCAN_PER_CHECK
+		var cell := AIEconomy.find_site(brain, def)
+		if cell.x >= 0 and (game.building_system as BuildingSystem).can_place_free(def, cell, k).is_empty():
+			game.building_system.place_building(def, cell, k, true)
 
 
 ## Schwierigkeit als Quelle "difficulty": Ertrag (gather, production), Stärke (hp,

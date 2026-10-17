@@ -20,7 +20,8 @@
 		"siege: Belagerungswaffen gegen befestigte Ziele (ab fortified_walls Mauerstücken oder fortified_towers Türmen): max_units + per_wave je bisheriger Welle, höchstens cap; attack_radius = Befestigungen in diesem Umkreis (Kacheln) um das Wellenziel werden angegriffen.",
 		"upgrades (Ausbaustufen, buildings.json → levels): ab min_minute baut die KI Gebäude aus, höchstens max_parallel gleichzeitig und nur, wenn die Ausbaukosten × surplus_factor über der Reserve übrig sind und nicht auf ein neues Gebäude gespart wird. Reihenfolge der Typen nach order (Wirtschaft zuerst; je Typ zuerst das niedrigste Gebäude); höchste Stufe je Spielminute aus max_level_by_minute (Paare [Minute, Stufe]). Die Burg geht vor (ab castle_min_minute): sind ihre Bedingungen erfüllt (Bewohner, Gebäude, ausgebaute Gebäude), baut die KI sie aus, sobald die Kosten über der Reserve da sind, und spart bis dahin darauf (keine anderen Ausbauten, auch nicht in der Pause; die Armee hält die Burgkosten zurück) – höchstens castle_save_seconds am Stück, danach castle_skip_seconds Pause, damit die Armee nicht dauerhaft ohne Mana bleibt. Gesperrte Gebäude (Burgstufe) überspringt die Bauliste wie fehlende Forschung.",
 		"forge (Truppen): Schmiede-Stufen ab min_minute kaufen, höchstens max_level_by_minute (Paare [Minute, Stufe]); bevorzugt die Klasse mit den meisten eigenen Truppen; gekauft wird erst, wenn reserve_factor × Kosten (plus Reserve) im Lager sind – die Truppen gehen vor. Wertepunkte verteilt die KI automatisch (Kingdom.auto_stat_points). Neue Truppen in army.composition: spearman, crossbow, heavy, cavalry, battlemage.",
-		"routes: Handelswege der KI – ab start_trade_minute einmal ein Handelsvertrag mit dem nächsten freien Dorf (bis start_trade_max_distance Kacheln); prefer_trade_first = Handel vor Bündnis, solange kein Handelsweg besteht; Geleitschutz für abgeschnittene Wege (escort_share des Heimbestands, mindestens escort_min Einheiten, bis escort_distance Kacheln, höchstens alle escort_cooldown s)."
+		"routes: Handelswege der KI – ab start_trade_minute einmal ein Handelsvertrag mit dem nächsten freien Dorf (bis start_trade_max_distance Kacheln); prefer_trade_first = Handel vor Bündnis, solange kein Handelsweg besteht; Geleitschutz für abgeschnittene Wege (escort_share des Heimbestands, mindestens escort_min Einheiten, bis escort_distance Kacheln, höchstens alle escort_cooldown s).",
+		"start_bonus: KI-Reiche starten grösser als der Spieler – villagers zusätzliche Bewohner und fertige Gebäude buildings (kostenlos, Platz wie beim normalen Bauen). Danach bauen sie nach build_order und build.growth weiter aus."
 	],
 	"kingdom_names": {"good": "Königreich der %s", "evil": "Dunkles Reich der %s"},
 	"people_personality": {
@@ -63,6 +64,7 @@
 		{"building": "farm", "count": 5}, {"building": "mana_well", "count": 2}, {"building": "barracks", "count": 2},
 		{"building": "library", "count": 2}, {"building": "temple", "count": 1}, {"building": "siege_workshop", "count": 1}, {"building": "storehouse", "count": 2}
 	],
+	"start_bonus": {"villagers": 3, "buildings": ["house", "lumberyard"]},
 	"build": {"wait_seconds": 90, "save_for": ["barracks"], "max_sites_base": 2, "max_sites_per_builders": 1, "max_sites": 4,
 	          "growth": {"house_per_pop": 4, "farm_per_pop": 9, "storehouse_per_pop": 25, "lumberyard_per_pop": 30, "max_buildings": 90},
 	          "reactive": {"housing_margin": 2, "food_margin_per_min": 2.0, "food_low": 30}},
