@@ -5,6 +5,11 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 ## Unveröffentlicht
 
+### Behoben
+
+- Spione erscheinen nicht mehr doppelt: Ein Spion bekommt nur noch einen Eintrag und eine Nummer, auch nach dem
+  Laden. Zu Spielbeginn hat kein Reich Spione; ein neuer Test sichert beides ab (#13).
+
 ## 1.1.0 – 2026-10-16
 
 Alte Spielstände (1.0.0) laden weiter: Gebäude stehen auf Stufe 1, die Burg auf Burgstufe 1.
