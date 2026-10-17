@@ -38,6 +38,15 @@ func run(r: Node) -> void:
 	var n := hist.size()
 	ds.tick_strength_attitude()
 	r.check(TOPIC, ds.get_history(friend, k).size() == n, "Verlauf fasst „%s“ zusammen" % reason)
+	# Zwei laufende Wirkungen im Wechsel (z. B. Stärke und Handelslieferungen) bleiben je ein Eintrag
+	for i in 4:
+		ds.tick_strength_attitude()
+		ds._apply(friend, k, 0.5, "Handelslieferung", true, true)
+	var by_reason := {}
+	for e in ds.get_history(friend, k):
+		by_reason[str(e["reason"])] = int(by_reason.get(str(e["reason"]), 0)) + 1
+	r.check(TOPIC, int(by_reason.get(reason, 0)) == 1 and int(by_reason.get("Handelslieferung", 0)) == 1,
+			"Verlauf: zwei laufende Wirkungen im Wechsel je ein Eintrag (%s)" % str(by_reason))
 	# Anzeige im Diplomatiefenster
 	var text := DiplomacyPanel.strength_text(ds.strength_effect(friend, k))
 	r.check(TOPIC, text.contains(reason) and text.contains("+"), "Diplomatiefenster: %s" % text)

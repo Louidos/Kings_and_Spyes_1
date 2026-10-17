@@ -83,10 +83,11 @@ Prüfpunkt. Geprüft werden unter anderem:
   Truppen, Türme, Gesamtstärke, Burgstufe und Bewohner genau wie im Spielzustand (Fenster und Protokoll).
 - **Neue Funktionen** (`smoke_features.gd`, eigene Szene `smoke_features.tscn`, ein Modul je Thema, einzeln mit
   `only=<Thema>`): **Stärke** (`smoke_strength.gd`) – bei gleichem Heer steigt der Ruf beim freundlichen Dorf, beim
-  neutralen nicht, beim misstrauischen sinkt er leicht; eine Drohung senkt ihn weiterhin.
+  neutralen nicht, beim misstrauischen sinkt er leicht; laufende Wirkungen im Wechsel bleiben im Verlauf je ein
+  Eintrag; eine Drohung senkt ihn weiterhin.
 - **Dörfer** (`smoke_villages.gd`, Modul in `smoke_features.gd`): neue Dörfer mit 4–7 Hütten, KI-Reiche mit
   Startvorsprung, 30 Minuten Frieden lassen ein Dorf wachsen (Hütten, Bewohner, Milizplätze, Turm), Krieg hält es an,
-  Grösse und Hütten überstehen Speichern und Laden.
+  ein volles Dorf baut eine zerstörte Hütte wieder auf, Grösse und Hütten überstehen Speichern und Laden.
 - **Helden** (`smoke_new_heroes.gd`, Modul in `smoke_features.gd`): fünf Helden je Fraktion mit ✓/✗ im Heldenfenster;
   die zwei neuen Helden der Fraktion lassen sich anwerben, haben eine eigene Figur, und jede Fähigkeit wirkt
   (Reichs-Zuschlag, Aura, Wirkung auf Freund oder Feind, Beschwörung); Schutz- und Hilfsfähigkeiten lösen sich nur im

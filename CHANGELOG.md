@@ -21,6 +21,9 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 - Figuren: Ein Klick auf Kopf oder Körper wählt die Einheit wieder aus (auch beim Aufziehen eines Rahmens);
   Rangabzeichen sitzen über jeder Figur, auch über Rammböcken, Wagen und Tieren und über echten Grafiken; Helden und
   ihre Porträts sind schärfer, und eine eigene Heldengrafik erscheint auch im Porträt (#40).
+- Ruf-Verlauf im Diplomatiefenster: Laufende Wirkungen (Schutzgefühl, Handelslieferungen, stationierte Truppen)
+  bleiben je ein Eintrag, auch wenn sie sich abwechseln – echte Ereignisse werden nicht mehr verdrängt (#39).
+- Volle Dörfer bauen zerstörte Hütten und Wachtürme wieder auf (#39).
 
 ## 1.2.0 – 2026-10-17
 

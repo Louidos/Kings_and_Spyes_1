@@ -280,8 +280,9 @@ func debug_set_reputation(village: Kingdom, other: Kingdom, value: float) -> voi
 	change_reputation(village, other, value - get_reputation(village, other), "Debug")
 
 
-## merge: gleicher Grund wie der letzte Verlaufseintrag (innerhalb strength_attitude.merge_seconds)
-## wird zusammengezählt statt neu eingetragen (laufende Wirkungen fluten den Verlauf nicht)
+## merge: der jüngste Verlaufseintrag mit gleichem Grund (innerhalb strength_attitude.merge_seconds)
+## wird zusammengezählt und ans Ende gerückt statt neu eingetragen – auch wenn dazwischen andere
+## Einträge liegen (mehrere laufende Wirkungen fluten den Verlauf nicht)
 func _apply(village: Kingdom, other: Kingdom, delta: float, reason: String, log_it: bool, merge: bool = false) -> void:
 	if village == null or other == null or village == other or delta == 0.0:
 		return
@@ -297,11 +298,20 @@ func _apply(village: Kingdom, other: Kingdom, delta: float, reason: String, log_
 	if log_it:
 		var by_village: Dictionary = history.get(village.id, {})
 		var entries: Array = by_village.get(other.id, [])
-		var last: Dictionary = entries[-1] if not entries.is_empty() else {}
-		if merge and not last.is_empty() and str(last["reason"]) == reason \
-				and GameClock.game_time - float(last["t"]) <= float(DataDB.diplo("strength_attitude.merge_seconds", 600)):
-			last["delta"] = float(last["delta"]) + value - old
-			last["t"] = GameClock.game_time
+		var same := -1
+		if merge:
+			var window := float(DataDB.diplo("strength_attitude.merge_seconds", 600))
+			for i in range(entries.size() - 1, -1, -1):
+				var e: Dictionary = entries[i]
+				if str(e["reason"]) == reason and GameClock.game_time - float(e["t"]) <= window:
+					same = i
+					break
+		if same >= 0:
+			var merged: Dictionary = entries[same]
+			entries.remove_at(same)
+			merged["delta"] = float(merged["delta"]) + value - old
+			merged["t"] = GameClock.game_time
+			entries.append(merged)
 		else:
 			entries.append({"t": GameClock.game_time, "delta": value - old, "reason": reason})
 		while entries.size() > int(DataDB.diplo("reputation.history_size", 8)):
@@ -1403,7 +1413,7 @@ func to_dict() -> Dictionary:
 			"cooldowns": cooldowns.duplicate(), "last_attack": last_attack.duplicate(),
 			"intrusion": intrusion.duplicate(), "history": history.duplicate(true), "notified": notified.duplicate(),
 			"rng_state": rng_state, "use_caravans": use_caravans, "pending": _pending.duplicate(true),
-			"tick_acc": _tick_acc, "decay_acc": _decay_acc, "intrusion_acc": _intrusion_acc}
+			"tick_acc": _tick_acc, "decay_acc": _decay_acc, "intrusion_acc": _intrusion_acc, "strength_acc": _strength_acc}
 
 
 func from_dict(d: Dictionary) -> void:
@@ -1422,6 +1432,7 @@ func from_dict(d: Dictionary) -> void:
 	use_caravans = bool(d.get("use_caravans", false))
 	_pending = (d.get("pending", []) as Array).duplicate(true)
 	_tick_acc = float(d.get("tick_acc", 0.0))
+	_strength_acc = float(d.get("strength_acc", 0.0))
 	_decay_acc = float(d.get("decay_acc", 0.0))
 	_intrusion_acc = float(d.get("intrusion_acc", 0.0))
 
