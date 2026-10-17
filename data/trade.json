@@ -6,8 +6,13 @@
 		"cut: abgeschnitten nach losses Überfällen in loss_window s oder wenn feindliche Kämpfer (auch Monster) danger_seconds lang näher als danger_radius Felder am Weg stehen (geprüft alle scan_seconds an Punkten alle sample_tiles Felder). Wieder offen nach mindestens min_cut_seconds und clear_seconds ohne Feinde. no_path_retry: neuer Versuch bei 'kein Weg'. max_travel_seconds: länger unterwegs = steckt fest.",
 		"supply: Versorgung – Einheiten (Spieler, KI) erholen sich nur im eigenen oder verbündeten Gebiet, bis radius_tiles Felder davon entfernt oder bis corridor_tiles Felder neben einem offenen eigenen Handelsweg (Raster chunk Felder).",
 		"display: Darstellung der gestrichelten Linie (Weltpixel bei Zoom 1).",
-		"debug_fast: Zeiten für Rauchtest und F3 (überschreiben die Werte oben)."
+		"debug_fast: Zeiten für Rauchtest und F3 (überschreiben die Werte oben).",
+		"prices: Angebot und Nachfrage je Dorf. Knappheit einer Ware = (reference_stock / Vorrat im Dorf) ^ elasticity, begrenzt auf min_factor … max_factor (Vorrat mindestens min_stock). Viel auf Lager = Faktor < 1: das Dorf verkauft billig und zahlt wenig; Mangel = Faktor > 1. Gilt für den Tausch im Diplomatiefenster und für die Bezahlung der Handelslieferungen (Durchschnitt der gelieferten Waren).",
+		"order: Handelsroute eines Handelsvertrags einstellen – Menge (Faktor auf die Lieferung des Volks, amount_steps) und Abstand in Sekunden (interval_steps); Standard 1 × und diplomacy.json treaties.trade.delivery_interval. reputation_per_delivery: Ruf je angekommener Lieferung (zusätzlich zu rep_per_hour des Vertrags)."
 	],
+	"prices": {"reference_stock": 150, "elasticity": 0.5, "min_factor": 0.6, "max_factor": 1.8, "min_stock": 5},
+	"order": {"amount_steps": [0.5, 1.0, 1.5, 2.0, 3.0], "interval_steps": [60, 150, 300, 600]},
+	"reputation_per_delivery": 1.0,
 	"enabled": true, "tick_seconds": 1.0, "caravan_unit": "caravan", "caravan_cost": {"wood": 20, "food": 10},
 	"respawn_seconds": 60, "load_seconds": 4, "pending_max": 2, "arrival_radius": 3, "loot_share": 0.6, "raid_reputation": -2,
 	"route_repath_seconds": 120,

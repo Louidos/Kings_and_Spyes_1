@@ -144,6 +144,8 @@ static func _village_diplomacy(b: AIBrain, v: Kingdom, now: float) -> bool:
 			return ds.annex(k, v)
 	var treaty := ds.get_treaty(v)
 	var own := not treaty.is_empty() and int(treaty.get("partner_id", 0)) == k.id
+	if own and str(treaty["type"]) == "trade":
+		_tune_trade_order(b, v)
 	# Phase 9: erst ein Handelsweg (Handelsvertrag), solange das Reich keinen hat
 	var trs: Variant = b.game.get("trade_route_system")
 	if treaty.is_empty() and bool(DataDB.ai("routes.prefer_trade_first", true)) and trs != null \
@@ -167,6 +169,32 @@ static func _village_diplomacy(b: AIBrain, v: Kingdom, now: float) -> bool:
 	if rep < friendly:
 		return _try_gift(b, v, now)
 	return false
+
+
+## Handelsroute einstellen wie der Spieler (DiplomacySystem.set_trade_order): bei billiger Ware
+## (price_index) mehr kaufen, bei teurer weniger; nur so viel, wie die Vorräte reserve_deliveries
+## Lieferungen lang bezahlen (ai.json routes.order)
+static func _tune_trade_order(b: AIBrain, v: Kingdom) -> void:
+	var ds: DiplomacySystem = b.game.diplomacy_system
+	var cfg: Dictionary = DataDB.ai("routes.order", {})
+	if cfg.is_empty():
+		return
+	var treaty := ds.get_treaty(v)
+	var index := float(ds.get_delivery(v, b.k)["price_index"])
+	var amount := 1.0
+	if index <= float(cfg.get("cheap_index", 0.85)):
+		amount = float(cfg.get("cheap_amount", 2.0))
+	elif index >= float(cfg.get("dear_index", 1.25)):
+		amount = float(cfg.get("dear_amount", 0.5))
+	# Bezahlung muss mehrere Lieferungen lang reichen, sonst kleiner
+	var base_take: Dictionary = b.game.village_system.get_people(v).get("delivery", {}).get("take", {})
+	var reserve := float(cfg.get("reserve_deliveries", 3))
+	for res_id in base_take:
+		while amount > 0.5 and b.k.get_amount(str(res_id)) < float(base_take[res_id]) * amount * index * reserve:
+			amount = 1.0 if amount > 1.0 else 0.5
+	if is_equal_approx(amount, float(treaty.get("amount_mult", 1.0))):
+		return
+	ds.set_trade_order(b.k, v, amount, ds.trade_interval(v))
 
 
 ## Geschenk: die Ware mit dem grössten Überschuss (Vorrat − 2 × Reserve) × Vorliebe des
