@@ -211,7 +211,8 @@ func get_rank(rec: Dictionary, ability_id: String) -> int:
 
 ## Werte einer Fähigkeit für diesen Helden (aktueller Rang, Talente eingerechnet):
 ## {"rank", "range", "radius" (Felder), "cooldown", "damage", "heal", "duration",
-##  "unit_effects", "self_effects", "summon", "teleport", "aura", "stat", "mana_cap", "mana_regen", "filter"}
+##  "unit_effects", "self_effects", "summon", "teleport", "aura", "stat", "mana_cap", "mana_regen", "filter",
+##  "kingdom_bonus" {Schlüssel: Zuschlag}, "kingdom_mods" {Schlüssel: Faktor}}
 ## Rang 0 (nicht gelernt): Werte von Rang 1, "rank" = 0.
 func get_ability_values(rec: Dictionary, ability_id: String) -> Dictionary:
 	var def := DataDB.get_ability(ability_id)
@@ -928,6 +929,13 @@ func _apply_hero(rec: Dictionary) -> void:
 				k.set_bonus(src, "cap.mana", float(v["mana_cap"]))
 			if v.has("mana_regen"):
 				k.set_bonus(src, "mana_regen", float(v["mana_regen"]))
+			# Reichs-Zuschläge (spy_skill, vigilance, spy_slots …) und -Faktoren (build, production …)
+			var bonuses: Dictionary = v.get("kingdom_bonus", {})
+			for key in bonuses:
+				k.set_bonus(src, str(key), float(bonuses[key]))
+			var factors: Dictionary = v.get("kingdom_mods", {})
+			if not factors.is_empty():
+				k.set_modifiers(src, factors)
 	var u: Variant = game.find_by_uid(int(rec["unit_uid"]))
 	if alive and is_instance_valid(u) and u is Unit:
 		u.hero_mods = mods
@@ -950,6 +958,9 @@ func _clear_kingdom_bonuses(k: Kingdom, rec: Dictionary) -> void:
 	for src in k.bonus_sources.keys():
 		if str(src).begins_with("ability:") and str(src).ends_with(suffix):
 			k.clear_bonuses(str(src))
+	for src in k.modifier_sources.keys():
+		if str(src).begins_with("ability:") and str(src).ends_with(suffix):
+			k.clear_modifiers(str(src))
 
 
 ## Talente des Helden als Definitionen (eigene und allgemeine, wiederholbare)

@@ -7,6 +7,12 @@
 class_name HeroUI
 extends RefCounted
 
+## Namen der Reichs-Schlüssel (Fähigkeiten mit kingdom_bonus / kingdom_mods)
+const KINGDOM_KEYS := {"spy_skill": "Geschick der Spione", "vigilance": "Wachsamkeit gegen Spione",
+	"spy_slots": "Spione", "spy_level": "Stufe neuer Spione", "build": "Bautempo", "production": "Produktion",
+	"summon": "Beschwörungstempo", "gather": "Sammeln", "research": "Forschungstempo", "satisfaction": "Zufriedenheit",
+	"loyalty": "Treue"}
+
 ## Tasten der drei Fähigkeiten (physisch C / V / B, siehe project.godot)
 const ABILITY_KEYS := ["C", "V", "B"]
 const COLOR_TEXT := Color(0.95, 0.92, 0.85)
@@ -156,6 +162,13 @@ static func values_text(ability_id: String, v: Dictionary) -> String:
 		parts.append("%+d Mana-Maximum" % roundi(float(v["mana_cap"])))
 	if v.has("mana_regen"):
 		parts.append("%s Mana/min" % ResourceBar.format_signed(float(v["mana_regen"]) * 60.0))
+	var bonuses: Dictionary = v.get("kingdom_bonus", {})
+	for key in bonuses:
+		parts.append("%s %s (Reich)" % [ResourceBar.format_signed(float(bonuses[key])), str(KINGDOM_KEYS.get(str(key), key))])
+	var factors: Dictionary = v.get("kingdom_mods", {})
+	for key in factors:
+		parts.append("%s %% %s (Reich)" % [ResourceBar.format_signed(roundf((float(factors[key]) - 1.0) * 100.0)),
+				str(KINGDOM_KEYS.get(str(key), key))])
 	var duration := float(v.get("duration", 0.0))
 	if duration > 0.0:
 		parts.append("%s s" % num(duration))

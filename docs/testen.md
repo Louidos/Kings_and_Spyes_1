@@ -88,6 +88,9 @@ Prüfpunkt. Geprüft werden unter anderem:
 - **Dörfer** (`smoke_villages.gd`, Modul in `smoke_features.gd`): neue Dörfer mit 4–7 Hütten, KI-Reiche mit
   Startvorsprung, 30 Minuten Frieden lassen ein Dorf wachsen (Hütten, Bewohner, Milizplätze, Turm), Krieg hält es an,
   Grösse und Hütten überstehen Speichern und Laden.
+- **Helden** (`smoke_new_heroes.gd`, Modul in `smoke_features.gd`): fünf Helden je Fraktion mit ✓/✗ im Heldenfenster;
+  die zwei neuen Helden der Fraktion lassen sich anwerben, haben eine eigene Figur, und jede Fähigkeit wirkt
+  (Reichs-Zuschlag, Aura, Wirkung auf Freund oder Feind, Beschwörung).
 - **Bewerber** (`smoke_recruits.gd`): langsames Wachstum, Taverne verkürzt die Wartezeit, Bewerber mit Bedingungen,
   Aufnehmen im Bewerberfenster gesperrt und wieder frei, Bewohner +1, Geschenk, Fachkraft schneller, Abweisen,
   wartender Bewerber im Speichern-Laden-Rundlauf. `recruits=off` schaltet die Bewerber ab (Balancing: das
