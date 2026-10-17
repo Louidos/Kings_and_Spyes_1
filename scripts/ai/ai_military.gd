@@ -915,8 +915,9 @@ static func _cast_school(b: AIBrain, school: String, pos: Vector2) -> bool:
 	return false
 
 
-## Helden wirken Fähigkeiten mit Ortsziel auf Feinde (z. B. Pfeilregen) und Schutz
-## auf sich selbst, wenn sie verletzt sind (die übrigen löst das HeroSystem selbst aus)
+## Helden wirken Fähigkeiten mit Ortsziel auf Feinde (z. B. Pfeilregen), Beschwörungen am
+## Kampfort, Schutz für die eigenen Truppen (z. B. Rauchschleier) und für sich selbst, wenn sie
+## verletzt sind (die übrigen löst das HeroSystem selbst aus)
 static func _hero_abilities(b: AIBrain) -> void:
 	var hs: HeroSystem = b.game.hero_system
 	for rec in b.k.heroes:
@@ -931,8 +932,20 @@ static func _hero_abilities(b: AIBrain) -> void:
 			match str(def.get("target", "")):
 				"point":
 					var t: Object = u.target
-					if hs.get_ability_side(ability_id) == "enemy" and t is Unit and hs.can_use(u, ability_id, (t as Unit).position).is_empty():
-						hs.use_ability(u, ability_id, (t as Unit).position)
+					if not (t is Unit):
+						continue
+					var side := hs.get_ability_side(ability_id)
+					var values := hs.get_ability_values(rec, ability_id)
+					var pos := (t as Unit).position
+					if side == "own" or values.has("summon"):
+						# Beschwörung zwischen Held und Feind, Schutz um den Helden (wenn er verletzt ist)
+						if side == "own" and u.hp >= u.max_hp * 0.6:
+							continue
+						pos = u.position.lerp(pos, 0.5) if values.has("summon") else u.position
+					elif side != "enemy":
+						continue
+					if hs.can_use(u, ability_id, pos).is_empty():
+						hs.use_ability(u, ability_id, pos)
 						return
 				"self":
 					if u.hp < u.max_hp * 0.5 and hs.can_use(u, ability_id).is_empty():

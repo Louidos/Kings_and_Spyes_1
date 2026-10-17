@@ -89,7 +89,8 @@ Prüfpunkt. Geprüft werden unter anderem:
   Grösse und Hütten überstehen Speichern und Laden.
 - **Helden** (`smoke_new_heroes.gd`, Modul in `smoke_features.gd`): fünf Helden je Fraktion mit ✓/✗ im Heldenfenster;
   die zwei neuen Helden der Fraktion lassen sich anwerben, haben eine eigene Figur, und jede Fähigkeit wirkt
-  (Reichs-Zuschlag, Aura, Wirkung auf Freund oder Feind, Beschwörung).
+  (Reichs-Zuschlag, Aura, Wirkung auf Freund oder Feind, Beschwörung); Schutz- und Hilfsfähigkeiten lösen sich nur im
+  Ernstfall selbst aus (Kampf oder verwundete Truppen).
 - **Handel** (`smoke_trade.gd`, Modul in `smoke_features.gd`): Holzpreis im holzreichen Dorf billiger als im
   holzarmen (auch beim Tausch), Preise im Diplomatiefenster; Handelsroute mit Menge und Abstand einstellen, unerlaubte
   Werte abgelehnt, Fluss je Minute im Reiter Handelswege; die Karawane liefert ohne Klicken, der Ruf steigt;
