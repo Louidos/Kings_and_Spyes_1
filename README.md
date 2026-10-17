@@ -135,7 +135,8 @@ Helden mit eigenen Bedingungen – das Reich wächst langsamer und über Stufen 
 
 **Noch offen:**
 
-- **Grafiken:** Das Spiel nutzt automatisch gezeichnete Platzhalter. Echte Bilder (Anime-Stil, von oben) werden nach
+- **Grafiken:** Das Spiel nutzt automatisch gezeichnete Platzhalter, Einheiten erscheinen als gezeichnete Figuren
+  (Truppen je Klasse, Helden, Bewohner, Spione, Monster). Echte Bilder (Anime-Stil, von oben) werden nach
   und nach mit einer Bild-KI erzeugt – siehe [Grafiken austauschen](docs/grafiken.md) und die
   [Grafikliste](assets_liste.md).
 - **Ton:** Lautstärke-Regler sind da, Musik und Geräusche fehlen noch.

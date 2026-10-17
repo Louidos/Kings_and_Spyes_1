@@ -118,7 +118,8 @@ XDG_DATA_HOME=/tmp/kr-data xvfb-run -a -s "-screen 0 1920x1080x24" $GODOT --rend
 `tests/ui_shots.gd` baut ein kleines Reich auf (Kaserne, Schmiede, Reitstall, Magierturm, Heldenhalle, je Truppentyp
 ein paar Einheiten mit Rängen, ein Held) und fotografiert nacheinander: leere Oberfläche, Kaserne, Schmiede, einzelne
 Truppe, gemischte Gruppe, Held und alle Fenster (Forschung, Helden, Diplomatie, Spionage, Reich, Armee, Hilfe,
-Speichern). Dateien: `<fraktion>_<win>_<ui_scale>_<nr>_<name>.png`. Mit `ui_scale=1.25` bzw. `1.5` lässt sich die
+Speichern), danach je eine Figur jedes Einheitentyps (`15_figuren`) und über 300 zusätzliche Truppen auf einmal
+(`16_viele_einheiten`, mit gemessener Bildzeit `[smoke] Figuren: … ms je Bild`). Dateien: `<fraktion>_<win>_<ui_scale>_<nr>_<name>.png`. Mit `ui_scale=1.25` bzw. `1.5` lässt sich die
 Oberflächengrösse prüfen. Die Bilder in `docs/bilder/` sind so entstanden (auf 1280 px verkleinert, JPEG).
 
 Auch die übrigen Rauchtests fotografieren mit `shots=<ordner>` an wichtigen Stellen, wenn ein Fenster da ist.

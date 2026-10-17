@@ -1,7 +1,7 @@
 # Grafiken austauschen
 
-Das Spiel kommt ganz ohne Bilddateien aus: Alles, was du siehst, sind **automatisch gezeichnete Platzhalter**
-(farbige Flächen mit Kurztext, Kreise mit Buchstaben, Muster für das Gelände). Sobald eine PNG-Datei mit dem
+Das Spiel kommt ganz ohne Bilddateien aus: Alles, was du siehst, ist **automatisch gezeichnet** (farbige Flächen
+mit Kurztext für Gebäude, Muster für das Gelände und **gezeichnete Spielfiguren** für alle Einheiten). Sobald eine PNG-Datei mit dem
 richtigen Namen am richtigen Ort liegt, nimmt das Spiel beim nächsten Start diese Datei – **ohne Code-Änderung**.
 
 Die vollständige Liste aller Dateien mit Namen, Grösse und Bildbeschreibung steht in
@@ -14,9 +14,10 @@ Die vollständige Liste aller Dateien mit Namen, Grösse und Bildbeschreibung st
 3. [Dateinamen](#dateinamen)
 4. [Arbeitsablauf mit der Bild-KI](#arbeitsablauf-mit-der-bild-ki)
 5. [Prompt-Vorlagen](#prompt-vorlagen)
-6. [Aussehen (Skins)](#aussehen-skins)
-7. [Burgen je Volk und Dörfer](#burgen-je-volk-und-dörfer)
-8. [Häufige Fragen](#häufige-fragen)
+6. [Gezeichnete Spielfiguren](#gezeichnete-spielfiguren)
+7. [Aussehen (Skins)](#aussehen-skins)
+8. [Burgen je Volk und Dörfer](#burgen-je-volk-und-dörfer)
+9. [Häufige Fragen](#häufige-fragen)
 
 ## So funktioniert der Austausch
 
@@ -27,7 +28,8 @@ Die vollständige Liste aller Dateien mit Namen, Grösse und Bildbeschreibung st
    daneben eine `.import`-Datei an. Dann F5 – das Wohnhaus hat sein neues Bild.
 5. Beim Einchecken ins Git-Repository **die PNG und die `.import`-Datei** mitnehmen.
 
-Fehlt eine Datei oder ist der Name falsch, zeichnet das Spiel einfach weiter den Platzhalter – es geht nichts kaputt.
+Fehlt eine Datei oder ist der Name falsch, zeichnet das Spiel einfach weiter den Platzhalter bzw. die Figur – es geht
+nichts kaputt.
 
 > Ohne Editor lädt das Spiel eine neue PNG zwar auch direkt, für den **Export** (fertige .exe) muss sie aber vom
 > Editor importiert worden sein.
@@ -107,19 +109,49 @@ Beispiele für `[MOTIV]`:
 Die Beschreibungen aller Motive (auf Deutsch) stehen in [`assets_liste.md`](../assets_liste.md) – für die Bild-KI ins
 Englische übersetzen und in die Vorlage einsetzen.
 
+## Gezeichnete Spielfiguren
+
+![Alle Figuren vor der Burg (GUT): Truppen je Klasse, König, Helden, Bewohner mit Werkzeug, Spion, Milizen, Monster, Fahrzeuge](bilder/figuren.jpg)
+
+Solange in `assets/sprites/units/` bzw. `assets/sprites/heroes/` keine Datei liegt, zeichnet das Spiel jede Einheit
+als **Figur** (`scripts/util/figure_art.gd`): Körper, Kopf und Kopfbedeckung, dazu die Waffe der Klasse (Schwert und
+Rundschild, Speer, Bogen, Armbrust, Lanze zu Pferd, Zauberstab, Streitkolben mit Turmschild …), bei Bewohnern das
+Werkzeug ihres Berufs (Hammer, Axt, Spitzhacke, Korb, Sichel, Manakugel). Der Wappenrock trägt die **Farbe des
+Reichs**; **Licht** (GUT) hat helle Haut und blanken Stahl mit Helmbusch, **Finsternis** (BÖSE) graue Haut, glühende
+Augen und dunkles Eisen mit Hörnern und Dornen. **Helden** sind grösser, tragen einen Umhang und eine Aura, eine
+Krone oder einen Heiligenschein, **Spione** Kapuze und Umhang, **Reiter** sitzen auf Pferd oder Wolf. **Monster**
+haben je Art eine eigene Form (Wolf, Spinne, Golem, Wyvern), Belagerungswaffen und Karawanen sind Fahrzeuge.
+
+Jedes Aussehen wird **einmal erzeugt** und von allen gleich aussehenden Einheiten geteilt – auch mit Hunderten
+Einheiten bleibt das Zeichnen so billig wie mit den früheren Scheiben.
+
+**Was eine Figur trägt, steht in den Daten** (ohne Code-Änderung):
+
+- `data/units.json` → `figures`: Teile je Stufe (`tiers`), Werkzeug je Beruf (`jobs`), Haut, Metall und Augen je
+  Fraktion (`factions`), Grösse auf der Karte (`draw_scale`, `hero_scale`). Die erlaubten Werte stehen dort im
+  `_hinweis`.
+- Am Einheitentyp `figure`, z. B. `"figure": {"gear": "axe", "head": "beard", "shield": "round"}` für die Zwergenmiliz.
+- In `data/heroes.json` am Helden `figure` (Waffe, Umhang, `mark`: `aura`, `halo` oder `crown`).
+
+**Echte Grafik einsetzen:** Liegt die Datei aus `sprite`/`sprites` (z. B. `assets/sprites/units/fighter_good.png`,
+`assets/sprites/heroes/hero_paladin.png`) vor, hat sie **immer Vorrang** vor der gezeichneten Figur. Für ein Bild,
+das zu den Figuren passt: 64 × 64, transparent, Figur von vorn, Füsse knapp über dem unteren Rand, Kopf im oberen
+Fünftel. Man kann Einheiten einzeln austauschen – gezeichnete und echte Figuren lassen sich mischen.
+
 ## Aussehen (Skins)
 
 Skins sind rein kosmetische Farbvarianten der Truppen (Auswahlfenster → „Aussehen“). Fehlt die Datei
 `<einheit>_<skin>.png`, nimmt das Spiel die normale Grafik der Einheit **leicht getönt** in den Skin-Farben, ohne
-Grafik einen Platzhalter in den Skin-Farben – immer mit einem gezeichneten Abzeichen oben links.
+Grafik die **gezeichnete Figur in den Skin-Farben mit dem Muster des Skins** auf dem Wappenrock (und auf dem Schild) –
+immer mit einem gezeichneten Abzeichen oben links.
 
-| Skin-ID | Name | Fraktion | Farben / Abzeichen |
+| Skin-ID | Name | Fraktion | Farben / Muster / Abzeichen |
 |---|---|---|---|
-| `royal` | Königsgarde | GUT | königsblau mit Gold, Krone |
-| `sunwatch` | Sonnenwacht | GUT | hellgelb mit Weiss, Sonne |
-| `shadow` | Schattenwache | BÖSE | schwarzviolett, Mond |
-| `blood` | Blutbanner | BÖSE | dunkelrot, Reisszahn |
-| `hero_banner` | Heldenbanner | alle (einzelne Einheiten ab Rang Elite) | Gold mit Weiss, Stern |
+| `royal` | Königsgarde | GUT | königsblau mit Gold, geviertelt, Krone |
+| `sunwatch` | Sonnenwacht | GUT | hellgelb mit Weiss, Mittelstreifen, Sonne |
+| `shadow` | Schattenwache | BÖSE | schwarzviolett, Schärpe, Mond |
+| `blood` | Blutbanner | BÖSE | dunkelrot, Sparren, Reisszahn |
+| `hero_banner` | Heldenbanner | alle (einzelne Einheiten ab Rang Elite) | Gold mit Weiss, Saum, Stern |
 
 Beispiele: `units/fighter_good_royal.png`, `units/cavalry_evil_blood.png`, `units/spearman_good_hero_banner.png`.
 Einen neuen Skin legt man in `data/troops.json` → `skins.variants` an (siehe
@@ -131,7 +163,7 @@ Einen neuen Skin legt man in `data/troops.json` → `skins.variants` an (siehe
   `castle_good.png` bzw. `castle_evil.png`.
 - **Dorfzentren und Hütten** je neutralem Volk, **Milizen** und **Volkskrieger**: Namen in
   [`assets_liste.md`](../assets_liste.md), Abschnitt „Phase 6 – Neutrale Völker“. Ohne Datei zeichnet das Spiel sie in
-  der Farbe des Volks.
+  der Farbe des Volks (Milizen und Volkskrieger als Figuren mit eigener Waffe, siehe `figure` in `data/units.json`).
 
 ## Häufige Fragen
 

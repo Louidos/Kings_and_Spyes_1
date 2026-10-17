@@ -11,7 +11,7 @@
 		"sight: Sichtweite in Kacheln (ab Phase 7 für Entdeckung). building_damage: Faktor gegen Gebäude (Schützen 0.5).",
 		"Optional: requires (Freischaltungen aus der Forschung, z. B. unit:elite_good), people (Volk), flee_on_hit, joins_fights, target_priority, formation_rank – sonst aus role abgeleitet.",
 		"temporary: beschworen durch einen Zauber, verschwindet nach Ablauf (tier summon).",
-		"sprites: Grafik je Fraktion (64x64 PNG); sprite: eine Grafik für alle. Fehlt sie, wird ein Kreis mit dem Buchstaben gezeichnet.",
+		"sprites: Grafik je Fraktion (64x64 PNG); sprite: eine Grafik für alle. Fehlt sie, wird eine Spielfigur gezeichnet (figures, figure).",
 		"tier militia = Dorfwache eines Volks (faction neutral, ersetzt das Dorf aus dem eigenen Vorrat, cost = Kosten für das Dorf).",
 		"tier special = Volkskrieger, wird bei Bündnis oder Aufnahme in der Kaserne freigeschaltet (summon:barracks:<id>).",
 		"tier messenger / role messenger = Bote: kämpft nie, flieht durch Sprinten, Befehl travel.",
@@ -21,8 +21,57 @@
 		"unit_damage: Faktor gegen Einheiten (Belagerungswaffen schwach). targets: buildings = greift nur Gebäude an, buildings_first = Gebäude bevorzugt. splash_radius/splash_factor: Flächenschaden (Felder, Anteil). mechanical: wird nicht geheilt (Heiler, Krankenstation).",
 		"tier ram/catapult = Belagerungswaffen (Belagerungswerkstatt). role caravan = Karawane eines Handelswegs: kämpft nie, keine Befehle (commandable false).",
 		"Truppen (troops.json): class = Truppenklasse (infantry, cavalry, ranged, mage, siege, support) für Konter, Schmiede, Wertepunkte und Aussehen; bonus_vs = Schadenszuschlag gegen Klassen ({\"cavalry\": 1.0} = +100 %); armor_pierce = Anteil der gegnerischen Rüstung, der ignoriert wird.",
-		"Neue Truppen: spearman (Speerträger/Pfähler, Kaserne, gegen Reiterei), crossbow (Armbrust, Kaserne, durchschlägt Rüstung), heavy (schwere Fusstruppen, Kaserne), cavalry (Lanzenreiter/Wolfsreiter, Reitstall), battlemage (Kampfmagier/Hexer, Magierturm, Flächenschaden). Freischaltung über die Forschung (requires)."
+		"Neue Truppen: spearman (Speerträger/Pfähler, Kaserne, gegen Reiterei), crossbow (Armbrust, Kaserne, durchschlägt Rüstung), heavy (schwere Fusstruppen, Kaserne), cavalry (Lanzenreiter/Wolfsreiter, Reitstall), battlemage (Kampfmagier/Hexer, Magierturm, Flächenschaden). Freischaltung über die Forschung (requires).",
+		"figure: Aussehen der gezeichneten Spielfigur, solange keine Grafikdatei vorhanden ist (überschreibt figures.tiers). Schlüssel siehe figures._hinweis."
 	],
+
+	"figures": {
+		"_hinweis": [
+			"Gezeichnete Spielfiguren (FigureArt), solange unter assets/sprites/ keine Datei liegt. size = Bildgrösse in Pixeln (einmal je Aussehen erzeugt). draw_scale = Breite der Figur auf der Karte in Radien, feet = Füsse so viele Radien unter dem Mittelpunkt, hero_scale = Helden so viel grösser.",
+			"tiers: Teile je Stufe (default gilt für alle, dann die Stufe, dann figure am Typ bzw. Helden; by_faction ergänzt je Fraktion). kind: humanoid, mounted (Reiter, mount horse/wolf), wolf, spider, golem, wyvern, skeleton, spirit (Geist ohne Beine), ram, catapult, caravan.",
+			"outfit: soldier, villager, king, hero, spy, messenger, refugee, militia, mage, healer. armor: light, heavy (Metallbrust, Schulterstücke), cloth, robe (langes Gewand), cloak (Umhang über dem Körper). head: none, helmet, hood, cap, hat (Spitzhut), brim (Krempenhut), crown, hair, horns, beard (Helm mit Bart).",
+			"gear (rechte Hand): sword, greatsword, dagger, spear, lance, bow, crossbow, staff, staff_heal, staff_dark, sceptre, mace, club, axe, hammer, pick, sickle, basket, orb, scroll, sling, bomb, bundle, none. offhand: zweite Waffe in der linken Hand. shield: round, kite, tower.",
+			"cape: Umhangfarbe (\"#rrggbb\"), mark: aura (Leuchten in der Saumfarbe trim), halo (Heiligenschein), crown. trim: Saumfarbe (sonst aus der Reichsfarbe), pattern: Muster auf dem Wappenrock (stripes, chevron, quartered, sash, border) – Skins (troops.json) setzen tint, trim und pattern. skin_color: Hautfarbe, align: good/evil/neutral (Licht oder Finsternis).",
+			"tool_by_job: Werkzeug nach Beruf aus jobs (Bewohner). factions: Haut, Metall, Augen je Licht (good), Finsternis (evil, glühende Augen, Hörner), neutral und wild."
+		],
+		"size": 64, "draw_scale": 3.4, "feet": 0.72, "hero_scale": 1.25,
+		"tiers": {
+			"default": {"kind": "humanoid", "outfit": "soldier", "armor": "light", "head": "helmet", "gear": "sword"},
+			"villager": {"outfit": "villager", "armor": "cloth", "head": "cap", "tool_by_job": true},
+			"king": {"outfit": "king", "armor": "heavy", "head": "crown", "gear": "sceptre", "cape": "#8e2b3a",
+			         "by_faction": {"evil": {"cape": "#3a1a44", "head": "horns"}}},
+			"scout": {"armor": "light", "head": "cap", "gear": "dagger"},
+			"fighter": {"gear": "sword", "shield": "round"},
+			"archer": {"gear": "bow", "head": "hood", "by_faction": {"evil": {"head": "cap"}}},
+			"elite": {"gear": "greatsword", "armor": "heavy"},
+			"medic": {"outfit": "healer", "armor": "robe", "head": "hood", "gear": "staff_heal"},
+			"spearman": {"gear": "spear", "shield": "kite"},
+			"crossbow": {"gear": "crossbow"},
+			"heavy": {"gear": "mace", "shield": "tower", "armor": "heavy"},
+			"cavalry": {"kind": "mounted", "mount": "horse", "gear": "lance", "armor": "heavy", "shield": "kite"},
+			"battlemage": {"outfit": "mage", "armor": "robe", "head": "hat", "gear": "staff",
+			               "by_faction": {"evil": {"gear": "staff_dark"}}},
+			"spy": {"outfit": "spy", "armor": "cloak", "head": "hood", "gear": "dagger"},
+			"messenger": {"outfit": "messenger", "armor": "cloth", "head": "cap", "gear": "scroll"},
+			"refugee": {"outfit": "refugee", "armor": "cloth", "head": "brim", "gear": "bundle"},
+			"militia": {"outfit": "militia", "armor": "light", "head": "cap", "gear": "spear"},
+			"special": {"armor": "light", "head": "helmet", "gear": "sword"},
+			"hero": {"outfit": "hero", "armor": "heavy", "head": "helmet", "gear": "sword", "mark": "aura"},
+			"summon": {"kind": "spirit"},
+			"monster": {"kind": "wolf", "align": "wild"},
+			"caravan": {"kind": "caravan"},
+			"ram": {"kind": "ram"},
+			"catapult": {"kind": "catapult"}
+		},
+		"jobs": {"idle": "none", "builder": "hammer", "woodcutter": "axe", "stonecutter": "pick", "miner": "pick",
+		         "gatherer": "basket", "farmer": "sickle", "mana_worker": "orb"},
+		"factions": {
+			"good": {"skin": "#f0c9a2", "metal": "#d3d9e3", "eyes": "#27324a", "accent": "#9fd8ff"},
+			"evil": {"skin": "#97a487", "metal": "#5a5361", "eyes": "#ff4a2a", "glow_eyes": true, "horns": true, "accent": "#b06cff"},
+			"neutral": {"skin": "#d9ad82", "metal": "#aaa59c", "eyes": "#2a2a2a", "accent": "#7fd0c0"},
+			"wild": {"skin": "#a08870", "metal": "#888888", "eyes": "#ffcc33", "glow_eyes": true}
+		}
+	},
 
 	"units": [
 		{
@@ -193,6 +242,7 @@
 		},
 		{
 			"id": "cavalry_evil", "name": "Wolfsreiter", "faction": "evil", "tier": "cavalry", "role": "combat", "class": "cavalry", "letter": "Wr",
+			"figure": {"mount": "wolf"},
 			"description": "Ork auf einem Riesenwolf: sehr schnell, überrennt Schützen, Hexer und Belagerungswaffen. Vor Speeren hüten (Wolfszwinger).",
 			"requires": ["unit:cavalry_evil"],
 			"speed": 3.9, "radius": 19, "sight": 7, "food_per_day": 14,
@@ -223,6 +273,7 @@
 
 		{
 			"id": "light_guardian", "name": "Lichtgeist", "faction": "good", "tier": "summon", "role": "combat", "letter": "L", "color": "#f3d36b",
+			"figure": {"kind": "spirit", "gear": "sword", "align": "good"},
 			"description": "Beschworen mit „Ruf des Lichts“. Verschwindet nach einer Minute.",
 			"speed": 2.4, "radius": 17, "sight": 6, "food_per_day": 0, "temporary": true, "can_work": false, "needs_housing": false,
 			"hp": 150, "attack": 14, "attack_interval": 1.2, "range": 0.8, "armor": 0.25, "aggro_range": 5, "regen": 0,
@@ -231,6 +282,7 @@
 		},
 		{
 			"id": "shadow_servant", "name": "Schattendiener", "faction": "evil", "tier": "summon", "role": "combat", "letter": "D", "color": "#7d3c98",
+			"figure": {"kind": "spirit", "gear": "dagger", "align": "evil"},
 			"description": "Beschworen mit „Schattenbrut“. Verschwindet nach einer Minute.",
 			"speed": 2.4, "radius": 17, "sight": 6, "food_per_day": 0, "temporary": true, "can_work": false, "needs_housing": false,
 			"hp": 120, "attack": 16, "attack_interval": 1.2, "range": 0.8, "armor": 0.15, "aggro_range": 5, "regen": 0,
@@ -240,6 +292,7 @@
 
 		{
 			"id": "skeleton", "name": "Skelett", "faction": "evil", "tier": "summon", "role": "combat", "letter": "K", "color": "#d5d8dc",
+			"figure": {"kind": "skeleton", "gear": "sword", "shield": "round", "align": "evil"},
 			"description": "Erweckt vom Nekromanten (Totenerweckung). Zerfällt nach einer halben Minute.",
 			"speed": 2.2, "radius": 15, "sight": 6, "food_per_day": 0, "temporary": true, "can_work": false, "needs_housing": false,
 			"hp": 90, "attack": 12, "attack_interval": 1.2, "range": 0.8, "armor": 0.1, "aggro_range": 5, "regen": 0,
@@ -249,6 +302,7 @@
 
 		{
 			"id": "wolf", "name": "Wolf", "faction": "wild", "tier": "monster", "role": "monster", "letter": "W", "color": "#8a6a52",
+			"figure": {"kind": "wolf"},
 			"speed": 3.0, "radius": 15, "sight": 5, "food_per_day": 0,
 			"hp": 60, "attack": 8, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 5, "regen": 1.0,
 			"kill_points": 1,
@@ -256,6 +310,7 @@
 		},
 		{
 			"id": "spider", "name": "Riesenspinne", "faction": "wild", "tier": "monster", "role": "monster", "letter": "Sp", "color": "#4a3b5c",
+			"figure": {"kind": "spider"},
 			"speed": 2.2, "radius": 16, "sight": 5, "food_per_day": 0,
 			"hp": 90, "attack": 10, "attack_interval": 1.1, "range": 0.8, "armor": 0.1, "aggro_range": 4, "regen": 1.0,
 			"kill_points": 2,
@@ -263,6 +318,7 @@
 		},
 		{
 			"id": "golem", "name": "Steingolem", "faction": "wild", "tier": "monster", "role": "monster", "letter": "G", "color": "#7d7468",
+			"figure": {"kind": "golem"},
 			"speed": 1.4, "radius": 21, "sight": 5, "food_per_day": 0,
 			"hp": 300, "attack": 22, "attack_interval": 1.8, "range": 0.9, "armor": 0.4, "aggro_range": 4, "regen": 2.0,
 			"kill_points": 5,
@@ -270,6 +326,7 @@
 		},
 		{
 			"id": "wyvern", "name": "Wyvern", "faction": "wild", "tier": "monster", "role": "monster", "letter": "Wy", "color": "#5f8a4a",
+			"figure": {"kind": "wyvern"},
 			"speed": 3.2, "radius": 20, "sight": 7, "food_per_day": 0,
 			"hp": 220, "attack": 18, "attack_interval": 1.3, "range": 0.9, "armor": 0.15, "aggro_range": 6, "regen": 1.5,
 			"kill_points": 4,
@@ -303,6 +360,7 @@
 
 		{
 			"id": "militia_dwarves", "name": "Zwergenwache", "faction": "neutral", "tier": "militia", "role": "combat", "people": "dwarves", "letter": "Z", "color": "#b0703c",
+			"figure": {"gear": "axe", "head": "beard", "shield": "round"},
 			"description": "Dorfwache der Zwerge. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
 			"speed": 1.8, "radius": 15, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
 			"hp": 170, "attack": 12, "attack_interval": 1.3, "range": 0.8, "armor": 0.35, "aggro_range": 5, "regen": 0.6,
@@ -312,6 +370,7 @@
 
 		{
 			"id": "militia_halflings", "name": "Halblingschleuderer", "faction": "neutral", "tier": "militia", "role": "combat", "people": "halflings", "letter": "H", "color": "#8fbf5a",
+			"figure": {"gear": "sling", "head": "cap"},
 			"description": "Dorfwache der Halblinge. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
 			"speed": 2.4, "radius": 15, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
 			"hp": 60, "attack": 7, "attack_interval": 1.3, "range": 4.5, "armor": 0.05, "aggro_range": 6, "regen": 0.5,
@@ -322,6 +381,7 @@
 
 		{
 			"id": "militia_wood_elves", "name": "Waldelfenwache", "faction": "neutral", "tier": "militia", "role": "combat", "people": "wood_elves", "letter": "W", "color": "#3f9e5a",
+			"figure": {"gear": "bow", "head": "hood"},
 			"description": "Dorfwache der Waldelfen. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
 			"speed": 2.3, "radius": 15, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
 			"hp": 75, "attack": 10, "attack_interval": 1.4, "range": 6, "armor": 0.05, "aggro_range": 7, "regen": 0.5,
@@ -332,6 +392,7 @@
 
 		{
 			"id": "militia_lizardfolk", "name": "Echsenkrieger", "faction": "neutral", "tier": "militia", "role": "combat", "people": "lizardfolk", "letter": "E", "color": "#6aa38f",
+			"figure": {"gear": "spear", "head": "none", "skin_color": "#6aa38f"},
 			"description": "Dorfwache des Echsenvolks. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
 			"speed": 2.3, "radius": 15, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
 			"hp": 130, "attack": 13, "attack_interval": 1.1, "range": 0.8, "armor": 0.15, "aggro_range": 5, "regen": 0.8,
@@ -341,6 +402,7 @@
 
 		{
 			"id": "militia_nomads", "name": "Nomadenwache", "faction": "neutral", "tier": "militia", "role": "combat", "people": "nomads", "letter": "N", "color": "#d9a441",
+			"figure": {"gear": "sword", "head": "brim"},
 			"description": "Dorfwache der Nomaden. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
 			"speed": 2.8, "radius": 15, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
 			"hp": 100, "attack": 11, "attack_interval": 1.2, "range": 0.8, "armor": 0.1, "aggro_range": 6, "regen": 0.5,
@@ -350,6 +412,7 @@
 
 		{
 			"id": "militia_giants", "name": "Riesenwächter", "faction": "neutral", "tier": "militia", "role": "combat", "people": "giants", "letter": "R", "color": "#8c8c9c",
+			"figure": {"gear": "club", "head": "none", "armor": "cloth"},
 			"description": "Dorfwache der Riesen. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
 			"speed": 1.5, "radius": 24, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
 			"hp": 420, "attack": 30, "attack_interval": 2.0, "range": 1.0, "armor": 0.3, "aggro_range": 4, "regen": 1.5,
@@ -360,6 +423,7 @@
 
 		{
 			"id": "militia_water_spirits", "name": "Quellwächter", "faction": "neutral", "tier": "militia", "role": "combat", "people": "water_spirits", "letter": "Q", "color": "#4fb6d6",
+			"figure": {"kind": "spirit", "gear": "spear"},
 			"description": "Dorfwache der Wassergeister. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
 			"speed": 2.2, "radius": 15, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
 			"hp": 90, "attack": 9, "attack_interval": 1.3, "range": 4, "armor": 0.1, "aggro_range": 6, "regen": 2.0,
@@ -370,6 +434,7 @@
 
 		{
 			"id": "militia_kobold_traders", "name": "Koboldwache", "faction": "neutral", "tier": "militia", "role": "combat", "people": "kobold_traders", "letter": "K", "color": "#c76fd1",
+			"figure": {"gear": "dagger", "head": "cap", "skin_color": "#c79a6a"},
 			"description": "Dorfwache der Koboldhändler. Hält ihren Posten am Dorf und wird aus dem Dorfvorrat ersetzt.",
 			"speed": 2.6, "radius": 15, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
 			"hp": 70, "attack": 8, "attack_interval": 1.0, "range": 4, "armor": 0.05, "aggro_range": 6, "regen": 0.5,
@@ -380,6 +445,7 @@
 
 		{
 			"id": "dwarf_ironguard", "name": "Eisenwache", "faction": "neutral", "tier": "special", "role": "combat", "people": "dwarves", "letter": "Ei", "color": "#b0703c",
+			"figure": {"gear": "axe", "head": "beard", "shield": "tower", "armor": "heavy"},
 			"description": "Volkskrieger der Zwerge. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf der Zwerge oder seiner Aufnahme ins Reich.",
 			"speed": 1.8, "radius": 16, "sight": 7, "food_per_day": 12, "can_work": false, "needs_housing": false,
 			"hp": 300, "attack": 20, "attack_interval": 1.4, "range": 0.8, "armor": 0.45, "aggro_range": 5, "regen": 0.5,
@@ -389,6 +455,7 @@
 
 		{
 			"id": "halfling_slinger", "name": "Schleudermeister", "faction": "neutral", "tier": "special", "role": "combat", "people": "halflings", "letter": "Sm", "color": "#8fbf5a",
+			"figure": {"gear": "sling", "head": "cap"},
 			"description": "Volkskrieger der Halblinge. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf der Halblinge oder seiner Aufnahme ins Reich.",
 			"speed": 2.6, "radius": 16, "sight": 7, "food_per_day": 6, "can_work": false, "needs_housing": false,
 			"hp": 70, "attack": 11, "attack_interval": 1.1, "range": 5.5, "armor": 0.05, "aggro_range": 6, "regen": 0.5,
@@ -399,6 +466,7 @@
 
 		{
 			"id": "wood_elf_ranger", "name": "Blattschütze", "faction": "neutral", "tier": "special", "role": "combat", "people": "wood_elves", "letter": "Bs", "color": "#3f9e5a",
+			"figure": {"gear": "bow", "head": "hood"},
 			"description": "Volkskrieger der Waldelfen. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf der Waldelfen oder seiner Aufnahme ins Reich.",
 			"speed": 2.4, "radius": 16, "sight": 7, "food_per_day": 8, "can_work": false, "needs_housing": false,
 			"hp": 90, "attack": 15, "attack_interval": 1.5, "range": 7, "armor": 0.05, "aggro_range": 7, "regen": 0.5,
@@ -409,6 +477,7 @@
 
 		{
 			"id": "lizard_skirmisher", "name": "Sumpfjäger", "faction": "neutral", "tier": "special", "role": "combat", "people": "lizardfolk", "letter": "Sj", "color": "#6aa38f",
+			"figure": {"gear": "spear", "shield": "round", "skin_color": "#6aa38f"},
 			"description": "Volkskrieger des Echsenvolks. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf des Echsenvolks oder seiner Aufnahme ins Reich.",
 			"speed": 2.8, "radius": 16, "sight": 7, "food_per_day": 8, "can_work": false, "needs_housing": false,
 			"hp": 150, "attack": 16, "attack_interval": 1.0, "range": 0.8, "armor": 0.15, "aggro_range": 6, "regen": 0.5,
@@ -418,6 +487,7 @@
 
 		{
 			"id": "nomad_rider", "name": "Steppenreiter", "faction": "neutral", "tier": "special", "role": "combat", "class": "cavalry", "people": "nomads", "letter": "Sr", "color": "#d9a441",
+			"figure": {"kind": "mounted", "gear": "sword", "head": "brim", "mount": "horse"},
 			"description": "Volkskrieger der Nomaden. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf der Nomaden oder seiner Aufnahme ins Reich.",
 			"speed": 3.4, "radius": 16, "sight": 7, "food_per_day": 12, "can_work": false, "needs_housing": false,
 			"hp": 170, "attack": 17, "attack_interval": 1.2, "range": 0.9, "armor": 0.2, "aggro_range": 6, "regen": 0.5,
@@ -427,6 +497,7 @@
 
 		{
 			"id": "giant_brute", "name": "Hügelriese", "faction": "neutral", "tier": "special", "role": "combat", "people": "giants", "letter": "Hr", "color": "#8c8c9c",
+			"figure": {"gear": "club", "armor": "cloth"},
 			"description": "Volkskrieger der Riesen. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf der Riesen oder seiner Aufnahme ins Reich.",
 			"speed": 1.6, "radius": 26, "sight": 7, "food_per_day": 30, "can_work": false, "needs_housing": false,
 			"hp": 650, "attack": 38, "attack_interval": 2.0, "range": 1.0, "armor": 0.3, "aggro_range": 4, "regen": 0.5,
@@ -437,6 +508,7 @@
 
 		{
 			"id": "water_spirit_healer", "name": "Quellgeist", "faction": "neutral", "tier": "special", "role": "support", "people": "water_spirits", "letter": "Qg", "color": "#4fb6d6",
+			"figure": {"kind": "spirit", "gear": "staff_heal"},
 			"description": "Volkskrieger der Wassergeister. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf der Wassergeister oder seiner Aufnahme ins Reich.",
 			"speed": 2.3, "radius": 16, "sight": 7, "food_per_day": 4, "can_work": false, "needs_housing": false,
 			"hp": 80, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.1, "aggro_range": 0, "regen": 2,
@@ -447,6 +519,7 @@
 
 		{
 			"id": "kobold_bombardier", "name": "Koboldsprenger", "faction": "neutral", "tier": "special", "role": "combat", "class": "ranged", "people": "kobold_traders", "letter": "Ks", "color": "#c76fd1",
+			"figure": {"gear": "bomb", "head": "cap", "skin_color": "#c79a6a"},
 			"description": "Volkskrieger der Koboldhändler. In der Kaserne verfügbar nach einem Bündnis mit einem Dorf der Koboldhändler oder seiner Aufnahme ins Reich.",
 			"speed": 2.3, "radius": 16, "sight": 7, "food_per_day": 6, "can_work": false, "needs_housing": false,
 			"hp": 60, "attack": 20, "attack_interval": 2.4, "range": 5, "armor": 0.05, "aggro_range": 6, "regen": 0.5,

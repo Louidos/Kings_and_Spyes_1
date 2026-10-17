@@ -16,9 +16,6 @@ enum State { IDLE, MOVING, GATHERING, BUILDING, WORKING, WAITING }
 ## Getarnt-Zustand hat sich geändert (Tarnzauber begonnen/beendet)
 signal stealth_changed(unit: Unit)
 
-## Buchstaben auf Platzhaltern zeichnen? (Die Kamera schaltet sie beim
-## Herauszoomen ab.)
-static var show_letters := true
 ## Aus wessen Sicht wird gezeichnet (Reich des Spielers; -1 = alles sichtbar).
 ## Getarnte eigene/verbündete Einheiten erscheinen halb durchsichtig, fremde gar nicht.
 static var viewer_kingdom_id := -1
@@ -198,6 +195,9 @@ var terrain_biome := -1
 var job_id: String = "idle":
 	set(value):
 		job_id = value
+		# Bewohner tragen das Werkzeug ihres Berufs (gezeichnete Figur)
+		if _figure != null and _figure_job != value:
+			refresh_look()
 		queue_redraw()
 var state: int = State.IDLE
 ## Was nach der Ankunft passieren soll ("gather", "dropoff", "build", "work", "wander")
@@ -232,7 +232,10 @@ var selected := false
 var hit_flash := 0.0
 
 var _texture: Texture2D
-var _token: Texture2D
+## Gezeichnete Spielfigur (FigureArt), solange es keine Grafikdatei gibt
+var _figure: Texture2D
+## Beruf, für den _figure erzeugt wurde (Werkzeug der Bewohner)
+var _figure_job := ""
 var _radius := 13.0
 ## Aussehen: Tönung einer vorhandenen Grafik ohne eigene Skin-Datei und Abzeichen (oder null)
 var _tint := Color.WHITE
@@ -264,9 +267,10 @@ func setup(p_type_def: Dictionary, p_kingdom: Kingdom, p_uid: int) -> void:
 	queue_redraw()
 
 
-## Grafik bzw. Platzhalter neu bestimmen (beim Aufbau, nach einem Besitzerwechsel und
-## wenn sich das Aussehen ändert). Skin: eigene Datei <einheit>_<skin>.png, sonst die
-## Grafik des Typs getönt mit Abzeichen, sonst ein Platzhalter in Skin-Farben.
+## Grafik bzw. Figur neu bestimmen (beim Aufbau, nach einem Besitzerwechsel, wenn sich das
+## Aussehen oder – bei Bewohnern – der Beruf ändert). Vorrang: eigene Skin-Datei
+## <einheit>_<skin>.png, sonst die Grafik des Typs (getönt, mit Abzeichen), sonst die
+## gezeichnete Figur (FigureArt) in Reichs- bzw. Skin-Farben mit Muster und Abzeichen.
 func refresh_look() -> void:
 	var skin_id := get_skin()
 	var skin_data := {} if skin_id == "standard" else TroopRules.skin_def(skin_id)
@@ -278,20 +282,34 @@ func refresh_look() -> void:
 	var own_skin_file := _texture != null
 	if _texture == null:
 		_texture = Assets.texture(DataDB.get_unit_sprite(type_def, kingdom.faction_id))
-	_token = null
-	var shape := "diamond" if role == "monster" else "circle"
+	_figure = null
 	var color: Color = type_def.get("color", kingdom.color)
 	if not skin_data.is_empty() and not own_skin_file:
-		var mix := float(DataDB.trp("skins.tint_mix", 0.55))
-		var tint: Color = skin_data.get("tint", color)
 		_emblem = Assets.emblem(str(skin_data.get("emblem", "")), skin_data.get("trim", Color.WHITE))
 		if _texture != null:
+			var mix := float(DataDB.trp("skins.tint_mix", 0.55))
+			var tint: Color = skin_data.get("tint", color)
 			_tint = Color.WHITE.lerp(tint, mix * 0.6)
-		else:
-			_token = Assets.unit_skin_token(color.lerp(tint, mix), shape, skin_data.get("trim", Color.WHITE))
-	if _texture == null and _token == null:
-		_token = Assets.unit_token(color, shape)
+	if _texture == null:
+		_figure_job = job_id
+		_figure = Assets.figure(FigureArt.spec_for(type_def, kingdom.faction_id, color, skin_data, job_id))
 	queue_redraw()
+
+
+## Grösse der gezeichneten Figur (Breite in Pixeln; Helden grösser)
+func figure_size() -> float:
+	var cfg := DataDB.unit_figures()
+	var fs := _radius * float(cfg.get("draw_scale", 3.4))
+	if role == "hero":
+		fs *= float(cfg.get("hero_scale", 1.25))
+	return fs
+
+
+## Oberkante der Figur relativ zur Position (Rangabzeichen darüber)
+func visual_top() -> float:
+	if _figure == null:
+		return -_radius * 1.35
+	return _radius * float(DataDB.unit_figures().get("feet", 0.72)) - figure_size() * FigureArt.HEAD_TOP
 
 
 ## Wirksames Aussehen: eigenes, sonst das des Typs im Reich, sonst "standard"
@@ -529,23 +547,12 @@ func _draw() -> void:
 		# Grafik etwas grösser als der Platzhalter, Füsse auf der Position
 		var tex_size := r * 3.0
 		draw_texture_rect(_texture, Rect2(Vector2(-tex_size * 0.5, -tex_size * 0.75), Vector2(tex_size, tex_size)), false, _tint)
-	else:
-		# Platzhalter: einmal erzeugte Grafik (Kreis bzw. Raute für Monster)
-		var size := r * 2.0 + 4.0
-		draw_texture_rect(_token, Rect2(Vector2(-size * 0.5, -size * 0.5 + 1.0), Vector2(size, size)), false)
-		if show_letters:
-			# Buchstabe: Bewohner zeigen ihren Beruf, alle anderen ihren Typ
-			var letter := str(type_def.get("letter", ""))
-			if letter.is_empty():
-				letter = str(DataDB.get_job(job_id).get("letter", ""))
-			if not letter.is_empty():
-				SpriteDraw.draw_label(self, letter, Vector2.ZERO, clampi(int(r * 1.1), 10, 22))
-		if role == "king":
-			# Krone über dem König
-			var crown := PackedVector2Array([Vector2(-r * 0.6, -r * 1.05), Vector2(-r * 0.6, -r * 1.45),
-					Vector2(-r * 0.3, -r * 1.2), Vector2(0, -r * 1.55), Vector2(r * 0.3, -r * 1.2),
-					Vector2(r * 0.6, -r * 1.45), Vector2(r * 0.6, -r * 1.05)])
-			draw_colored_polygon(crown, Color(1.0, 0.82, 0.25))
+	elif _figure != null:
+		# Gezeichnete Figur (einmal erzeugt, von allen gleich aussehenden Einheiten geteilt),
+		# Füsse knapp unter der Position
+		var fs := figure_size()
+		var feet := r * float(DataDB.unit_figures().get("feet", 0.72))
+		draw_texture_rect(_figure, Rect2(Vector2(-fs * 0.5, feet - fs * FigureArt.FEET), Vector2(fs, fs)), false)
 	if _emblem != null:
 		# Abzeichen des Aussehens (Skin) oben links
 		draw_texture_rect(_emblem, Rect2(Vector2(-r * 1.2, -r * 1.2), Vector2(r * 0.85, r * 0.85)), false)

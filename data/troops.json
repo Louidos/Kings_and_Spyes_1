@@ -7,7 +7,7 @@
 		"forge.upgrades: kaufbare Stufen in der Schmiede (Gebäude mit \"forge\": true). class = Truppenklasse, per_level = Faktor je Stufe (attack 0.1 = +10 % Angriff je Stufe, Stufe 3 = +30 %), cost = Kosten je Stufe (Liste, Länge = höchste Stufe). Wirkung als Modifikator des Reichs mit Quelle \"upgrade:<id>\" und Schlüssel \"<wert>#<klasse>\" (z. B. attack#cavalry).",
 		"veterancy: Erfahrung (EP) für Truppen der Rollen roles: xp_per_damage je Schadenspunkt gegen Feinde (gegen Gebäude mal building_xp), kill_xp + kill_xp_per_point × Kampfpunkte des Opfers für den letzten Treffer. ranks: Name, nötige EP und Wertepunkte beim Aufstieg (5 Ränge). rank_bonus: Faktor je Rang (hp 0.03 = +3 % Leben je Rang). rank_heal: Anteil Leben beim Aufstieg.",
 		"veterancy.stats: Wertepunkte (mult = Faktor je Punkt, add = Zuschlag je Punkt, Rüstung 0.03 = +3 Prozentpunkte), höchstens max_per_stat Punkte je Wert. auto_priority: Reihenfolge beim automatischen Verteilen je Klasse. hero_points_per_level: Wertepunkte der Helden je Stufe ab Stufe 2. notify_min_rank: Aufstiege ab diesem Rang werden gemeldet.",
-		"skins.variants: Aussehen je Truppentyp (rein kosmetisch). faction: für Reiche dieser Fraktion (any = alle). tint = Grundfarbe des Platzhalters (Mischung tint_mix), trim = Rand, emblem = Abzeichen (crown, sun, skull, fang, star, moon, shield). min_rank: nur für einzelne Einheiten ab diesem Rang. Grafik: assets/sprites/units/<einheit>_<skin>.png (64x64), sonst Platzhalter. skins.roles: welche Rollen Skins haben."
+		"skins.variants: Aussehen je Truppentyp (rein kosmetisch). faction: für Reiche dieser Fraktion (any = alle). tint = Grundfarbe des Platzhalters (Mischung tint_mix), trim = Rand bzw. Saum, emblem = Abzeichen (crown, sun, skull, fang, star, moon, shield), pattern = Muster auf dem Wappenrock der gezeichneten Figur (stripes, chevron, quartered, sash, border). min_rank: nur für einzelne Einheiten ab diesem Rang. Grafik: assets/sprites/units/<einheit>_<skin>.png (64x64), sonst die gezeichnete Figur in Skin-Farben. skins.roles: welche Rollen Skins haben."
 	],
 
 	"classes": {
@@ -107,15 +107,15 @@
 		"tint_mix": 0.55,
 		"variants": [
 			{"id": "standard", "name": "Standard", "faction": "any", "description": "Farben des Reichs."},
-			{"id": "royal", "name": "Königsgarde", "faction": "good", "tint": "#3e63c9", "trim": "#f3d36b", "emblem": "crown",
+			{"id": "royal", "name": "Königsgarde", "faction": "good", "tint": "#3e63c9", "trim": "#f3d36b", "emblem": "crown", "pattern": "quartered",
 			 "description": "Blau und Gold der königlichen Garde."},
-			{"id": "sunwatch", "name": "Sonnenwacht", "faction": "good", "tint": "#e8c25a", "trim": "#fff4d2", "emblem": "sun",
+			{"id": "sunwatch", "name": "Sonnenwacht", "faction": "good", "tint": "#e8c25a", "trim": "#fff4d2", "emblem": "sun", "pattern": "stripes",
 			 "description": "Helle Wappenröcke mit Sonnenzeichen."},
-			{"id": "shadow", "name": "Schattenwache", "faction": "evil", "tint": "#2e2440", "trim": "#a874d6", "emblem": "moon",
+			{"id": "shadow", "name": "Schattenwache", "faction": "evil", "tint": "#2e2440", "trim": "#a874d6", "emblem": "moon", "pattern": "sash",
 			 "description": "Schwarze Umhänge mit violettem Saum."},
-			{"id": "blood", "name": "Blutbanner", "faction": "evil", "tint": "#7a1414", "trim": "#e85050", "emblem": "fang",
+			{"id": "blood", "name": "Blutbanner", "faction": "evil", "tint": "#7a1414", "trim": "#e85050", "emblem": "fang", "pattern": "chevron",
 			 "description": "Rote Banner der Blutkrieger."},
-			{"id": "hero_banner", "name": "Heldenbanner", "faction": "any", "tint": "#d9a520", "trim": "#ffffff", "emblem": "star", "min_rank": 3,
+			{"id": "hero_banner", "name": "Heldenbanner", "faction": "any", "tint": "#d9a520", "trim": "#ffffff", "emblem": "star", "pattern": "border", "min_rank": 3,
 			 "description": "Nur für einzelne Einheiten ab dem Rang Elite: goldenes Banner verdienter Krieger."}
 		]
 	}

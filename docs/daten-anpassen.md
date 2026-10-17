@@ -160,7 +160,8 @@ Berufe: `type` (`builder`, `gather`, `building`), `resource`, `deposits`, `gathe
 
 | Feld | Bedeutung |
 |---|---|
-| `id`, `name`, `description`, `letter` | Kennung, Anzeige, Buchstabe auf dem Platzhalter |
+| `id`, `name`, `description`, `letter` | Kennung, Anzeige, Kurzzeichen (Listen, Debug) |
+| `figure` | Aussehen der gezeichneten Figur, z. B. `{"gear": "axe", "shield": "round"}` (siehe `figures` oben in der Datei und [Grafiken](grafiken.md#gezeichnete-spielfiguren)) |
 | `faction` | `good`, `evil`, `any`, `neutral`, `wild` |
 | `tier` | Stufe (`fighter`, `archer`, `spearman` …) – Gebäude beschwören nach Stufe die Einheit der eigenen Fraktion |
 | `role` | `worker`, `king`, `combat`, `support`, `monster`, `spy`, … |
@@ -398,7 +399,8 @@ Den BÖSEN Eintrag genauso mit `"id": "halberdier_evil"`, `"name": "Schnitter"`,
 Ohne Schritt 3 (und ohne `requires` in Schritt 1) ist die Einheit sofort verfügbar.
 
 **4. Grafik (optional)** – `assets/sprites/units/halberdier_good.png` und `halberdier_evil.png`, 64 × 64,
-transparent. Ohne Datei zeichnet das Spiel einen Kreis mit dem Buchstaben „Hb“. Skins: `halberdier_good_royal.png`
+transparent. Ohne Datei zeichnet das Spiel eine Figur nach `figures.tiers` – für die Hellebarde z. B.
+`"figure": {"gear": "spear", "shield": ""}` am Typ ergänzen. Skins: `halberdier_good_royal.png`
 usw. (siehe [Grafiken](grafiken.md)). Neue Dateien in `assets_liste.md` eintragen.
 
 **5. KI (optional)** – `data/ai.json` → `army.composition`: `"halberdier": 1.5` – sonst beschwört die KI die neue

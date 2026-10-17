@@ -11,8 +11,6 @@
 class_name UnitOverlay
 extends Node2D
 
-## Ab dieser Vergrösserung stehen Buchstaben auf den Platzhaltern
-const LETTER_MIN_ZOOM := 0.5
 ## Rangabzeichen: Silber (Soldat, Veteran), Gold (Elite, Held der Truppe)
 const RANK_SILVER := Color(0.86, 0.88, 0.92)
 const RANK_GOLD := Color(1.0, 0.82, 0.25)
@@ -38,11 +36,6 @@ func _process(_delta: float) -> void:
 	if show_units != _units_visible:
 		_units_visible = show_units
 		game.unit_layer.visible = show_units
-	var letters := zoom >= LETTER_MIN_ZOOM
-	if letters != Unit.show_letters:
-		Unit.show_letters = letters
-		for u in game.unit_system.units:
-			u.queue_redraw()
 	queue_redraw()
 
 
@@ -70,7 +63,7 @@ func _draw() -> void:
 		var rad: float = u.get_radius()
 		# Rang erfahrener Truppen (getarnte fremde Einheiten sind unsichtbar)
 		if u.vet_rank > 0 and u.modulate.a > 0.01:
-			_draw_rank(u.position + Vector2(0, -rad * 1.35 - 4.0), u.vet_rank)
+			_draw_rank(u.position + Vector2(0, u.visual_top() - 4.0), u.vet_rank)
 		if not show_bar:
 			continue
 		if u.selected:
