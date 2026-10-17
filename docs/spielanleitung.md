@@ -836,9 +836,13 @@ Gebäuden, Bevölkerung, Armee, Helden und Angriffen (Aggression klingt wieder a
 | 60–99 | Auffällig |
 | ab 100 | Weithin sichtbar |
 
-Daraus entsteht bei jedem Gegnerreich eine **Aufmerksamkeit** (ab 30 Gerüchte, ab 60 bist du entdeckt). Angriffe
-kommen erst, wenn du **entdeckt** bist **und** die Wartezeit der Schwierigkeit vorbei ist (Normal: frühestens nach
-45 Minuten). *Reichsschleier* / *Reichsschatten* senkt den Entdeckungswert um 40 %.
+Daraus entsteht bei jedem Gegnerreich eine **Aufmerksamkeit** (ab 37,5 Gerüchte, ab 75 bist du entdeckt). Sie
+steigt langsam (höchstens 1,8 Punkte je Minute); schneller geht es durch Sprünge: Boten und Verräter, Späher und
+Spione, die in deinem Gebiet stehen (ein Spion 1 Minute, ein Späher 4 Minuten am Stück bestätigen die Entdeckung),
+und vor allem **Angriffe** auf das Gegnerreich – danach bist du sofort entdeckt. Auch ein stilles Reich bleibt nicht
+ewig verborgen: Nach einer Wartezeit (Normal 90 Minuten) halten die Gegner ihre Aufmerksamkeit bei Gerüchten und
+schicken Spione. Angriffe kommen erst, wenn du **entdeckt** bist **und** die Wartezeit der Schwierigkeit vorbei ist
+(Normal: frühestens nach 45 Minuten). *Reichsschleier* / *Reichsschatten* senkt den Entdeckungswert um 40 %.
 
 ![Spionagefenster](bilder/spionage.jpg)
 

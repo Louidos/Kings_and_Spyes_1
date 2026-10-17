@@ -407,7 +407,7 @@ static func _rect_gap(a: Rect2i, b: Rect2i) -> int:
 ## Ab dieser Spielminute sinkt die Aufmerksamkeit der KI nicht mehr unter patience_floor:
 ## patience_minutes der Schwierigkeit (ai.json difficulty), sonst espionage.json
 func _patience_minutes() -> float:
-	var fallback := float(DataDB.esp("awareness.patience_minutes", 120))
+	var fallback := float(DataDB.esp("awareness.patience_minutes", 180))
 	var ai: Variant = game.get("ai_system")
 	if ai is AISystem:
 		return float((ai as AISystem).get_difficulty().get("patience_minutes", fallback))
@@ -794,6 +794,7 @@ func _scan_observers(k: Kingdom, bbox: Rect2i, ids: Array, now: float) -> void:
 		var spies: Variant = game.get("spy_system")
 		var discovered := float(DataDB.esp("awareness.discovered", 60))
 		var confirm := float(DataDB.esp("awareness.spy_confirm_seconds", 60))
+		var scout_confirm := float(DataDB.esp("awareness.scout_confirm_seconds", confirm))
 		for o in observers:
 			var ob: Unit = o
 			var level := scout_level
@@ -845,7 +846,9 @@ func _scan_observers(k: Kingdom, bbox: Rect2i, ids: Array, now: float) -> void:
 						spy_scout_since[key] = now
 					if is_party(host):
 						_sighting(k, host, float(DataDB.esp("awareness.scout_inside", 2.0)), ":inside", now)
-						if k.controller == "ai" and now - float(spy_scout_since[key]) >= confirm:
+						# Spione bestätigen nach spy_confirm_seconds, Späher erst nach scout_confirm_seconds
+						var need := confirm if ob.tier == "spy" else scout_confirm
+						if k.controller == "ai" and now - float(spy_scout_since[key]) >= need:
 							raise_awareness_to(k, host, discovered + 5.0, "Kundschaft")
 		for fid in near_found:
 			var f: Kingdom = game.get_kingdom(int(fid))

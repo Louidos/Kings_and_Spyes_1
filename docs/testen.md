@@ -98,6 +98,9 @@ Prüfpunkt. Geprüft werden unter anderem:
   der Dorfliste des Armeefensters); fünf Krieger beim verbündeten Dorf stationiert, angekommen, zählen zur
   Verteidigung; Speichern und Laden; Ruf steigt, Abgabe kommt an; Angreifer am Dorf werden angegriffen;
   Zurückrufen; Hilferuf ablehnen kostet Ruf; Kündigung zieht die Truppen ab; die KI stationiert ebenfalls.
+- **Entdeckung** (`smoke_discovery.gd`, Modul in `smoke_features.gd`): Abstufung nach Schwierigkeit (Faktor steigt,
+  Wartezeit sinkt von leicht bis episch), Schwellen (Wartezeit hält über der Gerüchte-Schwelle), Anstieg
+  in einer Minute höchstens `rise_per_minute` (ohne Sprünge), ein Angriff entdeckt den Angreifer sofort.
 - **Bewerber** (`smoke_recruits.gd`): langsames Wachstum, Taverne verkürzt die Wartezeit, Bewerber mit Bedingungen,
   Aufnehmen im Bewerberfenster gesperrt und wieder frei, Bewohner +1, Geschenk, Fachkraft schneller, Abweisen,
   wartender Bewerber im Speichern-Laden-Rundlauf. `recruits=off` schaltet die Bewerber ab (Balancing: das
