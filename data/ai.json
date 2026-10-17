@@ -41,16 +41,16 @@
 		               "branch_weights": {"military": 1.0, "economy": 0.9, "magic": 1.3, "mana": 1.1}}
 	},
 	"difficulty": {
-		"easy":   {"kingdoms": {"small": 1, "medium": 1, "large": 1}, "first_attack_minutes": 75, "patience_minutes": 90, "first_village_attack_minutes": 50, "wave_interval": 1200,
+		"easy":   {"kingdoms": {"small": 1, "medium": 1, "large": 1}, "first_attack_minutes": 75, "patience_minutes": 135, "first_village_attack_minutes": 50, "wave_interval": 1200,
 		           "wave_min_size": 4, "first_wave_max": 6, "army_size_mult": 0.6, "awareness_mult": 0.7, "build_mult": 0.85, "summon_mult": 0.85,
 		           "research_mult": 0.8, "start_resources_mult": 1.0, "extra_villagers": 0, "max_heroes": 1, "retreat_ratio": 0.5, "vigilance_bonus": 0.0},
-		"normal": {"kingdoms": {"small": 1, "medium": 2, "large": 2}, "first_attack_minutes": 45, "patience_minutes": 60, "first_village_attack_minutes": 30, "wave_interval": 900,
+		"normal": {"kingdoms": {"small": 1, "medium": 2, "large": 2}, "first_attack_minutes": 45, "patience_minutes": 90, "first_village_attack_minutes": 30, "wave_interval": 900,
 		           "wave_min_size": 6, "first_wave_max": 8, "army_size_mult": 1.0, "awareness_mult": 1.0, "build_mult": 1.0, "summon_mult": 1.0,
 		           "research_mult": 1.0, "start_resources_mult": 1.0, "extra_villagers": 0, "max_heroes": 2, "retreat_ratio": 0.4, "vigilance_bonus": 0.0},
-		"hard":   {"kingdoms": {"small": 2, "medium": 2, "large": 2}, "first_attack_minutes": 30, "patience_minutes": 50, "first_village_attack_minutes": 20, "wave_interval": 720,
+		"hard":   {"kingdoms": {"small": 2, "medium": 2, "large": 2}, "first_attack_minutes": 30, "patience_minutes": 75, "first_village_attack_minutes": 20, "wave_interval": 720,
 		           "wave_min_size": 8, "first_wave_max": 12, "army_size_mult": 1.3, "awareness_mult": 1.2, "build_mult": 1.15, "summon_mult": 1.15,
 		           "research_mult": 1.15, "start_resources_mult": 1.3, "extra_villagers": 2, "max_heroes": 3, "retreat_ratio": 0.35, "vigilance_bonus": 0.5},
-		"epic":   {"kingdoms": {"small": 2, "medium": 2, "large": 2}, "first_attack_minutes": 20, "patience_minutes": 35, "first_village_attack_minutes": 15, "wave_interval": 600,
+		"epic":   {"kingdoms": {"small": 2, "medium": 2, "large": 2}, "first_attack_minutes": 20, "patience_minutes": 52.5, "first_village_attack_minutes": 15, "wave_interval": 600,
 		           "wave_min_size": 10, "first_wave_max": 16, "army_size_mult": 1.6, "awareness_mult": 1.4, "build_mult": 1.3, "summon_mult": 1.3,
 		           "research_mult": 1.3, "start_resources_mult": 1.6, "extra_villagers": 4, "max_heroes": 3, "retreat_ratio": 0.3, "vigilance_bonus": 1.0}
 	},

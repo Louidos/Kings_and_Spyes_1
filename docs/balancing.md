@@ -10,7 +10,8 @@ nachjustieren lässt.
 3. [Beobachtungen](#beobachtungen)
 4. [Leistung](#leistung)
 5. [Anpassungen in Phase 10](#anpassungen-in-phase-10)
-6. [Selbst nachjustieren](#selbst-nachjustieren)
+6. [Entdeckung langsamer (nach 1.1.0)](#entdeckung-langsamer-nach-110)
+7. [Selbst nachjustieren](#selbst-nachjustieren)
 
 ## So wurde gemessen
 
@@ -65,6 +66,34 @@ Ohne Fenster, eine Partie je Kern:
 - Im Code ein Zwischenspeicher für erfolglose Vorkommen-Suchen (Arbeit 4–6 ms → 1,4 ms je Schritt in späten
   Partien).
 
+## Entdeckung langsamer (nach 1.1.0)
+
+Gemessen mit einer Messpartie ohne Fenster: Karte *medium*, Normal, GUT, 3 KI-Reiche, passiver Spieler, Seeds 11, 22
+und 33, je 1–2 Läufe vorher und nachher. Gemessen wird, wann das erste Gegnerreich den Spieler entdeckt (Spielminuten).
+
+| Seed | vorher | nachher |
+|---|---|---|
+| 11 | 71, 77 | 129, 129 |
+| 22 | 74, 84 | 109, 132 |
+| 33 | 52, 58 | 36, nicht bis min 105 (4 Läufe) |
+| Ø | 69 | etwa 105–115 |
+
+Ein stilles Reich wird jetzt also rund 50–70 % später entdeckt. Seed 33 streut stark: Dort lösen Ereignisse wie
+eine Verräter-Meldung oder Späher im Gebiet die Entdeckung aus. In vier von fünf Läufen fiel der passive Spieler
+nach 105 Minuten anderen Gefahren zum Opfer, bevor ihn ein Reich entdeckte. Angriffe entdecken weiterhin sofort
+(Rauchtest *Entdeckung*).
+
+Geänderte Werte:
+
+- `espionage.json` → `awareness`: `rise_per_minute` 3 → 1,8 (−40 %), `discovered` 60 → 75 (+25 %), `rumour` 30 → 37,5,
+  `patience_floor` 35 → 44 (bleibt über der Gerüchte-Schwelle), `scout_inside` 2 → 1,2. Neu ist
+  `scout_confirm_seconds` 240: KI-Späher bestätigen die Entdeckung erst nach 4 Minuten am Stück im Gebiet (vorher
+  wie Spione nach 60 s).
+- `espionage.json` → `discovery.per_army_power` 0,12 → 0,084 (−30 %).
+- `ai.json` → `difficulty.*.patience_minutes` ×1,5: leicht 135, normal 90, schwer 75, episch 52,5. Die Abstufung nach
+  Schwierigkeit bleibt, ebenso `awareness_mult` (0,7 / 1 / 1,2 / 1,4).
+  Der Ersatzwert ohne KI (`espionage.json` → `awareness.patience_minutes`) steigt ebenso von 120 auf 180.
+
 ## Selbst nachjustieren
 
 Nur Daten, kein Code (Details in [Daten anpassen](daten-anpassen.md)):
@@ -79,7 +108,7 @@ Nur Daten, kein Code (Details in [Daten anpassen](daten-anpassen.md)):
 | Preise nach Angebot und Nachfrage | `trade.json` → `prices` (`reference_stock`, `elasticity`, `min_factor`, `max_factor`) |
 | Einstellbare Handelsrouten, Ruf je Lieferung | `trade.json` → `order` (`amount_steps`, `interval_steps`), `reputation_per_delivery`; KI: `ai.json` → `routes.order` |
 | Stationierte Truppen bei Verbündeten (Ruf, Abgaben, Hilferufe, KI) | `diplomacy.json` → `station` |
-| Wie schnell die KI den Spieler bemerkt | `espionage.json` → `awareness` (`rise_per_minute`, `rumour`, `discovered`, `patience_floor`) |
+| Wie schnell die KI den Spieler bemerkt | `espionage.json` → `awareness` (`rise_per_minute`, `rumour`, `discovered`, `patience_floor`, `scout_confirm_seconds`, `scout_inside`), `discovery.per_army_power`; Wartezeit `ai.json` → `difficulty.<stufe>.patience_minutes` |
 | Stärke und Ertrag der Gegner, Startvorräte | `difficulties.json` |
 | Häufigkeit der Ereignisse | `events.json` (`chance_per_check`, Abstände, Abklingzeiten) |
 | Monster-Streifzüge, Wachstum der Lager | `combat.json` (`raids`, `lair_growth`) |

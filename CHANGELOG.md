@@ -27,6 +27,9 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
   stehen im Diplomatiefenster; Menge und Abstand jeder Route lassen sich im Reiter Handelswege einstellen, dort steht
   auch, was der Handel je Minute bringt und kostet. Jede Lieferung verbessert den Ruf, die KI handelt nach denselben
   Regeln (#25).
+- Gegnerische Reiche entdecken dich langsamer: Die Aufmerksamkeit steigt langsamer, Gerüchte und Entdeckung brauchen
+  mehr, Späher müssen länger in deinem Gebiet bleiben, und ein stilles Reich fällt erst später auf. Bei normaler
+  Schwierigkeit kommt die Entdeckung rund 50–70 % später; Angriffe entdecken dich weiterhin sofort (#29).
 
 ### Behoben
 

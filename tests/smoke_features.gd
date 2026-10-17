@@ -12,6 +12,7 @@ const MODULES := {
 	"Helden": preload("res://tests/smoke_new_heroes.gd"),
 	"Handel": preload("res://tests/smoke_trade.gd"),
 	"Bündnis": preload("res://tests/smoke_alliance.gd"),
+	"Entdeckung": preload("res://tests/smoke_discovery.gd"),
 }
 
 var game: Node
