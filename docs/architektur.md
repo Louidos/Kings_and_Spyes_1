@@ -253,7 +253,7 @@ Jedes Dorf ist ein eigenes `Kingdom` (`controller = "neutral"`, Feld `people_id`
   - `AISatisfaction` – Zufriedenheit der KI-Reiche (Taverne bzw. Tempel bauen, Feste feiern).
   - `AIRivalry` – Spannung zwischen KI-Reichen bis zum Krieg.
 - Die KI benutzt nur die öffentlichen Schnittstellen, die auch der Spieler nutzt. Angriffe auf den Spieler kommen
-  erst, wenn er **entdeckt** ist und die Zeitsperre der Schwierigkeit (`first_attack_minutes`, Normal 45 min)
+  erst, wenn er **entdeckt** ist und die Zeitsperre der Schwierigkeit (`first_attack_minutes`, Normal 67,5 min)
   abgelaufen ist.
 
 ## Entdeckung und Spionage

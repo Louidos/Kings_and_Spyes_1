@@ -11,7 +11,8 @@ nachjustieren lässt.
 4. [Leistung](#leistung)
 5. [Anpassungen in Phase 10](#anpassungen-in-phase-10)
 6. [Entdeckung langsamer (nach 1.1.0)](#entdeckung-langsamer-nach-110)
-7. [Selbst nachjustieren](#selbst-nachjustieren)
+7. [Längere Partien (nach 1.1.0)](#längere-partien-nach-110)
+8. [Selbst nachjustieren](#selbst-nachjustieren)
 
 ## So wurde gemessen
 
@@ -40,7 +41,7 @@ werden geheilt, damit der Lauf die vollen 3 Stunden geht.
 
 - **KI-Wachstum:** Die KI wächst über die ganze Zeit (Armee-Soll bis 32 Spielstunden, höchstens 90 je Reich), greift
   den Spieler frühestens nach `first_attack_minutes` und erst nach Kundschaft an; Wellen kommen danach etwa alle
-  `wave_interval` und werden je Welle um 3 Einheiten grösser.
+  `wave_interval` und werden je Welle um 2 Einheiten grösser (bis 1.1.0: 3).
 - **Ereignisse** bleiben selten (2–3 beim Spieler in 3 Stunden, frühestens nach 20 min).
 - **Monster** wachsen bis etwa zum Doppelten des Starts (medium 52 → 98, large 198 → 371) und bleiben dort.
 - **Zufriedenheit:** KI-Reiche 70–90; ein passiver Spieler ohne Häuser und Nahrung sinkt auf 25–45 (Überläufer 2–9
@@ -93,6 +94,35 @@ Geänderte Werte:
 - `ai.json` → `difficulty.*.patience_minutes` ×1,5: leicht 135, normal 90, schwer 75, episch 52,5. Die Abstufung nach
   Schwierigkeit bleibt, ebenso `awareness_mult` (0,7 / 1 / 1,2 / 1,4).
   Der Ersatzwert ohne KI (`espionage.json` → `awareness.patience_minutes`) steigt ebenso von 120 auf 180.
+
+## Längere Partien (nach 1.1.0)
+
+Alle Startzeiten der KI-Aggression sind ×1,5, und die Wellen wachsen langsamer. Die Länge des Spieltags
+(`time.seconds_per_day`) bleibt gleich.
+
+- `ai.json` → `difficulty.*.first_attack_minutes`: leicht 75 → 112,5, normal 45 → 67,5, schwer 30 → 45, episch
+  20 → 30.
+- `ai.json` → `difficulty.*.first_village_attack_minutes`: leicht 50 → 75, normal 30 → 45, schwer 20 → 30, episch
+  15 → 22,5.
+- `ai.json` → `villages.min_minute` 10 → 15 (Dorfdiplomatie), `lairs.min_minute` 10 → 15 (Angriffe auf
+  Monsterlager), `fortify.min_minute` 25 → 37,5 (Türme und Mauern).
+- `ai.json` → `waves.growth_per_wave` 3 → 2.
+- `patience_minutes` (×1,5) gehört zur Gruppe „Entdeckung langsamer“, siehe oben.
+
+Gemessen mit `DISCOVERED=1 DIFFS=normal TIME_SCALE=6 tests/run_balance.sh <ordner> 7200` (Karte *medium*, 2
+KI-Reiche, passiver Spieler, Seed 12345). Mit `DISCOVERED=1` kennen die KI-Reiche den Spieler von Anfang an, wie
+bei einem aktiven Spieler. So hängt die erste Welle nur an `first_attack_minutes` und am Aufbau der KI:
+
+| Lauf | Erste Welle gegen den Spieler | Passiver Spieler fällt |
+|---|---|---|
+| Normal, GUT, vorher | 45,0 min | 48,8 min |
+| Normal, GUT, nachher | 67,6 min | 71,4 min |
+| Normal, BÖSE, vorher | 45,0 min | 49,0 min |
+| Normal, BÖSE, nachher | 67,5 min | 71,0 min |
+
+Die erste Welle kommt 50 % später, und eine Partie gegen einen untätigen Spieler dauert rund 45 % länger. Die KI
+gewinnt also nicht schneller als vorher. Ein stilles Reich, das die KI noch nicht kennt, wird zusätzlich erst nach
+etwa 105–115 Minuten entdeckt (siehe oben), statt wie in 1.1.0 nach etwa 70 Minuten mit der ersten Welle.
 
 ## Selbst nachjustieren
 

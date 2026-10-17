@@ -154,7 +154,9 @@ GODOT=/pfad/zu/godot tests/run_balance.sh [ausgabeordner] [Spielsekunden] [Karte
 Echte KI, passiver Spieler, ohne Fenster im Zeitraffer (`balance=1`, Modul `tests/balance_phase10.gd`). Standard: 3
 Spielstunden (10 800 s), Karte *medium*, GUT/BÖSE × Normal/Schwer, parallel (`JOBS`, Standard 3), Ausgabe nach
 `build/balance`. Umgebung: `DIFFS` („normal hard“), `TIME_SCALE` (4; höher verwirft Schritte), `IMMORTAL=1` (Burg und
-König des Spielers unverwundbar: Lauf über die volle Dauer, wiederholte Wellen). Ergebnisse: [Balancing](balancing.md).
+König des Spielers unverwundbar: Lauf über die volle Dauer, wiederholte Wellen), `DISCOVERED=1` (die KI kennt den
+Spieler von Anfang an wie einen aktiven Spieler; die erste Welle hängt dann nur an `first_attack_minutes`).
+Ergebnisse: [Balancing](balancing.md).
 
 Feste Prüfungen (Zeilen `[balance] PRÜFUNG OK/FEHLER`, ein Fehler lässt den Lauf scheitern): nach 10 Spielminuten hat
 kein KI-Reich Gebäude ab Burgstufe 3, nach 30 Minuten hat mindestens eines ein ausgebautes Gebäude, nach 40 Minuten
@@ -183,7 +185,7 @@ Argumente stehen nach `--` (bei `run_smoke.sh` einfach hinten anhängen):
 | `time_scale=8` | Zeitraffer der Engine |
 | `tutorial=1` | Tutorial-Rauchtest |
 | `ui_shots=1`, `shots=<ordner>`, `win=1920x1080` | Bildschirmfotos (nur mit Fenster) |
-| `balance=1`, `immortal=1` | Balancing-Lauf |
+| `balance=1`, `immortal=1`, `discovered=1` | Balancing-Lauf |
 
 Beispiel – lange Partie mit echter KI: `$GODOT --headless res://tests/smoke_test.tscn -- faction=evil seconds=3600
 p7=natural size=medium` (der Bericht zeigt Zeitleiste, Wellen und Denkzeit der KI); ein bestimmtes Volk mit
@@ -389,7 +391,7 @@ Ressourcen.
    im Spionagefenster.
 6. Fremde Spione kommen zu dir, wenn ein Reich Gerüchte über dich hört. Späher, eigene Spione und das
    Kundschafterhaus entdecken sie (roter Punkt am Spionage-Knopf); entdeckte Spione kann man angreifen.
-7. Auf Normal greift die KI frühestens nach 45 Minuten an und erst, wenn sie dich entdeckt hat (Meldung). Späher
+7. Auf Normal greift die KI frühestens nach 67,5 Minuten an und erst, wenn sie dich entdeckt hat (Meldung). Späher
    melden Truppen nahe der Grenze, Feinde im eigenen Gebiet werden immer gemeldet. Wird eine Welle zu stark
    geschwächt, zieht sie sich zurück.
 8. *Reichsschleier* (BÖSE: *Reichsschatten*, Magie Stufe 4): ein Klick in der Zauberleiste oder „Tarnung

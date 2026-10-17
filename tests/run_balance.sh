@@ -5,7 +5,8 @@
 # Aufruf im Projektordner:
 #   GODOT=/pfad/zu/godot tests/run_balance.sh [ausgabeordner] [Spielsekunden] [Karte]
 # Standard: 3 Spielstunden (10800 s, 18 Spieltage), Karte medium, gut/böse × normal/schwer.
-# Umgebung: JOBS (parallel), DIFFS ("normal hard"), TIME_SCALE (4; höher verwirft Schritte), IMMORTAL=1
+# Umgebung: JOBS (parallel), DIFFS ("normal hard"), TIME_SCALE (4; höher verwirft Schritte), DISCOVERED=1
+# (die KI kennt den Spieler von Anfang an – erste Welle wie bei einem aktiven Spieler), IMMORTAL=1
 # (Burg und König des Spielers unverwundbar: Lauf über die volle Dauer, wiederholte Wellen).
 set -u
 GODOT="${GODOT:-godot}"
@@ -26,11 +27,11 @@ run_one() {
 	local faction=$1 diff=$2
 	local file="$OUT/${faction}_${diff}_${SIZE}.txt"
 	timeout 5400 "$GODOT" --headless res://tests/smoke_test.tscn -- balance=1 faction=$faction difficulty=$diff \
-		size=$SIZE seconds=$SECS ai=2 time_scale=${TIME_SCALE:-4} immortal=${IMMORTAL:-0} > "$file" 2>&1
+		size=$SIZE seconds=$SECS ai=2 time_scale=${TIME_SCALE:-4} immortal=${IMMORTAL:-0} discovered=${DISCOVERED:-0} > "$file" 2>&1
 	echo "fertig: $faction $diff (Code $?)"
 }
 export -f run_one
-export GODOT OUT SECS SIZE TIME_SCALE IMMORTAL
+export GODOT OUT SECS SIZE TIME_SCALE IMMORTAL DISCOVERED
 printf '%s\n' "${runs[@]}" | xargs -P "$JOBS" -L 1 bash -c 'run_one $0 $1'
 fail=0
 for f in "$OUT"/*_"$SIZE".txt; do
