@@ -26,6 +26,14 @@ for faction in good evil; do
 		echo "FEHLER im Spione-Rauchtest ($faction, Code $code)"
 		fail=1
 	fi
+	# Neue Funktionen (tests/smoke_features.gd, ein Modul je Thema)
+	out=$(timeout 600 "$GODOT" --headless res://tests/smoke_features.tscn -- faction=$faction 2>&1)
+	code=$?
+	echo "$out" | grep -E "^\[smoke\]|SCRIPT ERROR|ERROR:|at: " | head -200
+	if [ $code -ne 0 ] || echo "$out" | grep -qE "SCRIPT ERROR|^ERROR:"; then
+		echo "FEHLER im Funktionen-Rauchtest ($faction, Code $code)"
+		fail=1
+	fi
 done
 [ $fail -eq 0 ] && echo "OK: Rauchtest ohne Fehler"
 exit $fail

@@ -752,6 +752,13 @@ Der Ruf steigt durch Geschenke, Handel, Verträge und Schutz und sinkt durch Ang
 zerstörte Gebäude, Drohungen, Kriegserklärungen (−30) und Vertragsbruch (−40). Andere Dörfer hören Gerüchte davon.
 Mit der Zeit nähert er sich wieder dem Grundwert.
 
+**Dein Heer und der Ruf:** Ein starkes Heer macht dich nicht automatisch bei allen gefürchtet. Dörfer, die dir
+**freundlich** gesinnt sind oder mit dir einen **Schutzvertrag** bzw. ein **Bündnis** haben, fühlen sich beschützt:
+ihr Ruf steigt langsam (je stärker das Heer, desto schneller, höchstens bis +80). **Neutrale** Dörfer kümmert dein
+Heer nicht. **Misstrauische** und **feindselige** Dörfer misstrauen ihm etwas mehr. Angst bei allen machen nur
+**Taten**: Angriffe, Drohungen und Eroberungen (und die Gerüchte darüber). Im Diplomatiefenster steht unter dem
+Verlauf, wie dein Heer gerade wirkt (z. B. „+2,3 je Minute – fühlt sich beschützt“).
+
 ### Was du tun kannst
 
 | Aktion | So geht's |
