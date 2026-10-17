@@ -8,7 +8,8 @@
 		"trade: Kurs = Wert(gegeben) × buys / (Wert(erhalten) × sells) × (1 − Marge). Marge = base_margin − Ruf/100 × rep_bonus_per_100 − Vertragsbonus − Volksbonus (begrenzt auf min_margin…max_margin). daily_value_limit: Höchstwert pro Dorf und Reich je Spieltag.",
 		"annex: Aufnahme ins Reich. Ergeben (devoted) = sofort; ab min_reputation mit grossem Geschenk (annex_gift des Volks × Dorfgrösse × gift_size_scale) oder Einschüchterung (eigene Stärke in der Nähe ≥ intimidation_ratio × Dorfstärke).",
 		"village: Dorfwirtschaft und Milizen. messenger: Boten, die angegriffene Dörfer losschicken.",
-		"strength_attitude: Wirkung der Heeresstärke auf den Ruf (alle interval Sekunden). Stärke = Kampfkraft aller Truppen, Helden und des Königs (wie Dorfmilizen); unter min_power keine Wirkung, Faktor = Stärke / reference_power (höchstens max_factor). Freundlich/Ergeben (friendly_tiers) oder mit Schutz-/Bündnisvertrag: + friendly_per_interval × Faktor bis friendly_cap (Grund friendly_reason). Neutral: keine Wirkung. Misstrauisch/Feindselig oder im Krieg: + hostile_per_interval × Faktor bis hostile_floor. Angst bei allen erzeugen nur Taten (events: Angriff, Drohung, Eroberung und ihre Gerüchte). merge_seconds: gleiche Gründe werden im Verlauf zusammengezählt."
+		"strength_attitude: Wirkung der Heeresstärke auf den Ruf (alle interval Sekunden). Stärke = Kampfkraft aller Truppen, Helden und des Königs (wie Dorfmilizen); unter min_power keine Wirkung, Faktor = Stärke / reference_power (höchstens max_factor). Freundlich/Ergeben (friendly_tiers) oder mit Schutz-/Bündnisvertrag: + friendly_per_interval × Faktor bis friendly_cap (Grund friendly_reason). Neutral: keine Wirkung. Misstrauisch/Feindselig oder im Krieg: + hostile_per_interval × Faktor bis hostile_floor. Angst bei allen erzeugen nur Taten (events: Angriff, Drohung, Eroberung und ihre Gerüchte). merge_seconds: gleiche Gründe werden im Verlauf zusammengezählt.",
+		"village.growth: Dorfwachstum. Im Frieden wächst ein Dorf je interval Sekunden um base (Handelsvertrag oder Handelsweg + trade_bonus, Schutz- oder Bündnisvertrag + alliance_bonus); bei 1 kommt eine Hütte dazu (mehr Bewohner, mehr Milizplätze; militia_max begrenzt). Krieg mit einem Reich, Alarm oder ein Angriff/eine zerstörte Hütte in den letzten attack_pause_seconds halten es an. Höchstens max_size Hütten; neue Hütten auf freien Kacheln bis hut_search_radius um das Dorfzentrum. towers_at_size: ab dieser Grösse je ein Wachturm (Gebäude tower)."
 	],
 
 	"reputation": {
@@ -73,8 +74,10 @@
 	"village": {
 		"hall": "village_hall", "hut": "village_hut",
 		"start_stock": { "wood": 60, "stone": 40, "ore": 20, "food": 80, "mana": 10 }, "stock_cap": 400,
-		"tick_seconds": 1.0, "militia_base": 2, "militia_per_size": 1, "militia_max": 7, "refill_seconds": 120,
-		"guard_radius": [3.5, 5.0], "alarm_radius_extra": 4, "alarm_calm_seconds": 10, "population_per_size": 4
+		"tick_seconds": 1.0, "militia_base": 2, "militia_per_size": 1, "militia_max": 10, "refill_seconds": 120,
+		"guard_radius": [3.5, 5.0], "alarm_radius_extra": 4, "alarm_calm_seconds": 10, "population_per_size": 4,
+		"growth": {"interval": 600, "base": 1.0, "trade_bonus": 0.5, "alliance_bonus": 0.25, "attack_pause_seconds": 900,
+		           "max_size": 10, "hut_search_radius": 8, "tower": "tower", "towers_at_size": [7, 9]}
 	},
 
 	"messenger": {

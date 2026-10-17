@@ -41,13 +41,19 @@ func can_place(def: Dictionary, cell: Vector2i, kingdom: Kingdom) -> String:
 	return _place_reason(def, cell, kingdom, true)
 
 
-func _place_reason(def: Dictionary, cell: Vector2i, kingdom: Kingdom, check_cost: bool) -> String:
+## Wie can_place, aber ohne Kosten, Freischaltung und Burgstufe (Dorfgebäude, die ein Dorf
+## beim Wachsen selbst errichtet; Startgebäude der KI)
+func can_place_free(def: Dictionary, cell: Vector2i, kingdom: Kingdom) -> String:
+	return _place_reason(def, cell, kingdom, false, false)
+
+
+func _place_reason(def: Dictionary, cell: Vector2i, kingdom: Kingdom, check_cost: bool, check_type: bool = true) -> String:
 	if def.get("is_road", false):
 		var reason := can_place_road(cell, kingdom)
 		if reason.is_empty() and check_cost:
 			reason = kingdom.missing_text(def.get("cost", {}))
 		return reason
-	var type_reason := can_build_type(def, kingdom)
+	var type_reason := can_build_type(def, kingdom) if check_type else ""
 	if not type_reason.is_empty():
 		return type_reason
 	var size: Vector2i = def.get("size", Vector2i(2, 2))

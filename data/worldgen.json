@@ -62,10 +62,10 @@
 	},
 
 	"villages": {
-		"_hinweis": "Neutrale Dörfer. count_by_size: Anzahl je Kartengrösse (Kacheln). Abstand zum Start min_dist_start…max_dist_ratio × Breite, untereinander mindestens max(min_between, min_between_ratio × Breite), zu Königreichsplätzen min_dist_kingdom. Bebaubarkeit im Umkreis check_radius; bevorzugtes Biom des Volks im Umkreis preferred_radius zählt für die Platzwahl. size = Anzahl Hütten (2–4). keep_clear_radius: Umkreis ohne verstreute Vorkommen (Platz für die Hütten).",
+		"_hinweis": "Neutrale Dörfer. count_by_size: Anzahl je Kartengrösse (Kacheln). Abstand zum Start min_dist_start…max_dist_ratio × Breite, untereinander mindestens max(min_between, min_between_ratio × Breite), zu Königreichsplätzen min_dist_kingdom. Bebaubarkeit im Umkreis check_radius; bevorzugtes Biom des Volks im Umkreis preferred_radius zählt für die Platzwahl. size = Anzahl Hütten beim Start (4–7; sie wachsen im Spiel weiter, diplomacy.json village.growth). keep_clear_radius: Umkreis ohne verstreute Vorkommen (Platz für die Hütten).",
 		"count_by_size": [[256, 6], [512, 10], [1024, 16]],
 		"min_dist_start": 50, "max_dist_ratio": 0.75, "min_between": 30, "min_between_ratio": 0.05, "min_dist_kingdom": 40,
 		"check_radius": 4, "min_buildable_ratio": 0.75, "preferred_radius": 10, "attempts_per_village": 150,
-		"edge_margin": 0.06, "size": [2, 4], "keep_clear_radius": 4
+		"edge_margin": 0.06, "size": [4, 7], "keep_clear_radius": 7
 	}
 }

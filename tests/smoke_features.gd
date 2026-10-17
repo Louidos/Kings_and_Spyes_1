@@ -8,6 +8,7 @@ extends Node
 ## Prüfmodule in dieser Reihenfolge
 const MODULES := {
 	"Stärke": preload("res://tests/smoke_strength.gd"),
+	"Dörfer": preload("res://tests/smoke_villages.gd"),
 }
 
 var game: Node

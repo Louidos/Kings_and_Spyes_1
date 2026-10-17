@@ -9,6 +9,7 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 - Spione liefern einen genauen Bericht: Truppen, Helden, Verteidigung, Burgstufe, Vorräte und Bündnisse des Ziels
   (#17).
+- Dörfer sind grösser und wachsen im Lauf der Partie; gegnerische Reiche starten grösser und bauen weiter aus (#21).
 
 ### Geändert
 
