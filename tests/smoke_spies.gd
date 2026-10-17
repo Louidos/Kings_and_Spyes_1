@@ -2,7 +2,7 @@
 ## gestartet): Zu Spielbeginn hat kein Reich Spione; ein über das Spionagefenster beschworener
 ## Spion existiert genau einmal (Einheit, Datensatz in SpySystem.spies, Eintrag im Fenster) –
 ## auch mit Auftrag und nach Speichern und Laden.
-##   godot --headless res://tests/smoke_spies.tscn -- faction=good
+##   godot --headless res://tests/smoke_spies.tscn -- faction=good [shots=<ordner> unter xvfb-run]
 ## Fehler erscheinen als "ERROR: [smoke] Spione FEHLER: …" (push_error), Rückgabewert 1.
 extends Node
 
@@ -15,6 +15,8 @@ var _wait_until := 0.0
 var _errors := 0
 var _spy_uid := 0
 var _target_id := 0
+## Ordner für Bildschirmfotos ("" = keine)
+var _shots := ""
 
 
 func _ready() -> void:
@@ -22,6 +24,8 @@ func _ready() -> void:
 		var parts := str(a).split("=", true, 1)
 		if parts.size() == 2 and parts[0] == "faction":
 			_faction = parts[1]
+		if parts.size() == 2 and parts[0] == "shots":
+			_shots = parts[1]
 	GameSession.setup_new_game(_faction, "normal", "small", "12345", "")
 	_spawn_game()
 
@@ -39,6 +43,13 @@ func _swap_game() -> void:
 		old.get_parent().remove_child(old)
 	old.queue_free()
 	_spawn_game()
+
+
+## Bildschirmfoto (nur mit Fenster und shots=<ordner>)
+func _shot(shot_name: String) -> void:
+	if _shots.is_empty() or DisplayServer.get_name() == "headless":
+		return
+	get_viewport().get_texture().get_image().save_png("%s/spies_%s_%s.png" % [_shots, _faction, shot_name])
 
 
 func _check(cond: bool, text: String) -> void:
@@ -161,7 +172,110 @@ func _process(_delta: float) -> void:
 			_expect(2, "Abfrage vor der Beschwörungs-Meldung")
 			_check(int(ss.counters.get(k.id, 0)) == number and number == 2,
 					"Keine doppelte Nummer (%s, Zähler %d)" % [u.get_display_name(), int(ss.counters.get(k.id, 0))])
+			_step = 98
+			await _report_test(u)
 			_finish()
+
+
+## Spionagebericht: ohne Kundschaft "unbekannt"; ein Spion der höchsten Stufe am Ziel liefert
+## genaue Truppen- und Verteidigungszahlen, die zum Spielzustand passen, und eine Meldung
+func _report_test(spy: Unit) -> void:
+	var g := _game
+	var k: Kingdom = g.player
+	var ss: SpySystem = g.spy_system
+	var esp: EspionageSystem = g.espionage_system
+	var panel: EspionagePanel = g.hud.espionage_panel
+	var villages: Array = g.village_system.get_villages()
+	if not villages.is_empty():
+		var v: Kingdom = villages[0]
+		panel.open(EspionagePanel.TAB_REALMS, v.id)
+		panel._refresh()
+		_check(esp.get_report(k, v).is_empty() and panel._realm_report.text.contains("unbekannt"),
+				"Bericht ohne Kundschaft über %s: unbekannt" % v.display_name)
+		panel.close()
+	var ai: Array = g.ai_system.get_ai_kingdoms()
+	if ai.is_empty():
+		_check(false, "Kein KI-Reich für den Spionagebericht")
+		return
+	var target: Kingdom = ai[0]
+	# Ein Turm beim Ziel, damit die Verteidigung etwas zu zählen hat
+	var tower_def := DataDB.get_building("tower")
+	var center: Vector2i = g.world.world_to_cell(target.castle.get_center())
+	var placed := false
+	for r in range(4, 14):
+		for dy in range(-r, r + 1):
+			for dx in range(-r, r + 1):
+				var cell := center + Vector2i(dx, dy)
+				if placed or (absi(dx) != r and absi(dy) != r) or not _free_2x2(target, cell):
+					continue
+				for res in tower_def.get("cost", {}):
+					target.resources[res] = float(target.resources.get(res, 0.0)) + float(tower_def["cost"][res])
+				placed = g.building_system.place_building(tower_def, cell, target, true) != null
+	_check(placed, "Turm beim Ziel gebaut")
+	# Ein paar Truppen beim Ziel (3 Nahkämpfer, 2 Schützen)
+	for tier in ["fighter", "fighter", "fighter", "archer", "archer"]:
+		var def := DataDB.get_unit_for_tier(target.faction_id, tier)
+		g.unit_system.spawn_unit(target, str(def["id"]), target.castle.get_approach_point(target.castle.get_center() + Vector2(0, 900)))
+	# Spion auf höchster Stufe am Ziel, Auskundschaften läuft
+	var rec := ss.get_record(spy)
+	rec["level"] = SpySystem.max_level()
+	rec["mission"] = "scout"
+	rec["target_id"] = target.id
+	rec["state"] = "active"
+	rec["active_since"] = GameClock.game_time
+	spy.position = target.castle.get_center() + Vector2(0, 300)
+	var notes_before := Notify.history.size()
+	ss._work(spy, rec, GameClock.game_time)
+	var report := esp.get_report(k, target)
+	var troops := 0
+	var power := 0.0
+	var towers := 0
+	for u in target.units:
+		if EspionageSystem.is_army_unit(u) and (u as Unit).role != "hero":
+			troops += 1
+	for u in target.units:
+		if EspionageSystem.is_army_unit(u) or (u as Unit) == target.king:
+			power += VillageSystem.unit_power(u)
+	var tower_power := 0.0
+	for b in target.buildings:
+		if (b as Building).constructed and str((b as Building).def.get("fortification", "")) == "tower":
+			towers += 1
+			var t: Dictionary = (b as Building).def.get("tower", {})
+			tower_power += (b as Building).max_hp * float(t.get("attack", 0.0)) / maxf(float(t.get("interval", 1.0)), 0.1) / 100.0
+	_check(not report.is_empty() and int(report["level"]) == 3, "Bericht über %s auf Stufe 3" % target.display_name)
+	_check(int(report.get("troop_total", -1)) == troops and int(report.get("towers", -1)) == towers
+			and int(report.get("defense_power", -1)) == roundi(power + tower_power)
+			and int(report.get("castle_level", -1)) == target.get_castle_level()
+			and int(report.get("population", -1)) == target.get_population(),
+			"Bericht stimmt mit dem Spielzustand: %d Truppen, %d Türme, Stärke %d, Burgstufe %d, %d Bewohner" % [
+			troops, towers, roundi(power + tower_power), target.get_castle_level(), target.get_population()])
+	panel.open(EspionagePanel.TAB_REALMS, target.id)
+	panel._refresh()
+	var text := panel._realm_report.text
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_shot("bericht")
+	_check(text.contains("Truppen:[/b] %d" % troops) and text.contains("Türme %d" % towers)
+			and text.contains("Gesamtstärke %d" % roundi(power + tower_power)) and text.contains("[b]Plan:[/b]"),
+			"Spionagefenster zeigt die genauen Zahlen und Pläne")
+	panel.close()
+	var noted := false
+	for i in range(notes_before, Notify.history.size()):
+		if str((Notify.history[i] as Dictionary).get("text", "")).contains("Spionagebericht"):
+			noted = true
+	_check(noted, "Neuer Bericht steht im Protokoll")
+
+
+## 2 × 2 freie, bebaubare Kacheln im Gebiet von k (ohne Strasse und Vorkommen)
+func _free_2x2(k: Kingdom, cell: Vector2i) -> bool:
+	var w: WorldData = _game.world
+	for y in range(cell.y, cell.y + 2):
+		for x in range(cell.x, cell.x + 2):
+			var c := Vector2i(x, y)
+			if not w.in_bounds(c) or w.get_owner(c) != k.id or not bool(w.get_biome(c).get("buildable", false)) \
+					or w.occupancy.get(c, null) != null or w.roads.has(c) or not w.get_deposit(c).is_empty():
+				return false
+	return true
 
 
 func _finish() -> void:

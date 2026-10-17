@@ -5,6 +5,11 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 ## Unveröffentlicht
 
+### Hinzugefügt
+
+- Spione liefern einen genauen Bericht: Truppen, Helden, Verteidigung, Burgstufe, Vorräte und Bündnisse des Ziels
+  (#17).
+
 ### Geändert
 
 - Alle Figuren haben jetzt ein eigenes Aussehen statt Punkten: Truppen je Klasse, Helden, Bewohner, Spione und

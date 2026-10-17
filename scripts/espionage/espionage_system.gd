@@ -38,6 +38,8 @@ signal intel_changed(observer: Kingdom, target: Kingdom, level: int)
 signal enemy_spotted(observer: Kingdom, foe: Kingdom, pos: Vector2, count: int, inside: bool)
 ## Reichstarnung an/aus
 signal cloak_changed(k: Kingdom, active: bool)
+## Neuer Spionagebericht von observer über target
+signal report_made(observer: Kingdom, target: Kingdom)
 
 ## Namen der Aufmerksamkeitsstufen (Spionagefenster, Zusammenfassung)
 const AWARENESS_TIER_NAMES := ["Keine", "Gerüchte", "Entdeckt"]
@@ -68,6 +70,8 @@ var reported: Dictionary = {}
 var sightings: Dictionary = {}
 ## "beobachter:ziel" -> Spielzeit, seit der ein Späher/Spion des Beobachters im Gebiet des Ziels steht
 var spy_scout_since: Dictionary = {}
+## "beobachter:ziel" -> letzter Spionagebericht (SpyReport.build; nur Spieler-Beobachter)
+var reports: Dictionary = {}
 
 var _ts := 64.0
 var _disc_acc := 0.0
@@ -551,6 +555,34 @@ func grant_intel(observer: Kingdom, target: Kingdom, level: int, source: String)
 		intel_changed.emit(observer, target, after)
 
 
+## Spionagebericht (Schnappschuss) von observer über target anlegen bzw. erneuern – höchstens alle
+## report.refresh_seconds; Meldung ins Protokoll beim ersten Bericht und wenn der letzte älter als
+## report.notify_seconds ist. Nur für den Spieler (die KI liest den Spielzustand selbst).
+func make_report(observer: Kingdom, target: Kingdom, level: int, source: String, force: bool = false) -> void:
+	if observer == null or target == null or observer == target or not observer.is_player or level <= 0:
+		return
+	var key := pair_key(observer, target)
+	var old: Dictionary = reports.get(key, {})
+	var age := GameClock.game_time - float(old.get("at", -INF))
+	if not force and not old.is_empty() and age < float(DataDB.esp("report.refresh_seconds", 60)) \
+			and int(old.get("level", 0)) >= level:
+		return
+	reports[key] = SpyReport.build(game, observer, target, level, source)
+	report_made.emit(observer, target)
+	if old.is_empty() or age >= float(DataDB.esp("report.notify_seconds", 300)):
+		var names: Array = DataDB.esp("intel.names", ["Unbekannt", "Gerüchte", "Bericht", "Genau"])
+		observer.notify("Spionagebericht über %s (%s) – Spionagefenster (K)" % [target.display_name,
+				str(names[clampi(level, 0, names.size() - 1)])], "info",
+				{"window": "espionage", "tab": "realms", "target_id": target.id, "pos": _castle_pos(target)})
+
+
+## Letzter Spionagebericht von observer über target ({} = keiner)
+func get_report(observer: Kingdom, target: Kingdom) -> Dictionary:
+	if observer == null or target == null:
+		return {}
+	return reports.get(pair_key(observer, target), {})
+
+
 ## Darf viewer Einzelheiten über k sehen (Stufe min_level)? Eigenes und verbündetes
 ## Reich, Monster und Dörfer (ab Stufe 1) immer.
 func details_visible(viewer: Kingdom, k: Kingdom, min_level: int) -> bool:
@@ -958,7 +990,7 @@ func on_kingdom_defeated(k: Kingdom) -> void:
 		cloak_changed.emit(k, false)
 	var prefix := "%d:" % k.id
 	var suffix := ":%d" % k.id
-	for dict in [awareness, awareness_tier, spy_scout_since]:
+	for dict in [awareness, awareness_tier, spy_scout_since, reports]:
 		var d: Dictionary = dict
 		for key in d.keys():
 			if str(key).begins_with(prefix) or str(key).ends_with(suffix):
@@ -974,7 +1006,7 @@ func to_dict() -> Dictionary:
 			"pair_aggr_at": pair_aggr_at.duplicate(), "awareness": awareness.duplicate(),
 			"awareness_tier": awareness_tier.duplicate(), "intel": intel.duplicate(true), "cloaks": cloaks.duplicate(true),
 			"reported": reported.duplicate(), "sightings": sightings.duplicate(), "spy_scout_since": spy_scout_since.duplicate(),
-			"acc": [_disc_acc, _aw_acc, _rep_acc]}
+			"reports": reports.duplicate(true), "acc": [_disc_acc, _aw_acc, _rep_acc]}
 
 
 func from_dict(d: Dictionary) -> void:
@@ -988,6 +1020,8 @@ func from_dict(d: Dictionary) -> void:
 	reported = (d.get("reported", {}) as Dictionary).duplicate()
 	sightings = (d.get("sightings", {}) as Dictionary).duplicate()
 	spy_scout_since = (d.get("spy_scout_since", {}) as Dictionary).duplicate()
+	# Spielstände vor den Spionageberichten: keine Berichte
+	reports = (d.get("reports", {}) as Dictionary).duplicate(true)
 	var acc: Array = d.get("acc", [0.0, 0.0, 0.0])
 	if acc.size() >= 3:
 		_disc_acc = float(acc[0])
