@@ -76,6 +76,8 @@ Nur Daten, kein Code (Details in [Daten anpassen](daten-anpassen.md)):
 | Wie das eigene Heer auf den Ruf der Dörfer wirkt | `diplomacy.json` → `strength_attitude` (`friendly_per_interval`, `friendly_cap`, `hostile_per_interval`, `reference_power`) |
 | Grösse und Wachstum der Dörfer | `worldgen.json` → `villages.size`, `diplomacy.json` → `village.growth`, `village.militia_max` |
 | Startvorsprung der KI-Reiche | `ai.json` → `start_bonus` (Bewohner, Gebäude) |
+| Preise nach Angebot und Nachfrage | `trade.json` → `prices` (`reference_stock`, `elasticity`, `min_factor`, `max_factor`) |
+| Einstellbare Handelsrouten, Ruf je Lieferung | `trade.json` → `order` (`amount_steps`, `interval_steps`), `reputation_per_delivery`; KI: `ai.json` → `routes.order` |
 | Wie schnell die KI den Spieler bemerkt | `espionage.json` → `awareness` (`rise_per_minute`, `rumour`, `discovered`, `patience_floor`) |
 | Stärke und Ertrag der Gegner, Startvorräte | `difficulties.json` |
 | Häufigkeit der Ereignisse | `events.json` (`chance_per_check`, Abstände, Abklingzeiten) |

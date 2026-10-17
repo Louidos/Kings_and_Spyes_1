@@ -1224,6 +1224,7 @@ func _refresh_actions(k: Kingdom, v: Kingdom) -> void:
 		trade_text = tip.colored(str(q["reason"]), COLOR_BAD)
 	trade_text += "  ·  Kurs %s  ·  heute noch Wert %d" % [("%.2f" % float(q["rate"])).replace(".", ","),
 			floori(float(q["remaining_today"]))]
+	trade_text += "\n" + prices_text(ds.get_prices(v, k))
 	_set_rich(_trade_preview, trade_text)
 	_set_disabled(_trade_button, not bool(q["ok"]))
 
@@ -1318,10 +1319,12 @@ func _treaty_text(k: Kingdom, v: Kingdom) -> String:
 				text += "\n" + tip.colored("Pflicht: Wird das Dorf angegriffen, schicke binnen %d s Truppen hin." % int(
 						DataDB.diplo("treaties.protection.help_seconds", 60)), COLOR_DIM)
 		"trade":
-			var delivery: Dictionary = people.get("delivery", {})
-			text += "\nNächste Lieferung in %d s: %s für %s  ·  bisher %d" % [maxi(ceili(float(t["next_delivery"]) - GameClock.game_time), 0),
-					DataDB.cost_to_text(delivery.get("give", {})), DataDB.cost_to_text(delivery.get("take", {})),
-					int(t.get("deliveries", 0))]
+			var delivery: Dictionary = (game.diplomacy_system as DiplomacySystem).get_delivery(v, k)
+			text += "\nLieferung alle %d s (Menge ×%s): %s für %s  ·  nächste in %d s  ·  bisher %d" % [
+					roundi(float(delivery["interval"])), ResourceBar.format_number(float(t.get("amount_mult", 1.0))),
+					DataDB.cost_to_text(delivery["give"]), DataDB.cost_to_text(delivery["take"]),
+					maxi(ceili(float(t["next_delivery"]) - GameClock.game_time), 0), int(t.get("deliveries", 0))]
+			text += "\n" + tip.colored("Menge und Abstand: Reiter Handelswege", COLOR_DIM)
 		"alliance":
 			var special := str(people.get("special_unit", ""))
 			text += "\nMilizen helfen dir im Umkreis von %d Kacheln" % int(DataDB.diplo("treaties.alliance.help_radius", 25))
@@ -1332,6 +1335,27 @@ func _treaty_text(k: Kingdom, v: Kingdom) -> String:
 	if not route.is_empty():
 		text += "\n" + tip.esc(game.trade_route_system.get_route_text(route, k)) + "  ·  Reiter Handelswege"
 	return text
+
+
+## Preise des Dorfs nach Angebot und Nachfrage (DiplomacySystem.get_prices), farbig:
+## "Preise (Wert je Stück): Holz verkauft 0,7 / kauft 0,5 · …" – grün = günstig, rot = teuer
+static func prices_text(prices: Dictionary) -> String:
+	var parts: PackedStringArray = []
+	for r in DataDB.resources:
+		var id := str(r["id"])
+		if not prices.has(id):
+			continue
+		var p: Dictionary = prices[id]
+		var f := float(p["supply"])
+		var color := COLOR_GOOD if f < 0.9 else (COLOR_BAD if f > 1.15 else COLOR_TEXT)
+		var hint := "viel" if f < 0.9 else ("knapp" if f > 1.15 else "")
+		parts.append("[color=#%s]%s %s/%s%s[/color]" % [color.to_html(false), str(r.get("name", id)),
+				_price(float(p["sell"])), _price(float(p["buy"])), (" (%s)" % hint) if not hint.is_empty() else ""])
+	return "Preise (verkauft/kauft, Wert je Stück): " + " · ".join(parts)
+
+
+static func _price(v: float) -> String:
+	return ("%.1f" % v).replace(".", ",")
 
 
 ## "Beziehungen: Krieg mit dir · Bündnis mit …" (Monster zählen nicht). Beziehungen zu

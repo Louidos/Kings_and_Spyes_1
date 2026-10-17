@@ -35,6 +35,8 @@ signal side_switched(village: Kingdom, new_ally: Kingdom, against: Kingdom)
 signal aggression_reported(receiver: Kingdom, aggressor: Kingdom, village: Kingdom)
 ## Handelslieferung fällig (Phase 9: als Karawane, siehe use_caravans)
 signal trade_delivery_due(village: Kingdom, partner: Kingdom, give: Dictionary, take: Dictionary)
+## Menge oder Abstand einer Handelsroute wurde eingestellt
+signal trade_order_changed(village: Kingdom, partner: Kingdom)
 ## Ein Schutzbefohlener wird angegriffen und braucht bis deadline (Spielzeit) Hilfe
 signal protection_requested(village: Kingdom, protector: Kingdom, attacker: Kingdom, deadline: float)
 
@@ -535,6 +537,11 @@ func note_delivery(village: Kingdom) -> void:
 		return
 	var t: Dictionary = treaties[village.id]
 	t["deliveries"] = int(t.get("deliveries", 0)) + 1
+	# Handel stärkt den Ruf: jede angekommene Lieferung (trade.json reputation_per_delivery)
+	var partner: Kingdom = game.get_kingdom(int(t["partner_id"]))
+	var gain := float(DataDB.trade("reputation_per_delivery", 1.0))
+	if partner != null and gain != 0.0:
+		_apply(village, partner, gain, "Handelslieferung", true, true)
 
 
 ## KI-Startvertrag, Rauchtest und F3: Vertrag ohne Annahmeprüfung schliessen ("" = ok, sonst Grund)
@@ -670,18 +677,16 @@ func get_trade_quote(trader: Kingdom, village: Kingdom, give_res: String, give_a
 		q["reason"] = "Wähle zwei verschiedene Waren"
 		return q
 	var values: Dictionary = DataDB.diplo("gifts.resource_value", {})
-	var people := village_system.get_people(village)
-	var rates: Dictionary = people.get("trade_rates", {})
+	var rates: Dictionary = village_system.get_people(village).get("trade_rates", {})
 	var buys: Dictionary = rates.get("buys", {})
 	var sells: Dictionary = rates.get("sells", {})
 	var rep := get_reputation(village, trader)
-	var treaty_bonus := float(DataDB.diplo("treaties.trade.rate_bonus", 0.15)) if get_treaty_with(village, trader) == "trade" else 0.0
-	var margin := float(DataDB.diplo("trade.base_margin", 0.3)) - rep / 100.0 * float(DataDB.diplo("trade.rep_bonus_per_100", 0.15)) \
-			- treaty_bonus - float(people.get("trade_bonus", 0.0))
-	margin = clampf(margin, float(DataDB.diplo("trade.min_margin", 0.05)), float(DataDB.diplo("trade.max_margin", 0.6)))
+	var margin := trade_margin(village, trader)
 	var give_value := float(values.get(give_res, 1.0))
-	var rate := give_value * float(buys.get(give_res, 1.0)) \
-			/ maxf(float(values.get(get_res, 1.0)) * float(sells.get(get_res, 1.0)), 0.01) * (1.0 - margin)
+	# Angebot und Nachfrage (trade.json prices): viel auf Lager = billig, wenig = teuer
+	var rate := give_value * float(buys.get(give_res, 1.0)) * supply_factor(village, give_res) \
+			/ maxf(float(values.get(get_res, 1.0)) * float(sells.get(get_res, 1.0)) * supply_factor(village, get_res), 0.01) \
+			* (1.0 - margin)
 	var value := maxf(give_amount, 0.0) * give_value
 	var remaining := maxf(_trade_limit(village, trader) - _trade_used(village, trader), 0.0)
 	var get_amount := floorf(maxf(give_amount, 0.0) * rate)
@@ -707,6 +712,111 @@ func get_trade_quote(trader: Kingdom, village: Kingdom, give_res: String, give_a
 		q["reason"] = trader.missing_text({give_res: give_amount})
 	q["ok"] = str(q["reason"]).is_empty()
 	return q
+
+
+## Knappheit einer Ware im Dorf (trade.json prices): (reference_stock / Vorrat) ^ elasticity,
+## begrenzt auf min_factor … max_factor. < 1 = das Dorf hat viel davon (verkauft billig, zahlt
+## wenig), > 1 = es fehlt ihm (verkauft teuer, zahlt gut).
+func supply_factor(village: Kingdom, res_id: String) -> float:
+	var cfg: Dictionary = DataDB.trade("prices", {})
+	if cfg.is_empty() or village == null:
+		return 1.0
+	var stock := maxf(village.get_amount(res_id), float(cfg.get("min_stock", 5)))
+	var f := pow(float(cfg.get("reference_stock", 150)) / stock, float(cfg.get("elasticity", 0.5)))
+	return clampf(f, float(cfg.get("min_factor", 0.6)), float(cfg.get("max_factor", 1.8)))
+
+
+## Preise des Dorfs für trader (Wert je Einheit, 1 = Grundwert Holz): {Ware: {"sell": Preis, den das
+## Dorf verlangt, "buy": Preis, den es zahlt, "supply": Knappheit}} – mit Volk, Vorrat, Ruf und Vertrag
+func get_prices(village: Kingdom, trader: Kingdom) -> Dictionary:
+	var result := {}
+	if not village_system.is_village_kingdom(village):
+		return result
+	var values: Dictionary = DataDB.diplo("gifts.resource_value", {})
+	var rates: Dictionary = village_system.get_people(village).get("trade_rates", {})
+	var buys: Dictionary = rates.get("buys", {})
+	var sells: Dictionary = rates.get("sells", {})
+	var margin := trade_margin(village, trader)
+	for r in DataDB.resources:
+		var id := str(r["id"])
+		var f := supply_factor(village, id)
+		var base := float(values.get(id, 1.0))
+		result[id] = {"sell": base * float(sells.get(id, 1.0)) * f / maxf(1.0 - margin, 0.05),
+				"buy": base * float(buys.get(id, 1.0)) * f * (1.0 - margin), "supply": f}
+	return result
+
+
+## Handelsspanne des Dorfs gegenüber trader (Ruf, Handelsvertrag, Volk)
+func trade_margin(village: Kingdom, trader: Kingdom) -> float:
+	var people := village_system.get_people(village)
+	var treaty_bonus := float(DataDB.diplo("treaties.trade.rate_bonus", 0.15)) if get_treaty_with(village, trader) == "trade" else 0.0
+	var margin := float(DataDB.diplo("trade.base_margin", 0.3)) - get_reputation(village, trader) / 100.0 \
+			* float(DataDB.diplo("trade.rep_bonus_per_100", 0.15)) - treaty_bonus - float(people.get("trade_bonus", 0.0))
+	return clampf(margin, float(DataDB.diplo("trade.min_margin", 0.05)), float(DataDB.diplo("trade.max_margin", 0.6)))
+
+
+## Lieferung eines Handelsvertrags: Waren des Volks (peoples.json delivery) × eingestellte Menge;
+## die Bezahlung folgt dem Preis (viel Ware im Dorf = billiger). {"give", "take", "interval"}
+func get_delivery(village: Kingdom, _k: Kingdom) -> Dictionary:
+	var t := get_treaty(village)
+	var delivery: Dictionary = village_system.get_people(village).get("delivery", {})
+	var mult := float(t.get("amount_mult", 1.0))
+	var give := {}
+	var price := 0.0
+	var n := 0
+	for res_id in delivery.get("give", {}):
+		give[res_id] = roundf(float(delivery["give"][res_id]) * mult)
+		price += supply_factor(village, str(res_id))
+		n += 1
+	var index := clampf(price / maxf(float(n), 1.0), float(DataDB.trade("prices.min_factor", 0.6)),
+			float(DataDB.trade("prices.max_factor", 1.8))) if n > 0 else 1.0
+	var take := {}
+	for res_id in delivery.get("take", {}):
+		take[res_id] = maxf(roundf(float(delivery["take"][res_id]) * mult * index), 1.0)
+	return {"give": give, "take": take, "interval": trade_interval(village), "price_index": index}
+
+
+## Abstand der Lieferungen dieses Handelsvertrags (eingestellt, sonst delivery_interval)
+func trade_interval(village: Kingdom) -> float:
+	var t := get_treaty(village)
+	return maxf(float(t.get("interval", DataDB.diplo("treaties.trade.delivery_interval", 150))), 1.0)
+
+
+## Menge (Faktor) und Abstand einer Handelsroute einstellen (trade.json order: amount_steps,
+## interval_steps). "" = übernommen, sonst der Grund.
+func set_trade_order(k: Kingdom, village: Kingdom, amount_mult: float, interval: float) -> String:
+	var t := get_treaty(village)
+	if t.is_empty() or str(t["type"]) != "trade" or int(t["partner_id"]) != k.id:
+		return "Kein Handelsvertrag mit diesem Dorf"
+	var amounts: Array = DataDB.trade("order.amount_steps", [0.5, 1.0, 1.5, 2.0, 3.0])
+	var intervals: Array = DataDB.trade("order.interval_steps", [60, 150, 300, 600])
+	if not amounts.has(amount_mult) and not amounts.has(int(amount_mult)):
+		return "Menge nicht erlaubt"
+	if not intervals.has(interval) and not intervals.has(int(interval)):
+		return "Abstand nicht erlaubt"
+	var old_interval := trade_interval(village)
+	t["amount_mult"] = amount_mult
+	t["interval"] = interval
+	# Die nächste Lieferung rückt mit dem neuen Abstand näher bzw. weiter weg
+	t["next_delivery"] = float(t["next_delivery"]) - old_interval + interval
+	trade_order_changed.emit(village, k)
+	return ""
+
+
+## Handel je Spielminute aus allen Handelsverträgen des Reichs: {"in": {Ware: Menge}, "out": {Ware: Menge}}
+func get_trade_flow(k: Kingdom) -> Dictionary:
+	var flow := {"in": {}, "out": {}}
+	for entry in get_treaties_of(k):
+		if str(entry["type"]) != "trade":
+			continue
+		var v: Kingdom = entry["village"]
+		var d := get_delivery(v, k)
+		var per_min := 60.0 / float(d["interval"])
+		for res_id in d["give"]:
+			flow["in"][res_id] = float(flow["in"].get(res_id, 0.0)) + float(d["give"][res_id]) * per_min
+		for res_id in d["take"]:
+			flow["out"][res_id] = float(flow["out"].get(res_id, 0.0)) + float(d["take"][res_id]) * per_min
+	return flow
 
 
 ## Tausch ausführen. Gibt die erhaltene Menge zurück (0 = kein Tausch).
@@ -1047,19 +1157,19 @@ func _tick_protection(now: float) -> void:
 
 ## Handelsverträge: regelmässige Lieferung (Ware des Dorfs gegen Bezahlung)
 func _tick_deliveries(now: float) -> void:
-	var interval := maxf(float(DataDB.diplo("treaties.trade.delivery_interval", 150)), 1.0)
 	for vid in treaties.keys():
 		var t: Dictionary = treaties[vid]
 		if str(t["type"]) != "trade" or now < float(t["next_delivery"]):
 			continue
-		t["next_delivery"] = now + interval
 		var v: Kingdom = game.get_kingdom(int(vid))
 		var k: Kingdom = game.get_kingdom(int(t["partner_id"]))
+		var interval := trade_interval(v)
+		t["next_delivery"] = now + interval
 		if not village_system.is_village(v) or not is_party(k):
 			continue
-		var delivery: Dictionary = village_system.get_people(v).get("delivery", {})
-		var give: Dictionary = delivery.get("give", {})
-		var take: Dictionary = delivery.get("take", {})
+		var delivery := get_delivery(v, k)
+		var give: Dictionary = delivery["give"]
+		var take: Dictionary = delivery["take"]
 		if use_caravans:
 			trade_delivery_due.emit(v, k, give, take)
 			continue
@@ -1074,11 +1184,11 @@ func _tick_deliveries(now: float) -> void:
 			continue
 		v.spend(give)
 		k.spend(take)
-		t["deliveries"] = int(t.get("deliveries", 0)) + 1
 		for res_id in give:
 			k.add_resource(res_id, float(give[res_id]))
 		for res_id in take:
 			v.add_resource(res_id, float(take[res_id]))
+		note_delivery(v)
 		k.notify("Handelslieferung aus %s: %s für %s" % [v.display_name, DataDB.cost_to_text(give),
 				DataDB.cost_to_text(take)], "info", center)
 

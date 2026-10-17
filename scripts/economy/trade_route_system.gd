@@ -495,7 +495,6 @@ func _tick_route(r: Dictionary, now: float) -> void:
 		depot = _depot(r)
 	if str(r["state"]) == "paused" and str(r["reason"]) == "Kein Lager":
 		_set_state(r, "open", "")
-	var delivery: Dictionary = vs.get_people(v).get("delivery", {})
 	# 2. Bündniswege: Lieferung fällig (Ware ohne Bezahlung)
 	if str(r["kind"]) == "alliance" and now >= float(r["next_delivery"]):
 		var interval := float(DataDB.diplo("treaties.trade.delivery_interval", 150)) \
@@ -535,7 +534,8 @@ func _tick_route(r: Dictionary, now: float) -> void:
 	if leg == "idle" and int(r["pending"]) > 0 and str(r["state"]) == "open":
 		var cargo := {}
 		if str(r["kind"]) == "trade":
-			var take: Dictionary = delivery.get("take", {})
+			# Menge und Preis der Route (DiplomacySystem.get_delivery: Einstellung und Angebot/Nachfrage)
+			var take: Dictionary = game.diplomacy_system.get_delivery(v, k)["take"]
 			if not k.spend(take):
 				r["pending"] = int(r["pending"]) - 1
 				r["missed"] = int(r["missed"]) + 1
@@ -648,6 +648,7 @@ func _arrive(id: String, uid: int, ok: bool) -> void:
 		var give: Dictionary = delivery.get("give", {})
 		var goods := {}
 		if str(r["kind"]) == "trade":
+			give = game.diplomacy_system.get_delivery(v, k)["give"]
 			if v.can_afford(give):
 				for res_id in r["cargo"]:
 					v.add_resource(str(res_id), float(r["cargo"][res_id]))

@@ -777,7 +777,7 @@ Verlauf, wie dein Heer gerade wirkt (z. B. „+2,3 je Minute – fühlt sich bes
 | Aktion | So geht's |
 |---|---|
 | **Geschenk** | Ware und Menge wählen; die Zeile zeigt den Rufgewinn. Lieblingswaren des Volks zählen mehr, viele Geschenke kurz nacheinander weniger |
-| **Handel** | Menge und Ware geben, Ware bekommen; Kurs und Tageslimit stehen darunter. Koboldhändler und Nomaden haben die besten Kurse |
+| **Handel** | Menge und Ware geben, Ware bekommen; Kurs und Tageslimit stehen darunter, dazu die **Preise** des Dorfs je Ware (verkauft/kauft). Was ein Dorf reichlich hat, gibt es billig ab (grün, „viel“), was ihm fehlt, ist teuer und bringt beim Verkauf mehr (rot, „knapp“). Koboldhändler und Nomaden haben die besten Kurse |
 | **Schutzvertrag** (ab Neutral) | Das Dorf zahlt Tribut. Wird es angegriffen, musst du binnen 60 s Truppen schicken (roter Punkt am Knopf), sonst sinkt der Ruf |
 | **Handelsvertrag** (ab Neutral) | regelmässige Lieferungen, bessere Kurse, höheres Limit, eine Karawane pendelt (siehe [Handelswege](#handelswege)) |
 | **Verteidigungsbündnis** (ab Freundlich) | Milizen helfen dir in der Nähe, der **Volkskrieger** erscheint in deiner Kaserne |
@@ -938,6 +938,13 @@ Linie auf Karte und Minikarte). Diplomatie (N) → „Handelswege“ oder Reichs
 Lieferungen und Verluste. Feinde am Weg überfallen sie – erst geht die Ladung verloren, dann ist der Weg
 abgeschnitten (rotes ✕). Sind keine Feinde mehr da, öffnet er sich nach einigen Minuten, oder du gibst ihn mit
 „Weg freigeben“ frei. Überfällst du selbst KI-Karawanen, bekommst du Beute.
+
+Handelswege mit Handelsvertrag sind **dauerhafte Routen**: Sie laufen von selbst weiter, ohne dass du klicken musst,
+und werden mit dem Spielstand gespeichert. Im Reiter „Handelswege“ stellst du je Route die **Menge** (×0,5 bis ×3)
+und den **Abstand** der Lieferungen (alle 60 bis 600 s) ein. Die Bezahlung folgt dem Preis: Hat das Dorf viel von
+seiner Ware, zahlst du weniger. Oben im Reiter steht, was der Handel je Minute bringt und kostet („Handel je
+Minute: Ein … · Aus …“). Jede angekommene Lieferung verbessert den Ruf beim Dorf, und Dörfer mit Handelsvertrag
+wachsen schneller. Die KI richtet ihre Routen nach denselben Regeln ein und kauft mehr, wenn die Ware billig ist.
 
 ### Versorgung
 

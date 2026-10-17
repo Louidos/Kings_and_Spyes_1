@@ -27,6 +27,8 @@ var _rows: Dictionary = {}
 var _foreign_labels: Array = []
 var _supply_label: Label
 var _supply_jump: Button
+## Einnahmen und Ausgaben je Minute aus den Handelsverträgen
+var _flow_label: Label
 
 
 func setup(p_game: Node) -> void:
@@ -61,6 +63,7 @@ func refresh() -> void:
 		if fi < _foreign_labels.size():
 			(_foreign_labels[fi] as Label).text = _foreign_text(r)
 		fi += 1
+	_flow_label.text = flow_text(game.diplomacy_system.get_trade_flow(player))
 	var unsupplied: Array = game.supply_system.get_unsupplied(player)
 	_supply_label.text = "%d Einheiten ohne Versorgung (keine Erholung)" % unsupplied.size() if not unsupplied.is_empty() \
 			else "Alle Truppen versorgt (eigenes Gebiet, Verbündete oder offene Handelswege)."
@@ -74,6 +77,9 @@ func _rebuild(own: Array, foreign: Array, debug: bool) -> void:
 		c.queue_free()
 	_rows.clear()
 	_foreign_labels.clear()
+	add_child(_header("Handel je Minute"))
+	_flow_label = _label("", COLOR_TEXT)
+	add_child(_flow_label)
 	add_child(_header("Eigene Handelswege"))
 	if own.is_empty():
 		add_child(_label("Keine – schliesse einen Handelsvertrag oder ein Bündnis mit einem Dorf (Reiter Dörfer).", COLOR_DIM))
@@ -93,6 +99,14 @@ func _rebuild(own: Array, foreign: Array, debug: bool) -> void:
 		var reopen := _button("Weg freigeben", _on_reopen.bind(id), "Blockierten Weg neu suchen lassen")
 		buttons.add_child(reopen)
 		row["reopen"] = reopen
+		if str(r["kind"]) == "trade":
+			# Dauerhafte Handelsroute: Menge und Abstand der Lieferungen (trade.json order)
+			var amount := _button("", _on_order.bind(id, "amount"), "Menge je Lieferung (Klick: nächste Stufe)")
+			buttons.add_child(amount)
+			row["amount"] = amount
+			var interval := _button("", _on_order.bind(id, "interval"), "Abstand der Lieferungen (Klick: nächste Stufe)")
+			buttons.add_child(interval)
+			row["interval"] = interval
 		if debug:
 			buttons.add_child(_button("Karawane überfallen (Test)", _on_debug_kill.bind(id), "Debug (F3)"))
 			buttons.add_child(_button("Abschneiden (Test)", _on_debug_cut.bind(id), "Debug (F3)"))
@@ -120,10 +134,31 @@ func _rebuild(own: Array, foreign: Array, debug: bool) -> void:
 	sl.add_child(_supply_jump)
 
 
+## "Ein: +6 Nahrung/min · Aus: −4 Holz/min" (DiplomacySystem.get_trade_flow)
+static func flow_text(flow: Dictionary) -> String:
+	var parts: PackedStringArray = []
+	for side in ["in", "out"]:
+		var amounts: Dictionary = flow[side]
+		var items: PackedStringArray = []
+		for r in DataDB.resources:
+			var id := str(r["id"])
+			if float(amounts.get(id, 0.0)) >= 0.05:
+				items.append("%s %s" % [ResourceBar.format_signed(snappedf(float(amounts[id]), 0.1) * (1.0 if side == "in" else -1.0)),
+						str(r.get("name", id))])
+		if not items.is_empty():
+			parts.append("%s: %s" % ["Ein" if side == "in" else "Aus", ", ".join(items)])
+	return " · ".join(parts) + " je Minute" if not parts.is_empty() else "Kein laufender Handelsvertrag."
+
+
 func _update_row(r: Dictionary) -> void:
 	var row: Dictionary = _rows.get(str(r["id"]), {})
 	if row.is_empty():
 		return
+	if row.has("amount"):
+		var vk: Kingdom = game.get_kingdom(int(r["partner_id"]))
+		var t: Dictionary = game.diplomacy_system.get_treaty(vk)
+		(row["amount"] as Button).text = "Menge ×%s" % ResourceBar.format_number(float(t.get("amount_mult", 1.0)))
+		(row["interval"] as Button).text = "alle %d s" % roundi(game.diplomacy_system.trade_interval(vk))
 	var trs: TradeRouteSystem = game.trade_route_system
 	var v: Kingdom = game.get_kingdom(int(r["partner_id"]))
 	var name_label: Label = row["title"]
@@ -173,6 +208,34 @@ func _on_jump(id: String) -> void:
 		jump_requested.emit(u.position)
 	else:
 		jump_requested.emit(trs.get_midpoint(r))
+
+
+## Menge bzw. Abstand eine Stufe weiter (am Ende wieder von vorn)
+func _on_order(id: String, what: String) -> void:
+	var r: Dictionary = game.trade_route_system.get_route(id)
+	if r.is_empty():
+		return
+	var ds: DiplomacySystem = game.diplomacy_system
+	var v: Kingdom = game.get_kingdom(int(r["partner_id"]))
+	var t := ds.get_treaty(v)
+	var amount := float(t.get("amount_mult", 1.0))
+	var interval := ds.trade_interval(v)
+	var steps: Array = DataDB.trade("order.amount_steps" if what == "amount" else "order.interval_steps", [])
+	if steps.is_empty():
+		return
+	var current := amount if what == "amount" else interval
+	var next_value := float(steps[0])
+	for i in steps.size():
+		if is_equal_approx(float(steps[i]), current):
+			next_value = float(steps[(i + 1) % steps.size()])
+	if what == "amount":
+		amount = next_value
+	else:
+		interval = next_value
+	var reason := ds.set_trade_order(game.player, v, amount, interval)
+	if not reason.is_empty():
+		Notify.warning(reason)
+	refresh()
 
 
 func _on_reopen(id: String) -> void:

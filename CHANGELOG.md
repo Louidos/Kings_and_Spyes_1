@@ -19,6 +19,10 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
   Monster (#15).
 - Ein starkes Heer macht dich nicht mehr bei allen gefürchtet: Verbündete fühlen sich sicherer, nur Angriffe und
   Drohungen machen Angst (#19).
+- Handel überarbeitet: Preise nach Angebot und Nachfrage, dauerhafte Handelsrouten mit Karawanen. Preise je Dorf
+  stehen im Diplomatiefenster; Menge und Abstand jeder Route lassen sich im Reiter Handelswege einstellen, dort steht
+  auch, was der Handel je Minute bringt und kostet. Jede Lieferung verbessert den Ruf, die KI handelt nach denselben
+  Regeln (#25).
 
 ### Behoben
 
