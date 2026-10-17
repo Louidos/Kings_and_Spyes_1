@@ -112,6 +112,8 @@ var _stock_label: Label
 var _rep_bar: HpBar
 var _base_label: Label
 var _history_label: Label
+## Wirkung des eigenen Heers auf den Ruf (strength_attitude)
+var _strength_label: Label
 var _treaty_info: RichTextLabel
 var _relations_label: Label
 
@@ -511,6 +513,8 @@ func _build_info(parent: Control) -> void:
 	rep_row.add_child(_base_label)
 	_history_label = _wrap_label(14, COLOR_DIM)
 	info.add_child(_history_label)
+	_strength_label = _wrap_label(14, COLOR_DIM)
+	info.add_child(_strength_label)
 	_treaty_info = _rich(15)
 	info.add_child(_treaty_info)
 	_relations_label = _wrap_label(14, COLOR_DIM)
@@ -1134,6 +1138,9 @@ func _refresh_detail(k: Kingdom, v: Kingdom) -> void:
 	_rep_bar.set_value(rep + 100.0, 200.0, "%s (%s)" % [DiplomacySystem.tier_name(tier), ResourceBar.format_signed(roundf(rep))])
 	_set_text(_base_label, "Grundwert %s" % ResourceBar.format_signed(roundf(ds.get_base_reputation(v, k))), COLOR_DIM)
 	_set_text(_history_label, _history_text(ds.get_history(v, k)), COLOR_DIM)
+	var effect := ds.strength_effect(v, k)
+	_set_text(_strength_label, strength_text(effect), COLOR_GOOD if float(effect["delta"]) > 0.0 else
+			(COLOR_BAD if float(effect["delta"]) < 0.0 else COLOR_DIM))
 	var treaty_text := _treaty_text(k, v)
 	if _treaty_info.text != treaty_text:
 		_treaty_info.text = treaty_text
@@ -1366,6 +1373,21 @@ func _inactive_text(v: Kingdom) -> String:
 
 
 ## "+10 Geschenk · −5 Angriff" (neueste zuerst)
+## "Dein Heer (Stärke 120): +2 je Minute – fühlt sich beschützt" (DiplomacySystem.strength_effect)
+static func strength_text(effect: Dictionary) -> String:
+	var minutes := 60.0 / maxf(float(DataDB.diplo("strength_attitude.interval", 60)), 1.0)
+	var head := "Dein Heer (Stärke %d): " % roundi(float(effect["power"]))
+	match str(effect["kind"]):
+		"weak":
+			return head + "zu klein, um aufzufallen"
+		"friendly", "hostile":
+			var per_minute := float(effect["delta"]) * minutes
+			if absf(per_minute) < 0.05:
+				return head + "%s (Grenze erreicht)" % str(effect["reason"])
+			return head + "%s je Minute – %s" % [ResourceBar.format_signed(snappedf(per_minute, 0.1)), str(effect["reason"])]
+	return head + "keine Wirkung – nur Angriffe und Drohungen machen Angst"
+
+
 func _history_text(entries: Array) -> String:
 	if entries.is_empty():
 		return "Verlauf: noch keine Änderungen"

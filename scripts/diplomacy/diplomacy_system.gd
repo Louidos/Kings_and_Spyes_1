@@ -77,6 +77,7 @@ var _ts := 64.0
 var _tick_acc := 0.0
 var _decay_acc := 0.0
 var _intrusion_acc := 0.0
+var _strength_acc := 0.0
 ## Wartende Aufgaben: ["end_treaty", Dorf-id, Reich-id, Grund], ["side_switch", Dorf-id, Reich-id]
 var _pending: Array = []
 
@@ -277,7 +278,9 @@ func debug_set_reputation(village: Kingdom, other: Kingdom, value: float) -> voi
 	change_reputation(village, other, value - get_reputation(village, other), "Debug")
 
 
-func _apply(village: Kingdom, other: Kingdom, delta: float, reason: String, log_it: bool) -> void:
+## merge: gleicher Grund wie der letzte Verlaufseintrag (innerhalb strength_attitude.merge_seconds)
+## wird zusammengezählt statt neu eingetragen (laufende Wirkungen fluten den Verlauf nicht)
+func _apply(village: Kingdom, other: Kingdom, delta: float, reason: String, log_it: bool, merge: bool = false) -> void:
 	if village == null or other == null or village == other or delta == 0.0:
 		return
 	if not village_system.is_village_kingdom(village):
@@ -292,7 +295,13 @@ func _apply(village: Kingdom, other: Kingdom, delta: float, reason: String, log_
 	if log_it:
 		var by_village: Dictionary = history.get(village.id, {})
 		var entries: Array = by_village.get(other.id, [])
-		entries.append({"t": GameClock.game_time, "delta": value - old, "reason": reason})
+		var last: Dictionary = entries[-1] if not entries.is_empty() else {}
+		if merge and not last.is_empty() and str(last["reason"]) == reason \
+				and GameClock.game_time - float(last["t"]) <= float(DataDB.diplo("strength_attitude.merge_seconds", 600)):
+			last["delta"] = float(last["delta"]) + value - old
+			last["t"] = GameClock.game_time
+		else:
+			entries.append({"t": GameClock.game_time, "delta": value - old, "reason": reason})
 		while entries.size() > int(DataDB.diplo("reputation.history_size", 8)):
 			entries.remove_at(0)
 		by_village[other.id] = entries
@@ -965,6 +974,11 @@ func _on_sim_tick(dt: float) -> void:
 	if _intrusion_acc >= check:
 		_tick_intrusion(_intrusion_acc)
 		_intrusion_acc = 0.0
+	_strength_acc += step
+	var strength_interval := maxf(float(DataDB.diplo("strength_attitude.interval", 60)), 1.0)
+	if _strength_acc >= strength_interval:
+		_strength_acc -= strength_interval
+		tick_strength_attitude()
 
 
 func _process_pending() -> void:
@@ -1094,6 +1108,70 @@ func _decay(_interval: float) -> void:
 					_apply(v, k, delta, "Verfall", false)
 			if float(row[kid]) <= threshold:
 				_pending.append(["side_switch", v.id, k.id])
+
+
+## Stärke und Haltung (diplomacy.json strength_attitude): Das Heer eines Reichs wirkt je nach
+## Beziehung des Dorfs – Freunde und Vertragspartner (Schutz, Bündnis) fühlen sich beschützt
+## (Ruf steigt langsam bis friendly_cap), Neutrale bleiben gleichgültig, Misstrauische und Feinde
+## misstrauen dem Heer etwas mehr (bis hostile_floor). Angst bei allen Dörfern erzeugen nur
+## Taten: Angriffe, Drohungen und Eroberungen (events, rumour_*).
+func tick_strength_attitude() -> void:
+	var powers := {}
+	for v in village_system.get_villages():
+		var village: Kingdom = v
+		for o in game.kingdoms:
+			var k: Kingdom = o
+			if not is_party(k) or k.defeated:
+				continue
+			if not powers.has(k.id):
+				powers[k.id] = army_power(k)
+			var effect := strength_effect(village, k, float(powers[k.id]))
+			if absf(float(effect["delta"])) >= 0.001:
+				_apply(village, k, float(effect["delta"]), str(effect["reason"]), true, true)
+
+
+## Wirkung des Heers von k auf das Dorf je strength_attitude.interval:
+## {"delta", "reason", "power", "kind": "friendly" | "neutral" | "hostile" | "weak"}
+func strength_effect(village: Kingdom, k: Kingdom, power: float = -1.0) -> Dictionary:
+	var cfg: Dictionary = DataDB.diplo("strength_attitude", {})
+	if power < 0.0:
+		power = army_power(k)
+	var result := {"delta": 0.0, "reason": "", "power": power, "kind": "neutral"}
+	if cfg.is_empty() or village == null or k == null:
+		return result
+	if power < float(cfg.get("min_power", 30)):
+		result["kind"] = "weak"
+		return result
+	var factor := minf(power / maxf(float(cfg.get("reference_power", 150)), 1.0), float(cfg.get("max_factor", 1.5)))
+	var rep := get_reputation(village, k)
+	var tier := get_tier(village, k)
+	var treaty := get_treaty_with(village, k)
+	if game.are_hostile(village, k) or (cfg.get("hostile_tiers", []) as Array).has(tier):
+		result["kind"] = "hostile"
+		result["reason"] = str(cfg.get("hostile_reason", "misstraut deinem Heer"))
+		var floor_value := float(cfg.get("hostile_floor", -60))
+		if rep > floor_value:
+			result["delta"] = maxf(float(cfg.get("hostile_per_interval", -0.4)) * factor, floor_value - rep)
+	elif (cfg.get("friendly_tiers", []) as Array).has(tier) or (cfg.get("friendly_treaties", []) as Array).has(treaty):
+		result["kind"] = "friendly"
+		result["reason"] = str(cfg.get("friendly_reason", "fühlt sich beschützt"))
+		var cap := float(cfg.get("friendly_cap", 80))
+		if rep < cap:
+			result["delta"] = minf(float(cfg.get("friendly_per_interval", 1.5)) * factor, cap - rep)
+	return result
+
+
+## Kampfkraft aller Truppen eines Reichs (Helden, Heiler und König zählen mit; Bewohner, Späher,
+## Spione und beschworene Zaubereinheiten nicht)
+func army_power(k: Kingdom) -> float:
+	var total := 0.0
+	if k == null:
+		return total
+	for u in k.units:
+		if u.hp > 0.0 and u.expires_at < 0.0 and u.tier != "scout" and u.tier != "spy" \
+				and (u.role == "combat" or u.role == "hero" or u.role == "king" or u.role == "support"):
+			total += VillageSystem.unit_power(u)
+	return total
 
 
 ## Gebietsverletzung: viele fremde Truppen (ohne Vertrag/Bündnis, ohne Krieg) lange im Dorfgebiet

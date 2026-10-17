@@ -7,7 +7,8 @@
 		"treaties: Annahme-Chance = chance_base + (Ruf − min_reputation) / chance_span (0…1). Unter min_reputation unmöglich. keep_min: fällt der Ruf darunter, kündigt das Dorf. rep_per_hour: Ruf-Gewinn pro Spielstunde, solange der Vertrag läuft.",
 		"trade: Kurs = Wert(gegeben) × buys / (Wert(erhalten) × sells) × (1 − Marge). Marge = base_margin − Ruf/100 × rep_bonus_per_100 − Vertragsbonus − Volksbonus (begrenzt auf min_margin…max_margin). daily_value_limit: Höchstwert pro Dorf und Reich je Spieltag.",
 		"annex: Aufnahme ins Reich. Ergeben (devoted) = sofort; ab min_reputation mit grossem Geschenk (annex_gift des Volks × Dorfgrösse × gift_size_scale) oder Einschüchterung (eigene Stärke in der Nähe ≥ intimidation_ratio × Dorfstärke).",
-		"village: Dorfwirtschaft und Milizen. messenger: Boten, die angegriffene Dörfer losschicken."
+		"village: Dorfwirtschaft und Milizen. messenger: Boten, die angegriffene Dörfer losschicken.",
+		"strength_attitude: Wirkung der Heeresstärke auf den Ruf (alle interval Sekunden). Stärke = Kampfkraft aller Truppen, Helden und des Königs (wie Dorfmilizen); unter min_power keine Wirkung, Faktor = Stärke / reference_power (höchstens max_factor). Freundlich/Ergeben (friendly_tiers) oder mit Schutz-/Bündnisvertrag: + friendly_per_interval × Faktor bis friendly_cap (Grund friendly_reason). Neutral: keine Wirkung. Misstrauisch/Feindselig oder im Krieg: + hostile_per_interval × Faktor bis hostile_floor. Angst bei allen erzeugen nur Taten (events: Angriff, Drohung, Eroberung und ihre Gerüchte). merge_seconds: gleiche Gründe werden im Verlauf zusammengezählt."
 	],
 
 	"reputation": {
@@ -62,6 +63,11 @@
 
 	"side_switch": { "threshold": -50 },
 
+	"strength_attitude": {"interval": 60, "reference_power": 150, "min_power": 30, "max_factor": 1.5,
+	                      "friendly_tiers": ["friendly", "devoted"], "friendly_treaties": ["protection", "alliance"],
+	                      "friendly_per_interval": 1.5, "friendly_cap": 80, "friendly_reason": "fühlt sich beschützt",
+	                      "hostile_tiers": ["suspicious", "hostile"], "hostile_per_interval": -0.4, "hostile_floor": -60,
+	                      "hostile_reason": "misstraut deinem Heer", "merge_seconds": 600},
 	"strength": { "weak": 40, "medium": 90 },
 
 	"village": {

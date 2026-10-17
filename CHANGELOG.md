@@ -14,6 +14,8 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 - Alle Figuren haben jetzt ein eigenes Aussehen statt Punkten: Truppen je Klasse, Helden, Bewohner, Spione und
   Monster (#15).
+- Ein starkes Heer macht dich nicht mehr bei allen gefürchtet: Verbündete fühlen sich sicherer, nur Angriffe und
+  Drohungen machen Angst (#19).
 
 ### Behoben
 
