@@ -205,19 +205,35 @@ static func tick_stations(b: AIBrain, now: float) -> void:
 	if cfg.is_empty():
 		return
 	var pool := b.home_pool()
+	var want := int(cfg.get("units", 4))
+	var keep := float(cfg.get("keep_home_share", 0.6))
+	# Wird die eigene Burg gerade angegriffen, bleibt jeder Krieger daheim
+	var alarm := not (b.st["alarm"] as Dictionary).is_empty()
+	var vs: VillageSystem = b.game.village_system
 	for help in ss.get_help_calls(b.k):
 		var host: Kingdom = help["host"]
-		if pool.size() >= int(cfg.get("accept_help_min_pool", 8)):
-			ss.answer_help(b.k, host, true, _nearest(pool, b.game.village_system.get_center(host),
-					int(DataDB.diplo("station.help_units", 6))))
+		# Höchstens so viele, dass keep_home_share des Heers daheim bleibt
+		var spare := pool.size() - ceili(keep * float(b.army_units().size()))
+		var send := mini(int(DataDB.diplo("station.help_units", 6)), spare)
+		if not alarm and pool.size() >= int(cfg.get("accept_help_min_pool", 8)) \
+				and send >= int(DataDB.diplo("station.min_units", 3)):
+			ss.answer_help(b.k, host, true, _nearest(pool, vs.get_center(host), send))
 			pool = b.home_pool()
 		else:
 			ss.answer_help(b.k, host, false)
-	if now < float(cfg.get("min_minute", 30)) * 60.0:
-		return
-	var want := int(cfg.get("units", 4))
-	var keep := float(cfg.get("keep_home_share", 0.6))
 	var ds: DiplomacySystem = b.game.diplomacy_system
+	for entry in ds.get_treaties_of(b.k):
+		if str(entry["type"]) != "alliance":
+			continue
+		var v: Kingdom = entry["village"]
+		# Hilfstruppen nach dem Kampf heim, bis auf die gewünschte Wache
+		var extra := ss.get_stationed(b.k, v).size() - want
+		if extra > 0 and ss.get_help_call(v, b.k).is_empty() \
+				and not vs.has_enemies_near(v, vs.get_center(v), vs.get_radius_tiles(v) + 6.0):
+			ss.release(b.k, v, extra)
+			pool = b.home_pool()
+	if alarm or now < float(cfg.get("min_minute", 30)) * 60.0:
+		return
 	for entry in ds.get_treaties_of(b.k):
 		if str(entry["type"]) != "alliance":
 			continue

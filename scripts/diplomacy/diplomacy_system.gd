@@ -537,9 +537,13 @@ func note_delivery(village: Kingdom) -> void:
 		return
 	var t: Dictionary = treaties[village.id]
 	t["deliveries"] = int(t.get("deliveries", 0)) + 1
-	# Handel stärkt den Ruf: jede angekommene Lieferung (trade.json reputation_per_delivery)
+	# Handel stärkt den Ruf: jede angekommene Lieferung (trade.json reputation_per_delivery) für die
+	# Standardlieferung; kleinere oder häufigere Lieferungen zählen anteilig, damit viele Mini-
+	# Lieferungen nicht mehr Ruf bringen als derselbe Handel in normalen Lieferungen
 	var partner: Kingdom = game.get_kingdom(int(t["partner_id"]))
-	var gain := float(DataDB.trade("reputation_per_delivery", 1.0))
+	var share := float(t.get("amount_mult", 1.0)) * trade_interval(village) \
+			/ maxf(float(DataDB.diplo("treaties.trade.delivery_interval", 150)), 1.0)
+	var gain := float(DataDB.trade("reputation_per_delivery", 1.0)) * clampf(share, 0.0, 3.0)
 	if partner != null and gain != 0.0:
 		_apply(village, partner, gain, "Handelslieferung", true, true)
 

@@ -8,7 +8,7 @@
 		"display: Darstellung der gestrichelten Linie (Weltpixel bei Zoom 1).",
 		"debug_fast: Zeiten für Rauchtest und F3 (überschreiben die Werte oben).",
 		"prices: Angebot und Nachfrage je Dorf. Knappheit einer Ware = (reference_stock / Vorrat im Dorf) ^ elasticity, begrenzt auf min_factor … max_factor (Vorrat mindestens min_stock). Viel auf Lager = Faktor < 1: das Dorf verkauft billig und zahlt wenig; Mangel = Faktor > 1. Gilt für den Tausch im Diplomatiefenster und für die Bezahlung der Handelslieferungen (Durchschnitt der gelieferten Waren).",
-		"order: Handelsroute eines Handelsvertrags einstellen – Menge (Faktor auf die Lieferung des Volks, amount_steps) und Abstand in Sekunden (interval_steps); Standard 1 × und diplomacy.json treaties.trade.delivery_interval. reputation_per_delivery: Ruf je angekommener Lieferung (zusätzlich zu rep_per_hour des Vertrags)."
+		"order: Handelsroute eines Handelsvertrags einstellen – Menge (Faktor auf die Lieferung des Volks, amount_steps) und Abstand in Sekunden (interval_steps); Standard 1 × und diplomacy.json treaties.trade.delivery_interval. reputation_per_delivery: Ruf je angekommener Standardlieferung (Menge ×1 im Standardabstand), bei anderer Einstellung anteilig: × Menge × Abstand / Standardabstand (höchstens ×3); zusätzlich zu rep_per_hour des Vertrags."
 	],
 	"prices": {"reference_stock": 150, "elasticity": 0.5, "min_factor": 0.6, "max_factor": 1.8, "min_stock": 5},
 	"order": {"amount_steps": [0.5, 1.0, 1.5, 2.0, 3.0], "interval_steps": [60, 150, 300, 600]},

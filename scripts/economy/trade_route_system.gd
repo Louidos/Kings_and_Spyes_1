@@ -34,7 +34,7 @@ var world: WorldData
 ##   "pending": int, "next_caravan_at": float, "next_delivery": float (nur alliance), "retries": int,
 ##   "free_caravan": bool, "load_until": float, "arrive_tries": int, "next_repath": float,
 ##   "losses": Array[float], "danger_time": float, "clear_time": float, "danger_pos": Vector2,
-##   "seen_by": Array[int], "missed": int,
+##   "seen_by": Array[int], "missed": int, "order_give": Dictionary (Ware dieser Fahrt, beim Aufbruch festgelegt),
 ##   "stats": {"trips": int, "lost": int, "delivered": Dictionary, "paid": Dictionary, "raided_by": Dictionary} }
 var routes: Dictionary = {}
 var stats := {"trips": 0, "lost": 0, "cuts": 0, "reopened": 0}
@@ -534,8 +534,11 @@ func _tick_route(r: Dictionary, now: float) -> void:
 	if leg == "idle" and int(r["pending"]) > 0 and str(r["state"]) == "open":
 		var cargo := {}
 		if str(r["kind"]) == "trade":
-			# Menge und Preis der Route (DiplomacySystem.get_delivery: Einstellung und Angebot/Nachfrage)
-			var take: Dictionary = game.diplomacy_system.get_delivery(v, k)["take"]
+			# Menge und Preis der Route (DiplomacySystem.get_delivery: Einstellung und Angebot/Nachfrage).
+			# Die Ware wird beim Aufbruch festgelegt: eine spätere Änderung der Menge gilt erst für
+			# die nächste Fahrt (sonst wenig bezahlen und viel abholen).
+			var delivery_now: Dictionary = game.diplomacy_system.get_delivery(v, k)
+			var take: Dictionary = delivery_now["take"]
 			if not k.spend(take):
 				r["pending"] = int(r["pending"]) - 1
 				r["missed"] = int(r["missed"]) + 1
@@ -544,6 +547,7 @@ func _tick_route(r: Dictionary, now: float) -> void:
 							vs.get_center(v))
 				return
 			cargo = take.duplicate()
+			r["order_give"] = (delivery_now["give"] as Dictionary).duplicate()
 			_add_to(r["stats"]["paid"], take)
 		r["cargo"] = cargo
 		r["cargo_kind"] = "pay"
@@ -648,7 +652,11 @@ func _arrive(id: String, uid: int, ok: bool) -> void:
 		var give: Dictionary = delivery.get("give", {})
 		var goods := {}
 		if str(r["kind"]) == "trade":
-			give = game.diplomacy_system.get_delivery(v, k)["give"]
+			# Beim Aufbruch festgelegte Ware (ältere Spielstände: aktuelle Einstellung)
+			give = r.get("order_give", {})
+			if give.is_empty():
+				give = game.diplomacy_system.get_delivery(v, k)["give"]
+			r.erase("order_give")
 			if v.can_afford(give):
 				for res_id in r["cargo"]:
 					v.add_resource(str(res_id), float(r["cargo"][res_id]))

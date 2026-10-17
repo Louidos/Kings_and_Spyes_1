@@ -27,6 +27,17 @@ func run(r: Node) -> void:
 	r.check(TOPIC, err.is_empty(), "Bündnis mit %s %s" % [v.display_name, "geschlossen" if err.is_empty() else "fehlt: " + err])
 	if not err.is_empty():
 		return
+	# Bündnis mit offenem Karawanenweg: das Dorf wächst mit Handels- und Bündnisbonus
+	await r.wait_game_seconds(3.0)
+	var vrec: Dictionary = g.village_system.get_record(v)
+	vrec["last_attacked"] = -1.0e9
+	var route: Dictionary = g.trade_route_system.get_route_for(player, v)
+	var growth_cfg: Dictionary = DataDB.diplo("village.growth", {})
+	var want_rate := float(growth_cfg.get("base", 1.0)) + float(growth_cfg.get("trade_bonus", 0.5)) \
+			+ float(growth_cfg.get("alliance_bonus", 0.25))
+	var rate: float = g.village_system.growth_rate(v, vrec, GameClock.game_time)
+	r.check(TOPIC, str(route.get("state", "")) != "open" or is_equal_approx(rate, want_rate),
+			"Wachstum mit Bündnis und offenem Karawanenweg: ×%s (Weg %s)" % [str(rate), str(route.get("state", "keiner"))])
 	var units: Array = r.spawn_tier(player, "fighter", 5)
 	# 1. Gesperrt beim Nicht-Verbündeten, mit Grund (auch im Armeefenster)
 	var reason := ss.can_station(player, units, other)
@@ -111,7 +122,18 @@ func run(r: Node) -> void:
 	var before := ss.get_stationed(player, v).size()
 	var back := ss.recall(player, v)
 	r.check(TOPIC, back > 0 and back == before and ss.get_stationed(player, v).is_empty(), "Zurückgerufen: %d Krieger" % back)
+	var raider: Unit = null
 	if not ai.is_empty():
+		# Nur eine Warnung (Bote, kein Feind am Dorf): kein Hilferuf
+		g.village_system.village_alarm.emit(v, ai[0], g.village_system.get_center(v))
+		r.check(TOPIC, ss.get_help_call(v, player).is_empty(), "Boten-Warnung ohne Feind am Dorf ruft nicht um Hilfe")
+		var rdef := DataDB.get_unit_for_tier((ai[0] as Kingdom).faction_id, "fighter")
+		raider = g.unit_system.spawn_unit(ai[0], str(rdef["id"]), g.village_system.get_center(v) + Vector2(40.0, 30.0))
+		raider.stance = "passive"
+		# Ein echter Angriff: das Reich ist mit dem Dorf im Krieg (am Ende wieder Frieden)
+		g.set_relation(v, ai[0], "war")
+		# Der Umgebungsindex des Kampfs erfasst den Angreifer im nächsten Takt
+		await r.wait_game_seconds(1.0)
 		var rep1 := ds.get_reputation(v, player)
 		g.village_system.village_alarm.emit(v, ai[0], g.village_system.get_center(v))
 		var opened := not ss.get_help_call(v, player).is_empty()
@@ -119,6 +141,15 @@ func run(r: Node) -> void:
 		r.check(TOPIC, opened and decline.is_empty() and ss.get_help_call(v, player).is_empty()
 				and ds.get_reputation(v, player) < rep1, "Hilferuf von %s abgelehnt: Ruf %.1f → %.1f" % [v.display_name,
 				rep1, ds.get_reputation(v, player)])
+		# Miliz anfordern, während sie schon unterwegs ist: abgelehnt, ohne Ruf zu kosten
+		var vr: Dictionary = g.village_system.get_record(v)
+		vr["help_until"] = GameClock.game_time + 60.0
+		var rep2 := ds.get_reputation(v, player)
+		var militia_err := ss.request_militia(player, v)
+		r.check(TOPIC, not militia_err.is_empty() and is_equal_approx(ds.get_reputation(v, player), rep2),
+				"Miliz unterwegs: Anforderung abgelehnt ohne Rufverlust (%s)" % militia_err)
+		vr["help_until"] = 0.0
+		ss.cooldowns.erase("militia:" + StationSystem.pair(v, player))
 	# 7. Bündnisbruch: Truppen ziehen ab
 	var fresh: Array = []
 	for uid in uids:
@@ -126,11 +157,31 @@ func run(r: Node) -> void:
 		if u is Unit and (u as Unit).is_alive():
 			fresh.append(u)
 	ss.station(player, fresh, v)
+	# Halten fern vom Dorf (z. B. nach einem Angriffsbefehl am Ort des besiegten Gegners)
+	# beendet die Stationierung dieser Einheit
+	var stopper: Unit = fresh[0]
+	stopper.command = "hold"
+	stopper.command_pos = player.castle.get_center()
+	await r.wait_game_seconds(3.0)
+	r.check(TOPIC, not ss.is_stationed(stopper) and ss.get_stationed(player, v).size() == fresh.size() - 1,
+			"Halten fern vom Dorf beendet die Stationierung dieser Einheit (noch %d stationiert)" %
+			ss.get_stationed(player, v).size())
 	var again: Array = ss.get_stationed(player, v)
+	# Ein offener Hilferuf (hier direkt eingetragen) endet mit dem Bündnis
+	ss.help_calls[StationSystem.pair(v, player)] = {"host_id": v.id, "kingdom_id": player.id,
+			"attacker_id": (ai[0] as Kingdom).id if not ai.is_empty() else 0, "until": GameClock.game_time + 100.0,
+			"pos": g.village_system.get_center(v)}
+	var had_call := not ss.get_help_call(v, player).is_empty()
 	ds.cancel_treaty(player, v)
+	var call_gone := ss.get_help_call(v, player).is_empty()
 	await r.wait_game_seconds(3.0)
 	r.check(TOPIC, not again.is_empty() and ss.get_stationed(player, v).is_empty(),
 			"Bündnis gekündigt: %d stationierte Krieger ziehen ab" % again.size())
+	r.check(TOPIC, had_call and call_gone, "Offener Hilferuf endet mit dem Bündnis")
+	if is_instance_valid(raider) and raider.is_alive():
+		g.unit_system.remove_unit(raider)
+	if not ai.is_empty():
+		g.set_relation(v, ai[0], "peace")
 	# 8. Die KI stationiert nach denselben Regeln
 	if not ai.is_empty():
 		var ak: Kingdom = ai[0]
