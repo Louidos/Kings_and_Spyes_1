@@ -77,6 +77,9 @@ Prüfpunkt. Geprüft werden unter anderem:
   Golem, Speichern der Haltung, Fenstergrösse bei 100/150 %, Tooltips.
 - **Truppen** (`smoke_troops.gd`): jede neue Truppe beschwören, Konter, Schmiede, Rang und Wertepunkte, Aussehen und
   dessen Erhalt im Speichern-Laden-Rundlauf.
+- **Spione** (`smoke_spies.gd`, eigene Szene `smoke_spies.tscn`): zu Spielbeginn hat kein Reich Spione; ein im
+  Spionagefenster beschworener Spion existiert genau einmal (Einheit, Datensatz, Liste, Fenster), auch mit Auftrag
+  und nach Speichern und Laden.
 - **Bewerber** (`smoke_recruits.gd`): langsames Wachstum, Taverne verkürzt die Wartezeit, Bewerber mit Bedingungen,
   Aufnehmen im Bewerberfenster gesperrt und wieder frei, Bewohner +1, Geschenk, Fachkraft schneller, Abweisen,
   wartender Bewerber im Speichern-Laden-Rundlauf. `recruits=off` schaltet die Bewerber ab (Balancing: das

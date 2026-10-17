@@ -78,13 +78,15 @@ func is_spy(u: Unit) -> bool:
 	return u != null and is_instance_valid(u) and u.tier == "spy"
 
 
-## Lebende Spione des Reichs (fehlende Datensätze werden angelegt)
+## Lebende Spione des Reichs, jeder genau einmal (fehlende Datensätze werden angelegt)
 func get_spies(k: Kingdom) -> Array:
 	var list: Array = []
 	if k == null:
 		return list
+	var seen := {}
 	for u in k.units:
-		if u.tier == "spy" and u.is_alive():
+		if u.tier == "spy" and u.is_alive() and not seen.has(u.uid):
+			seen[u.uid] = true
 			get_record(u)
 			list.append(u)
 	return list
@@ -630,13 +632,24 @@ func _on_unit_summoned(u: Unit, b: Building) -> void:
 	var level := 1 + int(u.kingdom.bonus("spy_level"))
 	if b != null and bool(b.def.get("spy_den", false)):
 		level += 1
-	_register(u, level)
+	if spies.has(u.uid):
+		# Schon angelegt (z. B. von einer Abfrage vor dieser Meldung): nur die Stufe nachziehen,
+		# keinen zweiten Datensatz und keine zweite Nummer
+		var rec: Dictionary = spies[u.uid]
+		level = clampi(level, 1, max_level())
+		if level > int(rec["level"]):
+			rec["level"] = level
+			rec["xp"] = maxf(float(rec["xp"]), float(level_def(level).get("xp", 0)))
+	else:
+		_register(u, level)
 	stats["recruited"] = int(stats["recruited"]) + 1
 	u.kingdom.notify("%s bereit – Auftrag im Spionagefenster (K)" % u.get_display_name(), "info",
 			{"window": "espionage", "tab": "spies", "spy_uid": u.uid, "pos": u.position})
 
 
 func _register(u: Unit, level: int) -> void:
+	if spies.has(u.uid):
+		return
 	var k := u.kingdom
 	level = clampi(level, 1, max_level())
 	var number := int(counters.get(k.id, 0)) + 1
@@ -848,8 +861,17 @@ func to_dict() -> Dictionary:
 
 
 func from_dict(d: Dictionary) -> void:
-	spies = (d.get("spies", {}) as Dictionary).duplicate(true)
-	counters = (d.get("counters", {}) as Dictionary).duplicate()
+	# Schlüssel immer als Zahl (uid bzw. Reich-id), sonst entstünde beim ersten Abfragen ein
+	# zweiter Datensatz für denselben Spion
+	spies = {}
+	var saved: Dictionary = d.get("spies", {})
+	for key in saved:
+		var rec: Dictionary = (saved[key] as Dictionary).duplicate(true)
+		spies[int(rec.get("uid", key))] = rec
+	counters = {}
+	var saved_counters: Dictionary = d.get("counters", {})
+	for key in saved_counters:
+		counters[int(key)] = int(saved_counters[key])
 	stats = (d.get("stats", stats) as Dictionary).duplicate()
 	rng_state = int(d.get("rng_state", rng_state))
 	_pending = (d.get("pending", []) as Array).duplicate(true)
