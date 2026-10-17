@@ -13,7 +13,9 @@ for faction in good evil; do
 	code=$?
 	echo "$out" | grep -E "^\[smoke\]|SCRIPT ERROR|ERROR:|at: " | head -400
 	if [ $code -ne 0 ] || echo "$out" | grep -qE "SCRIPT ERROR|^ERROR:"; then
-		echo "FEHLER im Rauchtest ($faction, Code $code)"
+		echo "FEHLER im Rauchtest ($faction, Code $code):"
+		# Fehlerzeilen immer vollständig zeigen (die Liste oben ist nach 400 Zeilen abgeschnitten)
+		echo "$out" | grep -nE -B3 -A4 "SCRIPT ERROR|^ERROR:" | head -80
 		fail=1
 	fi
 	# Spione: keine zu Spielbeginn, jeder genau einmal (auch nach Speichern und Laden)
