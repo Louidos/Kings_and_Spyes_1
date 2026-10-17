@@ -5,6 +5,11 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 ## Unveröffentlicht
 
+## 1.2.0 – 2026-10-17
+
+Alte Spielstände (1.1.0) laden weiter (#33): Dörfer behalten ihre Grösse und wachsen ab jetzt weiter, Handelsrouten
+laufen mit Menge ×1 und dem bisherigen Abstand, Stationierungen gibt es noch keine.
+
 ### Hinzugefügt
 
 - Spione liefern einen genauen Bericht: Truppen, Helden, Verteidigung, Burgstufe, Vorräte und Bündnisse des Ziels
@@ -38,8 +43,6 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 - Spione erscheinen nicht mehr doppelt: Ein Spion bekommt nur noch einen Eintrag und eine Nummer, auch nach dem
   Laden. Zu Spielbeginn hat kein Reich Spione; ein neuer Test sichert beides ab (#13).
-- Spielstände aus Version 1.1.0 laden wieder: Die grösseren Dörfer hatten die aus dem Seed erzeugte Welt verändert.
-  Ein neuer Test hält die Welt gleich (#33).
 
 ## 1.1.0 – 2026-10-16
 
