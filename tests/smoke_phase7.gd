@@ -38,6 +38,8 @@ var _attack_seen := false
 var _near_seen := false
 ## Grund und Zeitpunkt, wenn die erzwungene Welle endet (Fehlersuche im Rauchtest)
 var _wave_end_reason := ""
+## Eine vorzeitig zurückgerufene Welle wurde einmal neu erzwungen
+var _wave_retried := false
 var _wave_start := 0.0
 var _rival_test := false
 var _player_alive_1800 := true
@@ -149,9 +151,9 @@ func tick(t: float) -> void:
 				_s4()
 				_stage = 5
 		5:
-			if t >= 520.0 or _attack_seen:
-				if _s5(t):
-					_stage = 6
+			# Jedes Bild prüfen, ob die Welle an der Burg ist (sie kann kurz danach wieder abziehen)
+			if _s5(t):
+				_stage = 6
 		6:
 			if t >= _seconds - 45.0:
 				_s_growth()
@@ -581,7 +583,17 @@ func _s5(t: float) -> bool:
 		for u in brain.units_of(wave.get("uids", [])):
 			if u.position.distance_to(player.castle.get_center()) <= 30.0 * float(g.world.tile_size):
 				_near_seen = true
-	if not _attack_seen and not _near_seen and t < 520.0:
+	# Ruft die KI die Welle vor der Ankunft zurück (z. B. weil ihre eigene Burg angegriffen wird),
+	# einmal eine neue Welle erzwingen
+	if wave.is_empty() and not _near_seen and not _attack_seen and not _wave_retried and t < 460.0:
+		_wave_retried = true
+		var again := ai.debug_force_attack(_ai0, player)
+		print("[smoke] Phase 7: Welle vorzeitig beendet (%s) – neue Welle %s" % [_wave_end_reason, "erzwungen" if again else "nicht möglich"])
+		_wave_end_reason = ""
+		return false
+	# Auf die Ankunft an der Burg warten: trifft die Welle unterwegs Einheiten des Spielers
+	# (Angriff gemeldet), ist sie noch nicht in seinem Gebiet – sonst fehlt die Sichtungsmeldung
+	if not _near_seen and t < 520.0:
 		return false
 	_check(_attack_seen or _near_seen, "Welle von %s erreicht den Spieler (Angriff gemeldet: %s, nahe der Burg: %s, Zustand %s%s)" % [
 			_ai0.display_name, str(_attack_seen), str(_near_seen), str(wave.get("state", "beendet")),
