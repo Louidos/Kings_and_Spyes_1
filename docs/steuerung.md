@@ -85,7 +85,7 @@ der Mitte offen – öffnet man ein anderes, schliesst sich das erste.
 | Armeefenster | **T** oder Knopf „Armee · 24“ oben (Strich = Leben aller Truppen, roter Punkt = Kampf) |
 | … Zeilen | je Einheitentyp, Held und Armee 1–9: „Wählen“ (Befehlsgruppe), „Hin“ (Kamera), „✕“ (Armee auflösen) |
 | … Auswahl | „Alle Krieger auswählen (Strg+A)“, „Untätige“, „Verwundete“, Auswahl als Armee 1–9 speichern |
-| … Befehle an die Gruppe | Sammeln an der Burg, Rückzug zur Burg, Angreifend vorrücken …, Bewegen …, Patrouille … (danach Ziel anklicken), Halten, Formation, Haltung |
+| … Befehle an die Gruppe | Sammeln an der Burg, Rückzug zur Burg, Angreifend vorrücken …, Bewegen …, Patrouille … (danach Ziel anklicken), Halten, Stationieren … (bei einem Verbündeten, Dorf aus der Liste), Zurückrufen (Stationierte), Formation, Haltung |
 | Einheiten beschwören | Gebäude auswählen (Burg, Kaserne, Reitstall, Magierturm, Krankenstation, Belagerungswerkstatt) → Knöpfe im Raster; Kosten auf dem Knopf, Dauer, Klasse und Konter im Tooltip. Klick auf ein Symbol der Warteschlange bricht ab |
 | Wertepunkte verteilen | Truppe auswählen → „Angriff +“, „Leben +“, „Rüstung +“, „Tempo +“ (nur sichtbar, solange Punkte frei sind) |
 | Punkte automatisch verteilen | mehrere Truppen auswählen → „Verteilen“; Häkchen „automatisch“ = für das ganze Reich bei jedem Aufstieg |

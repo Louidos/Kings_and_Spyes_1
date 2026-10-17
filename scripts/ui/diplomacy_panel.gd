@@ -138,6 +138,15 @@ var _threat_button: ResearchTipButton
 var _war_button: ResearchTipButton
 var _jump_button: Button
 var _action_info: RichTextLabel
+## Bündnis (StationSystem): Stationieren, Zurückrufen, Miliz anfordern, Hilferuf
+var _station_button: Button
+var _recall_button: Button
+var _militia_button: Button
+var _help_row: HBoxContainer
+var _help_label: RichTextLabel
+var _help_accept: Button
+var _help_decline: Button
+var _alliance_info: RichTextLabel
 var _debug_row: HBoxContainer
 
 # Reiter "Reiche"
@@ -613,7 +622,36 @@ func _build_actions(parent: Control) -> void:
 	_trade_preview = _rich(14)
 	_actions.add_child(_trade_preview)
 
-	# 4. Aufnahme, Drohung, Krieg/Frieden, Hinspringen
+	# 4. Bündnis: Truppen stationieren, Hilferufe, Truppenaustausch
+	var alliance_row := _row(_actions)
+	alliance_row.add_child(_section_label("Bündnis"))
+	_station_button = _plain_button("Truppen stationieren")
+	_station_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_station_button.pressed.connect(_on_station_pressed)
+	alliance_row.add_child(_station_button)
+	_recall_button = _plain_button("Zurückrufen")
+	_recall_button.tooltip_text = "Alle deine Truppen bei diesem Dorf kehren zur Burg zurück"
+	_recall_button.pressed.connect(_on_recall_pressed)
+	alliance_row.add_child(_recall_button)
+	_militia_button = _plain_button("Miliz anfordern")
+	_militia_button.pressed.connect(_on_militia_pressed)
+	alliance_row.add_child(_militia_button)
+	_help_row = _row(_actions)
+	_help_label = _rich(14)
+	_help_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_help_label.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_help_row.add_child(_help_label)
+	_help_accept = _plain_button("Hilfe schicken")
+	_help_accept.tooltip_text = "Ausgewählte Krieger (sonst die nächsten freien) ziehen zum Dorf und bleiben dort stationiert"
+	_help_accept.pressed.connect(_on_help_pressed.bind(true))
+	_help_row.add_child(_help_accept)
+	_help_decline = _plain_button("Ablehnen")
+	_help_decline.pressed.connect(_on_help_pressed.bind(false))
+	_help_row.add_child(_help_decline)
+	_alliance_info = _rich(14)
+	_actions.add_child(_alliance_info)
+
+	# 5. Aufnahme, Drohung, Krieg/Frieden, Hinspringen
 	var other_row := _row(_actions)
 	_annex_button = _tip_button("Ins Reich aufnehmen")
 	_annex_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1258,6 +1296,71 @@ func _refresh_actions(k: Kingdom, v: Kingdom) -> void:
 	_set_disabled(_war_button, hostile and not ds.can_make_peace(k, v).is_empty())
 
 	_set_rich(_action_info, _action_info_text(k, v, annex, threat))
+	_refresh_alliance(k, v)
+
+
+## Bündnis-Abschnitt: Stationierung (Knopf gesperrt mit Grund), Hilferuf, Wirkung, gemeinsame
+## Ziele und Truppenaustausch
+func _refresh_alliance(k: Kingdom, v: Kingdom) -> void:
+	var ss: StationSystem = game.station_system
+	var tip := ResearchTipButton
+	var lines: PackedStringArray = []
+	var units := StationSystem.eligible(k, game.selection.get_own_units())
+	var reason := ss.can_station(k, units, v)
+	var host_reason := ss.host_reason(k, v)
+	if host_reason.is_empty() and units.is_empty():
+		reason = "Erst Truppen auswählen (auf der Karte oder im Armeefenster, Taste T)"
+	_set_button_text(_station_button, "%d Krieger stationieren" % units.size() if reason.is_empty() else "Truppen stationieren")
+	_set_disabled(_station_button, not reason.is_empty())
+	_station_button.tooltip_text = ("Die ausgewählten Krieger ziehen zu %s, verteidigen das Dorf selbstständig und " +
+			"bleiben, bis du sie zurückrufst. Unterhalt zahlst du weiter selbst.") % v.display_name if reason.is_empty() else reason
+	var info := ss.summary(k, v)
+	_recall_button.visible = int(info["stationed"]) > 0
+	var militia := ss.militia_reason(k, v)
+	_set_disabled(_militia_button, not militia.is_empty())
+	var militia_rep := roundi(float(DataDB.diplo("station.militia_reputation", -2)))
+	_militia_button.tooltip_text = ("Die Miliz von %s kommt zu deiner Burg und hilft dort (Ruf %s)." % [v.display_name,
+			ResourceBar.format_signed(militia_rep)]) if militia.is_empty() else militia
+	if not host_reason.is_empty():
+		lines.append(tip.colored(host_reason, COLOR_BAD))
+	elif not reason.is_empty():
+		lines.append(tip.colored(reason, COLOR_DIM))
+	# Stationierte Truppen und ihre Wirkung
+	if int(info["stationed"]) > 0:
+		var line := "Deine Truppen hier: %d (am Dorf %d, Stärke %d)" % [int(info["stationed"]), int(info["present"]),
+				roundi(float(info["power"]))]
+		var gain := float(info["reputation"])
+		if gain > 0.0:
+			line += "  ·  " + tip.colored("Ruf +%s alle %d s" % [HeroUI.num(gain), int(DataDB.diplo("station.reputation_interval", 120))], COLOR_GOOD)
+			var tribute: Dictionary = info["tribute"]
+			if not tribute.is_empty():
+				line += "  ·  " + tip.colored("Abgabe %s alle %d s" % [DataDB.cost_to_text(tribute),
+						int(DataDB.diplo("station.tribute_interval", 300))], COLOR_GOOD)
+		else:
+			line += "  ·  " + tip.colored("Ruf und Abgaben ab %d Kriegern am Dorf" % int(DataDB.diplo("station.min_units", 3)), COLOR_DIM)
+		if float(info["rep_total"]) > 0.0 or not (info["tribute_total"] as Dictionary).is_empty():
+			line += "  ·  bisher Ruf +%d%s" % [roundi(float(info["rep_total"])),
+					(", " + DataDB.cost_to_text(info["tribute_total"])) if not (info["tribute_total"] as Dictionary).is_empty() else ""]
+		lines.append(line)
+	# Hilferuf
+	var help := ss.get_help_call(v, k)
+	_help_row.visible = not help.is_empty()
+	if not help.is_empty():
+		var attacker: Kingdom = game.get_kingdom(int(help["attacker_id"]))
+		_set_rich(_help_label, tip.colored("Hilferuf: %s greift an – noch %d s" % [attacker.display_name if attacker != null else "?",
+				maxi(ceili(float(help["until"]) - GameClock.game_time), 0)], COLOR_WARN))
+		_help_decline.tooltip_text = "Ablehnen: Ruf %s" % ResourceBar.format_signed(roundi(float(DataDB.diplo("station.help_decline_reputation", -4))))
+	if game.diplomacy_system.get_treaty_with(v, k) == "alliance":
+		var enemies: PackedStringArray = []
+		for e in ss.shared_enemies(k, v):
+			enemies.append((e as Kingdom).display_name)
+		lines.append("Gemeinsame Ziele: %s" % (", ".join(enemies) if not enemies.is_empty() else "keine gemeinsamen Feinde"))
+		var special := str(game.village_system.get_people(v).get("special_unit", ""))
+		var exchange := "Truppenaustausch: Milizen helfen dir bei Angriffen in der Nähe"
+		if not special.is_empty():
+			exchange += ", %s in deiner Kaserne" % str(DataDB.get_unit_type(special).get("name", special))
+		lines.append(exchange + "; „Miliz anfordern“ holt sie zur Burg.")
+	_set_rich(_alliance_info, "\n".join(lines))
 
 
 ## Infozeilen unter den Knöpfen: Aufnahme und Drohung bzw. Frieden (mit Grund)
@@ -1699,6 +1802,43 @@ func _on_war_pressed() -> void:
 		ds.declare_war(k, v)
 	else:
 		_ask_confirm("war", v)
+	_refresh()
+
+
+func _on_station_pressed() -> void:
+	var v := _selected()
+	if v == null:
+		return
+	var err: String = game.station_system.station(game.player, game.selection.get_own_units(), v)
+	if not err.is_empty():
+		Notify.warning(err)
+	_refresh()
+
+
+func _on_recall_pressed() -> void:
+	var v := _selected()
+	if v != null:
+		game.station_system.recall(game.player, v)
+	_refresh()
+
+
+func _on_militia_pressed() -> void:
+	var v := _selected()
+	if v == null:
+		return
+	var err: String = game.station_system.request_militia(game.player, v)
+	if not err.is_empty():
+		Notify.warning(err)
+	_refresh()
+
+
+func _on_help_pressed(accept: bool) -> void:
+	var v := _selected()
+	if v == null:
+		return
+	var err: String = game.station_system.answer_help(game.player, v, accept, game.selection.get_own_units())
+	if not err.is_empty():
+		Notify.warning(err)
 	_refresh()
 
 

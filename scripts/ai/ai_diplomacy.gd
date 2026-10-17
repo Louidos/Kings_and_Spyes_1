@@ -197,6 +197,45 @@ static func _tune_trade_order(b: AIBrain, v: Kingdom) -> void:
 	ds.set_trade_order(b.k, v, amount, ds.trade_interval(v))
 
 
+## Bündnisse (diplomacy.json station.ai): Hilferufe beantworten und Truppen bei den eigenen
+## verbündeten Dörfern stationieren – über dieselben Funktionen wie der Spieler (StationSystem)
+static func tick_stations(b: AIBrain, now: float) -> void:
+	var ss: StationSystem = b.game.station_system
+	var cfg: Dictionary = DataDB.diplo("station.ai", {})
+	if cfg.is_empty():
+		return
+	var pool := b.home_pool()
+	for help in ss.get_help_calls(b.k):
+		var host: Kingdom = help["host"]
+		if pool.size() >= int(cfg.get("accept_help_min_pool", 8)):
+			ss.answer_help(b.k, host, true, _nearest(pool, b.game.village_system.get_center(host),
+					int(DataDB.diplo("station.help_units", 6))))
+			pool = b.home_pool()
+		else:
+			ss.answer_help(b.k, host, false)
+	if now < float(cfg.get("min_minute", 30)) * 60.0:
+		return
+	var want := int(cfg.get("units", 4))
+	var keep := float(cfg.get("keep_home_share", 0.6))
+	var ds: DiplomacySystem = b.game.diplomacy_system
+	for entry in ds.get_treaties_of(b.k):
+		if str(entry["type"]) != "alliance":
+			continue
+		var v: Kingdom = entry["village"]
+		var missing := want - ss.get_stationed(b.k, v).size()
+		var total := b.army_units().size()
+		if missing <= 0 or float(pool.size() - missing) < keep * float(total):
+			continue
+		if ss.station(b.k, _nearest(pool, b.game.village_system.get_center(v), missing), v).is_empty():
+			pool = b.home_pool()
+
+
+static func _nearest(units: Array, pos: Vector2, count: int) -> Array:
+	var list := units.duplicate()
+	list.sort_custom(func(a: Unit, c: Unit) -> bool: return a.position.distance_to(pos) < c.position.distance_to(pos))
+	return list.slice(0, maxi(count, 0))
+
+
 ## Geschenk: die Ware mit dem grössten Überschuss (Vorrat − 2 × Reserve) × Vorliebe des
 ## Volks, höchstens gift_amount; nur bei genug Rufgewinn und im Stundenbudget
 static func _try_gift(b: AIBrain, v: Kingdom, now: float) -> bool:

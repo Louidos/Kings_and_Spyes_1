@@ -13,7 +13,9 @@
 ## Angreifend vorrücken / Bewegen / Patrouille (danach Klick auf die Karte – derselbe
 ## Zielmodus wie "Angriff-Vorrücken" im Auswahlfenster), Halten, Formation (Block, Linie,
 ## Keil, Kreis – die Gruppe stellt sich an ihrem Ort neu auf) und Haltung (aggressiv,
-## verteidigend, passiv). Alle Befehle laufen über die öffentlichen Funktionen des
+## verteidigend, passiv) sowie "Bei Verbündetem stationieren" (Liste der Dörfer, nicht
+## verbündete gesperrt mit Grund) und "Stationierte zurückrufen" (StationSystem).
+## Alle Befehle laufen über die öffentlichen Funktionen des
 ## CommandSystem, die auch die KI benutzen kann.
 ## Aktualisiert alle 0.5 s, solange offen; Zeilen werden nur neu angelegt, wenn sich
 ## Typen, Helden oder Armeen ändern.
@@ -84,6 +86,9 @@ var _army_keys: Array = []
 ## Schlüssel -> {"icon", "name", "count", "bar", "info", "select", "jump", …}
 var _type_rows: Dictionary = {}
 var _hero_rows: Dictionary = {}
+## Auswahl des Dorfs für "Bei Verbündetem stationieren"
+var _station_menu: PopupMenu
+var _station_targets: Array = []
 var _army_rows: Dictionary = {}
 var _group_label: Label
 ## Knöpfe nach Namen (auch für den Rauchtest): "all", "idle", "wounded", "gather",
@@ -314,8 +319,9 @@ func group_name() -> String:
 # Befehle (über das CommandSystem – dieselben Funktionen kann die KI nutzen)
 # ---------------------------------------------------------------------------
 
-## Befehl an die Befehlsgruppe: "gather", "retreat", "hold", "attack_move", "move",
-## "patrol" (die letzten drei warten auf einen Klick in die Karte). true = gegeben.
+## Befehl an die Befehlsgruppe: "gather", "retreat", "hold", "station" (Dorfliste),
+## "recall_stations", "attack_move", "move", "patrol" (die letzten drei warten auf einen
+## Klick in die Karte). true = gegeben.
 func order(kind: String) -> bool:
 	var units := group_units()
 	if units.is_empty():
@@ -331,6 +337,16 @@ func order(kind: String) -> bool:
 			Notify.info("%s ziehen sich zur Burg zurück" % group_name())
 		"hold":
 			cs.order_stop(units)
+		"station":
+			# Auswahl des verbündeten Dorfs (andere Dörfer stehen gesperrt mit Grund in der Liste)
+			_open_station_menu()
+			return true
+		"recall_stations":
+			var n := 0
+			for host in game.station_system.get_hosts(game.player):
+				n += game.station_system.recall(game.player, host)
+			if n == 0:
+				Notify.info("Keine Truppen bei Verbündeten stationiert")
 		"attack_move", "move", "patrol":
 			# Zielmodus des SelectionController: der nächste Klick in die Karte gibt den Befehl
 			game.selection.select(units)
@@ -342,6 +358,57 @@ func order(kind: String) -> bool:
 	if visible:
 		refresh()
 	return true
+
+
+## Ziele für "Bei Verbündetem stationieren": bekannte Dörfer, nächste zuerst, je
+## {"village": Kingdom, "reason": "" (möglich) oder Grund der Sperre}
+func station_targets() -> Array:
+	var k: Kingdom = game.player
+	var ss: StationSystem = game.station_system
+	var vs: VillageSystem = game.village_system
+	var from: Vector2 = k.castle.get_center() if is_instance_valid(k.castle) else Vector2.ZERO
+	var list: Array = []
+	for v in vs.get_villages():
+		list.append({"village": v, "reason": ss.host_reason(k, v), "d": from.distance_to(vs.get_center(v))})
+	list.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		if str(a["reason"]).is_empty() != str(b["reason"]).is_empty():
+			return str(a["reason"]).is_empty()
+		return float(a["d"]) < float(b["d"]))
+	return list
+
+
+## Befehlsgruppe bei host stationieren ("" = ok, sonst Grund – auch als Meldung)
+func station_at(host: Kingdom) -> String:
+	var err: String = game.station_system.station(game.player, group_units(), host)
+	if not err.is_empty():
+		Notify.warning(err)
+	elif visible:
+		refresh()
+	return err
+
+
+func _open_station_menu() -> void:
+	_station_menu.clear()
+	_station_targets = station_targets()
+	if _station_targets.is_empty():
+		Notify.info("Keine Dörfer bekannt")
+		return
+	for i in _station_targets.size():
+		var entry: Dictionary = _station_targets[i]
+		var v: Kingdom = entry["village"]
+		var reason := str(entry["reason"])
+		_station_menu.add_item(v.display_name if reason.is_empty() else "%s – gesperrt: %s" % [v.display_name, reason], i)
+		_station_menu.set_item_disabled(i, not reason.is_empty())
+		_station_menu.set_item_tooltip(i, reason)
+	var b: Button = buttons["station"]
+	_station_menu.reset_size()
+	_station_menu.position = Vector2i(b.get_screen_position() + Vector2(0, b.size.y))
+	_station_menu.popup()
+
+
+func _on_station_chosen(i: int) -> void:
+	if i >= 0 and i < _station_targets.size():
+		station_at(_station_targets[i]["village"])
 
 
 ## Formation setzen (gilt für die nächsten Marschbefehle) und die Gruppe darin aufstellen
@@ -455,6 +522,10 @@ func _build() -> void:
 
 ## Rechte Spalte: Auswahl, Befehle, Formation, Haltung
 func _build_side() -> Control:
+	_station_menu = PopupMenu.new()
+	_station_menu.add_theme_font_size_override("font_size", 15)
+	_station_menu.id_pressed.connect(_on_station_chosen)
+	add_child(_station_menu)
 	var side := VBoxContainer.new()
 	side.custom_minimum_size = Vector2(SIDE_WIDTH, 0)
 	side.add_theme_constant_override("separation", 6)
@@ -499,7 +570,9 @@ func _build_side() -> Control:
 			["attack_move", "Angreifend vorrücken …", "Danach Ziel auf der Karte anklicken: die Gruppe marschiert und kämpft unterwegs (Esc bricht ab)"],
 			["move", "Bewegen …", "Danach Ziel auf der Karte anklicken: die Gruppe marschiert, ohne Feinde anzugreifen (Esc bricht ab)"],
 			["patrol", "Patrouille …", "Danach Ziel auf der Karte anklicken: die Gruppe läuft zwischen ihrem Ort und dem Ziel hin und her und kämpft unterwegs"],
-			["hold", "Halten", "Stehen bleiben und den Platz verteidigen (je nach Haltung)"]]:
+			["hold", "Halten", "Stehen bleiben und den Platz verteidigen (je nach Haltung)"],
+			["station", "Stationieren …", "Bei Verbündetem stationieren: Die Gruppe zieht zu einem verbündeten Dorf (Liste), verteidigt es selbstständig und bleibt dort; stationierte Truppen bringen Ruf und kleine Abgaben. Nur bei Bündnis möglich"],
+			["recall_stations", "Zurückrufen", "Stationierte zurückrufen: Alle bei Verbündeten stationierten Truppen kehren zur Burg zurück"]]:
 		var b := _button(str(entry[1]), str(entry[2]))
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.pressed.connect(order.bind(str(entry[0])))

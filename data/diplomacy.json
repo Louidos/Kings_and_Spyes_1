@@ -9,7 +9,8 @@
 		"annex: Aufnahme ins Reich. Ergeben (devoted) = sofort; ab min_reputation mit grossem Geschenk (annex_gift des Volks × Dorfgrösse × gift_size_scale) oder Einschüchterung (eigene Stärke in der Nähe ≥ intimidation_ratio × Dorfstärke).",
 		"village: Dorfwirtschaft und Milizen. messenger: Boten, die angegriffene Dörfer losschicken.",
 		"strength_attitude: Wirkung der Heeresstärke auf den Ruf (alle interval Sekunden). Stärke = Kampfkraft aller Truppen, Helden und des Königs (wie Dorfmilizen); unter min_power keine Wirkung, Faktor = Stärke / reference_power (höchstens max_factor). Freundlich/Ergeben (friendly_tiers) oder mit Schutz-/Bündnisvertrag: + friendly_per_interval × Faktor bis friendly_cap (Grund friendly_reason). Neutral: keine Wirkung. Misstrauisch/Feindselig oder im Krieg: + hostile_per_interval × Faktor bis hostile_floor. Angst bei allen erzeugen nur Taten (events: Angriff, Drohung, Eroberung und ihre Gerüchte). merge_seconds: gleiche Gründe werden im Verlauf zusammengezählt.",
-		"village.growth: Dorfwachstum. Im Frieden wächst ein Dorf je interval Sekunden um base (Handelsvertrag oder Handelsweg + trade_bonus, Schutz- oder Bündnisvertrag + alliance_bonus); bei 1 kommt eine Hütte dazu (mehr Bewohner, mehr Milizplätze; militia_max begrenzt). Krieg mit einem Reich, Alarm oder ein Angriff/eine zerstörte Hütte in den letzten attack_pause_seconds halten es an. Höchstens max_size Hütten; neue Hütten auf freien Kacheln bis hut_search_radius um das Dorfzentrum. towers_at_size: ab dieser Grösse je ein Wachturm (Gebäude tower)."
+		"village.growth: Dorfwachstum. Im Frieden wächst ein Dorf je interval Sekunden um base (Handelsvertrag oder Handelsweg + trade_bonus, Schutz- oder Bündnisvertrag + alliance_bonus); bei 1 kommt eine Hütte dazu (mehr Bewohner, mehr Milizplätze; militia_max begrenzt). Krieg mit einem Reich, Alarm oder ein Angriff/eine zerstörte Hütte in den letzten attack_pause_seconds halten es an. Höchstens max_size Hütten; neue Hütten auf freien Kacheln bis hut_search_radius um das Dorfzentrum. towers_at_size: ab dieser Grösse je ein Wachturm (Gebäude tower).",
+		"station: Truppen bei Verbündeten stationieren (Armeefenster und Diplomatiefenster, nur bei Bündnis). Am Dorf zählt, wer höchstens Dorfradius + radius_extra Kacheln vom Zentrum steht; ein Marschbefehl weiter weg als Dorfradius + leave_extra beendet die Stationierung. Ab min_units anwesenden Kriegern: alle reputation_interval s Ruf + (reputation_per_interval + reputation_per_unit × Anzahl), höchstens reputation_max_per_interval, nur bis reputation_cap; alle tribute_interval s Abgabe des Dorfs: tribute_per_unit × Anzahl (höchstens tribute_max) seiner reichlichsten Handelsware. Hilferuf, wenn ein verbündetes Dorf ohne deine Truppen angegriffen wird: help_seconds Zeit, Annehmen schickt bis help_units freie Krieger (Ruf help_accept_reputation), Ablehnen help_decline_reputation, Verstreichen help_ignore_reputation; höchstens alle help_cooldown s je Dorf. Miliz anfordern: Miliz des Dorfs kommt zur Burg (Ruf militia_reputation, wieder nach militia_cooldown s). ai: KI-Reiche stationieren ab min_minute bei ihren verbündeten Dörfern units Krieger, wenn danach noch keep_home_share ihrer Truppen daheim bleiben; Hilferufe nimmt sie ab accept_help_min_pool Kriegern daheim an."
 	],
 
 	"reputation": {
@@ -70,6 +71,13 @@
 	                      "hostile_tiers": ["suspicious", "hostile"], "hostile_per_interval": -0.4, "hostile_floor": -60,
 	                      "hostile_reason": "misstraut deinem Heer", "merge_seconds": 600},
 	"strength": { "weak": 40, "medium": 90 },
+	"station": {"tick_seconds": 2, "radius_extra": 4, "leave_extra": 12, "min_units": 3,
+	            "reputation_interval": 120, "reputation_per_interval": 1.5, "reputation_per_unit": 0.1,
+	            "reputation_max_per_interval": 3.0, "reputation_cap": 75,
+	            "tribute_interval": 300, "tribute_per_unit": 2, "tribute_max": 30,
+	            "help_seconds": 120, "help_units": 6, "help_accept_reputation": 3, "help_decline_reputation": -4,
+	            "help_ignore_reputation": -2, "help_cooldown": 300, "militia_cooldown": 600, "militia_reputation": -2,
+	            "ai": {"min_minute": 30, "units": 4, "keep_home_share": 0.6, "accept_help_min_pool": 8}},
 
 	"village": {
 		"hall": "village_hall", "hut": "village_hut",

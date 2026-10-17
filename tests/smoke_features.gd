@@ -11,6 +11,7 @@ const MODULES := {
 	"Dörfer": preload("res://tests/smoke_villages.gd"),
 	"Helden": preload("res://tests/smoke_new_heroes.gd"),
 	"Handel": preload("res://tests/smoke_trade.gd"),
+	"Bündnis": preload("res://tests/smoke_alliance.gd"),
 }
 
 var game: Node

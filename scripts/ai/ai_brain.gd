@@ -156,6 +156,7 @@ func think(now: float) -> void:
 	if now >= float(st["village_next"]):
 		st["village_next"] = now + float(DataDB.ai("villages.interval", 60))
 		AIDiplomacy.tick_villages(self, now)
+		AIDiplomacy.tick_stations(self, now)
 		AISiege.tick_routes(self, now)
 	t0 = _measure("diplomacy", t0)
 	if (st["wave"] as Dictionary).is_empty() and (st["alarm"] as Dictionary).is_empty():
@@ -277,16 +278,17 @@ func army_units() -> Array:
 	return list
 
 
-## Truppen zu Hause: ohne Wellen- und Hilfstrupps
+## Truppen zu Hause: ohne Wellen- und Hilfstrupps und ohne bei Verbündeten stationierte
 func home_pool() -> Array:
 	var busy := {}
 	for uid in (st["wave"] as Dictionary).get("uids", []):
 		busy[int(uid)] = true
 	for uid in (st["help"] as Dictionary).get("uids", []):
 		busy[int(uid)] = true
+	var stations: Variant = game.get("station_system")
 	var list: Array = []
 	for u in army_units():
-		if not busy.has(u.uid):
+		if not busy.has(u.uid) and not (stations is StationSystem and (stations as StationSystem).is_stationed(u)):
 			list.append(u)
 	return list
 
