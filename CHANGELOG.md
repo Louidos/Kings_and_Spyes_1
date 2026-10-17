@@ -5,6 +5,10 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 ## Unveröffentlicht
 
+## 1.2.1 – 2026-10-17
+
+Nur Fehlerbehebungen; Spielstände aus 1.2.0 und 1.1.0 laden weiter.
+
 ### Behoben
 
 - Helden: Eisenhaltung löst sich mit Selbstauslösung im Kampf von selbst aus; Steinwall und andere Hilfen für die
