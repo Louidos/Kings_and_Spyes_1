@@ -79,7 +79,8 @@ Prüfpunkt. Geprüft werden unter anderem:
   dessen Erhalt im Speichern-Laden-Rundlauf.
 - **Spione** (`smoke_spies.gd`, eigene Szene `smoke_spies.tscn`): zu Spielbeginn hat kein Reich Spione; ein im
   Spionagefenster beschworener Spion existiert genau einmal (Einheit, Datensatz, Liste, Fenster), auch mit Auftrag
-  und nach Speichern und Laden.
+  und nach Speichern und Laden. Spionagebericht: ohne Kundschaft „unbekannt“, ein Spion der höchsten Stufe liefert
+  Truppen, Türme, Gesamtstärke, Burgstufe und Bewohner genau wie im Spielzustand (Fenster und Protokoll).
 - **Bewerber** (`smoke_recruits.gd`): langsames Wachstum, Taverne verkürzt die Wartezeit, Bewerber mit Bedingungen,
   Aufnehmen im Bewerberfenster gesperrt und wieder frei, Bewohner +1, Geschenk, Fachkraft schneller, Abweisen,
   wartender Bewerber im Speichern-Laden-Rundlauf. `recruits=off` schaltet die Bewerber ab (Balancing: das

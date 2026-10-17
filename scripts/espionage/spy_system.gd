@@ -514,7 +514,9 @@ func _work(u: Unit, rec: Dictionary, now: float) -> void:
 		"scout":
 			if esp != null:
 				var levels: Array = DataDB.esp("intel.spy_levels", [2, 3, 3])
-				esp.grant_intel(employer, target, int(levels[clampi(int(rec["level"]) - 1, 0, levels.size() - 1)]), "Spion")
+				var intel_level := int(levels[clampi(int(rec["level"]) - 1, 0, levels.size() - 1)])
+				esp.grant_intel(employer, target, intel_level, "Spion")
+				esp.make_report(employer, target, intel_level, u.get_display_name())
 				if employer.controller == "ai" and now - since >= float(DataDB.esp("awareness.spy_confirm_seconds", 60)):
 					esp.raise_awareness_to(employer, target, float(DataDB.esp("awareness.discovered", 60)) + 5.0, "Spion")
 			rec["progress"] = clampf((now - since) / maxf(float(DataDB.esp("spies.scout_duration", 180)), 1.0), 0.0, 1.0)

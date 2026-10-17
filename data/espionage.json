@@ -9,6 +9,7 @@
 		"reports: Meldungen, wenn Feinde nahe oder im eigenen Gebiet gesehen werden (je Gebiet area_tiles und Reich gedrosselt).",
 		"spies: Stufen (xp, skill = Geschick gegen Entdeckung, speed = Tempo bei Aufträgen), Erfahrung je Auftrag, Auftragsdauer, Aufhetzen (Ruf/Spannung je incite_interval). Entdeckung: alle detect_interval Sekunden Wurf mit Chance = detect_base × Wachsamkeit / Geschick (begrenzt). Wachsamkeit = base (im Gebiet; ausserhalb outside_presence) + Späher/Spione des Ziels in der Nähe + Gebäude (vigilance.buildings, Umkreis building_radius) + Bonus des Reichs (Forschung, Schwierigkeit). Enttarnt: reveal_seconds sichtbar, flieht heim (Tempo × flee_speed für flee_seconds). Ertappt ein Dorf den Spion, sinkt sein Ruf beim Auftraggeber um caught_reputation.",
 		"Hinweis: Feindliche Wetterzonen (Nebel, Fluch) treffen auch getarnte Spione – die Zonenwirkung prüft die Sichtbarkeit bewusst nicht.",
+		"report: Spionagebericht (Spionagefenster, Reiter Reiche & Dörfer). Ein Spion beim Ziel erneuert ihn höchstens alle refresh_seconds; Meldung ins Protokoll beim ersten Bericht und wenn der letzte älter als notify_seconds war. Ab stale_seconds Alter erscheint er grau. Stufe 1 = Schätzungen (Spanne ± estimate_spread), ab exact_from_level genaue Zahlen, ab plans_from_level auch die Pläne der KI.",
 		"Phase 9: Mauern (wall) zählen beim Entdeckungswert kaum, Türme und Belagerungswerkstätten mehr; kill_caravan = Aggression für eine überfallene Karawane."
 	],
 	"discovery": {
@@ -30,6 +31,8 @@
 	              "sighting_cooldown": 10, "spy_confirm_seconds": 60, "patience_minutes": 120, "patience_floor": 35},
 	"intel": {"stale_seconds": 900, "names": ["Unbekannt", "Gerüchte", "Bericht", "Genau"], "scout_level": 2, "spy_levels": [2, 3, 3],
 	          "messenger_level": 1, "traitor_level": 2, "caught_spy_level": 1, "village_default": 1, "estimate_spread": 0.25},
+	"report": {"refresh_seconds": 60, "notify_seconds": 300, "stale_seconds": 900, "estimate_spread": 0.3,
+	           "exact_from_level": 2, "plans_from_level": 3},
 	"reports": {"interval": 2, "inside_interval": 45, "near_interval": 90, "area_tiles": 20, "near_tiles": 12, "report_monsters": false,
 	            "max_observers": 16},
 	"spies": {

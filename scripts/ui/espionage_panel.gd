@@ -115,6 +115,8 @@ var _realm_swatch: ColorRect
 var _realm_name: Label
 var _realm_people: Label
 var _realm_summary: Label
+## Spionagebericht des gewählten Reichs/Dorfs (BBCode)
+var _realm_report: RichTextLabel
 var _realm_scout_button: ResearchTipButton
 var _realm_incite_button: ResearchTipButton
 var _realm_jump_button: Button
@@ -422,9 +424,25 @@ func _build_realms(page: HBoxContainer) -> void:
 	scroll2.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll2.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_realm_detail.add_child(scroll2)
+	var texts := VBoxContainer.new()
+	texts.add_theme_constant_override("separation", 10)
+	texts.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	texts.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	scroll2.add_child(texts)
 	_realm_summary = _wrap_label(16, COLOR_TEXT)
 	_realm_summary.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	scroll2.add_child(_realm_summary)
+	texts.add_child(_realm_summary)
+	# Spionagebericht (SpyReport): Schnappschuss des letzten Spions, grau wenn veraltet
+	_realm_report = RichTextLabel.new()
+	_realm_report.bbcode_enabled = true
+	_realm_report.fit_content = true
+	_realm_report.scroll_active = false
+	_realm_report.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_realm_report.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_realm_report.add_theme_font_size_override("normal_font_size", 16)
+	_realm_report.add_theme_font_size_override("bold_font_size", 16)
+	_realm_report.add_theme_color_override("default_color", COLOR_TEXT)
+	texts.add_child(_realm_report)
 	var actions := _row(_realm_detail)
 	_realm_scout_button = _tip_button("Spion schicken: Auskundschaften")
 	_realm_scout_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -829,6 +847,9 @@ func _refresh_realm_detail(k: Kingdom, r: Kingdom) -> void:
 	else:
 		summary = esp.get_kingdom_summary(r, k)
 	_set_text(_realm_summary, summary, COLOR_TEXT)
+	var report_text := "" if r.defeated else SpyReport.format(esp.get_report(k, r))
+	if _realm_report.text != report_text:
+		_realm_report.text = report_text
 	var vs: VillageSystem = game.village_system
 	var village := vs.is_village(r)
 	_realm_scout_button.disabled = r.defeated

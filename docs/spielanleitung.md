@@ -814,6 +814,15 @@ Aufträge:
 - **Dorf aufhetzen** – senkt den Ruf eines Dorfs gegenüber einem Reich.
 - **Rivalen aufhetzen** – treibt zwei KI-Reiche in den Krieg gegeneinander.
 
+**Spionagebericht:** Ein Spion beim Auskundschaften schickt laufend einen Bericht über sein Ziel (Reich oder Dorf),
+zu sehen im Spionagefenster, Reiter „Reiche & Dörfer“, unter dem gewählten Ziel; ein neuer Bericht steht im Protokoll.
+Er nennt Truppen nach Typ und Anzahl, Helden mit Stufe, die Verteidigung (Türme, Mauerstücke, Tore und die
+Gesamtstärke als Zahl), Burgstufe, Gebäude und Bewohner, Vorräte, die laufende Forschung, Verträge und Bündnisse und
+gerade aufbrechende Armeen. Wie genau, hängt an der Kundschaft: **Gerüchte** nur Schätzungen („etwa 20–30“),
+**Bericht** genaue Zahlen, **Genau** (Spion ab Stufe 2) zusätzlich die **Pläne** der KI (Ziel, worauf sie spart, ihre
+Aufmerksamkeit auf dich und wann sie frühestens angreift). Oben steht das Alter („vor 3 Min.“); nach 15 Minuten ist
+ein Bericht veraltet und grau. Ohne Kundschaft steht „unbekannt“.
+
 Die Vorschau zeigt die Entdeckungsgefahr am Ziel. Entdeckte Spione werden kurz sichtbar und fliehen heim; mit
 Erfahrung steigen sie bis Stufe 3. Fremde Spione kommen zu dir, sobald ein Reich Gerüchte über dich hört – Späher,
 eigene Spione und das Kundschafterhaus entdecken sie (roter Punkt am Spionage-Knopf), dann kann man sie angreifen.
