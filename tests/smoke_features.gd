@@ -9,6 +9,7 @@ extends Node
 const MODULES := {
 	"Stärke": preload("res://tests/smoke_strength.gd"),
 	"Dörfer": preload("res://tests/smoke_villages.gd"),
+	"Helden": preload("res://tests/smoke_new_heroes.gd"),
 }
 
 var game: Node

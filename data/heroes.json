@@ -5,7 +5,7 @@
 		"Erfahrung (EP): besiegte Feinde geben kill_points × xp_per_kill_point; jeder eigene Held im Umkreis xp_share_radius bekommt davon xp_share[Anzahl Helden − 1]. Zerstörte Höhlen (Einsätze) zählen lair_xp_factor-mal. Ausbildung in der Halle (training). levels: EP für Stufe 2, 3, … 10.",
 		"Je Stufe: growth (hp/attack, multiplikativ), level_heal (Anteil geheilt). Stufenaufstieg: Wahl zwischen einer Fähigkeitsstufe (rank_min_level: ab welcher Heldenstufe Rang 1/2/3) und einem Talent des Helden (talents, sonst generic_talents).",
 		"stats: Werte wie in units.json. abilities: erste ist ab Stufe 1 gelernt. leadership: zusätzliche Führungswirkung (Truppen im Umkreis settings.leadership.radius; dazu immer +attack_base + attack_per_level × Stufe Angriff).",
-		"Fähigkeiten: kind active/passive; target enemy (eine Einheit), point (Stelle), self, none (um den Helden). range/radius in Feldern, cooldown in Sekunden; autocast = löst von selbst aus (abschaltbar). ranks: Werte je Rang (damage, heal, unit_effects mit side/key/mult/add und duration, self_effects, summon {unit, count} mit duration, teleport, range, aura {filter, effects}, stat {key: {add/mult}}, mana_cap, mana_regen).",
+		"Fähigkeiten: kind active/passive; target enemy (eine Einheit), point (Stelle), self, none (um den Helden). range/radius in Feldern, cooldown in Sekunden; autocast = löst von selbst aus (abschaltbar). ranks: Werte je Rang (damage, heal, unit_effects mit side/key/mult/add und duration, self_effects, summon {unit, count} mit duration, teleport, range, aura {filter, effects}, stat {key: {add/mult}}, mana_cap, mana_regen, kingdom_bonus {Schlüssel: Zuschlag} für das ganze Reich wie bonus in research.json – z. B. spy_skill, vigilance, spy_slots –, kingdom_mods {Schlüssel: Faktor} wie modifier in research.json – z. B. build, production). Reichs-Wirkungen gelten nur, solange der Held lebt.",
 		"requirements: Bedingungen, bevor sich der Held anwerben lässt (alle müssen erfüllt sein; im Heldenfenster mit ✓/✗). Bausteine wie bei den Bewerbern (Requirements): castle_level {min}, building {building, level}, research {research}, kills {count} (besiegte Feinde), lairs {count} (zerstörte Monsterhöhlen), satisfaction {min}, population {min}, upgraded {count}. Der erste Held jeder Fraktion ist ab Burgstufe 3 mit einfachen Bedingungen erreichbar, die übrigen deutlich später. Die KI hält sich an dieselben Bedingungen.",
 		"Talente: stat {key: {add/mult}} oder ability + damage_mult / cooldown_mult / radius_add / range_add / count_add / effect_mult, oder leadership {key, mult/add}.",
 		"figure: Aussehen der gezeichneten Heldenfigur, solange keine Grafik (sprite) existiert – wie figure in units.json (gear, offhand, shield, head, armor, outfit, cape, mark aura/halo/crown, trim). Helden werden um figures.hero_scale grösser gezeichnet."
@@ -656,6 +656,445 @@
 					"cooldown_mult": 0.7
 				}
 			]
+		},
+		{
+			"id": "hero_spymaster",
+			"faction": "good",
+			"name": "Meisterspionin",
+			"title": "Herrin der Kundschafter – Spione, Rauchschleier, Schwachstellen",
+			"letter": "M",
+			"color": "#7fb8d8",
+			"figure": {
+				"armor": "cloak",
+				"head": "hood",
+				"gear": "dagger",
+				"offhand": "dagger",
+				"cape": "#2e4a5c",
+				"mark": "aura",
+				"trim": "#9fd8ff"
+			},
+			"sprite": "res://assets/sprites/heroes/hero_spymaster.png",
+			"portrait": "res://assets/sprites/heroes/portrait_spymaster.png",
+			"description": "Leitet das Netz der Kundschafterinnen: Ihre Spione sind kaum zu entdecken, ihr Rauchschleier verbirgt ganze Trupps, und sie zeigt den Truppen die Schwachstellen des Feinds.",
+			"cost": {
+				"food": 150,
+				"ore": 80,
+				"mana": 60
+			},
+			"recruit_time": 30,
+			"requirements": [
+				{
+					"type": "castle_level",
+					"min": 3
+				},
+				{
+					"type": "building",
+					"building": "spy_den"
+				},
+				{
+					"type": "kills",
+					"count": 15
+				}
+			],
+			"stats": {
+				"hp": 300,
+				"attack": 22,
+				"attack_interval": 1.0,
+				"range": 0.8,
+				"armor": 0.15,
+				"speed": 3.0,
+				"aggro_range": 6,
+				"sight": 10,
+				"regen": 1.5,
+				"radius": 17,
+				"food_per_day": 20
+			},
+			"abilities": [
+				"spy_network",
+				"smoke_veil",
+				"expose_weakness"
+			],
+			"leadership": [
+				{
+					"side": "own_kingdom",
+					"key": "sight",
+					"add": 1.0
+				}
+			],
+			"leadership_text": "Sicht +1 Feld für Truppen in der Nähe",
+			"talents": [
+				{
+					"id": "sm_thick_smoke",
+					"name": "Dichter Rauch",
+					"text": "Rauchschleier +1 Feld",
+					"ability": "smoke_veil",
+					"radius_add": 1.0
+				},
+				{
+					"id": "sm_deadly_lesson",
+					"name": "Tödliche Lehre",
+					"text": "Schwachstelle +30 % Schaden",
+					"ability": "expose_weakness",
+					"damage_mult": 1.3
+				},
+				{
+					"id": "sm_quick_smoke",
+					"name": "Rasche Hände",
+					"text": "Rauchschleier 30 % schneller bereit",
+					"ability": "smoke_veil",
+					"cooldown_mult": 0.7
+				},
+				{
+					"id": "sm_silent",
+					"name": "Lautlos",
+					"text": "+10 % Tempo",
+					"stat": {
+						"speed": {
+							"mult": 1.1
+						}
+					}
+				},
+				{
+					"id": "sm_poisoned",
+					"name": "Vergiftete Klingen",
+					"text": "+10 % Angriff",
+					"stat": {
+						"attack": {
+							"mult": 1.1
+						}
+					}
+				}
+			]
+		},
+		{
+			"id": "hero_architect",
+			"faction": "good",
+			"name": "Baumeister",
+			"title": "Meister der Bauhütten – baut schneller, schützt die Truppen, belebt den Handel",
+			"letter": "B",
+			"color": "#c9a46a",
+			"figure": {
+				"armor": "light",
+				"head": "cap",
+				"gear": "hammer",
+				"shield": "round",
+				"cape": "#7a5a30",
+				"mark": "crown",
+				"trim": "#f3d36b"
+			},
+			"sprite": "res://assets/sprites/heroes/hero_architect.png",
+			"portrait": "res://assets/sprites/heroes/portrait_architect.png",
+			"description": "Ein Zunftmeister mit Hammer und Plan. Solange er lebt, wachsen die Bauten schneller und die Werkstätten liefern mehr; in der Schlacht macht er die Truppen zu einer Mauer.",
+			"cost": {
+				"food": 150,
+				"ore": 80,
+				"mana": 60
+			},
+			"recruit_time": 30,
+			"requirements": [
+				{
+					"type": "castle_level",
+					"min": 3
+				},
+				{
+					"type": "building",
+					"building": "storehouse",
+					"level": 2
+				},
+				{
+					"type": "building",
+					"building": "library"
+				}
+			],
+			"stats": {
+				"hp": 380,
+				"attack": 20,
+				"attack_interval": 1.2,
+				"range": 0.8,
+				"armor": 0.3,
+				"speed": 2.2,
+				"aggro_range": 6,
+				"sight": 8,
+				"regen": 1.5,
+				"radius": 18,
+				"food_per_day": 20
+			},
+			"abilities": [
+				"master_plans",
+				"stone_ward",
+				"guild_trade"
+			],
+			"leadership": [
+				{
+					"side": "own_kingdom",
+					"key": "armor",
+					"add": 0.03
+				}
+			],
+			"leadership_text": "Rüstung +3 % für Truppen in der Nähe",
+			"talents": [
+				{
+					"id": "ar_wide_ward",
+					"name": "Weiter Schutz",
+					"text": "Steinwall +2 Felder",
+					"ability": "stone_ward",
+					"radius_add": 2.0
+				},
+				{
+					"id": "ar_quick_ward",
+					"name": "Geübte Maurer",
+					"text": "Steinwall 30 % schneller bereit",
+					"ability": "stone_ward",
+					"cooldown_mult": 0.7
+				},
+				{
+					"id": "ar_strong_ward",
+					"name": "Fester Mörtel",
+					"text": "Steinwall wirkt 30 % stärker",
+					"ability": "stone_ward",
+					"effect_mult": 1.3
+				},
+				{
+					"id": "ar_tough",
+					"name": "Zäh wie Eichenholz",
+					"text": "+15 % Leben",
+					"stat": {
+						"hp": {
+							"mult": 1.15
+						}
+					}
+				},
+				{
+					"id": "ar_stone_skin",
+					"name": "Steinhaut",
+					"text": "+8 % Rüstung",
+					"stat": {
+						"armor": {
+							"add": 0.08
+						}
+					}
+				}
+			]
+		},
+		{
+			"id": "hero_summoner",
+			"faction": "evil",
+			"name": "Dämonenruferin",
+			"title": "Beschwörerin – ruft Schattenbrut, saugt Seelen, nährt das Mana",
+			"letter": "D",
+			"color": "#8e44ad",
+			"figure": {
+				"outfit": "mage",
+				"armor": "robe",
+				"head": "horns",
+				"gear": "staff_dark",
+				"cape": "#3a1a44",
+				"mark": "aura",
+				"trim": "#c39bd3"
+			},
+			"sprite": "res://assets/sprites/heroes/hero_summoner.png",
+			"portrait": "res://assets/sprites/heroes/portrait_summoner.png",
+			"description": "Sie öffnet Risse in die Schattenwelt. Schattenbrut kämpft für sie, ihr Seelenraub lähmt Feinde, und ihr Pakt füllt die Manaquellen des Reichs.",
+			"cost": {
+				"food": 150,
+				"ore": 80,
+				"mana": 60
+			},
+			"recruit_time": 30,
+			"requirements": [
+				{
+					"type": "castle_level",
+					"min": 4
+				},
+				{
+					"type": "building",
+					"building": "mage_tower"
+				},
+				{
+					"type": "kills",
+					"count": 25
+				}
+			],
+			"stats": {
+				"hp": 330,
+				"attack": 22,
+				"attack_interval": 1.4,
+				"range": 5.0,
+				"armor": 0.1,
+				"speed": 2.2,
+				"aggro_range": 6,
+				"sight": 8,
+				"regen": 1.5,
+				"radius": 18,
+				"food_per_day": 20,
+				"projectile": "bolt"
+			},
+			"abilities": [
+				"call_shadows",
+				"soul_drain",
+				"dark_pact"
+			],
+			"leadership": [
+				{
+					"side": "enemy",
+					"key": "armor",
+					"add": -0.03
+				}
+			],
+			"leadership_text": "Feinde in der Nähe −3 % Rüstung",
+			"talents": [
+				{
+					"id": "su_more_shadows",
+					"name": "Weiter Riss",
+					"text": "Schattenruf +1 Schattenbrut",
+					"ability": "call_shadows",
+					"count_add": 1
+				},
+				{
+					"id": "su_hungry",
+					"name": "Seelenhunger",
+					"text": "Seelenraub +30 % Schaden",
+					"ability": "soul_drain",
+					"damage_mult": 1.3
+				},
+				{
+					"id": "su_quick_drain",
+					"name": "Gierige Hand",
+					"text": "Seelenraub 25 % schneller bereit",
+					"ability": "soul_drain",
+					"cooldown_mult": 0.75
+				},
+				{
+					"id": "su_dark_skin",
+					"name": "Schattenhaut",
+					"text": "+15 % Leben",
+					"stat": {
+						"hp": {
+							"mult": 1.15
+						}
+					}
+				},
+				{
+					"id": "su_far_bolt",
+					"name": "Weite Blitze",
+					"text": "+1 Feld Reichweite",
+					"stat": {
+						"range": {
+							"add": 1.0
+						}
+					}
+				}
+			]
+		},
+		{
+			"id": "hero_ironwall",
+			"faction": "evil",
+			"name": "Eisenwall",
+			"title": "Verteidiger – hält jede Bresche, schützt Truppen und Mauern",
+			"letter": "E",
+			"color": "#7f8c8d",
+			"figure": {
+				"armor": "heavy",
+				"head": "horns",
+				"gear": "mace",
+				"shield": "tower",
+				"cape": "#2c2c34",
+				"mark": "crown",
+				"trim": "#e8a050"
+			},
+			"sprite": "res://assets/sprites/heroes/hero_ironwall.png",
+			"portrait": "res://assets/sprites/heroes/portrait_ironwall.png",
+			"description": "Ein Koloss in schwarzem Eisen. Er hält die Stellung, wo andere fallen: Seine Haltung macht ihn fast unverwundbar, sein Brüllen lähmt Angreifer, und Truppen an seiner Seite stehen fester.",
+			"cost": {
+				"food": 150,
+				"ore": 80,
+				"mana": 60
+			},
+			"recruit_time": 30,
+			"requirements": [
+				{
+					"type": "castle_level",
+					"min": 3
+				},
+				{
+					"type": "building",
+					"building": "barracks",
+					"level": 2
+				},
+				{
+					"type": "building",
+					"building": "tower"
+				}
+			],
+			"stats": {
+				"hp": 520,
+				"attack": 22,
+				"attack_interval": 1.4,
+				"range": 0.8,
+				"armor": 0.4,
+				"speed": 2.0,
+				"aggro_range": 6,
+				"sight": 8,
+				"regen": 2.0,
+				"radius": 19,
+				"food_per_day": 20
+			},
+			"abilities": [
+				"iron_stance",
+				"dread_roar",
+				"bulwark"
+			],
+			"leadership": [
+				{
+					"side": "own_kingdom",
+					"key": "armor",
+					"add": 0.05
+				}
+			],
+			"leadership_text": "Rüstung +5 % für Truppen in der Nähe",
+			"talents": [
+				{
+					"id": "iw_mountain",
+					"name": "Berg aus Eisen",
+					"text": "+20 % Leben",
+					"stat": {
+						"hp": {
+							"mult": 1.2
+						}
+					}
+				},
+				{
+					"id": "iw_quick_stance",
+					"name": "Eiserne Gewohnheit",
+					"text": "Eisenhaltung 30 % schneller bereit",
+					"ability": "iron_stance",
+					"cooldown_mult": 0.7
+				},
+				{
+					"id": "iw_loud_roar",
+					"name": "Donnerstimme",
+					"text": "Schreckensbrüllen +2 Felder",
+					"ability": "dread_roar",
+					"radius_add": 2.0
+				},
+				{
+					"id": "iw_wide_wall",
+					"name": "Breiter Schildwall",
+					"text": "Bollwerk +2 Felder",
+					"ability": "bulwark",
+					"radius_add": 2.0
+				},
+				{
+					"id": "iw_plates",
+					"name": "Doppelte Platten",
+					"text": "+8 % Rüstung",
+					"stat": {
+						"armor": {
+							"add": 0.08
+						}
+					}
+				}
+			]
 		}
 	],
 	"abilities": [
@@ -1289,6 +1728,485 @@
 						"armor": {
 							"add": 0.2
 						}
+					}
+				}
+			]
+		},
+		{
+			"id": "spy_network",
+			"name": "Spionagenetz",
+			"letter": "N",
+			"color": "#7fb8d8",
+			"icon": "res://assets/ui/icons/ability_spy_network.png",
+			"description": "Solange sie lebt, sind die Spione des Reichs geschickter und fremde Spione fallen eher auf; auf Rang 3 ein Spion mehr.",
+			"kind": "passive",
+			"ranks": [
+				{
+					"kingdom_bonus": {
+						"spy_skill": 0.3,
+						"vigilance": 0.5
+					}
+				},
+				{
+					"kingdom_bonus": {
+						"spy_skill": 0.5,
+						"vigilance": 1.0
+					}
+				},
+				{
+					"kingdom_bonus": {
+						"spy_skill": 0.7,
+						"vigilance": 1.5,
+						"spy_slots": 1
+					}
+				}
+			]
+		},
+		{
+			"id": "smoke_veil",
+			"name": "Rauchschleier",
+			"letter": "R",
+			"color": "#a8b8c8",
+			"icon": "res://assets/ui/icons/ability_smoke_veil.png",
+			"description": "Dichter Rauch: eigene Einheiten im Kreis werden unsichtbar, bis sie angreifen.",
+			"kind": "active",
+			"target": "point",
+			"range": 7,
+			"radius": 3,
+			"cooldown": 60,
+			"ranks": [
+				{
+					"unit_effects": [
+						{
+							"side": "own_kingdom",
+							"key": "stealth",
+							"add": 1
+						}
+					],
+					"duration": 8
+				},
+				{
+					"unit_effects": [
+						{
+							"side": "own_kingdom",
+							"key": "stealth",
+							"add": 1
+						}
+					],
+					"duration": 10,
+					"radius": 3.5
+				},
+				{
+					"unit_effects": [
+						{
+							"side": "own_kingdom",
+							"key": "stealth",
+							"add": 1
+						}
+					],
+					"duration": 12,
+					"radius": 4
+				}
+			]
+		},
+		{
+			"id": "expose_weakness",
+			"name": "Schwachstelle",
+			"letter": "S",
+			"color": "#e8c03c",
+			"icon": "res://assets/ui/icons/ability_expose_weakness.png",
+			"description": "Ein gezielter Stich zeigt allen die Schwachstelle: das Ziel erleidet eine Weile mehr Schaden.",
+			"kind": "active",
+			"target": "enemy",
+			"range": 7,
+			"radius": 0,
+			"cooldown": 25,
+			"autocast": true,
+			"ranks": [
+				{
+					"damage": 30,
+					"unit_effects": [
+						{
+							"side": "enemy",
+							"key": "damage_taken",
+							"mult": 1.2
+						}
+					],
+					"duration": 10
+				},
+				{
+					"damage": 40,
+					"unit_effects": [
+						{
+							"side": "enemy",
+							"key": "damage_taken",
+							"mult": 1.25
+						}
+					],
+					"duration": 12
+				},
+				{
+					"damage": 50,
+					"unit_effects": [
+						{
+							"side": "enemy",
+							"key": "damage_taken",
+							"mult": 1.3
+						}
+					],
+					"duration": 14
+				}
+			]
+		},
+		{
+			"id": "master_plans",
+			"name": "Meisterpläne",
+			"letter": "P",
+			"color": "#c9a46a",
+			"icon": "res://assets/ui/icons/ability_master_plans.png",
+			"description": "Solange er lebt, baut das ganze Reich schneller.",
+			"kind": "passive",
+			"ranks": [
+				{
+					"kingdom_mods": {
+						"build": 1.15
+					}
+				},
+				{
+					"kingdom_mods": {
+						"build": 1.25
+					}
+				},
+				{
+					"kingdom_mods": {
+						"build": 1.35
+					}
+				}
+			]
+		},
+		{
+			"id": "stone_ward",
+			"name": "Steinwall",
+			"letter": "W",
+			"color": "#a0a0a0",
+			"icon": "res://assets/ui/icons/ability_stone_ward.png",
+			"description": "Eigene Truppen im Kreis stehen eine Weile wie eine Mauer: mehr Rüstung und Erholung.",
+			"kind": "active",
+			"target": "none",
+			"radius": 6,
+			"cooldown": 40,
+			"autocast": true,
+			"ranks": [
+				{
+					"unit_effects": [
+						{
+							"side": "own_kingdom",
+							"key": "armor",
+							"add": 0.15
+						},
+						{
+							"side": "own_kingdom",
+							"key": "hp_per_sec",
+							"add": 2
+						}
+					],
+					"duration": 15
+				},
+				{
+					"unit_effects": [
+						{
+							"side": "own_kingdom",
+							"key": "armor",
+							"add": 0.2
+						},
+						{
+							"side": "own_kingdom",
+							"key": "hp_per_sec",
+							"add": 3
+						}
+					],
+					"duration": 15
+				},
+				{
+					"unit_effects": [
+						{
+							"side": "own_kingdom",
+							"key": "armor",
+							"add": 0.25
+						},
+						{
+							"side": "own_kingdom",
+							"key": "hp_per_sec",
+							"add": 4
+						}
+					],
+					"duration": 18
+				}
+			]
+		},
+		{
+			"id": "guild_trade",
+			"name": "Zunfthandel",
+			"letter": "Z",
+			"color": "#d9b46a",
+			"icon": "res://assets/ui/icons/ability_guild_trade.png",
+			"description": "Solange er lebt, liefern alle Werkstätten und Sammelhütten mehr.",
+			"kind": "passive",
+			"ranks": [
+				{
+					"kingdom_mods": {
+						"production": 1.05
+					}
+				},
+				{
+					"kingdom_mods": {
+						"production": 1.08
+					}
+				},
+				{
+					"kingdom_mods": {
+						"production": 1.12
+					}
+				}
+			]
+		},
+		{
+			"id": "call_shadows",
+			"name": "Schattenruf",
+			"letter": "R",
+			"color": "#8e44ad",
+			"icon": "res://assets/ui/icons/ability_call_shadows.png",
+			"description": "Ein Riss öffnet sich: Schattenbrut erscheint und kämpft eine Weile.",
+			"kind": "active",
+			"target": "point",
+			"range": 6,
+			"cooldown": 50,
+			"ranks": [
+				{
+					"summon": {
+						"unit": "shadow_servant",
+						"count": 1
+					},
+					"duration": 30
+				},
+				{
+					"summon": {
+						"unit": "shadow_servant",
+						"count": 2
+					},
+					"duration": 40
+				},
+				{
+					"summon": {
+						"unit": "shadow_servant",
+						"count": 3
+					},
+					"duration": 45
+				}
+			]
+		},
+		{
+			"id": "soul_drain",
+			"name": "Seelenraub",
+			"letter": "S",
+			"color": "#5b2a86",
+			"icon": "res://assets/ui/icons/ability_soul_drain.png",
+			"description": "Saugt dem Ziel Seele ab: Schaden, und es wird eine Weile langsamer.",
+			"kind": "active",
+			"target": "enemy",
+			"range": 6,
+			"radius": 0,
+			"cooldown": 20,
+			"autocast": true,
+			"ranks": [
+				{
+					"damage": 60,
+					"unit_effects": [
+						{
+							"side": "enemy",
+							"key": "speed",
+							"mult": 0.7
+						}
+					],
+					"duration": 6
+				},
+				{
+					"damage": 80,
+					"unit_effects": [
+						{
+							"side": "enemy",
+							"key": "speed",
+							"mult": 0.65
+						}
+					],
+					"duration": 7
+				},
+				{
+					"damage": 100,
+					"unit_effects": [
+						{
+							"side": "enemy",
+							"key": "speed",
+							"mult": 0.6
+						}
+					],
+					"duration": 8
+				}
+			]
+		},
+		{
+			"id": "dark_pact",
+			"name": "Dunkler Pakt",
+			"letter": "P",
+			"color": "#6c3483",
+			"icon": "res://assets/ui/icons/ability_dark_pact.png",
+			"description": "Solange sie lebt, fasst das Reich mehr Mana und die Burg erzeugt Mana.",
+			"kind": "passive",
+			"ranks": [
+				{
+					"mana_cap": 15,
+					"mana_regen": 0.02
+				},
+				{
+					"mana_cap": 25,
+					"mana_regen": 0.04
+				},
+				{
+					"mana_cap": 35,
+					"mana_regen": 0.06
+				}
+			]
+		},
+		{
+			"id": "iron_stance",
+			"name": "Eisenhaltung",
+			"letter": "H",
+			"color": "#7f8c8d",
+			"icon": "res://assets/ui/icons/ability_iron_stance.png",
+			"description": "Er stemmt sich gegen jeden Schlag: erleidet eine Weile viel weniger Schaden.",
+			"kind": "active",
+			"target": "self",
+			"cooldown": 30,
+			"autocast": true,
+			"ranks": [
+				{
+					"self_effects": [
+						{
+							"key": "damage_taken",
+							"mult": 0.5
+						}
+					],
+					"duration": 8
+				},
+				{
+					"self_effects": [
+						{
+							"key": "damage_taken",
+							"mult": 0.45
+						}
+					],
+					"duration": 10
+				},
+				{
+					"self_effects": [
+						{
+							"key": "damage_taken",
+							"mult": 0.4
+						}
+					],
+					"duration": 12
+				}
+			]
+		},
+		{
+			"id": "dread_roar",
+			"name": "Schreckensbrüllen",
+			"letter": "B",
+			"color": "#c0392b",
+			"icon": "res://assets/ui/icons/ability_dread_roar.png",
+			"description": "Ein Brüllen lähmt die Feinde im Kreis: sie schlagen eine Weile schwächer zu.",
+			"kind": "active",
+			"target": "none",
+			"radius": 5,
+			"cooldown": 35,
+			"autocast": true,
+			"ranks": [
+				{
+					"unit_effects": [
+						{
+							"side": "enemy",
+							"key": "attack",
+							"mult": 0.8
+						}
+					],
+					"duration": 10
+				},
+				{
+					"unit_effects": [
+						{
+							"side": "enemy",
+							"key": "attack",
+							"mult": 0.75
+						}
+					],
+					"duration": 10
+				},
+				{
+					"unit_effects": [
+						{
+							"side": "enemy",
+							"key": "attack",
+							"mult": 0.7
+						}
+					],
+					"duration": 12
+				}
+			]
+		},
+		{
+			"id": "bulwark",
+			"name": "Bollwerk",
+			"letter": "W",
+			"color": "#5d6d7e",
+			"icon": "res://assets/ui/icons/ability_bulwark.png",
+			"description": "Truppen an seiner Seite stehen fester (mehr Rüstung).",
+			"kind": "passive",
+			"radius": 5,
+			"ranks": [
+				{
+					"aura": {
+						"filter": "fighters",
+						"effects": [
+							{
+								"side": "own_kingdom",
+								"key": "armor",
+								"add": 0.06
+							}
+						]
+					}
+				},
+				{
+					"aura": {
+						"filter": "fighters",
+						"effects": [
+							{
+								"side": "own_kingdom",
+								"key": "armor",
+								"add": 0.09
+							}
+						]
+					}
+				},
+				{
+					"aura": {
+						"filter": "fighters",
+						"effects": [
+							{
+								"side": "own_kingdom",
+								"key": "armor",
+								"add": 0.12
+							}
+						]
 					}
 				}
 			]

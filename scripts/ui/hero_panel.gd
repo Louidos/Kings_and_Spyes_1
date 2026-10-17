@@ -441,10 +441,16 @@ func _build_recruit_page() -> void:
 	status_row.add_child(_hall_button)
 	_queue_label = _label(16, COLOR_WARN)
 	_recruit_page.add_child(_queue_label)
+	# Fünf und mehr Helden: die Liste scrollt, das Fenster bleibt so gross wie die anderen Reiter
+	var scroll := ScrollContainer.new()
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_recruit_page.add_child(scroll)
 	_offer_list = VBoxContainer.new()
 	_offer_list.add_theme_constant_override("separation", 10)
+	_offer_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_offer_list.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_recruit_page.add_child(_offer_list)
+	scroll.add_child(_offer_list)
 
 
 func _make_tab(text: String, group: ButtonGroup) -> ResearchTipButton:

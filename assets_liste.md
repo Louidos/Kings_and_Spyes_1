@@ -232,6 +232,10 @@ Porträt auf dunklem Grund in der Heldenfarbe, gefallene Helden grau).
 | `hero_necromancer.png` | `portrait_necromancer.png` | Nekromant (BÖSE) | hagere Gestalt in violett-schwarzer Robe, Schädelstab |
 | `hero_warlord.png` | `portrait_warlord.png` | Kriegsherr (BÖSE) | grosser Orkhäuptling, Axt, Fellumhang, Kriegsbemalung |
 | `hero_blade_dancer.png` | `portrait_blade_dancer.png` | Klingentänzerin (BÖSE) | Blutelfe mit zwei gebogenen Klingen, rot-schwarz |
+| `hero_spymaster.png` | `portrait_spymaster.png` | Meisterspionin (GUT) | Frau in blaugrauem Kapuzenmantel mit zwei Dolchen, wachsamer Blick |
+| `hero_architect.png` | `portrait_architect.png` | Baumeister (GUT) | Zunftmeister mit Hammer, Rundschild und Bauplan, braune Kappe, goldener Saum |
+| `hero_summoner.png` | `portrait_summoner.png` | Dämonenruferin (BÖSE) | Hexe mit Hörnern und dunklem Stab, violette Robe, Schattenrisse um sie |
+| `hero_ironwall.png` | `portrait_ironwall.png` | Eisenwall (BÖSE) | Ork-Koloss in schwarzer Plattenrüstung mit Turmschild und Streitkolben |
 
 **Gebäude** (`assets/sprites/buildings/`, 128 × 128): `hero_hall_good.png` (Heldenhalle: Halle mit Bannern
 und Statuen, Gold) / `hero_hall_evil.png` (Halle der Schatten: dunkle Halle mit violetten Fackeln).
@@ -251,6 +255,12 @@ und Statuen, Gold) / `hero_hall_evil.png` (Halle der Schatten: dunkle Halle mit 
 | `ability_arrow_rain.png` | Pfeilhagel | `ability_shadow_step.png` | Schattenschritt |
 | `ability_battle_cry.png` | Schlachtruf | `ability_venom_blade.png` | Giftklinge |
 | `ability_eagle_eye.png` | Adlerauge | `ability_evasion.png` | Ausweichen |
+| `ability_spy_network.png` | Spionagenetz | `ability_call_shadows.png` | Schattenruf |
+| `ability_smoke_veil.png` | Rauchschleier | `ability_soul_drain.png` | Seelenraub |
+| `ability_expose_weakness.png` | Schwachstelle | `ability_dark_pact.png` | Dunkler Pakt |
+| `ability_master_plans.png` | Meisterpläne | `ability_iron_stance.png` | Eisenhaltung |
+| `ability_stone_ward.png` | Steinwall | `ability_dread_roar.png` | Schreckensbrüllen |
+| `ability_guild_trade.png` | Zunfthandel | `ability_bulwark.png` | Bollwerk |
 
 Heldenmarkierung, Fähigkeitseffekte, Stufenaufstieg und EP-Anzeigen zeichnet das Spiel selbst.
 
