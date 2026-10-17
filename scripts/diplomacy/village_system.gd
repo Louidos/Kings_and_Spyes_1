@@ -706,13 +706,43 @@ func _tick_active(v: Kingdom, rec: Dictionary, step: float, now: float) -> void:
 ## attack_pause_seconds halten es an. Höchstens max_size Hütten.
 func tick_growth(v: Kingdom, rec: Dictionary, step: float, now: float) -> void:
 	var rate := growth_rate(v, rec, now)
-	if rate <= 0.0 or int(rec.get("size", 1)) >= int(DataDB.diplo("village.growth.max_size", 10)):
+	if rate <= 0.0:
+		return
+	# Zerstörte Hütten und Türme werden im selben Takt wieder aufgebaut, auch bei voller Grösse
+	var full := int(rec.get("size", 1)) >= int(DataDB.diplo("village.growth.max_size", 10))
+	if full and not _needs_rebuild(rec):
 		return
 	var interval := maxf(float(DataDB.diplo("village.growth.interval", 600)), 1.0)
 	rec["growth"] = float(rec.get("growth", 0.0)) + rate * step / interval
 	if float(rec["growth"]) >= 1.0:
 		rec["growth"] = float(rec["growth"]) - 1.0
-		grow(v, rec)
+		# Erst Zerstörtes ersetzen; findet sich dafür kein Platz, wächst das Dorf wie sonst
+		var hall := get_hall(v)
+		var rebuilt := hall != null and _needs_rebuild(rec) and _rebuild(v, rec, hall)
+		if not rebuilt and not full:
+			grow(v, rec)
+
+
+## Fehlt eine Hütte (zerstört) oder ein Turm, der zur Grösse gehört?
+func _needs_rebuild(rec: Dictionary) -> bool:
+	var towers_at: Array = DataDB.diplo("village.growth.towers_at_size", [])
+	var towers := (rec.get("tower_uids", []) as Array).size()
+	var due := 0
+	for at in towers_at:
+		if int(rec.get("size", 1)) >= int(at):
+			due += 1
+	return (rec.get("hut_uids", []) as Array).size() < int(rec.get("size", 1)) or towers < due
+
+
+## Eine zerstörte Hütte neu bauen, sonst einen fehlenden Turm; true = gebaut
+func _rebuild(v: Kingdom, rec: Dictionary, hall: Building) -> bool:
+	var huts: Array = rec["hut_uids"]
+	if huts.size() < int(rec["size"]):
+		var hut := _place_hut(v, hall, int(rec.get("site_index", 0)) + huts.size())
+		if hut != null:
+			huts.append(hut.uid)
+			return true
+	return _place_missing_tower(v, rec, hall)
 
 
 ## Wachstum je growth.interval (0 = angehalten): 1 im Frieden, + trade_bonus mit Handelsvertrag oder
@@ -754,21 +784,29 @@ func grow(v: Kingdom, rec: Dictionary) -> bool:
 	# Mehr Milizplätze: Posten neu verteilen, der Vorrat füllt sie nach und nach auf
 	rec["posts"] = _make_posts(hall, get_militia_target(v))
 	_return_to_posts(v, rec)
+	_place_missing_tower(v, rec, hall)
+	village_grew.emit(v, int(rec["size"]))
+	return true
+
+
+## Wachturm bauen, wenn zur Grösse einer fehlt (growth.towers_at_size); true = gebaut
+func _place_missing_tower(v: Kingdom, rec: Dictionary, hall: Building) -> bool:
 	var towers_at: Array = DataDB.diplo("village.growth.towers_at_size", [])
 	var tower_uids: Array = rec.get("tower_uids", [])
 	rec["tower_uids"] = tower_uids
-	if tower_uids.size() < towers_at.size() and int(rec["size"]) >= int(towers_at[tower_uids.size()]):
-		var tower_def := DataDB.get_building(str(DataDB.diplo("village.growth.tower", "tower")))
-		var cells: Array = []
-		var center := hall.cell + Vector2i(1, 1)
-		var angle := TAU * tower_uids.size() / maxf(float(towers_at.size()), 1.0) + 0.8
-		for r in range(4, 9):
-			cells.append(center + Vector2i((Vector2.from_angle(angle) * r).round()))
-			cells.append(center + Vector2i((Vector2.from_angle(angle + 0.5) * r).round()))
-		var tower := _place_village_building(v, tower_def, cells)
-		if tower != null:
-			tower_uids.append(tower.uid)
-	village_grew.emit(v, int(rec["size"]))
+	if tower_uids.size() >= towers_at.size() or int(rec["size"]) < int(towers_at[tower_uids.size()]):
+		return false
+	var tower_def := DataDB.get_building(str(DataDB.diplo("village.growth.tower", "tower")))
+	var cells: Array = []
+	var center := hall.cell + Vector2i(1, 1)
+	var angle := TAU * tower_uids.size() / maxf(float(towers_at.size()), 1.0) + 0.8
+	for r in range(4, 9):
+		cells.append(center + Vector2i((Vector2.from_angle(angle) * r).round()))
+		cells.append(center + Vector2i((Vector2.from_angle(angle + 0.5) * r).round()))
+	var tower := _place_village_building(v, tower_def, cells)
+	if tower == null:
+		return false
+	tower_uids.append(tower.uid)
 	return true
 
 

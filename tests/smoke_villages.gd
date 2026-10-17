@@ -54,6 +54,25 @@ func run(r: Node) -> void:
 	var towers_at: Array = DataDB.diplo("village.growth.towers_at_size", [])
 	r.check(TOPIC, towers_at.is_empty() or int(rec["size"]) < int(towers_at[0]) or towers >= 1,
 			"Ab Grösse %s steht ein Wachturm (%d Türme bei %d Hütten)" % [str(towers_at), towers, int(rec["size"])])
+	# Volle Grösse: eine zerstörte Hütte wird trotzdem wieder aufgebaut
+	var max_size := int(DataDB.diplo("village.growth.max_size", 10))
+	var later := now + 180 * 10.0
+	var guard := 0
+	while int(rec["size"]) < max_size and guard < 400:
+		vs.tick_growth(v, rec, 10.0, later)
+		later += 10.0
+		guard += 1
+	var huts: Array = rec["hut_uids"]
+	var lost: Variant = g.find_by_uid(int(huts[0])) if not huts.is_empty() else null
+	if int(rec["size"]) >= max_size and lost is Building:
+		g.combat_system._destroy_building(lost, null)
+		var missing := (rec["hut_uids"] as Array).size()
+		later += float(DataDB.diplo("village.growth.attack_pause_seconds", 900)) + 10.0
+		for i in 120:
+			vs.tick_growth(v, rec, 10.0, later + i * 10.0)
+		r.check(TOPIC, missing == max_size - 1 and (rec["hut_uids"] as Array).size() == max_size,
+				"Volles Dorf baut eine zerstörte Hütte wieder auf (%d → %d von %d)" % [missing,
+				(rec["hut_uids"] as Array).size(), max_size])
 	# Krieg hält das Wachstum an
 	var w: Kingdom = villages[1]
 	var wrec := vs.get_record(w)
