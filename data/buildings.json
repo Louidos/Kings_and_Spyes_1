@@ -13,6 +13,7 @@
 		"sprites: Grafik je Fraktion (128x128, Burg 256x256); sprite: eine Grafik für alle. Fehlt die Datei, wird ein Platzhalter in 'color' mit 'label' gezeichnet.",
 		"capturable: true = wird bei 0 Leben erobert statt zerstört (Dorfzentrum).",
 		"people_sprites: Grafik je Volk (Dorfgebäude), sprite_fallback: Grafik, wenn weder Volks- noch Fraktionsgrafik angegeben ist.",
+		"satisfaction_aura: {bonus, radius, cause} = Zufriedenheit für alle eigenen Bewohner im Umkreis (Felder) des fertigen Gebäudes; mehrere zählen nicht doppelt (der höchste Bonus). kingdom_bonus {Schlüssel: Zuschlag} / kingdom_mods {Schlüssel: Faktor}: wirken auf das ganze Reich, solange mindestens ein fertiges Gebäude des Typs steht (je Typ einmal), z. B. food_use (Nahrungsverbrauch), trade_bonus (Handelsmarge kleiner, bessere Kurse).",
 		"people_color: Platzhalter in der Volksfarbe. shape: Form des gezeichneten Platzhalters (rect Standard, well Brunnen, field Acker, workshop Werkstatt mit Esse). village_only: nur neutrale Dörfer bauen es (Dorfwachstum, diplomacy.json village.growth.extras_at_size).",
 		"satisfaction: {bonus, capacity, cause} = Zufriedenheit für bis zu capacity Bewohner (mehrere Gebäude addieren die Plätze); plague_spread_mult / discover_bonus: der Tempel mildert Seuchen und entdeckt Verräter und eingeschleuste Spione eher (Phase 8).",
 		"spy_den: true = Spionagehaus (Spione beginnen eine Stufe höher, +1 Spion, Wachsamkeit siehe espionage.json). people_sprites bei der Burg: Grafik je Volk (nur wenn die Datei existiert, sonst Fraktionsgrafik).",
@@ -154,6 +155,26 @@
 			"sprites": { "good": "res://assets/sprites/buildings/farm_good.png", "evil": "res://assets/sprites/buildings/farm_evil.png" }
 		},
 		{
+			"id": "well", "name": "Brunnen", "names": { "good": "Brunnen", "evil": "Zisterne" },
+			"label": "", "labels": { "good": "", "evil": "" },
+			"description": "Frisches Wasser für die Nachbarschaft: +5 Zufriedenheit für alle Bewohner im Umkreis von 8 Feldern (mehrere Brunnen zählen nicht doppelt).",
+			"size": [1, 1], "cost": { "wood": 15, "stone": 35 }, "build_time": 20,
+			"territory_radius": 2, "hp": 250, "shape": "well",
+			"satisfaction_aura": { "bonus": 5, "radius": 8, "cause": "Brunnen in der Nähe" },
+			"color": "#8e9aa6",
+			"sprites": { "good": "res://assets/sprites/buildings/well_good.png", "evil": "res://assets/sprites/buildings/well_evil.png" }
+		},
+		{
+			"id": "granary", "name": "Kornspeicher", "names": { "good": "Kornspeicher", "evil": "Vorratsgrube" },
+			"label": "Korn", "labels": { "good": "Korn", "evil": "Vorrat" },
+			"description": "Lager nur für Nahrung: Sammler, Jäger und Bauern liefern hier ab und sammeln 15 % schneller. Gut gelagert verdirbt weniger – das Reich verbraucht 10 % weniger Nahrung (zählt einmal).",
+			"size": [2, 2], "cost": { "wood": 45, "stone": 15 }, "build_time": 30,
+			"territory_radius": 4, "hp": 350, "dropoff": ["food"], "gather_radius": 12, "gather_bonus": 0.15,
+			"kingdom_mods": { "food_use": 0.9 },
+			"color": "#c9a24e",
+			"sprites": { "good": "res://assets/sprites/buildings/granary_good.png", "evil": "res://assets/sprites/buildings/granary_evil.png" }
+		},
+		{
 			"id": "mana_well", "name": "Manabrunnen", "label": "Mana",
 			"description": "Muss auf einer Manaquelle stehen. Erzeugt etwas Mana, mit Manawirkern deutlich mehr.",
 			"requires_castle_level": 2, "size": [2, 2], "cost": { "wood": 30, "stone": 30 }, "build_time": 40,
@@ -237,6 +258,16 @@
 			],
 			"color": "#b5651d",
 			"sprites": { "good": "res://assets/sprites/buildings/tavern_good.png", "evil": "res://assets/sprites/buildings/tavern_evil.png" }
+		},
+		{
+			"id": "market", "name": "Markt", "names": { "good": "Markt", "evil": "Basar" },
+			"label": "Markt", "labels": { "good": "Markt", "evil": "Basar" },
+			"description": "Händler und Waagen: bessere Kurse beim Tausch mit Dörfern und für die Bezahlung der Handelslieferungen (Handelsmarge −10 Prozentpunkte, zählt einmal).",
+			"requires_castle_level": 2, "size": [3, 3], "cost": { "wood": 80, "stone": 50, "food": 20 }, "build_time": 45,
+			"territory_radius": 5, "hp": 450,
+			"kingdom_bonus": { "trade_bonus": 0.1 },
+			"color": "#c27a3a",
+			"sprites": { "good": "res://assets/sprites/buildings/market_good.png", "evil": "res://assets/sprites/buildings/market_evil.png" }
 		},
 		{
 			"id": "temple", "name": "Tempel", "names": { "good": "Tempel des Lichts", "evil": "Schattenschrein" },

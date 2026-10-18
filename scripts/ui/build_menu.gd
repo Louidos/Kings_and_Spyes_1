@@ -366,6 +366,7 @@ static func build_tooltip(def: Dictionary) -> String:
 	var sat: Dictionary = def.get("satisfaction", {})
 	if not sat.is_empty():
 		lines.append("Zufriedenheit %+d für bis zu %d Bewohner" % [roundi(float(sat.get("bonus", 0))), int(sat.get("capacity", 0))])
+	lines.append_array(effect_lines(def))
 	var workers := int(def.get("workers", 0))
 	if workers > 0:
 		var job_name := str(DataDB.get_job(str(def.get("job", ""))).get("name", ""))
@@ -395,6 +396,25 @@ static func build_tooltip(def: Dictionary) -> String:
 	else:
 		lines.append("Linksklick: bauen  ·  Umschalt: mehrere  ·  Rechtsklick: abbrechen")
 	return "\n".join(lines)
+
+
+## Wirkungen im Umkreis und auf das ganze Reich (buildings.json satisfaction_aura, kingdom_bonus,
+## kingdom_mods) als Zeilen für Tooltip und Auswahlfenster
+static func effect_lines(def: Dictionary) -> PackedStringArray:
+	var lines: PackedStringArray = []
+	var aura: Dictionary = def.get("satisfaction_aura", {})
+	if not aura.is_empty():
+		lines.append("Zufriedenheit %+d für alle Bewohner im Umkreis von %d Feldern" % [roundi(float(aura.get("bonus", 0))),
+				int(aura.get("radius", 0))])
+	var bonuses: Dictionary = def.get("kingdom_bonus", {})
+	for key in bonuses:
+		lines.append("Ganzes Reich: %s" % DataDB.describe_bonus(str(key), float(bonuses[key])))
+	var mods: Dictionary = def.get("kingdom_mods", {})
+	for key in mods:
+		lines.append("Ganzes Reich: %s" % DataDB.describe_modifier(str(key), float(mods[key])))
+	if not bonuses.is_empty() or not mods.is_empty():
+		lines.append("(Wirkt einmal, auch mit mehreren Gebäuden dieser Art)")
+	return lines
 
 
 ## "Holz, Stein" aus einer Liste von Ressourcen-IDs

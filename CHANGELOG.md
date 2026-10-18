@@ -13,6 +13,8 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 - Neutrale Dörfer bauen selbst aus: Neue Hütten, Wachtürme, Brunnen, Felder und Werkstätten entstehen Schritt für
   Schritt als Baustelle, an der die Bewohner sichtbar arbeiten. Erst die fertige Hütte bringt Einwohner und
   Milizplätze; bei Alarm ruht der Bau. Spielstände mit Baustellen laden weiter, ältere Dörfer behalten ihre Hütten.
+- Neue Gebäude: Brunnen (Zufriedenheit für die Bewohner in der Nähe), Kornspeicher (Annahmestelle für Nahrung,
+  weniger Nahrungsverbrauch) und Markt (bessere Handelskurse bei allen Dörfern). Auch die KI-Reiche bauen sie.
 
 ## 1.2.1 – 2026-10-17
 

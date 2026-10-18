@@ -184,6 +184,8 @@ Umschalttaste setzt du mehrere. Es entsteht eine **Baustelle**, die deine Bauarb
 | **Erzmine** | Dorf | 40 Holz, 20 Stein | 35 s | 2×2 | 300 | Burgstufe 2 | Bergleute liefern hier ab und arbeiten 25 % schneller. Nahe an Erzadern bauen. |
 | **Jägerhütte** | Dorf | 25 Holz | 20 s | 2×2 | 300 | – | Sammler und Jäger liefern hier Nahrung ab und arbeiten 25 % schneller. |
 | **Bauernhof** | Dorf | 40 Holz | 30 s | 2×2 | 300 | – | Bis zu 3 Bauern erzeugen dauerhaft Nahrung. Am besten auf Ebene, schlecht in der Wüste. *(3 Arbeitsplätze)* |
+| **Brunnen / Zisterne** | Dorf | 15 Holz, 35 Stein | 20 s | 1×1 | 250 | – | Frisches Wasser für die Nachbarschaft: +5 Zufriedenheit für alle Bewohner im Umkreis von 8 Feldern (mehrere Brunnen zählen nicht doppelt). |
+| **Kornspeicher / Vorratsgrube** | Dorf | 45 Holz, 15 Stein | 30 s | 2×2 | 350 | – | Lager nur für Nahrung: Sammler, Jäger und Bauern liefern hier ab und sammeln 15 % schneller. Gut gelagert verdirbt weniger – das Reich verbraucht 10 % weniger Nahrung (zählt einmal). |
 | **Manabrunnen** | Dorf | 30 Holz, 30 Stein | 40 s | 2×2 | 300 | Burgstufe 2, auf einer Manaquelle | Muss auf einer Manaquelle stehen. Erzeugt etwas Mana, mit Manawirkern deutlich mehr. *(2 Arbeitsplätze)* |
 | **Kaserne** | Militär & Wissen | 60 Holz, 40 Stein, 30 Mana | 45 s | 2×2 | 600 | Burgstufe 2 | Hier beschwört der König Schwertkämpfer, Bogenschützen und – nach Forschung – Speerträger, Armbrustschützen, schwere Fusstruppen und Elitekrieger. Wird mit Mana errichtet. |
 | **Krankenstation** | Militär & Wissen | 50 Holz, 20 Stein, 25 Mana | 40 s | 2×2 | 400 | Burgstufe 3, Forschung Heilkunde / Dunkle Heilkunst | Beschwört Heiler. Eigene Einheiten in der Nähe erholen sich schneller. Wird mit Mana errichtet. Muss erforscht werden (Forschung R, Magie: Heilkunde). |
@@ -191,6 +193,7 @@ Umschalttaste setzt du mehrere. Es entsteht eine **Baustelle**, die deine Bauarb
 | **Heldenhalle / Halle der Schatten** | Militär & Wissen | 170 Holz, 210 Stein, 55 Erz, 55 Mana | 100 s | 3×3 | 900 | Burgstufe 3, Kaserne | Hier werden Helden angeworben (Heldenfenster mit G) und ausgebildet. Nur eine pro Reich, braucht eine Kaserne. *(höchstens 1)* |
 | **Kundschafterhaus / Schattenloge** | Militär & Wissen | 60 Holz, 50 Stein, 30 Mana | 45 s | 2×2 | 450 | Burgstufe 3, Forschung Spionagenetz / Schattennetz | Bildet Spione aus: sie beginnen eine Stufe höher. Erhöht die Wachsamkeit gegen fremde Spione und erlaubt einen Spion mehr. Nur eines pro Reich. *(höchstens 1)* |
 | **Taverne / Schenke** | Dorf | 60 Holz, 20 Stein, 30 Nahrung | 35 s | 2×2 | 350 | Burgstufe 2 | Hier treffen sich die Bewohner nach der Arbeit: +10 Zufriedenheit für bis zu 20 Bewohner (für mehr Bewohner weitere bauen). |
+| **Markt / Basar** | Dorf | 80 Holz, 50 Stein, 20 Nahrung | 45 s | 3×3 | 450 | Burgstufe 2 | Händler und Waagen: bessere Kurse beim Tausch mit Dörfern und für die Bezahlung der Handelslieferungen (Handelsmarge −10 Prozentpunkte, zählt einmal). |
 | **Tempel des Lichts / Schattenschrein** | Dorf | 110 Holz, 170 Stein, 55 Mana | 100 s | 3×3 | 700 | Burgstufe 3, Bibliothek | Ort des Glaubens: +8 Zufriedenheit für bis zu 30 Bewohner. Seuchen breiten sich langsamer aus, Verräter und eingeschleuste Spione fallen eher auf. Braucht eine Forschungsstätte. |
 | **Steinmauer / Dornenwall** | Verteidigung | 1 Holz, 5 Stein | 6 s | 1×1 | 500 | – | Mauerstück: hält Feinde auf, bis sie es zerstören. Mit gedrückter Maustaste ziehen (wie Strassen). Über eigene Strassen wird automatisch ein Tor gesetzt. Bauarbeiter reparieren beschädigte Mauern. |
 | **Burgtor / Schattentor** | Verteidigung | 30 Holz, 25 Stein | 20 s | 1×1 | 1000 | Burgstufe 2 | Durchgang in der Mauer: eigene und verbündete Einheiten gehen hindurch, Feinde müssen es aufbrechen. Auf ein eigenes Mauerstück oder eine eigene Strasse setzen. Im Auswahlfenster verriegeln (dann nur noch eigene und Verbündete). |
@@ -219,8 +222,8 @@ Gebiet um die Burg, und sie bietet mehr Wohnraum und Leben. Die Gegner halten si
 
 | Burgstufe | Kosten · Arbeit | Bedingungen | Burg | Schaltet frei |
 |---|---|---|---|---|
-| **I – Weiler** | Start | – | – | Wohnhaus, Lager, Holzfällerhütte, Steinmetzhütte, Jägerhütte, Bauernhof, Steinmauer, Strasse |
-| **II – Dorf** | 150 Holz, 120 Stein, 60 Nahrung · 60 s | 10 Bewohner, Lager, Bauernhof | Leben 2500, Wohnraum 8, Gebiet 16 | Erzmine, Manabrunnen, Kaserne, Bibliothek, Taverne, Burgtor, Wachturm |
+| **I – Weiler** | Start | – | – | Wohnhaus, Lager, Holzfällerhütte, Steinmetzhütte, Jägerhütte, Bauernhof, Brunnen, Kornspeicher, Steinmauer, Strasse |
+| **II – Dorf** | 150 Holz, 120 Stein, 60 Nahrung · 60 s | 10 Bewohner, Lager, Bauernhof | Leben 2500, Wohnraum 8, Gebiet 16 | Erzmine, Manabrunnen, Kaserne, Bibliothek, Taverne, Markt, Burgtor, Wachturm |
 | **III – Stadt** | 300 Holz, 320 Stein, 80 Erz, 60 Mana · 120 s | 20 Bewohner, Kaserne, Bibliothek, Taverne, 1 Gebäude auf Stufe II | Leben 3000, Wohnraum 10, Gebiet 18, Rüstung 35 % | Krankenstation, Heldenhalle, Kundschafterhaus, Tempel des Lichts, Schmiede, Reitstall, Gebäudestufe III |
 | **IV – Königssitz** | 550 Holz, 600 Stein, 200 Erz, 200 Nahrung, 90 Mana · 200 s | 35 Bewohner, Tempel des Lichts, Schmiede, 3 Gebäude auf Stufe II | Leben 4000, Wohnraum 12, Gebiet 20, Rüstung 40 % | Belagerungswerkstatt, Magierturm |
 
@@ -336,7 +339,7 @@ Reiter „Zufriedenheit“.
 | Grundstimmung 60 | Hunger, wenig Vorrat |
 | volle Speicher, freier Wohnraum | Überfüllung (mehr Bewohner als Wohnraum) |
 | Truppen im Gebiet, Mauerring und Türme (Sicherheit) | Feinde im Gebiet, Angriffe, verlorene Gebäude, getötete Bewohner |
-| **Taverne** (+10 für 20 Bewohner je Taverne), **Tempel** (+8 für 30) | lange ohne Beruf |
+| **Taverne** (+10 für 20 Bewohner je Taverne), **Tempel** (+8 für 30), **Brunnen** (+5 für alle Bewohner im Umkreis von 8 Feldern) | lange ohne Beruf |
 | **Fest feiern**: 100 Nahrung + 3 je Bewohner und 20 Mana → +15 für 15 Minuten (danach 40 Minuten Pause) | Ereignisse wie Dürre und Seuche |
 
 | Zufriedenheit | Folge |
@@ -797,7 +800,7 @@ Verlauf, wie dein Heer gerade wirkt (z. B. „+2,3 je Minute – fühlt sich bes
 | Aktion | So geht's |
 |---|---|
 | **Geschenk** | Ware und Menge wählen; die Zeile zeigt den Rufgewinn. Lieblingswaren des Volks zählen mehr, viele Geschenke kurz nacheinander weniger |
-| **Handel** | Menge und Ware geben, Ware bekommen; Kurs und Tageslimit stehen darunter, dazu die **Preise** des Dorfs je Ware (verkauft/kauft). Was ein Dorf reichlich hat, gibt es billig ab (grün, „viel“), was ihm fehlt, ist teuer und bringt beim Verkauf mehr (rot, „knapp“). Koboldhändler und Nomaden haben die besten Kurse |
+| **Handel** | Menge und Ware geben, Ware bekommen; Kurs und Tageslimit stehen darunter, dazu die **Preise** des Dorfs je Ware (verkauft/kauft). Was ein Dorf reichlich hat, gibt es billig ab (grün, „viel“), was ihm fehlt, ist teuer und bringt beim Verkauf mehr (rot, „knapp“). Koboldhändler und Nomaden haben die besten Kurse. Ein **Markt** (ab Burgstufe 2) senkt die Handelsmarge bei allen Dörfern um 10 Prozentpunkte |
 | **Schutzvertrag** (ab Neutral) | Das Dorf zahlt Tribut. Wird es angegriffen, musst du binnen 60 s Truppen schicken (roter Punkt am Knopf), sonst sinkt der Ruf |
 | **Handelsvertrag** (ab Neutral) | regelmässige Lieferungen, bessere Kurse, höheres Limit, eine Karawane pendelt (siehe [Handelswege](#handelswege)) |
 | **Verteidigungsbündnis** (ab Freundlich) | Milizen helfen dir in der Nähe, der **Volkskrieger** erscheint in deiner Kaserne, und du kannst Truppen beim Dorf stationieren (siehe [Bündnis: Truppen stationieren](#bündnis-truppen-stationieren)) |

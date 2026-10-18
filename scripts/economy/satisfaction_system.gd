@@ -64,6 +64,8 @@ var _maint_acc := 0.0
 var _idle_since: Dictionary = {}
 ## uid -> Spielzeit, seit der der Bewohner erfasst ist (Schutz für Neuankömmlinge)
 var _seen_since: Dictionary = {}
+## Reich-id -> {"t", "list"}: Gebäude mit satisfaction_aura (Brunnen), siehe _auras_of (Laufzeit)
+var _aura_cache: Dictionary = {}
 ## Ankünfte/Fehlschläge von Überläufern: [uid, ok] (im eigenen Takt verarbeitet; gespeichert)
 var _pending: Array = []
 ## Häufig gelesene Werte aus satisfaction.json (Laufzeit, einmal beim Aufbau gelesen)
@@ -614,7 +616,43 @@ func _personal_parts(u: Unit, now: float) -> Array:
 		var entry: Dictionary = e
 		if float(entry["until"]) > now:
 			parts.append([str(entry["cause"]), float(entry["value"])])
+	var aura := _aura_part(u, now)
+	if not aura.is_empty():
+		parts.append(aura)
 	return parts
+
+
+## Gebäude mit satisfaction_aura (Brunnen) in der Nähe: [Ursache, Wert] des besten, sonst []
+func _aura_part(u: Unit, now: float) -> Array:
+	var best: Array = []
+	for a in _auras_of(u.kingdom, now):
+		var entry: Array = a
+		if u.position.distance_squared_to(entry[0]) <= float(entry[1]) and (best.is_empty() or float(entry[3]) > float(best[1])):
+			best = [str(entry[2]), float(entry[3])]
+	return best
+
+
+## Fertige Gebäude mit satisfaction_aura eines Reichs: [[Mitte, Radius², Ursache, Bonus], …],
+## je Reich einmal je Spielsekunde neu bestimmt (Laufzeit)
+func _auras_of(k: Kingdom, now: float) -> Array:
+	if k == null:
+		return []
+	var cached: Dictionary = _aura_cache.get(k.id, {})
+	if not cached.is_empty() and absf(float(cached["t"]) - now) < 1.0:
+		return cached["list"]
+	var list: Array = []
+	var ts := float(game.world.tile_size)
+	for b in k.buildings:
+		if not is_instance_valid(b) or not b.constructed:
+			continue
+		var aura: Dictionary = b.def.get("satisfaction_aura", {})
+		if aura.is_empty():
+			continue
+		var r := float(aura.get("radius", 6)) * ts
+		list.append([b.get_center(), r * r, str(aura.get("cause", DataDB.get_building_name(b.def, k.faction_id))),
+				float(aura.get("bonus", 0))])
+	_aura_cache[k.id] = {"t": now, "list": list}
+	return list
 
 
 func _personal_sum(u: Unit, now: float) -> float:

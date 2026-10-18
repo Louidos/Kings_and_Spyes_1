@@ -229,7 +229,44 @@ func transfer_building(b: Building, to: Kingdom) -> void:
 	if int(b.def.get("housing", 0)) > 0:
 		from.population_changed.emit()
 		to.population_changed.emit()
+	refresh_building_effects(from)
+	refresh_building_effects(to)
 	building_transferred.emit(b, from, to)
+
+
+## Reichsweite Wirkungen fertiger Gebäude (buildings.json kingdom_bonus / kingdom_mods, z. B.
+## Kornspeicher: weniger Nahrungsverbrauch, Markt: bessere Handelskurse): je Gebäudetyp einmal,
+## solange mindestens eines fertig steht. Quelle "building:<id>". Idempotent (Bau, Abriss,
+## Besitzerwechsel, Laden).
+func refresh_building_effects(k: Kingdom) -> void:
+	if k == null:
+		return
+	var active := {}
+	for b in k.buildings:
+		if not is_instance_valid(b) or not b.constructed:
+			continue
+		if not (b.def.get("kingdom_bonus", {}) as Dictionary).is_empty() \
+				or not (b.def.get("kingdom_mods", {}) as Dictionary).is_empty():
+			active[str(b.def.get("id", ""))] = b.def
+	for src in k.bonus_sources.keys():
+		if str(src).begins_with("building:") and not active.has(str(src).substr(9)):
+			k.clear_bonuses(str(src))
+	for src in k.modifier_sources.keys():
+		if str(src).begins_with("building:") and not active.has(str(src).substr(9)):
+			k.clear_modifiers(str(src))
+	for id in active:
+		var def: Dictionary = active[id]
+		var src := "building:" + str(id)
+		var bonuses: Dictionary = def.get("kingdom_bonus", {})
+		for key in bonuses:
+			if not is_equal_approx(float((k.bonus_sources.get(src, {}) as Dictionary).get(key, -1.0e9)), float(bonuses[key])):
+				k.set_bonus(src, str(key), float(bonuses[key]))
+		var mods: Dictionary = def.get("kingdom_mods", {})
+		if not mods.is_empty():
+			var factors := {}
+			for key in mods:
+				factors[str(key)] = float(mods[key])
+			k.replace_modifiers(src, factors)
 
 
 # ---------------------------------------------------------------------------
@@ -705,6 +742,8 @@ func remove_building(b: Building, refund_factor: float = 0.0, destroyed: bool = 
 	kingdom.buildings.erase(b)
 	if kingdom.castle == b:
 		kingdom.castle = null
+	if b.constructed:
+		refresh_building_effects(kingdom)
 	game.unregister_entity(b)
 	building_removed.emit(b)
 	if b.constructed:
@@ -733,6 +772,7 @@ func get_dropoffs(kingdom: Kingdom, res_id: String) -> Array:
 
 func _on_building_finished(b: Building) -> void:
 	var kingdom := b.kingdom
+	refresh_building_effects(kingdom)
 	if int(b.def.get("territory_radius", 0)) > 0:
 		game.territory.recompute_area(world, TerritorySystem.claim_rect(b, world), game.kingdoms)
 	if int(b.def.get("housing", 0)) > 0:
@@ -851,4 +891,5 @@ func from_dict(_d: Dictionary) -> void:
 
 
 func rebuild_runtime() -> void:
-	pass
+	for k in game.kingdoms:
+		refresh_building_effects(k)
