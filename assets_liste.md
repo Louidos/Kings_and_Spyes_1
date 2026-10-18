@@ -290,6 +290,15 @@ des Volks (wie das Dorfzentrum, aber schlichter):
 `village_hut_lizardfolk.png`, `village_hut_nomads.png`, `village_hut_giants.png`,
 `village_hut_water_spirits.png`, `village_hut_kobold_traders.png`
 
+**Zusatzgebäude der Dörfer** (`assets/sprites/buildings/`, transparent – nur in neutralen Dörfern, beim Wachsen).
+Ohne Datei zeichnet das Spiel sie als Platzhalter (`shape` in `buildings.json`):
+
+| Datei | Gebäude | Grösse | Aussehen | Platzhalter |
+|---|---|---|---|---|
+| `village_well.png` | Dorfbrunnen | 64 × 64 (1 × 1) | runder Steinbrunnen mit Holzdach und Kurbel | Steinring mit Wasser, Pfosten, Dachbalken |
+| `village_field.png` | Feld | 192 × 128 (3 × 2) | Acker mit Furchen und reifem Korn | braune Fläche mit Furchen und Ähren |
+| `village_workshop.png` | Werkstatt | 128 × 128 (2 × 2) | kleines Fachwerkhaus mit Esse, Rauch und Werkbank | Haus in Volksfarbe mit Esse, Rauch, glühender Tür |
+
 **Dorfmilizen** (`assets/sprites/units/`, 64 × 64, transparent):
 
 | Datei | Einheit | Aussehen |

@@ -10,6 +10,9 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 - In neutralen Dörfern leben jetzt Bewohner: Sie gehen zur Arbeit, tragen Waren heim und fliehen bei einem Angriff ins
   Dorfzentrum. Nachts schlafen sie in den Hütten; ein Klick zeigt Name, Dorf und Tätigkeit. Die Dorfproduktion bleibt
   gleich, alte Spielstände bekommen ihre Bewohner beim Laden.
+- Neutrale Dörfer bauen selbst aus: Neue Hütten, Wachtürme, Brunnen, Felder und Werkstätten entstehen Schritt für
+  Schritt als Baustelle, an der die Bewohner sichtbar arbeiten. Erst die fertige Hütte bringt Einwohner und
+  Milizplätze; bei Alarm ruht der Bau. Spielstände mit Baustellen laden weiter, ältere Dörfer behalten ihre Hütten.
 
 ## 1.2.1 – 2026-10-17
 

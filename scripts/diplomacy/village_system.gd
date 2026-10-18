@@ -28,8 +28,10 @@ signal village_founded(village: Kingdom)
 signal settlement_transferred(from_kingdom: Kingdom, to_kingdom: Kingdom, reason: String)
 ## Ein Dorf wurde zerstört (Dorfzentrum gefallen, ohne Eroberer)
 signal village_destroyed(village: Kingdom, by: Kingdom)
-## Ein Dorf ist um eine Hütte gewachsen
+## Ein Dorf ist um eine Hütte gewachsen (die Baustelle ist fertig)
 signal village_grew(village: Kingdom, size: int)
+## Ein Dorf hat eine Baustelle begonnen (Hütte, Wachturm oder Zusatzgebäude)
+signal village_site_started(village: Kingdom, site: Building)
 ## Ein Dorf schlägt Alarm (angegriffen oder durch einen Boten gewarnt)
 signal village_alarm(village: Kingdom, attacker: Kingdom, pos: Vector2)
 
@@ -48,7 +50,9 @@ var world: WorldData
 ##  "status": "active" | "annexed" | "conquered" | "destroyed", "owner_id" (bei annexed/conquered),
 ##  "population", "production_factor", "refill_timer", "alarm_until", "alarm_pos", "calm_since",
 ##  "help_until", "help_pos", "helpers": Array (uids), "posts": Array (Weltpositionen der Wachposten),
-##  "slots": Dictionary (Miliz-uid -> Postennummer), Bewohner siehe VillageResidents}
+##  "slots": Dictionary (Miliz-uid -> Postennummer), "growth", "last_attacked", "tower_uids",
+##  "extra_uids" (Brunnen, Feld, Werkstatt), "sites": Array von {"uid", "kind" ("hut" | "tower" | "extra"),
+##  "grow" (fertig = Dorf wächst)}, Bewohner siehe VillageResidents}
 var villages: Dictionary = {}
 ## Dorf-Reich-ids in Gründungsreihenfolge (Liste im Diplomatiefenster)
 var order: Array = []
@@ -120,9 +124,12 @@ func found_village(site: Dictionary) -> Kingdom:
 			"population": village_size * int(DataDB.diplo("village.population_per_size", 4)),
 			"production_factor": 1.0, "refill_timer": 0.0, "alarm_until": 0.0, "alarm_pos": Vector2.ZERO,
 			"calm_since": 0.0, "help_until": 0.0, "help_pos": Vector2.ZERO, "helpers": [], "posts": [], "slots": {},
-			"growth": 0.0, "last_attacked": -1.0e9, "tower_uids": []}
+			"growth": 0.0, "last_attacked": -1.0e9, "tower_uids": [], "extra_uids": [], "sites": []}
 	villages[k.id] = rec
 	order.append(k.id)
+	# Zusatzgebäude, die zur Grösse gehören, stehen schon (wie die Hütten)
+	while _place_missing_extra(k, rec, hall, false):
+		pass
 	# Wachposten rund um das Dorfzentrum (nach den Hütten: Posten liegen auf freien Kacheln)
 	var target := get_militia_target(k)
 	rec["posts"] = _make_posts(hall, target)
@@ -134,8 +141,9 @@ func found_village(site: Dictionary) -> Kingdom:
 
 
 ## Neue Hütte auf einem freien Platz um das Dorfzentrum (zuerst die festen Plätze HUT_OFFSETS,
-## je Dorf gedreht, dann Ringe bis growth.hut_search_radius); null, wenn kein Platz frei ist
-func _place_hut(v: Kingdom, hall: Building, rotate: int) -> Building:
+## je Dorf gedreht, dann Ringe bis growth.hut_search_radius); null, wenn kein Platz frei ist.
+## site: als Baustelle (Dorfwachstum), sonst sofort fertig (Gründung)
+func _place_hut(v: Kingdom, hall: Building, rotate: int, site: bool = false) -> Building:
 	var hut_def := DataDB.get_building(str(DataDB.diplo("village.hut", "village_hut")))
 	if hut_def.is_empty() or hall == null:
 		return null
@@ -148,17 +156,18 @@ func _place_hut(v: Kingdom, hall: Building, rotate: int) -> Building:
 			for dx in range(-r, r + 1):
 				if absi(dx) == r or absi(dy) == r:
 					cells.append(center + Vector2i(dx, dy))
-	return _place_village_building(v, hut_def, cells)
+	return _place_village_building(v, hut_def, cells, site)
 
 
-## Setzt ein Dorfgebäude (fertig, kostenlos) auf die erste passende Kachel der Liste
-func _place_village_building(v: Kingdom, def: Dictionary, cells: Array) -> Building:
+## Setzt ein Dorfgebäude (kostenlos) auf die erste passende Kachel der Liste: sofort fertig oder
+## als Baustelle (site) mit der Bauzeit aus growth.build_seconds
+func _place_village_building(v: Kingdom, def: Dictionary, cells: Array, site: bool = false) -> Building:
 	var bs: BuildingSystem = game.building_system
 	for c in cells:
 		var cell: Vector2i = c
 		if not bs.can_place_free(def, cell, v).is_empty():
 			continue
-		var b: Building = bs.place_building(def, cell, v, true)
+		var b: Building = bs.place_building(def, cell, v, not site, true, site_seconds(str(def.get("id", ""))) if site else -1.0)
 		if b == null:
 			continue
 		b.extra["people_id"] = v.people_id
@@ -406,6 +415,9 @@ func get_summary_text(v: Kingdom, viewer: Kingdom) -> String:
 	lines.append("Produziert: %s pro Minute" % _amounts_text(get_production(v)))
 	lines.append("Miliz: %d/%d (%s)  ·  Einwohner: %d" % [get_militia(v).size(), get_militia_target(v),
 			get_strength_text(v), int(rec["population"])])
+	var building := get_site_text(v)
+	if not building.is_empty():
+		lines.append(building)
 	if float(rec["alarm_until"]) > GameClock.game_time:
 		lines.append("Alarm!")
 	return "\n".join(lines)
@@ -601,6 +613,8 @@ func transfer_settlement(from: Kingdom, to: Kingdom, reason: String) -> void:
 		rec["help_until"] = 0.0
 		# Die Bewohner bleiben Dorfbewohner (siehe VillageResidents.on_transfer)
 		residents.on_transfer(from, rec)
+		# Halbfertige Baustellen gehören jetzt dem neuen Besitzer (seine Bauarbeiter können sie fertigstellen)
+		rec["sites"] = []
 		var people := get_people(from)
 		var special := str(people.get("special_unit", ""))
 		if not special.is_empty():
@@ -700,6 +714,7 @@ func _tick_active(v: Kingdom, rec: Dictionary, step: float, now: float) -> void:
 			_return_to_posts(v, rec)
 	tick_growth(v, rec, step, now)
 	residents.tick(v, rec, step, now, float(rec["alarm_until"]) > 0.0)
+	tick_sites(v, rec, step, float(rec["alarm_until"]) > 0.0)
 	# Bündnishilfe beenden (Zeit um oder keine Feinde mehr am Einsatzort)
 	if float(rec["help_until"]) > 0.0:
 		if now >= float(rec["help_until"]) or not has_enemies_near(v, rec["help_pos"], HELP_ENEMY_RADIUS):
@@ -710,19 +725,25 @@ func _tick_active(v: Kingdom, rec: Dictionary, step: float, now: float) -> void:
 
 
 ## Wachstum (diplomacy.json village.growth): Im Frieden sammelt das Dorf Wachstum (Handel und
-## Bündnisse beschleunigen es); voll ergibt es eine neue Hütte, mehr Bewohner, mehr Milizen und ab
-## towers_at_size einen Wachturm. Krieg mit einem Reich, Alarm oder ein Angriff in den letzten
-## attack_pause_seconds halten es an. Höchstens max_size Hütten.
+## Bündnisse beschleunigen es); voll ergibt es eine Baustelle für eine neue Hütte – erst die fertige
+## Hütte bringt mehr Bewohner und Milizen, ab towers_at_size einen Wachturm und ab extras_at_size
+## Zusatzgebäude (ebenfalls als Baustelle). Krieg mit einem Reich, Alarm oder ein Angriff in den
+## letzten attack_pause_seconds halten es an. Solange eine Baustelle offen ist, beginnt keine neue
+## (das Wachstum sammelt sich bis zu einem Schritt an). Höchstens max_size Hütten.
 func tick_growth(v: Kingdom, rec: Dictionary, step: float, now: float) -> void:
 	var rate := growth_rate(v, rec, now)
 	if rate <= 0.0:
 		return
 	# Zerstörte Hütten und Türme werden im selben Takt wieder aufgebaut, auch bei voller Grösse
 	var full := int(rec.get("size", 1)) >= int(DataDB.diplo("village.growth.max_size", 10))
-	if full and not _needs_rebuild(rec):
+	if full and not _needs_rebuild(rec) and (rec.get("sites", []) as Array).is_empty():
 		return
 	var interval := maxf(float(DataDB.diplo("village.growth.interval", 600)), 1.0)
 	rec["growth"] = float(rec.get("growth", 0.0)) + rate * step / interval
+	# Solange eine Baustelle steht, sammelt sich höchstens ein Schritt an
+	if not (rec.get("sites", []) as Array).is_empty():
+		rec["growth"] = minf(float(rec["growth"]), 1.0)
+		return
 	if float(rec["growth"]) >= 1.0:
 		rec["growth"] = float(rec["growth"]) - 1.0
 		# Erst Zerstörtes ersetzen; findet sich dafür kein Platz, wächst das Dorf wie sonst
@@ -732,7 +753,7 @@ func tick_growth(v: Kingdom, rec: Dictionary, step: float, now: float) -> void:
 			grow(v, rec)
 
 
-## Fehlt eine Hütte (zerstört) oder ein Turm, der zur Grösse gehört?
+## Fehlt eine Hütte (zerstört), ein Turm oder ein Zusatzgebäude, das zur Grösse gehört?
 func _needs_rebuild(rec: Dictionary) -> bool:
 	var towers_at: Array = DataDB.diplo("village.growth.towers_at_size", [])
 	var towers := (rec.get("tower_uids", []) as Array).size()
@@ -740,18 +761,19 @@ func _needs_rebuild(rec: Dictionary) -> bool:
 	for at in towers_at:
 		if int(rec.get("size", 1)) >= int(at):
 			due += 1
-	return (rec.get("hut_uids", []) as Array).size() < int(rec.get("size", 1)) or towers < due
+	return (rec.get("hut_uids", []) as Array).size() < int(rec.get("size", 1)) or towers < due \
+			or (rec.get("extra_uids", []) as Array).size() < _extras_due(rec).size()
 
 
-## Eine zerstörte Hütte neu bauen, sonst einen fehlenden Turm; true = gebaut
+## Eine zerstörte Hütte neu bauen (Baustelle), sonst einen fehlenden Turm oder ein Zusatzgebäude; true = begonnen
 func _rebuild(v: Kingdom, rec: Dictionary, hall: Building) -> bool:
 	var huts: Array = rec["hut_uids"]
 	if huts.size() < int(rec["size"]):
-		var hut := _place_hut(v, hall, int(rec.get("site_index", 0)) + huts.size())
+		var hut := _place_hut(v, hall, int(rec.get("site_index", 0)) + huts.size(), true)
 		if hut != null:
-			huts.append(hut.uid)
+			_start_site(v, rec, hut, "hut", false)
 			return true
-	return _place_missing_tower(v, rec, hall)
+	return _place_missing_tower(v, rec, hall) or _place_missing_extra(v, rec, hall, true)
 
 
 ## Wachstum je growth.interval (0 = angehalten): 1 im Frieden, + trade_bonus mit Handelsvertrag oder
@@ -779,43 +801,172 @@ func growth_rate(v: Kingdom, rec: Dictionary, now: float) -> float:
 	return rate
 
 
-## Das Dorf wächst um eine Hütte: Bewohner, Milizplätze, ggf. Wachturm
+## Das Dorf beginnt eine neue Hütte (Baustelle). Erst wenn sie fertig ist, wächst es (_finish_site).
 func grow(v: Kingdom, rec: Dictionary) -> bool:
 	var hall := get_hall(v)
 	if hall == null:
 		return false
-	var hut := _place_hut(v, hall, int(rec.get("site_index", 0)) + int(rec.get("size", 1)))
+	var hut := _place_hut(v, hall, int(rec.get("site_index", 0)) + int(rec.get("size", 1)), true)
 	if hut == null:
 		return false
-	(rec["hut_uids"] as Array).append(hut.uid)
+	_start_site(v, rec, hut, "hut", true)
+	return true
+
+
+## Fertige Hütte eines Wachstumsschritts: Grösse, Bewohner, Milizplätze, ggf. Wachturm und
+## Zusatzgebäude (als neue Baustellen)
+func _complete_growth(v: Kingdom, rec: Dictionary, hall: Building) -> void:
 	rec["size"] = int(rec["size"]) + 1
 	add_population(v, int(DataDB.diplo("village.population_per_size", 4)))
 	# Mehr Milizplätze: Posten neu verteilen, der Vorrat füllt sie nach und nach auf
 	rec["posts"] = _make_posts(hall, get_militia_target(v))
 	_return_to_posts(v, rec)
 	_place_missing_tower(v, rec, hall)
+	_place_missing_extra(v, rec, hall, true)
 	village_grew.emit(v, int(rec["size"]))
-	return true
 
 
-## Wachturm bauen, wenn zur Grösse einer fehlt (growth.towers_at_size); true = gebaut
+# ---------------------------------------------------------------------------
+# Baustellen
+# ---------------------------------------------------------------------------
+
+## Bauzeit eines Dorfgebäudes in Sekunden bei einem Bauarbeiter (growth.build_seconds)
+static func site_seconds(def_id: String) -> float:
+	var table: Dictionary = DataDB.diplo("village.growth.build_seconds", {})
+	return maxf(float(table.get(def_id, 90.0)), 1.0)
+
+
+func _start_site(v: Kingdom, rec: Dictionary, b: Building, kind: String, grows: bool) -> void:
+	if not rec.has("sites"):
+		rec["sites"] = []
+	(rec["sites"] as Array).append({"uid": b.uid, "kind": kind, "grow": grows})
+	village_site_started.emit(v, b)
+
+
+## Offene Baustellen des Dorfs (Gebäude, noch nicht fertig)
+func get_sites(v: Kingdom) -> Array:
+	var list: Array = []
+	for s in get_record(v).get("sites", []):
+		var b: Variant = game.find_by_uid(int(s["uid"]))
+		if b is Building and not (b as Building).constructed and (b as Building).is_alive():
+			list.append(b)
+	return list
+
+
+## Baustellen weiterführen: Ohne Bewohner baut das Dorf selbst (wie ein Bauarbeiter), sonst bauen
+## die Bewohner (VillageResidents). Bei Alarm ruht der Bau. Fertige Gebäude zählen ab jetzt;
+## zerstörte Baustellen fallen weg.
+func tick_sites(v: Kingdom, rec: Dictionary, step: float, alarm: bool) -> void:
+	var sites: Array = rec.get("sites", [])
+	if sites.is_empty():
+		return
+	var self_build := residents.get_residents(v).is_empty()
+	for s in sites.duplicate():
+		var found: Variant = game.find_by_uid(int(s["uid"]))
+		if not (found is Building) or not (found as Building).is_alive():
+			sites.erase(s)
+			continue
+		var b: Building = found
+		if not b.constructed and self_build and not alarm:
+			b.add_work(step)
+		if b.constructed:
+			sites.erase(s)
+			_finish_site(v, rec, s, b)
+
+
+func _finish_site(v: Kingdom, rec: Dictionary, s: Dictionary, b: Building) -> void:
+	match str(s.get("kind", "hut")):
+		"hut":
+			(rec["hut_uids"] as Array).append(b.uid)
+		"tower":
+			(rec["tower_uids"] as Array).append(b.uid)
+		_:
+			if not rec.has("extra_uids"):
+				rec["extra_uids"] = []
+			(rec["extra_uids"] as Array).append(b.uid)
+	var hall := get_hall(v)
+	if bool(s.get("grow", false)) and hall != null:
+		_complete_growth(v, rec, hall)
+
+
+## Fortschritt der ersten Baustelle als Text ("Hütte im Bau: 40 %", "" ohne Baustelle)
+func get_site_text(v: Kingdom) -> String:
+	var parts: PackedStringArray = []
+	for b in get_sites(v):
+		parts.append("%s %d %%" % [(b as Building).get_display_name(), roundi((b as Building).get_progress_ratio() * 100.0)])
+	return "" if parts.is_empty() else "Baut: " + ", ".join(parts)
+
+
+## Zusatzgebäude, die zur Grösse gehören (growth.extras_at_size, in dieser Reihenfolge): Gebäude-ids
+static func _extras_due(rec: Dictionary) -> Array:
+	var due: Array = []
+	for e in DataDB.diplo("village.growth.extras_at_size", []):
+		if e is Dictionary and int(rec.get("size", 1)) >= int((e as Dictionary).get("size", 99)):
+			due.append(str((e as Dictionary).get("building", "")))
+	return due
+
+
+## Nächstes fälliges Zusatzgebäude setzen (fertig oder als Baustelle); true = gesetzt
+func _place_missing_extra(v: Kingdom, rec: Dictionary, hall: Building, site: bool) -> bool:
+	var due := _extras_due(rec)
+	if not rec.has("extra_uids"):
+		rec["extra_uids"] = []
+	var have := {}
+	for uid in rec["extra_uids"]:
+		var b: Variant = game.find_by_uid(int(uid))
+		if b is Building:
+			have[str((b as Building).def.get("id", ""))] = true
+	# Schon im Bau?
+	for s in rec.get("sites", []):
+		var sb: Variant = game.find_by_uid(int(s["uid"]))
+		if sb is Building and str(s.get("kind", "")) == "extra":
+			have[str((sb as Building).def.get("id", ""))] = true
+	for def_id in due:
+		if have.has(def_id):
+			continue
+		var def := DataDB.get_building(str(def_id))
+		if def.is_empty():
+			continue
+		var cells: Array = []
+		var center := hall.cell + Vector2i(1, 1)
+		var angle := 2.1 + 1.3 * float((rec["extra_uids"] as Array).size()) + float(int(rec.get("site_index", 0)))
+		for r in range(4, int(DataDB.diplo("village.growth.hut_search_radius", 8)) + 2):
+			for k in 8:
+				cells.append(center + Vector2i((Vector2.from_angle(angle + k * 0.45) * r).round()))
+		var b := _place_village_building(v, def, cells, site)
+		if b == null:
+			continue
+		if site:
+			_start_site(v, rec, b, "extra", false)
+		else:
+			(rec["extra_uids"] as Array).append(b.uid)
+		return true
+	return false
+
+
+## Wachturm bauen (als Baustelle), wenn zur Grösse einer fehlt (growth.towers_at_size); true = begonnen
 func _place_missing_tower(v: Kingdom, rec: Dictionary, hall: Building) -> bool:
 	var towers_at: Array = DataDB.diplo("village.growth.towers_at_size", [])
 	var tower_uids: Array = rec.get("tower_uids", [])
 	rec["tower_uids"] = tower_uids
-	if tower_uids.size() >= towers_at.size() or int(rec["size"]) < int(towers_at[tower_uids.size()]):
+	var building := 0
+	for s in rec.get("sites", []):
+		if str(s.get("kind", "")) == "tower":
+			building += 1
+	var count := tower_uids.size() + building
+	if count >= towers_at.size() or int(rec["size"]) < int(towers_at[count]):
 		return false
 	var tower_def := DataDB.get_building(str(DataDB.diplo("village.growth.tower", "tower")))
 	var cells: Array = []
 	var center := hall.cell + Vector2i(1, 1)
-	var angle := TAU * tower_uids.size() / maxf(float(towers_at.size()), 1.0) + 0.8
+	var angle := TAU * count / maxf(float(towers_at.size()), 1.0) + 0.8
 	for r in range(4, 9):
 		cells.append(center + Vector2i((Vector2.from_angle(angle) * r).round()))
 		cells.append(center + Vector2i((Vector2.from_angle(angle + 0.5) * r).round()))
-	var tower := _place_village_building(v, tower_def, cells)
+	var tower := _place_village_building(v, tower_def, cells, true)
 	if tower == null:
 		return false
-	tower_uids.append(tower.uid)
+	_start_site(v, rec, tower, "tower", false)
 	return true
 
 
@@ -909,9 +1060,10 @@ func _on_building_destroyed(b: Building, killer: Kingdom) -> void:
 	if int(rec["hall_uid"]) == b.uid:
 		_pending.append(["destroy", v.id, killer.id if killer != null else 0])
 	else:
-		# Zerstörte Hütte oder Turm: Plünderung hält das Wachstum an
+		# Zerstörte Hütte, Turm, Zusatzgebäude oder Baustelle: Plünderung hält das Wachstum an
 		(rec["hut_uids"] as Array).erase(b.uid)
 		(rec.get("tower_uids", []) as Array).erase(b.uid)
+		(rec.get("extra_uids", []) as Array).erase(b.uid)
 		rec["last_attacked"] = GameClock.game_time
 
 
@@ -946,6 +1098,11 @@ func from_dict(d: Dictionary) -> void:
 			rec["last_attacked"] = -1.0e9
 		if not rec.has("tower_uids"):
 			rec["tower_uids"] = []
+		# Spielstände vor den Baustellen (1.2.x): alle Hütten fertig, Zusatzgebäude entstehen als Baustelle
+		if not rec.has("extra_uids"):
+			rec["extra_uids"] = []
+		if not rec.has("sites"):
+			rec["sites"] = []
 		# Spielstände vor den Dorfbewohnern (1.2.x): sie erscheinen im ersten Takt
 		VillageResidents.ensure_fields(rec)
 	order = (d.get("order", []) as Array).duplicate()

@@ -80,6 +80,9 @@ Prüfpunkt. Geprüft werden unter anderem:
 - **Bewohner** (`smoke_residents.gd`, in `smoke_features.tscn`): jedes Dorf hat Bewohner (nicht als Miliz), sie
   arbeiten und tragen Waren, fliehen bei Alarm ins Dorfzentrum und kommen wieder heraus, schlafen nachts in Hütten,
   werden nach dem Tod ersetzt; Speichern/Laden und ein Dorf wie aus einem Spielstand 1.2.x.
+- **Baustellen** (`smoke_sites.gd`, in `smoke_features.tscn`): Zusatzgebäude nach Dorfgrösse, Bewohner arbeiten
+  am Brunnen, Wachstum beginnt als Baustelle (Grösse und Milizplätze erst bei Fertigstellung), Bewohner bauen, bei
+  Alarm ruht der Bau, Speichern/Laden setzt ihn fort, zerstörte Baustelle.
 - **Spione** (`smoke_spies.gd`, eigene Szene `smoke_spies.tscn`): zu Spielbeginn hat kein Reich Spione; ein im
   Spionagefenster beschworener Spion existiert genau einmal (Einheit, Datensatz, Liste, Fenster), auch mit Auftrag
   und nach Speichern und Laden. Spionagebericht: ohne Kundschaft „unbekannt“, ein Spion der höchsten Stufe liefert

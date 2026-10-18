@@ -232,6 +232,12 @@ Jedes Dorf ist ein eigenes `Kingdom` (`controller = "neutral"`, Feld `people_id`
   nicht). Ihr Zustand steht im Dorf-Datensatz (`residents`), die Einheiten selbst speichert SaveGame wie alle anderen.
   Alltagswege laufen über `UnitSystem.move_to_background` (eigene Warteschlange mit niedrigem Vorrang), damit viele
   Dörfer keine Armeen oder Karawanen bremsen.
+- **Dorf-Baustellen** (`VillageSystem.tick_growth`, `tick_sites`): Ein Wachstumsschritt setzt eine Baustelle
+  (`BuildingSystem.place_building(…, free, build_time)` mit eigener Bauzeit in `Building.extra.build_time`), die
+  Bewohner bauen über `Building.add_work` daran (ohne Bewohner baut das Dorf selbst wie ein Bauarbeiter). Erst die
+  fertige Hütte zählt (`_complete_growth`: Grösse, Einwohner, Milizposten, `village_grew`). Zusatzgebäude
+  (`village_well`, `village_field`, `village_workshop`, `diplomacy.json` → `village.growth.extras_at_size`) stehen im
+  Dorf-Datensatz unter `extra_uids`, offene Baustellen unter `sites`.
 - **`DiplomacySystem`**: Ruf je Dorf und Reich (−100 … +100, Stufen, Verfall zum Grundwert, Verlauf), Geschenke,
   Verträge (Schutz, Handel, Bündnis) mit Pflichten und Lieferungen, Tauschhandel mit Tageslimit, Aufnahme, Drohung,
   Krieg/Frieden, Seitenwechsel, Gebietsverletzung. Alle Aktionen haben `Kingdom`-Parameter (Spieler und KI rufen

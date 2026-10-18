@@ -13,7 +13,7 @@
 		"sprites: Grafik je Fraktion (128x128, Burg 256x256); sprite: eine Grafik für alle. Fehlt die Datei, wird ein Platzhalter in 'color' mit 'label' gezeichnet.",
 		"capturable: true = wird bei 0 Leben erobert statt zerstört (Dorfzentrum).",
 		"people_sprites: Grafik je Volk (Dorfgebäude), sprite_fallback: Grafik, wenn weder Volks- noch Fraktionsgrafik angegeben ist.",
-		"people_color: Platzhalter in der Volksfarbe.",
+		"people_color: Platzhalter in der Volksfarbe. shape: Form des gezeichneten Platzhalters (rect Standard, well Brunnen, field Acker, workshop Werkstatt mit Esse). village_only: nur neutrale Dörfer bauen es (Dorfwachstum, diplomacy.json village.growth.extras_at_size).",
 		"satisfaction: {bonus, capacity, cause} = Zufriedenheit für bis zu capacity Bewohner (mehrere Gebäude addieren die Plätze); plague_spread_mult / discover_bonus: der Tempel mildert Seuchen und entdeckt Verräter und eingeschleuste Spione eher (Phase 8).",
 		"spy_den: true = Spionagehaus (Spione beginnen eine Stufe höher, +1 Spion, Wachsamkeit siehe espionage.json). people_sprites bei der Burg: Grafik je Volk (nur wenn die Datei existiert, sonst Fraktionsgrafik).",
 		"segment: true = Mauerstück/Tor (kein eigenes Gebäude für Meldungen, Entdeckung, KI-Zählung, Ruinen). fortification: wall/gate/tower. replaces: darf auf eigene Gebäude dieser ids gesetzt werden (Tor auf Mauer). allow_on_road: darf auf eine eigene Strasse. line_gate: beim Ziehen einer Mauer über eine eigene Strasse wird stattdessen dieses Gebäude gesetzt. max_builders: höchstens so viele Bauarbeiter je Baustelle.",
@@ -299,6 +299,27 @@
 				"water_spirits": "res://assets/sprites/buildings/village_hut_water_spirits.png",
 				"kobold_traders": "res://assets/sprites/buildings/village_hut_kobold_traders.png"
 			}
+		},
+		{
+			"id": "village_well", "name": "Dorfbrunnen", "label": "",
+			"description": "Brunnen eines neutralen Dorfs. Die Bewohner holen hier Wasser.",
+			"size": [1, 1], "cost": {}, "build_time": 0, "player_buildable": false, "village_only": true,
+			"territory_radius": 0, "hp": 250, "shape": "well", "color": "#8e9aa6",
+			"sprite": "res://assets/sprites/buildings/village_well.png"
+		},
+		{
+			"id": "village_field", "name": "Feld", "label": "Feld",
+			"description": "Acker eines neutralen Dorfs. Ein Bauer bestellt ihn (man kann darüber laufen).",
+			"size": [3, 2], "cost": {}, "build_time": 0, "player_buildable": false, "village_only": true,
+			"territory_radius": 0, "hp": 150, "blocks_movement": false, "shape": "field", "color": "#9c7a45",
+			"sprite": "res://assets/sprites/buildings/village_field.png"
+		},
+		{
+			"id": "village_workshop", "name": "Werkstatt", "label": "Werkstatt",
+			"description": "Werkstatt eines neutralen Dorfs. Hier zimmern und schmieden die Bewohner.",
+			"size": [2, 2], "cost": {}, "build_time": 0, "player_buildable": false, "village_only": true,
+			"territory_radius": 0, "hp": 400, "shape": "workshop", "people_color": true, "color": "#8d6e52",
+			"sprite": "res://assets/sprites/buildings/village_workshop.png"
 		},
 		{
 			"id": "wall", "name": "Mauer", "names": { "good": "Steinmauer", "evil": "Dornenwall" }, "label": "",

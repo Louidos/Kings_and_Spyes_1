@@ -201,7 +201,7 @@ Umschalttaste setzt du mehrere. Es entsteht eine **Baustelle**, die deine Bauarb
 | **Magierturm / Hexenturm** | Militär & Wissen | 70 Holz, 125 Stein, 55 Mana | 85 s | 2×2 | 650 | Burgstufe 4, Forschung Lichtsegen / Fluch der Schwäche, Bibliothek | Bildet Kampfmagier (BÖSE: Hexer) aus, die Gruppen mit Flächenschaden treffen. Muss erforscht werden (Magie: Lichtsegen bzw. Fluch der Schwäche) und braucht eine Forschungsstätte. |
 | **Strasse** | Dorf | 1 Stein | 2 s | 1×1 | 300 | – | Bewohner laufen auf Strassen schneller. Mit gedrückter Maustaste ziehen. |
 
-Nicht baubar, aber auf der Karte: **Königsburg** (Sitz des Königs. Lager für alle Ressourcen und Wohnraum.), **Monsterhöhle** (Ein Unterschlupf wilder Monster. Zerstöre ihn, um die Gegend zu sichern und Beute zu machen.), **Dorfzentrum** (Mittelpunkt eines neutralen Dorfs. Wird es erobert oder das Dorf aufgenommen, wird es zum Aussenposten mit Lager und Gebiet.), **Hütte** (Wohnhütte eines Dorfs (nach der Aufnahme Wohnraum für 2).)
+Nicht baubar, aber auf der Karte: **Königsburg** (Sitz des Königs. Lager für alle Ressourcen und Wohnraum.), **Monsterhöhle** (Ein Unterschlupf wilder Monster. Zerstöre ihn, um die Gegend zu sichern und Beute zu machen.), **Dorfzentrum** (Mittelpunkt eines neutralen Dorfs. Wird es erobert oder das Dorf aufgenommen, wird es zum Aussenposten mit Lager und Gebiet.), **Hütte** (Wohnhütte eines Dorfs (nach der Aufnahme Wohnraum für 2).), **Dorfbrunnen** (Brunnen eines neutralen Dorfs. Die Bewohner holen hier Wasser.), **Feld** (Acker eines neutralen Dorfs. Ein Bauer bestellt ihn (man kann darüber laufen).), **Werkstatt** (Werkstatt eines neutralen Dorfs. Hier zimmern und schmieden die Bewohner.)
 
 <!-- /AUTO:gebaeude -->
 
@@ -745,6 +745,14 @@ mit einem Handelsvertrag oder Handelsweg schneller (+50 %), mit einem Schutzvert
 (+25 %). Jede Hütte bringt 4 Bewohner und einen Milizplatz mehr (höchstens 10 Milizen); ab 7 und ab 9 Hütten baut das
 Dorf je einen Wachturm. Höchstens 10 Hütten. Krieg mit einem Reich, ein Alarm oder ein Angriff bzw. eine zerstörte
 Hütte in den letzten 15 Minuten halten das Wachstum an. Die Hüttenzahl steht im Diplomatiefenster.
+
+**Dörfer bauen selbst:** Eine neue Hütte steht nicht sofort da – zuerst entsteht eine **Baustelle** mit Gerüst und
+Fortschrittsbalken, an der bis zu zwei Dorfbewohner arbeiten (Hütte 90 s, Wachturm 150 s bei einem Bauarbeiter; zwei
+sind doppelt so schnell). Erst die fertige Hütte zählt: dann wächst das Dorf, bekommt 4 Einwohner und einen
+Milizplatz mehr. Bei Alarm ruht der Bau, und eine angefangene Baustelle lässt sich zerstören. Grössere Dörfer haben
+eigene **Zusatzgebäude**: ab 5 Hütten einen **Dorfbrunnen**, ab 6 ein **Feld**, ab 8 eine **Werkstatt** – dort holen
+die Bewohner Wasser, bestellen den Acker und werkeln. Diese Gebäude gibt es nur in neutralen Dörfern. Was ein Dorf
+gerade baut, steht im Auswahlfenster des Dorfzentrums („Baut: Hütte 40 %“).
 
 **Dorfbewohner:** In jedem Dorf leben sichtbare Bewohner im Aussehen ihres Volks (je 4 Einwohner einer, höchstens 6).
 Tagsüber gehen sie zur Arbeit – Bäume fällen, Steine brechen, Erz abbauen, Felder bestellen oder Mana bündeln, je

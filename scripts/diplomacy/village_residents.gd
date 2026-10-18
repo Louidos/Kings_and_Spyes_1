@@ -6,13 +6,15 @@
 ## Tagesablauf je Bewohner: Ware des Volks wählen (gewichtet nach produces) → zum Arbeitsort
 ## gehen (Vorkommen im Dorfumkreis, Feld an einer Hütte oder das Dorfzentrum) → dort einige
 ## Sekunden arbeiten (Werkzeug und Text des Berufs aus jobs.json) → Ware sichtbar ins
-## Dorfzentrum tragen → kurz ruhen → von vorn. Nachts schlafen sie in den Hütten, bei Alarm
+## Dorfzentrum tragen → kurz ruhen → von vorn. Zusatzgebäude (Brunnen, Feld, Werkstatt) sind
+## weitere Arbeitsorte (extra_tasks). Hat das Dorf eine Baustelle, bauen bis zu growth.builders
+## Bewohner daran (Building.add_work, eine Sekunde Arbeit je Sekunde und Bewohner). Nachts schlafen sie in den Hütten, bei Alarm
 ## fliehen sie ins Dorfzentrum und kommen erst nach dem Alarm wieder heraus. Sie kämpfen nie
 ## (Befehl COMMAND: weder angreifen noch wehren). Wer einen Bewohner angreift, greift das Dorf
 ## an (Kampfsignal kingdom_attacked wie bei der Miliz).
 ##
 ## Zustand im Dorf-Datensatz (wird mit ihm gespeichert): "residents" (Array von
-## {"uid", "phase", "task", "spot", "until", "home_uid"}), "residents_seeded" (erste Bewohner
+## {"uid", "phase", "task", "spot", "until", "home_uid", "site_uid"}), "residents_seeded" (erste Bewohner
 ## erschienen; fehlt bei Spielständen vor 1.3 – dann erscheinen sie im ersten Takt nach dem
 ## Laden), "resident_timer" (Ersatz), "resident_lost" (gefallene, noch nicht ersetzte Bewohner).
 ## Laufzeit: _spots (Vorkommen je Dorf und Ware, alle SPOT_REFRESH Sekunden neu gesucht).
@@ -180,7 +182,7 @@ func tick(v: Kingdom, rec: Dictionary, step: float, now: float, alarm: bool) -> 
 		var u: Variant = game.find_by_uid(int(e["uid"]))
 		if not (u is Unit) or not (u as Unit).is_alive():
 			continue
-		_tick_one(v, rec, hall, u, e, now, alarm, night)
+		_tick_one(v, rec, hall, u, e, now, step, alarm, night)
 
 
 ## Zu viele (Einwohner weniger, z. B. nach einer Eroberung): wer übrig ist, verlässt das Dorf.
@@ -212,8 +214,8 @@ func _sync_count(v: Kingdom, rec: Dictionary, hall: Building, step: float, alarm
 		_spawn(v, rec, hall)
 
 
-func _tick_one(v: Kingdom, rec: Dictionary, hall: Building, u: Unit, e: Dictionary, now: float, alarm: bool,
-		night: bool) -> void:
+func _tick_one(v: Kingdom, rec: Dictionary, hall: Building, u: Unit, e: Dictionary, now: float, step: float,
+		alarm: bool, night: bool) -> void:
 	var phase := str(e["phase"])
 	# Alarm: ins Dorfzentrum (wer in seiner Hütte schläft, bleibt dort in Sicherheit)
 	if alarm:
@@ -255,13 +257,34 @@ func _tick_one(v: Kingdom, rec: Dictionary, hall: Building, u: Unit, e: Dictiona
 				var span: Array = cfg("work_seconds", [6, 12])
 				e["phase"] = "work"
 				e["until"] = now + _rng.randf_range(float(span[0]), float(span[-1]))
-				u.activity = str(DataDB.get_job(u.job_id).get("activity", "arbeitet"))
+				var extra: Dictionary = (cfg("extra_tasks", {}) as Dictionary).get(str(e["task"]), {})
+				u.activity = str(extra.get("activity", DataDB.get_job(u.job_id).get("activity", "arbeitet")))
+		"to_build":
+			var site := _site_of(e)
+			if site == null:
+				_after_build(u, e, now)
+			elif _arrived(u, e, now):
+				e["phase"] = "build"
+				u.activity = "baut: %s" % site.get_display_name()
+		"build":
+			# Bauarbeit über die Baulogik des Gebäudes (Fertigstellung meldet tick_sites)
+			var site := _site_of(e)
+			if site == null:
+				_after_build(u, e, now)
+			else:
+				site.add_work(step)
+				if site.constructed:
+					_after_build(u, e, now)
 		"work":
 			if now >= float(e["until"]):
 				var res_id := str(e["task"])
-				u.carry_res = res_id
-				u.carry_amount = float(cfg("carry", 5))
-				u.activity = "bringt %s ins Dorfzentrum" % str(DataDB.get_resource(res_id).get("name", res_id))
+				var extra: Dictionary = (cfg("extra_tasks", {}) as Dictionary).get(res_id, {})
+				if extra.is_empty():
+					u.carry_res = res_id
+					u.carry_amount = float(cfg("carry", 5))
+					u.activity = "bringt %s ins Dorfzentrum" % str(DataDB.get_resource(res_id).get("name", res_id))
+				else:
+					u.activity = str(extra.get("carry_text", "geht ins Dorfzentrum"))
 				e["phase"] = "to_hall"
 				e["until"] = now + WALK_TIMEOUT
 				_walk(u, hall.get_approach_point(u.position))
@@ -276,6 +299,21 @@ func _tick_one(v: Kingdom, rec: Dictionary, hall: Building, u: Unit, e: Dictiona
 			e["phase"] = "idle"
 
 
+## Baustelle dieses Bewohners (null, wenn fertig oder weg)
+func _site_of(e: Dictionary) -> Building:
+	var b: Variant = game.find_by_uid(int(e.get("site_uid", 0)))
+	if b is Building and (b as Building).is_alive() and not (b as Building).constructed:
+		return b
+	return null
+
+
+func _after_build(u: Unit, e: Dictionary, now: float) -> void:
+	e["site_uid"] = 0
+	e["phase"] = "rest"
+	e["until"] = now + _rng.randf_range(1.0, 3.0)
+	u.activity = "ruht sich nach dem Bau aus"
+
+
 ## Am Ziel (steht und wartet auf keinen Weg) oder zu lange unterwegs
 func _arrived(u: Unit, e: Dictionary, now: float) -> bool:
 	return (not u.moving and not u.path_pending) or now >= float(e["until"])
@@ -285,6 +323,7 @@ func _go_inside(u: Unit, e: Dictionary, b: Building, phase: String, text: String
 	if u.inside != null:
 		game.unit_system.set_inside(u, null)
 	_drop_carry(u)
+	e["site_uid"] = 0
 	e["phase"] = phase
 	e["until"] = now + WALK_TIMEOUT
 	u.activity = text
@@ -343,44 +382,106 @@ func _huts(rec: Dictionary) -> Array:
 # ---------------------------------------------------------------------------
 
 func _start_work(v: Kingdom, rec: Dictionary, hall: Building, u: Unit, e: Dictionary, now: float) -> void:
-	var res_id := _pick_task(v)
-	var tasks: Dictionary = cfg("tasks", {})
-	var task: Dictionary = tasks.get(res_id, {})
+	# Baustelle zuerst (bis zu growth.builders Bewohner je Baustelle)
+	var site := _site_needing_builder(v, rec)
+	if site != null:
+		if u.job_id != "builder":
+			u.job_id = "builder"
+		e["task"] = "build"
+		e["site_uid"] = site.uid
+		e["spot"] = site.get_approach_point(u.position)
+		e["phase"] = "to_build"
+		e["until"] = now + WALK_TIMEOUT
+		u.activity = "geht zur Baustelle: %s" % site.get_display_name()
+		_walk(u, e["spot"])
+		return
+	var res_id := _pick_task(v, rec)
+	var extra: Dictionary = (cfg("extra_tasks", {}) as Dictionary).get(res_id, {})
+	var task: Dictionary = extra if not extra.is_empty() else (cfg("tasks", {}) as Dictionary).get(res_id, {})
 	var job_id := str(task.get("job", "idle"))
 	if u.job_id != job_id:
 		u.job_id = job_id
 	e["task"] = res_id
-	e["spot"] = _find_spot(v, rec, hall, res_id, str(task.get("at", "")), job_id)
+	if not extra.is_empty():
+		var workplace := _extra_building(rec, res_id)
+		e["spot"] = _spot_at(workplace if workplace != null else hall)
+	else:
+		e["spot"] = _find_spot(v, rec, hall, res_id, str(task.get("at", "")), job_id)
 	e["phase"] = "to_work"
 	e["until"] = now + WALK_TIMEOUT
 	u.activity = "geht zur Arbeit"
 	_walk(u, e["spot"])
 
 
-## Ware des Volks, gewichtet nach der Produktion (nur Waren mit einer Tätigkeit in tasks)
-func _pick_task(v: Kingdom) -> String:
+## Offene Baustelle des Dorfs mit weniger als growth.builders Bewohnern daran (sonst null)
+func _site_needing_builder(v: Kingdom, rec: Dictionary) -> Building:
+	var max_builders := maxi(int(DataDB.diplo("village.growth.builders", 2)), 1)
+	for b in vs.get_sites(v):
+		var n := 0
+		for e in rec["residents"]:
+			if int(e.get("site_uid", 0)) == (b as Building).uid:
+				n += 1
+		if n < max_builders:
+			return b
+	return null
+
+
+## Tätigkeit: eine Ware des Volks (gewichtet nach der Produktion, nur Waren mit einem Eintrag in
+## tasks) oder ein Zusatzgebäude des Dorfs (extra_tasks, Gewicht weight)
+func _pick_task(v: Kingdom, rec: Dictionary) -> String:
 	var produces: Dictionary = vs.get_people(v).get("produces", {})
 	var tasks: Dictionary = cfg("tasks", {})
-	var total := 0.0
+	var weights := {}
 	for res_id in produces:
 		if tasks.has(res_id):
-			total += maxf(float(produces[res_id]), 0.0)
+			weights[str(res_id)] = maxf(float(produces[res_id]), 0.0)
+	var extras: Dictionary = cfg("extra_tasks", {})
+	for def_id in extras:
+		if _extra_building(rec, str(def_id)) != null:
+			weights[str(def_id)] = float((extras[def_id] as Dictionary).get("weight", 2.0))
+	var total := 0.0
+	for key in weights:
+		total += float(weights[key])
 	if total <= 0.0:
 		return "food" if tasks.has("food") else ""
 	var roll := _rng.randf() * total
-	for res_id in produces:
-		if not tasks.has(res_id):
-			continue
-		roll -= maxf(float(produces[res_id]), 0.0)
+	for key in weights:
+		roll -= float(weights[key])
 		if roll <= 0.0:
-			return str(res_id)
-	return str(produces.keys().back())
+			return str(key)
+	return str(weights.keys().back())
 
 
-## Arbeitsort: am Dorfzentrum (at "hall"), auf dem Feld neben einer Hütte (at "hut") oder an
-## einem passenden Vorkommen im Dorfumkreis (sonst doch neben einer Hütte)
+## Fertiges Zusatzgebäude dieser Art (buildings.json id) im Dorf, sonst null
+func _extra_building(rec: Dictionary, def_id: String) -> Building:
+	for uid in rec.get("extra_uids", []):
+		var b: Variant = game.find_by_uid(int(uid))
+		if b is Building and (b as Building).is_alive() and (b as Building).constructed \
+				and str((b as Building).def.get("id", "")) == def_id:
+			return b
+	return null
+
+
+## Arbeitsplatz an einem Gebäude: auf einem begehbaren (Feld) mittendrin, sonst davor
+func _spot_at(b: Building) -> Vector2:
+	var jitter := Vector2(_rng.randf_range(-14.0, 14.0), _rng.randf_range(-14.0, 14.0))
+	if not b.blocks_movement():
+		var fp := b.get_footprint()
+		var c := fp.position + Vector2i(_rng.randi() % fp.size.x, _rng.randi() % fp.size.y)
+		return world.cell_to_world(c) + jitter * 0.5
+	return b.get_approach_point(b.get_center() + Vector2.from_angle(_rng.randf() * TAU) * 1000.0) + jitter
+
+
+## Arbeitsort: am Dorfzentrum (at "hall"), auf dem Dorffeld (at "field", sonst neben einer Hütte),
+## neben einer Hütte (at "hut") oder an einem passenden Vorkommen im Dorfumkreis (sonst doch neben
+## einer Hütte)
 func _find_spot(v: Kingdom, rec: Dictionary, hall: Building, res_id: String, at: String, job_id: String) -> Vector2:
 	var jitter := Vector2(_rng.randf_range(-14.0, 14.0), _rng.randf_range(-14.0, 14.0))
+	if at == "field":
+		var field := _extra_building(rec, str(cfg("field_building", "village_field")))
+		if field != null:
+			return _spot_at(field)
+		at = "hut"
 	if at == "hall":
 		return hall.get_approach_point(hall.get_center() + Vector2.from_angle(_rng.randf() * TAU) * 1000.0) + jitter
 	if at != "hut":

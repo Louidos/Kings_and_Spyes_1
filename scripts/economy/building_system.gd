@@ -93,10 +93,12 @@ func _place_reason(def: Dictionary, cell: Vector2i, kingdom: Kingdom, check_cost
 	return kingdom.missing_text(def.get("cost", {})) if check_cost else ""
 
 
-## Setzt ein Gebäude (als Baustelle, ausser instant). Zieht die Kosten ab.
+## Setzt ein Gebäude (als Baustelle, ausser instant). Zieht die Kosten ab (nicht bei free).
 ## Gibt null zurück, wenn es nicht bezahlt werden kann. Ersetzt Mauerstücke (Tor).
-func place_building(def: Dictionary, cell: Vector2i, kingdom: Kingdom, instant: bool = false) -> Building:
-	if not instant and not kingdom.spend(def.get("cost", {})):
+## build_time >= 0: eigene Bauarbeit dieses Gebäudes (extra.build_time; Baustellen der Dörfer).
+func place_building(def: Dictionary, cell: Vector2i, kingdom: Kingdom, instant: bool = false, free: bool = false,
+		build_time: float = -1.0) -> Building:
+	if not instant and not free and not kingdom.spend(def.get("cost", {})):
 		return null
 	var replaces: Array = def.get("replaces", [])
 	if not replaces.is_empty():
@@ -107,6 +109,8 @@ func place_building(def: Dictionary, cell: Vector2i, kingdom: Kingdom, instant: 
 				if old != null and is_instance_valid(old) and old.kingdom == kingdom and replaces.has(str(old.def.get("id", ""))):
 					remove_building(old, float(DataDB.siege("segments.replace_refund", 0.5)))
 	var b := Building.new()
+	if build_time >= 0.0:
+		b.extra["build_time"] = build_time
 	b.setup(def, kingdom, cell, world, game.next_uid())
 	var fp := b.get_footprint()
 	# Geländefaktor vor dem Roden bestimmen (Wald zählt als Wald)
@@ -124,7 +128,7 @@ func place_building(def: Dictionary, cell: Vector2i, kingdom: Kingdom, instant: 
 	b.finished.connect(_on_building_finished)
 	b.upgraded.connect(_on_building_upgraded)
 	building_placed.emit(b)
-	if instant or float(def.get("build_time", 0.0)) <= 0.0:
+	if instant or float(b.extra.get("build_time", def.get("build_time", 0.0))) <= 0.0:
 		b.complete()
 	return b
 

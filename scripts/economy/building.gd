@@ -174,8 +174,9 @@ func _edge_point(from_pos: Vector2) -> Vector2:
 	return p
 
 
+## Nötige Bauarbeit (buildings.json build_time; eigene Bauzeit in extra.build_time, z. B. Dorf-Baustellen)
 func get_build_time() -> float:
-	return maxf(float(def.get("build_time", 1.0)), 0.01)
+	return maxf(float(extra.get("build_time", def.get("build_time", 1.0))), 0.01)
 
 
 func get_progress_ratio() -> float:
@@ -355,7 +356,8 @@ func _draw() -> void:
 	if fort_kind == "wall" or fort_kind == "gate":
 		_draw_segment(rect, tint)
 	else:
-		SpriteDraw.draw_entity(self, _texture, rect, _color, DataDB.get_building_label(def, kingdom.faction_id), "rect", tint)
+		SpriteDraw.draw_entity(self, _texture, rect, _color, DataDB.get_building_label(def, kingdom.faction_id),
+				str(def.get("shape", "rect")), tint)
 	if fort_kind == "tower" and selected:
 		var range_px := get_tower_range() * _tile_size
 		draw_arc(Vector2.ZERO, range_px, 0.0, TAU, 64, Color(0, 0, 0, 0.5), 4.0, true)

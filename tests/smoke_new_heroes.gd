@@ -112,8 +112,10 @@ func _test_ability(r: Node, u: Unit, rec: Dictionary, aid: String) -> void:
 		var parts: PackedStringArray = []
 		var bonuses: Dictionary = v.get("kingdom_bonus", {})
 		for key in bonuses:
-			ok = ok and k.bonus(str(key)) >= float(bonuses[key]) - 0.001
-			parts.append("%s %+.2f" % [key, k.bonus(str(key))])
+			# Ohne den Tag/Nacht-Zuschlag (nachts −0,3 Wachsamkeit), sonst hängt die Prüfung von der Uhrzeit ab
+			var value := k.bonus(str(key)) - float((k.bonus_sources.get("daynight", {}) as Dictionary).get(str(key), 0.0))
+			ok = ok and value >= float(bonuses[key]) - 0.001
+			parts.append("%s %+.2f" % [key, value])
 		var factors: Dictionary = v.get("kingdom_mods", {})
 		for key in factors:
 			ok = ok and k.mod(str(key)) >= float(factors[key]) - 0.001
