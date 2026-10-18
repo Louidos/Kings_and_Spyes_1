@@ -412,6 +412,17 @@ Fenster zeichnet das Spiel selbst.
 | `temple_good.png` | weisser Tempel mit Sonnenkuppel (3×3 – Grafik 128 × 128, gestreckt wie die Heldenhalle) |
 | `temple_evil.png` | Schattenschrein aus schwarzem Stein, violette Flammen |
 
+**Neue Gebäude nach 1.2.1** (`assets/sprites/buildings/`, 128 × 128, transparent – Brunnen 64 × 64 für 1 × 1):
+
+| Datei | Motiv | Platzhalter ohne Datei |
+|---|---|---|
+| `well_good.png` | runder Steinbrunnen mit Holzdach und Eimer | Steinring mit Wasser, Pfosten, Dachbalken (`shape: well`) |
+| `well_evil.png` | dunkle Zisterne mit Eisengitter | wie oben |
+| `granary_good.png` | Kornspeicher auf Stelzen mit Getreidesäcken | Rechteck in Kornfarbe mit „Korn“ |
+| `granary_evil.png` | Vorratsgrube mit Erdhügel und Holzluke | Rechteck mit „Vorrat“ |
+| `market_good.png` | Marktplatz mit bunten Ständen und Waage (3 × 3) | Rechteck mit „Markt“ |
+| `market_evil.png` | finsterer Basar mit Zeltdächern und Laternen (3 × 3) | Rechteck mit „Basar“ |
+
 **Einheiten** (`assets/sprites/units/`, 64 × 64):
 
 | Datei | Motiv |

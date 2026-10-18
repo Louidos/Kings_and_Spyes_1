@@ -22,9 +22,11 @@ signal unit_transferred(unit: Unit, from_kingdom: Kingdom, to_kingdom: Kingdom)
 ## Höchstens so viele Wegberechnungen bzw. so viel Zeit (µs) pro Frame
 const MAX_PATHS_PER_FRAME := 8
 const PATH_BUDGET_USEC := 2000
-## Wege mit niedriger Vorrang (Dorfbewohner): höchstens so viele pro Frame und nur, wenn die
-## normale Warteschlange leer ist
+## Wege mit niedriger Vorrang (Dorfbewohner): höchstens so viele pro Frame, sonst nur, wenn die
+## normale Warteschlange leer ist – jedes BACKGROUND_RESERVE_FRAMES. Frame gehört der erste Platz
+## aber einem Hintergrund-Weg, damit die Dorfbewohner bei viel Betrieb nicht ewig warten
 const MAX_BACKGROUND_PATHS_PER_FRAME := 2
+const BACKGROUND_RESERVE_FRAMES := 3
 ## Lange Wege werden in Abschnitten dieser Länge (Kacheln) berechnet, damit
 ## keine einzelne Berechnung das Spiel ruckeln lässt.
 const LEG_TILES := 48.0
@@ -37,8 +39,10 @@ var world: WorldData
 var units: Array = []
 
 var _path_queue: Array = []
-## Wege mit niedriger Vorrang (move_to_background); Einheiten darin haben path_background
+## Wege mit niedriger Vorrang (move_to_background); genau die Einheiten darin haben path_background
 var _background_queue: Array = []
+## Zählt die Frames der Wegberechnung (reservierter Hintergrund-Platz)
+var _path_frames := 0
 
 
 func setup(p_game: Node) -> void:
@@ -202,11 +206,11 @@ func _request(u: Unit, target: Vector2, keep_path: bool) -> void:
 		u.path_index = 0
 		u.moving = false
 	u.path_target = target
-	if u.path_pending and u.path_background:
+	if u.path_background:
 		# Wartet noch in der Hintergrund-Schlange: jetzt mit normalem Vorrang
 		_background_queue.erase(u)
+		u.path_background = false
 		u.path_pending = false
-	u.path_background = false
 	if not u.path_pending:
 		u.path_pending = true
 		_path_queue.append(u)
@@ -227,8 +231,9 @@ func move_to_background(u: Unit, target: Vector2, direct_tiles: float = 12.0) ->
 	u.moving = false
 	u.has_path_final = false
 	u.path_target = target
-	if not u.path_pending:
-		u.path_pending = true
+	u.path_pending = true
+	# Höchstens einmal in der Schlange (ein angehaltener Weg kann noch drinstehen)
+	if not u.path_background:
 		u.path_background = true
 		_background_queue.append(u)
 
@@ -439,21 +444,25 @@ func _process_path_queue() -> void:
 	var start := Time.get_ticks_usec()
 	var done := 0
 	var background := 0
+	_path_frames += 1
+	var reserve := _path_frames % BACKGROUND_RESERVE_FRAMES == 0
 	while done < MAX_PATHS_PER_FRAME:
 		if Time.get_ticks_usec() - start > PATH_BUDGET_USEC:
 			break
 		var u  # untypisiert: kann bereits gelöscht sein
-		if not _path_queue.is_empty():
+		var reserved := reserve and background == 0 and done == 0
+		if not _path_queue.is_empty() and not (reserved and not _background_queue.is_empty()):
 			u = _path_queue.pop_front()
 		elif not _background_queue.is_empty() and background < MAX_BACKGROUND_PATHS_PER_FRAME:
 			u = _background_queue.pop_front()
 			background += 1
+			if is_instance_valid(u):
+				u.path_background = false
 		else:
 			break
 		if not is_instance_valid(u) or not u.path_pending:
 			continue
 		u.path_pending = false
-		u.path_background = false
 		done += 1
 		var nav: NavGrid = game.nav
 		var p: PackedVector2Array = nav.find_path(world, u.position, u.path_target, u.kingdom.id)
@@ -500,6 +509,10 @@ func rebuild_runtime() -> void:
 	_path_queue = keep
 	var keep_bg: Array = []
 	for u in _background_queue:
-		if is_instance_valid(u) and u.path_pending and u.path_background and not keep_bg.has(u):
+		if not is_instance_valid(u):
+			continue
+		if u.path_pending and u.path_background and not keep_bg.has(u):
 			keep_bg.append(u)
+		else:
+			u.path_background = false
 	_background_queue = keep_bg

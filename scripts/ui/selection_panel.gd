@@ -668,6 +668,8 @@ func _building_facts(b: Building) -> String:
 					n += 1
 			line += " (Abdeckung %d %%)" % roundi(minf(1.0, float(sat.get("capacity", 0)) / maxf(float(n), 1.0)) * 100.0)
 		facts.append(line)
+	for line in BuildMenu.effect_lines(def):
+		facts.append(line if b.constructed or line.begins_with("(") else line + " (wenn fertig)")
 	var aura: Dictionary = def.get("heal_aura", {})
 	if b.constructed and not aura.is_empty():
 		facts.append("Heilt eigene Einheiten im Umkreis von %d Feldern (%s Leben/s)" % [

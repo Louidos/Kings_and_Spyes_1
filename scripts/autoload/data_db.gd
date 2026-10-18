@@ -556,6 +556,8 @@ func describe_effect_source(source: String) -> String:
 			return "Fest"
 		"espionage":
 			return "Spionage"
+		"building":
+			return get_building_name(get_building(parts[1]), "")
 	return parts[1]
 
 
@@ -613,6 +615,8 @@ func describe_bonus(key: String, add: float) -> String:
 			return "−%d %% Überlaufen und Verrat" % roundi(add * 100.0)
 		"tower_range":
 			return "%s Felder Turmreichweite" % ("%+.1f" % add).replace(".", ",")
+		"trade_bonus":
+			return "Handelsmarge −%d Prozentpunkte (bessere Kurse)" % roundi(add * 100.0)
 	if key.begins_with("cap."):
 		return "%+d Lager (%s)" % [roundi(add), str(get_resource(key.substr(4)).get("name", key.substr(4)))]
 	return "%+g %s" % [add, key]

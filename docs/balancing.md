@@ -12,7 +12,8 @@ nachjustieren lässt.
 5. [Anpassungen in Phase 10](#anpassungen-in-phase-10)
 6. [Entdeckung langsamer (nach 1.1.0)](#entdeckung-langsamer-nach-110)
 7. [Längere Partien (nach 1.1.0)](#längere-partien-nach-110)
-8. [Selbst nachjustieren](#selbst-nachjustieren)
+8. [Brunnen, Kornspeicher und Markt (nach 1.2.1)](#brunnen-kornspeicher-und-markt-nach-121)
+9. [Selbst nachjustieren](#selbst-nachjustieren)
 
 ## So wurde gemessen
 
@@ -124,6 +125,27 @@ Die erste Welle kommt 50 % später, und eine Partie gegen einen untätigen Spiel
 gewinnt also nicht schneller als vorher. Ein stilles Reich, das die KI noch nicht kennt, wird zusätzlich erst nach
 etwa 105–115 Minuten entdeckt (siehe oben), statt wie in 1.1.0 nach etwa 70 Minuten mit der ersten Welle.
 
+## Brunnen, Kornspeicher und Markt (nach 1.2.1)
+
+Drei neue Gebäude für Spieler und KI (`buildings.json`), Werte an ähnlichen Gebäuden ausgerichtet:
+
+| Gebäude | Kosten · Bauzeit · Leben | Voraussetzung | Wirkung | Vergleich |
+|---|---|---|---|---|
+| **Brunnen** (BÖSE: Zisterne), 1×1 | 15 Holz, 35 Stein · 20 s · 250 | – | +5 Zufriedenheit für alle Bewohner im Umkreis von 8 Feldern (`satisfaction_aura`, mehrere zählen nicht doppelt) | Taverne: +10 für 20 Bewohner, 60 Holz/20 Stein/30 Nahrung, Burgstufe 2. Der Brunnen ist billig und früh, wirkt aber nur halb so stark und nur nahe dem Brunnen – mehrere Brunnen lohnen erst für weit verteilte Siedlungen |
+| **Kornspeicher** (Vorratsgrube), 2×2 | 45 Holz, 15 Stein · 30 s · 350 | – | Annahmestelle nur für Nahrung (Sammelradius 12, +15 % Sammeltempo); das Reich verbraucht 10 % weniger Nahrung (`kingdom_mods.food_use`, einmal je Reich) | Lager (40 Holz/10 Stein, alle Waren, ohne Bonus) und Jägerhütte (25 Holz, nur Nahrung, +25 %). Der Kornspeicher kostet etwas mehr als das Lager, sammelt langsamer als die Jägerhütte, spart dafür dauerhaft Nahrung |
+| **Markt** (Basar), 3×3 | 80 Holz, 50 Stein, 20 Nahrung · 45 s · 450 | Burgstufe 2 | Handelsmarge −10 Prozentpunkte bei allen Dörfern (`kingdom_bonus.trade_bonus`, einmal je Reich): bessere Kurse beim Tausch und bei der Bezahlung der Handelslieferungen | Handelsvertrag: −15 Punkte (`treaties.trade.rate_bonus`), Ruf 100: −15 Punkte. Der Markt ist etwas schwächer als ein Vertrag, gilt dafür bei allen Dörfern; die Marge bleibt durch `trade.min_margin` (5 %) begrenzt |
+
+**Ersatz-Wirkung:** Nahrung hat im Spiel keine Lagergrenze (nur Mana, `resources.json` → `cap`). „Mehr Lagerplatz
+für Nahrung“ hätte deshalb keine Wirkung; der Kornspeicher senkt stattdessen den Nahrungsverbrauch (gut gelagerte
+Vorräte verderben weniger) – im Spiel messbar an „Nahrungsverbrauch“ im Reichsfenster und im Einkommen.
+Für die Zufriedenheit im Umkreis gab es keinen Haken; der Brunnen nutzt die persönlichen Ursachen des
+Zufriedenheitssystems („Brunnen in der Nähe“ beim Bewohner), der Markt den vorhandenen Abzug in
+`DiplomacySystem.trade_margin` (wie Vertrag und Volk).
+
+**KI:** `ai.json` → `build_order` baut einen Brunnen nach dem 4. Wohnhaus, den Kornspeicher nach dem 3. Bauernhof,
+den Markt nach der Heldenhalle und einen zweiten Brunnen nach dem 6. Wohnhaus – also nachdem die Grundwirtschaft und
+die erste Kaserne stehen, damit sich der Burgausbau nicht verzögert.
+
 ## Selbst nachjustieren
 
 Nur Daten, kein Code (Details in [Daten anpassen](daten-anpassen.md)):
@@ -144,6 +166,7 @@ Nur Daten, kein Code (Details in [Daten anpassen](daten-anpassen.md)):
 | Monster-Streifzüge, Wachstum der Lager | `combat.json` (`raids`, `lair_growth`) |
 | Zufriedenheit, Überläufer | `satisfaction.json` |
 | Wirtschaft (Ertrag, Verbrauch) | `economy.json`, `buildings.json` |
+| Brunnen, Kornspeicher, Markt | `buildings.json` → `well.satisfaction_aura`, `granary.kingdom_mods`, `market.kingdom_bonus`; KI: `ai.json` → `build_order` |
 
 Nach einer Änderung die Läufe wiederholen: `GODOT=/pfad/zu/godot tests/run_balance.sh` (Ausgabe in
 `build/balance/`; die vier Läufe laufen im Zeitraffer parallel und brauchen trotzdem eine Weile).

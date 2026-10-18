@@ -760,12 +760,13 @@ func get_prices(village: Kingdom, trader: Kingdom) -> Dictionary:
 	return result
 
 
-## Handelsspanne des Dorfs gegenüber trader (Ruf, Handelsvertrag, Volk)
+## Handelsspanne des Dorfs gegenüber trader (Ruf, Handelsvertrag, Volk, Markt: Reichsbonus trade_bonus)
 func trade_margin(village: Kingdom, trader: Kingdom) -> float:
 	var people := village_system.get_people(village)
 	var treaty_bonus := float(DataDB.diplo("treaties.trade.rate_bonus", 0.15)) if get_treaty_with(village, trader) == "trade" else 0.0
 	var margin := float(DataDB.diplo("trade.base_margin", 0.3)) - get_reputation(village, trader) / 100.0 \
-			* float(DataDB.diplo("trade.rep_bonus_per_100", 0.15)) - treaty_bonus - float(people.get("trade_bonus", 0.0))
+			* float(DataDB.diplo("trade.rep_bonus_per_100", 0.15)) - treaty_bonus - float(people.get("trade_bonus", 0.0)) \
+			- (trader.bonus("trade_bonus") if trader != null else 0.0)
 	return clampf(margin, float(DataDB.diplo("trade.min_margin", 0.05)), float(DataDB.diplo("trade.max_margin", 0.6)))
 
 
