@@ -5,6 +5,10 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 ## Unveröffentlicht
 
+## 1.3.0 – 2026-10-18
+
+Neue Inhalte; Spielstände aus 1.2.x laden weiter.
+
 ### Hinzugefügt
 
 - In neutralen Dörfern leben jetzt Bewohner: Sie gehen zur Arbeit, tragen Waren heim und fliehen bei einem Angriff ins
