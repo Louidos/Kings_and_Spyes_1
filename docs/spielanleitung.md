@@ -90,7 +90,7 @@ lässt es sich fortsetzen oder neu beginnen.
 
 Alle Fenster in der Mitte sehen gleich aus: Titel und Wappen links, Reiter und „×“ rechts, unten eine Zeile mit
 Hinweisen und der Taste zum Schliessen. Es ist immer nur ein Fenster offen; Esc schliesst es. Die Grösse der
-Oberfläche lässt sich unter Esc → Einstellungen von 75 bis 150 % einstellen.
+Oberfläche lässt sich unter Esc → Einstellungen → Oberfläche von 75 bis 150 % einstellen (weitere Einstellungen: [Steuerung](steuerung.md#einstellungen)).
 
 ## 4. Fraktionen und Völker
 

@@ -1797,7 +1797,7 @@ func _on_war_pressed() -> void:
 	if game.are_hostile(k, v):
 		if not ds.make_peace(k, v):
 			Notify.warning(ds.can_make_peace(k, v))
-	elif _is_confirm("war", v):
+	elif _is_confirm("war", v) or not Settings.confirm_war:
 		_confirm_action = ""
 		ds.declare_war(k, v)
 	else:

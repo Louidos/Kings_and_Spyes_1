@@ -16,6 +16,7 @@ const MODULES := {
 	"Handel": preload("res://tests/smoke_trade.gd"),
 	"Bündnis": preload("res://tests/smoke_alliance.gd"),
 	"Entdeckung": preload("res://tests/smoke_discovery.gd"),
+	"Einstellungen": preload("res://tests/smoke_settings.gd"),
 	"Welt": preload("res://tests/smoke_world_compat.gd"),
 }
 

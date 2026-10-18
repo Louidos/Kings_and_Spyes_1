@@ -94,7 +94,7 @@ tests/                   Skriptprüfung, Rauchtests, Balancing-Läufe, Bildschir
 | Autoload | Aufgabe |
 |---|---|
 | `DataDB` | lädt alle JSON-Dateien aus `data/` (in fester Reihenfolge, `reload()`), ergänzt Standardwerte, prüft Verweise (z. B. Völker → Milizen), Hilfsfunktionen (`get_unit_for_tier`, `describe_requirement`, `cost_to_text`) und einen Fingerabdruck der Daten für Spielstände |
-| `Settings` | Einstellungen (`user://settings.cfg`): Lautstärken, Kamera, Vollbild, UI-Grösse, Abdunklung, Autospeichern, Kompression |
+| `Settings` | Einstellungen (`user://settings.cfg`): Grafik, Ton, Steuerung, Oberfläche, Spiel (siehe [Oberfläche](#oberfläche)) |
 | `GameSession` | Parameter der Partie: Fraktion, Volk, Schwierigkeit, Karte, Seed, Tutorial, vorgemerkter Spielstand |
 | `GameClock` | einzige Zeitquelle der Spielwelt: Pause, Tempo, Tag und Uhrzeit, `frame_delta`, Signal `sim_tick` (10 Schritte pro Spielsekunde) |
 | `Assets` | lädt Texturen über ihren Pfad mit Zwischenspeicher (auch Fehltreffer); erzeugt Platzhalter-Figuren und Abzeichen |
@@ -399,8 +399,14 @@ Jedes Dorf ist ein eigenes `Kingdom` (`controller = "neutral"`, Feld `people_id`
 - Fenster: `ResearchPanel` (R), `HeroPanel` (G), `TroopPanel` (T), `DiplomacyPanel` (N), `EspionagePanel` (K),
   `KingdomPanel` (L), `MessageLogPanel` (M), `HelpPanel` (F1), `PauseMenu`, `SaveLoadPanel`, `SettingsForm`,
   `GameOverScreen`, `RefugeeDialog`, `TutorialOverlay`.
-- **Einstellungen** (`Settings`, `SettingsForm` im Haupt- und Spielmenü): Lautstärken (Busse Master, Music, SFX, UI),
-  Kamera, Vollbild, Grösse der Oberfläche, Tag-Nacht-Abdunklung, automatisch speichern, Kompression.
+- **Einstellungen** (`Settings`, `SettingsForm` im Haupt- und Spielmenü, Reiter Grafik · Ton · Steuerung ·
+  Oberfläche · Spiel): Vollbild, VSync, Bildrate (`Engine.max_fps`), Abdunklung; Lautstärken (Busse Master, Music,
+  SFX, UI); Rand-Scrollen, Kamera-, Rand- und Zoomtempo (`RTSCamera`); UI-Grösse, Lebensbalken
+  (`Settings.shows_hp_bar` für `UnitOverlay` und `Building`), Meldungsdauer (`NotificationPanel.lifetime`),
+  Minikarten-Grösse (`HUD._apply_minimap_scale`); automatisch speichern, Kompression, Starttempo
+  (`GameClock.start_new_game`), Rückfrage vor Kriegserklärung (`SelectionController`, `DiplomacyPanel`),
+  Tooltip-Verzögerung (nur beim Start gelesen: `user://project_override.cfg` über
+  `application/config/project_settings_override`). Fehlende Schlüssel älterer Dateien behalten ihren Standardwert.
 
 ## Speichern und Laden
 

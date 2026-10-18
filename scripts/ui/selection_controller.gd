@@ -585,7 +585,7 @@ func _issue_order(units: Array, world: Vector2, attack_move: bool) -> void:
 		if peaceful != null:
 			var v: Kingdom = peaceful.get("kingdom")
 			var now := Time.get_ticks_msec()
-			if v.id == _war_confirm_id and now - _war_confirm_msec <= WAR_CONFIRM_MSEC:
+			if not Settings.confirm_war or (v.id == _war_confirm_id and now - _war_confirm_msec <= WAR_CONFIRM_MSEC):
 				_war_confirm_id = 0
 				game.diplomacy_system.declare_war(game.player, v)
 				target = peaceful

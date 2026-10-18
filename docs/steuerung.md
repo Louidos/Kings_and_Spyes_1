@@ -15,9 +15,10 @@ Reiter „Steuerung“) und in den Tooltips der Knöpfe.
 6. [Helden und Magie](#helden-und-magie)
 7. [Reich, Diplomatie und Spionage](#reich-diplomatie-und-spionage)
 8. [Meldungen, Speichern und Menü](#meldungen-speichern-und-menü)
-9. [Tutorial](#tutorial)
-10. [Testhilfen (Debug)](#testhilfen-debug)
-11. [Tasten ändern](#tasten-ändern)
+9. [Einstellungen](#einstellungen)
+10. [Tutorial](#tutorial)
+11. [Testhilfen (Debug)](#testhilfen-debug)
+12. [Tasten ändern](#tasten-ändern)
 
 ## Die wichtigsten Tasten
 
@@ -125,12 +126,25 @@ der Mitte offen – öffnet man ein anderes, schliesst sich das erste.
 | Schnellspeichern / Schnellladen | **F5** / **F8** (die vorige Schnellspeicherung bleibt als Sicherung) |
 | Spielmenü | **Esc**, wenn kein Fenster offen ist und nichts gebaut oder ausgewählt wird: Fortsetzen, Speichern, Laden, Einstellungen, Hilfe, Tutorial, Hauptmenü, Beenden |
 | Hilfe | **F1** (auch im Spielmenü): Reiter „Steuerung“, „Spielablauf“, „Schwierigkeit“ |
-| Grösse der Oberfläche | Esc → Einstellungen → „Grösse der Oberfläche“ (75–150 %, wirkt sofort) |
+| Grösse der Oberfläche | Esc → Einstellungen → Reiter „Oberfläche“ → „Grösse der Oberfläche“ (75–150 %, wirkt sofort) |
 
 **Esc der Reihe nach:** zuerst schliesst Esc ein offenes Fenster, dann bricht es einen Zielmodus oder das Bauen ab,
 dann hebt es die Auswahl auf – erst danach öffnet es das Spielmenü.
 
 **F5 im Editor:** Im Godot-Editor startet F5 das Projekt; im laufenden Spiel ist F5 *Schnellspeichern*.
+
+## Einstellungen
+
+Hauptmenü → „Einstellungen“ oder Esc → „Einstellungen“. Alle Werte wirken sofort und stehen nach „Speichern und
+zurück“ in `user://settings.cfg` (auch nach einem Neustart); „Standard“ setzt alle Reiter zurück.
+
+| Reiter | Einstellungen |
+|---|---|
+| **Grafik** | Vollbild, VSync, Bildrate-Grenze (30 / 60 / 120 / unbegrenzt), Tag-Nacht-Abdunklung |
+| **Ton** | Lautstärke Gesamt, Musik, Effekte, Oberfläche |
+| **Steuerung** | Kamera am Bildschirmrand an/aus, Kamera-Tempo der Tasten, Tempo am Bildschirmrand (getrennt), Zoom-Tempo (Mausrad, Q/E) |
+| **Oberfläche** | Grösse der Oberfläche (75–150 %), Lebensbalken (immer / nur verletzt oder ausgewählt / nur ausgewählt), wie lange Meldungen sichtbar bleiben (4–20 s), Grösse der Minikarte (75–150 %) |
+| **Spiel** | Automatisch speichern, Spielstände komprimieren, Tempo zu Beginn einer Partie, Rückfrage vor einer Kriegserklärung (aus: der erste Rechtsklick auf ein friedliches Dorf bzw. „Krieg erklären“ gilt sofort), Tooltip-Verzögerung (gilt ab dem nächsten Start – Godot liest sie nur beim Programmstart; sie steht in `user://project_override.cfg`) |
 
 ## Tutorial
 

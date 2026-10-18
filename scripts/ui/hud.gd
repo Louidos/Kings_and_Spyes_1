@@ -55,6 +55,9 @@ const TOP_BAR_SEPARATION := 4
 ## Höhe der oberen Leiste (wie in hud.tscn)
 const TOP_BAR_HEIGHT := 48.0
 ## Steuerungshinweis über dem Baumenü (blendet nach 25 s aus; alles Weitere in der Hilfe)
+## Seitenlänge der Minikarte bei Grösse 100 % und Rand des Rahmens (hud.tscn: 244 + 28)
+const MINIMAP_SIZE := 244.0
+const MINIMAP_FRAME := 28.0
 const HINT_TEXT := "Linksklick: auswählen  ·  Rechtsklick: bewegen / angreifen  ·  Leertaste: Pause  ·  Esc: Menü  ·  F1: Hilfe"
 
 @onready var kingdom_label: Label = %KingdomLabel
@@ -130,6 +133,8 @@ var _speed_buttons: Array[Button] = []
 var _blink_time := 0.0
 var _hovered_cell := Vector2i(-1, -1)
 var _info_timer := 0.0
+## Lebensbalken-Einstellung, mit der die Gebäude zuletzt gezeichnet wurden
+var _hp_bars_mode := ""
 
 
 func _ready() -> void:
@@ -371,8 +376,27 @@ func _setup_phase10() -> void:
 func _on_settings_changed() -> void:
 	if is_inside_tree():
 		UiStyle.apply_ui_scale(get_tree())
+		_apply_minimap_scale()
 		_fit_top_bar()
 		_layout_bottom.call_deferred()
+		# Lebensbalken der Gebäude (Einstellung Oberfläche → Lebensbalken)
+		if game != null and _hp_bars_mode != Settings.hp_bars:
+			_hp_bars_mode = Settings.hp_bars
+			for k in game.kingdoms:
+				for b in k.buildings:
+					if is_instance_valid(b):
+						(b as Building).queue_redraw()
+
+
+## Grösse der Minikarte (Einstellungen → Oberfläche): Karte und Rahmen rechts unten
+func _apply_minimap_scale() -> void:
+	var side := roundf(MINIMAP_SIZE * Settings.minimap_scale)
+	if is_equal_approx(minimap.custom_minimum_size.x, side):
+		return
+	minimap.custom_minimum_size = Vector2(side, side)
+	var mm := $Root/MinimapPanel as Control
+	mm.offset_left = -(side + MINIMAP_FRAME + 12.0)
+	mm.offset_top = -(side + MINIMAP_FRAME + 12.0)
 
 
 ## Obere Leiste in drei Gruppen: Reich und Ressourcen | Fenster-Knöpfe (Mitte) |

@@ -86,6 +86,9 @@ Prüfpunkt. Geprüft werden unter anderem:
 - **Gebäude** (`smoke_new_buildings.gd`, in `smoke_features.tscn`): Brunnen, Kornspeicher und Markt im Baumenü mit
   Wirkung im Tooltip und Auswahlfenster; Zufriedenheit nahe am Brunnen, Kornspeicher nur für Nahrung und −10 %
   Verbrauch (einmal), Markt senkt die Handelsmarge; Abriss, Speichern/Laden, KI-Bauliste.
+- **Einstellungen** (`smoke_settings.gd`, in `smoke_features.tscn`, eigene Datei): fünf Reiter, neue Werte wirken
+  sofort, Speichern/Laden, alte `settings.cfg` ohne neue Schlüssel, „Standard“, Fenster passt bei UI-Grösse 80–150 %,
+  Krieg ohne Rückfrage.
 - **Spione** (`smoke_spies.gd`, eigene Szene `smoke_spies.tscn`): zu Spielbeginn hat kein Reich Spione; ein im
   Spionagefenster beschworener Spion existiert genau einmal (Einheit, Datensatz, Liste, Fenster), auch mit Auftrag
   und nach Speichern und Laden. Spionagebericht: ohne Kundschaft „unbekannt“, ein Spion der höchsten Stufe liefert

@@ -66,7 +66,8 @@ func start_new_game() -> void:
 	tick_count = 0
 	_tick_accumulator = 0.0
 	_last_total_hours = _total_hours()
-	speed_index = clampi(int(DataDB.cfg("time.default_speed_index", 1)), 0, speed_steps.size() - 1)
+	# Starttempo aus den Einstellungen (Reiter Spiel), sonst game_config.json
+	speed_index = Settings.get_start_speed_index(int(DataDB.cfg("time.default_speed_index", 1)), speed_steps.size())
 	paused = false
 	running = true
 	speed_changed.emit(paused, get_speed())
