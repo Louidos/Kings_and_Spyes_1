@@ -44,7 +44,8 @@ BIOME_NAMES = {b["id"]: b["name"] for b in load("biomes")["biomes"]}
 CLASS_NAMES = {k: v["name"] for k, v in TROOPS["classes"].items()}
 UNIT_BY_ID = {u["id"]: u for u in UNITS}
 BUILDING_BY_ID = {b["id"]: b for b in BUILDINGS}
-MENU_NAMES = {"economy": "Dorf", "military": "Militär & Wissen", "defense": "Verteidigung"}
+MENU_NAMES = {"economy": "Wirtschaft", "housing": "Wohnen & Versorgung", "military": "Militär", "defense": "Verteidigung",
+              "magic": "Magie & Forschung"}
 TIER_ORDER = ["scout", "fighter", "spearman", "archer", "crossbow", "heavy", "elite", "cavalry", "battlemage",
               "medic", "spy", "ram", "catapult"]
 
@@ -208,7 +209,7 @@ def sec_gebaeude():
         if b.get("max_per_kingdom"):
             extra.append("höchstens %d" % b["max_per_kingdom"])
         size = "%d×%d" % tuple(b["size"])
-        rows.append(["**%s**" % name, MENU_NAMES.get(b.get("menu", "economy"), "Dorf"), cost(b.get("cost", {})),
+        rows.append(["**%s**" % name, MENU_NAMES.get(b.get("category", b.get("menu", "economy")), "Wirtschaft"), cost(b.get("cost", {})),
                      num(b.get("build_time", 0)) + " s", size, num(b.get("hp", 300)), ", ".join(req) or "–",
                      b.get("description", "") + (" *(%s)*" % ", ".join(extra) if extra else "")])
     return table(["Gebäude (GUT / BÖSE)", "Baumenü", "Kosten", "Bauzeit", "Grösse", "Leben", "Voraussetzung",

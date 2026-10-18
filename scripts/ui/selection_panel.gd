@@ -79,7 +79,6 @@ var _stat_values: Array[Label] = []
 var _status: Label
 var _warn: Label
 var _facts: Label
-var _bonus: Label
 var _note: Label
 ## Zauberwirkungen, Tarnung, Restzeit beschworener Einheiten (eine Zeile je Eintrag)
 var _magic_box: VBoxContainer
@@ -165,6 +164,13 @@ var _multi_counts := ""
 var _multi_workers := 0
 var _multi_with_job := 0
 var _multi_army := 0
+## Einklappbare Abschnitte: Schlüssel → {"header": Button, "body": VBoxContainer, "content": Control}
+var _sections: Dictionary = {}
+## Zugeklappte Abschnitte (Schlüssel → true); bleibt während der Partie für alle Auswahlen gemerkt
+var _collapsed: Dictionary = {}
+## Kampfbonus und Gelände der gewählten Einheit (steht im Tooltip der Werte statt als eigene Zeile)
+var _bonus_text := ""
+var _stats_tip := ""
 
 
 func _ready() -> void:
@@ -180,7 +186,7 @@ func _ready() -> void:
 	_hp_bar = HpBar.new()
 	_hp_bar.custom_minimum_size = Vector2(0, 20)
 	vbox.add_child(_hp_bar)
-	_build_stats_grid(vbox)
+	_build_stats_grid(_add_section(vbox, "stats"))
 	_status = _make_label(vbox, FONT_SIZE, COLOR_DIM)
 	_warn = _make_label(vbox, FONT_SIZE, COLOR_WARN)
 	_facts = _make_label(vbox, FONT_SIZE, COLOR_TEXT)
@@ -189,7 +195,6 @@ func _ready() -> void:
 	_research_bar.fill_color = COLOR_RESEARCH
 	_research_bar.visible = false
 	vbox.add_child(_research_bar)
-	_bonus = _make_label(vbox, SMALL_FONT_SIZE, COLOR_GREY)
 	_build_mood_row(vbox)
 	_magic_box = VBoxContainer.new()
 	_magic_box.add_theme_constant_override("separation", 0)
@@ -244,7 +249,7 @@ func _ready() -> void:
 	vbox.add_child(_hero_box)
 
 	_troop_box = TroopSelectionBox.new()
-	vbox.add_child(_troop_box)
+	_add_section(vbox, "troop").add_child(_troop_box)
 
 	_village_row = HBoxContainer.new()
 	_village_row.add_theme_constant_override("separation", 6)
@@ -286,8 +291,10 @@ func _ready() -> void:
 	_gate_button.pressed.connect(_on_gate_pressed)
 	_gate_row.add_child(_gate_button)
 
-	_build_stance_row(vbox)
-	_build_actions(vbox)
+	_build_stance_row(_add_section(vbox, "stance"))
+	_build_actions(_add_section(vbox, "actions"))
+	for key in _sections:
+		_sections[key]["content"] = (_sections[key]["body"] as Control).get_child(0)
 
 	_research_button = Button.new()
 	_research_button.text = "Forschung öffnen (R)"
@@ -453,6 +460,9 @@ func _refresh() -> void:
 		_show_village_row(null)
 	if _mode != "unit" and _spy_row.visible:
 		_spy_row.visible = false
+	if Settings.compact_hud and _note.visible:
+		_note.visible = false
+	_sync_sections()
 
 
 # ---------------------------------------------------------------------------
@@ -473,7 +483,7 @@ func _show_building(b: Building) -> void:
 	_set_text(_title, title)
 	_show_owner(b.kingdom)
 	_stats_grid.visible = false
-	_set_text(_bonus, "")
+	_set_bonus("")
 	_set_text(_note, "")
 	_job_row.visible = false
 	_actions.visible = false
@@ -1103,11 +1113,11 @@ func _show_unit(u: Unit) -> void:
 		# Das Warnzeichen fehlt in manchen Schriften – "(!)" ist überall lesbar.
 		# Befehlstexte beginnen klein ("hält die Stellung"), als Zeile gross.
 		_set_text(_status, _capitalize(u.get_status_text().replace("⚠", "(!)")))
-		_set_text(_bonus, _join_bonus(game.combat_system.get_bonus_text(u), _terrain_text(u)))
+		_set_bonus(_join_bonus(game.combat_system.get_bonus_text(u), _terrain_text(u)))
 		_set_text(_note, KING_NOTE if u.role == "king" else "")
 	else:
 		_set_text(_status, "")
-		_set_text(_bonus, _terrain_text(u))
+		_set_bonus(_terrain_text(u))
 		_set_text(_note, "")
 	_show_unit_phase8(u, own)
 	if intel >= 3:
@@ -1188,7 +1198,7 @@ func _show_units(units: Array) -> void:
 				unsupplied += 1
 				break
 	_set_text(_facts, _multi_counts if unsupplied == 0 else _multi_counts + "\n%d ohne Versorgung (keine Erholung)" % unsupplied)
-	_set_text(_bonus, "")
+	_set_bonus("")
 	_set_text(_note, MULTI_HINT)
 	_show_units_mood(units)
 	_magic_box.visible = false
@@ -1292,7 +1302,22 @@ func _fill_stats(u: Unit) -> void:
 	tip.append(_stat_source_line(u, "armor", "Rüstung", u.armor, true))
 	tip.append(_stat_source_line(u, "hp", "Leben", u.max_hp, false))
 	tip.append(_stat_source_line(u, "speed", "Tempo", u.speed, false))
-	var text := "\n".join(tip)
+	_stats_tip = "\n".join(tip)
+	_apply_stats_tip()
+
+
+## Kampfbonus und Gelände: im Tooltip der Werte (oben), nicht als eigene Zeile
+func _set_bonus(text: String) -> void:
+	if _bonus_text == text:
+		return
+	_bonus_text = text
+	_apply_stats_tip()
+
+
+func _apply_stats_tip() -> void:
+	var text := _stats_tip
+	if not _bonus_text.is_empty():
+		text = _bonus_text + ("\n\n" + text if not text.is_empty() else "")
 	if _stats_grid.tooltip_text != text:
 		_stats_grid.tooltip_text = text
 
@@ -1449,6 +1474,94 @@ func _build_actions(parent: Control) -> void:
 	_formation_button.pressed.connect(_on_formation_pressed)
 
 
+# ---------------------------------------------------------------------------
+# Einklappbare Abschnitte
+# ---------------------------------------------------------------------------
+
+## Kopf (Knopf mit Dreieck) und Inhaltsbereich eines Abschnitts anlegen; liefert den Inhaltsbereich
+func _add_section(parent: Control, key: String) -> VBoxContainer:
+	var header := Button.new()
+	header.flat = true
+	header.focus_mode = Control.FOCUS_NONE
+	header.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	header.add_theme_font_size_override("font_size", SMALL_FONT_SIZE)
+	header.add_theme_color_override("font_color", COLOR_DIM)
+	header.add_theme_color_override("font_hover_color", COLOR_TITLE)
+	header.add_theme_constant_override("icon_max_width", 14)
+	header.add_theme_constant_override("h_separation", 4)
+	for style_name in ["normal", "hover", "pressed", "hover_pressed", "focus"]:
+		var style := StyleBoxEmpty.new()
+		style.content_margin_top = 0.0
+		style.content_margin_bottom = 0.0
+		header.add_theme_stylebox_override(style_name, style)
+	header.visible = false
+	header.pressed.connect(toggle_section.bind(key))
+	parent.add_child(header)
+	var body := VBoxContainer.new()
+	body.add_theme_constant_override("separation", 4)
+	body.visible = false
+	parent.add_child(body)
+	_sections[key] = {"header": header, "body": body, "content": null}
+	return body
+
+
+## Abschnitt auf- oder zuklappen ("stats", "troop", "stance", "actions")
+func toggle_section(key: String) -> void:
+	set_section_open(key, is_section_collapsed(key))
+
+
+func set_section_open(key: String, open: bool) -> void:
+	if open:
+		_collapsed.erase(key)
+	else:
+		_collapsed[key] = true
+	_sync_sections()
+
+
+func is_section_collapsed(key: String) -> bool:
+	return _collapsed.has(key)
+
+
+## Kopf sichtbar, solange der Abschnitt etwas zu zeigen hat; Inhalt nur aufgeklappt
+func _sync_sections() -> void:
+	for key in _sections:
+		var sec: Dictionary = _sections[key]
+		var content: Control = sec["content"]
+		var header: Button = sec["header"]
+		var body: Control = sec["body"]
+		var shown := content != null and content.visible
+		var open := not _collapsed.has(key)
+		if header.visible != shown:
+			header.visible = shown
+		if body.visible != (shown and open):
+			body.visible = shown and open
+		if not shown:
+			continue
+		var title := _section_title(str(key))
+		_set_button_text(header, title)
+		var icon := HudIcons.get_icon("open" if open else "closed")
+		if header.icon != icon:
+			header.icon = icon
+		var tip := "%s %s (Klick)" % [title, "einklappen" if open else "aufklappen"]
+		if key == "stats" and not _bonus_text.is_empty():
+			tip = _bonus_text + "\n\n" + tip
+		if header.tooltip_text != tip:
+			header.tooltip_text = tip
+
+
+func _section_title(key: String) -> String:
+	match key:
+		"stats":
+			return "Werte" + (" · Bonus" if not _bonus_text.is_empty() else "")
+		"troop":
+			return "Schmiede" if _troop_box.get_mode() == "forge" else ("Wertepunkte" if _mode == "units" else "Rang & Wertepunkte")
+		"stance":
+			return "Haltung"
+		"actions":
+			return "Befehle"
+	return key
+
+
 ## Zeile "Haltung" mit drei Umschaltern (CommandSystem.set_stance)
 func _build_stance_row(parent: Control) -> void:
 	_stance_row = HBoxContainer.new()
@@ -1461,6 +1574,8 @@ func _build_stance_row(parent: Control) -> void:
 	label.add_theme_color_override("font_color", COLOR_DIM)
 	label.custom_minimum_size = Vector2(62, 0)
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Der Abschnittskopf heisst schon "Haltung"
+	label.visible = false
 	_stance_row.add_child(label)
 	for stance in CommandSystem.STANCES:
 		var b := _make_compact_button(CommandSystem.get_stance_name(stance), SMALL_FONT_SIZE)

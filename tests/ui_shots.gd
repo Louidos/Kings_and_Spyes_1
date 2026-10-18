@@ -3,7 +3,7 @@
 ## Reitstall, Magierturm, Heldenhalle, je Truppentyp ein paar Einheiten mit Rängen, ein Held) und
 ## fotografiert nacheinander: leere Oberfläche, Kaserne, Schmiede, einzelne Truppe, gemischte
 ## Gruppe, Held, alle Fenster (Forschung, Helden, Diplomatie, Spionage, Reich, Armee, Hilfe,
-## Speichern), dann je eine Figur jedes Typs (15_figuren) und über 300 Einheiten auf einmal
+## Speichern), das kompakte HUD (14b_kompakt), dann je eine Figur jedes Typs (15_figuren) und über 300 Einheiten auf einmal
 ## mit gemessener Bildzeit (16_viele_einheiten). Fenstergrösse mit win=<B>x<H> (Standard 1600x900).
 ## Ohne Prüfungen – Fehler erscheinen nur als SCRIPT ERROR.
 extends RefCounted
@@ -105,13 +105,25 @@ func tick() -> void:
 		14:
 			_shot("14_speichern")
 			g.pause_menu.close()
-			_parade()
+			# Kompaktes HUD (Einstellungen → Oberfläche) mit einer ausgewählten Truppe
+			Settings.compact_hud = true
+			Settings.apply()
+			for u in _units:
+				if is_instance_valid(u) and (u as Unit).vet_rank >= 2:
+					g.selection.select([u])
+					break
 		15:
+			_shot("14b_kompakt")
+			Settings.compact_hud = false
+			Settings.apply()
+			g.selection.clear()
+			_parade()
+		16:
 			_shot("15_figuren")
 			_crowd(300)
-		16:
-			_crowd_usec = Time.get_ticks_usec()
 		17:
+			_crowd_usec = Time.get_ticks_usec()
+		18:
 			# Bildzeit mit über 300 zusätzlichen Einheiten (Mittel der letzten WAIT_FRAMES Bilder)
 			var ms := (Time.get_ticks_usec() - _crowd_usec) / 1000.0 / WAIT_FRAMES
 			print("[smoke] Figuren: %d Einheiten im Spiel, Ø %.1f ms je Bild, %d Figurenbilder erzeugt" % [

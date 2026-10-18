@@ -89,6 +89,14 @@ Prüfpunkt. Geprüft werden unter anderem:
 - **Einstellungen** (`smoke_settings.gd`, in `smoke_features.tscn`, eigene Datei): fünf Reiter, neue Werte wirken
   sofort, Speichern/Laden, alte `settings.cfg` ohne neue Schlüssel, „Standard“, Fenster passt bei UI-Grösse 80–150 %,
   Krieg ohne Rückfrage.
+- **HUD** (`smoke_hud.gd`, in `smoke_features.tscn`): jedes Gebäude in einem der fünf Reiter des Baumenüs (zwei
+  Klicks), gesperrte mit Grund im Tooltip; gleiche Meldungen gebündelt, höchstens vier sichtbar; Abschnitte des
+  Auswahlfensters klappen ein und bleiben es bei anderer Auswahl; „Kompaktes HUD“ an/aus. Mit echtem Fenster
+  zusätzlich: bei UI-Grösse 80–150 % (auch kompakt) überlappen obere Leiste, Auswahl, Baumenü, Minikarte, Meldungen
+  und Arbeitsverteilung nicht, und alle Ressourcen stehen oben auf dem Bildschirm. Ohne Fenster (`--headless`) wird
+  dieser Teil übersprungen, weil Godot dann keine echten Schriftmasse liefert:
+  `xvfb-run -a -s "-screen 0 1280x720x24" $GODOT --rendering-driver opengl3 --resolution 1280x720
+  res://tests/smoke_features.tscn -- faction=good only=HUD`.
 - **Neues Spiel** (`smoke_new_game.gd`, letztes Modul in `smoke_features.tscn`): Standard ergibt dieselbe Welt, Dörfer
   und Gegnerplätze nach Option; eine Partie mit 1 Gegner, wenigen Dörfern, vielen Vorräten, ohne Monster und
   Ereignisse; Speichern/Laden behält die Optionen.
@@ -161,7 +169,7 @@ XDG_DATA_HOME=/tmp/kr-data xvfb-run -a -s "-screen 0 1920x1080x24" $GODOT --rend
 `tests/ui_shots.gd` baut ein kleines Reich auf (Kaserne, Schmiede, Reitstall, Magierturm, Heldenhalle, je Truppentyp
 ein paar Einheiten mit Rängen, ein Held) und fotografiert nacheinander: leere Oberfläche, Kaserne, Schmiede, einzelne
 Truppe, gemischte Gruppe, Held und alle Fenster (Forschung, Helden, Diplomatie, Spionage, Reich, Armee, Hilfe,
-Speichern), danach je eine Figur jedes Einheitentyps (`15_figuren`) und über 300 zusätzliche Truppen auf einmal
+Speichern), das kompakte HUD mit einer Truppe (`14b_kompakt`), danach je eine Figur jedes Einheitentyps (`15_figuren`) und über 300 zusätzliche Truppen auf einmal
 (`16_viele_einheiten`, mit gemessener Bildzeit `[smoke] Figuren: … ms je Bild`). Dateien: `<fraktion>_<win>_<ui_scale>_<nr>_<name>.png`. Mit `ui_scale=1.25` bzw. `1.5` lässt sich die
 Oberflächengrösse prüfen. Die Bilder in `docs/bilder/` sind so entstanden (auf 1280 px verkleinert, JPEG).
 

@@ -92,13 +92,20 @@ lässt es sich fortsetzen oder neu beginnen.
 
 | Bereich | Inhalt |
 |---|---|
-| **Obere Leiste links** | Volk, Ressourcen (Holz, Stein, Erz, Nahrung, Mana mit Höchstwert), Kampfpunkte (gekreuzte Schwerter), Bewohner/Wohnraum, Zufriedenheit (Gesicht), Leben des Königs |
-| **Obere Leiste Mitte** | Knöpfe für die Fenster *Forschung · Helden · Armee · Diplomatie · Spionage · Reich*. Zahl, Strich und roter Punkt zeigen den Stand (z. B. „Armee · 22“, roter Punkt = Kampf), die Taste steht im Tooltip |
+| **Obere Leiste links** | Volk und Ressourcen als Symbol und Zahl (Holz, Stein, Erz, Nahrung, Mana), Kampfpunkte (gekreuzte Schwerter), Bewohner/Wohnraum, Zufriedenheit (Gesicht), Leben des Königs (Krone). Einkommen pro Minute, Lagergrenze und Einzelheiten stehen im Tooltip |
+| **Obere Leiste Mitte** | Knöpfe mit Symbol und kurzem Namen für die Fenster *Forschung · Helden · Armee · Diplomatie · Spionage · Reich*. Ein Strich oder roter Punkt zeigt, dass etwas ansteht (roter Punkt = Kampf); Zahlen, Stand und Taste stehen im Tooltip |
 | **Obere Leiste rechts** | Sonne/Mond, Tag und Uhrzeit, Pause und Tempo (0.5x, 1x, 2x, 3x) |
 | **Links oben** | Arbeitsverteilung (Taste J; „−“ klappt sie ein) |
 | **Links unten** | Auswahlfenster (was du angeklickt hast), Armee- und Heldenleiste, Infobereich (Gelände und Gebiet unter der Maus) |
-| **Unten Mitte** | Baumenü mit drei Reitern: *Dorf*, *Militär & Wissen*, *Verteidigung* |
-| **Rechts** | Meldungen (Klick springt zur Stelle), „Protokoll (M)“, Zauberleiste des Königs, Minikarte |
+| **Unten Mitte** | Baumenü mit fünf Reitern: *Wirtschaft*, *Wohnen & Versorgung*, *Militär*, *Verteidigung*, *Magie & Forschung*. Gesperrte Gebäude sind ausgegraut, der Grund steht im Tooltip |
+| **Rechts** | Meldungen (höchstens vier, gleiche werden gebündelt: „3× Angriff auf …“; Klick springt zur Stelle, alle stehen im Protokoll), „Protokoll (M)“, Zauberleiste des Königs, Minikarte |
+
+Die Abschnitte des Auswahlfensters (*Werte*, *Rang & Wertepunkte*, *Haltung*, *Befehle*) lassen sich mit einem
+Klick auf ihre Überschrift einklappen; das bleibt für die ganze Partie so. Kampfbonus und Gelände einer Einheit
+stehen im Tooltip der Werte („Werte · Bonus“). Unter Esc → Einstellungen → Oberfläche → **Kompaktes HUD** zeigen
+die Fenster-Knöpfe nur noch ihr Symbol, das Baumenü Kurznamen, und die Hinweiszeile verschwindet.
+
+![Kompaktes HUD](bilder/hud-kompakt.jpg)
 
 Alle Fenster in der Mitte sehen gleich aus: Titel und Wappen links, Reiter und „×“ rechts, unten eine Zeile mit
 Hinweisen und der Taste zum Schliessen. Es ist immer nur ein Fenster offen; Esc schliesst es. Die Grösse der
@@ -189,32 +196,32 @@ Umschalttaste setzt du mehrere. Es entsteht eine **Baustelle**, die deine Bauarb
 
 | Gebäude (GUT / BÖSE) | Baumenü | Kosten | Bauzeit | Grösse | Leben | Voraussetzung | Zweck |
 |---|---|---|---|---|---|---|---|
-| **Wohnhaus** | Dorf | 25 Holz | 20 s | 2×2 | 300 | – | Wohnraum für 4 Bewohner. Erweitert das Gebiet. *(Wohnraum 4)* |
-| **Lager** | Dorf | 40 Holz, 10 Stein | 30 s | 2×2 | 300 | – | Annahmestelle für Holz, Stein, Erz und Nahrung. Verkürzt die Wege der Sammler. |
-| **Holzfällerhütte** | Dorf | 30 Holz | 20 s | 2×2 | 300 | – | Holzfäller liefern hier ab und arbeiten 25 % schneller. Am besten nahe am Wald bauen. |
-| **Steinmetzhütte** | Dorf | 35 Holz | 25 s | 2×2 | 300 | – | Steinhauer liefern hier ab und arbeiten 25 % schneller. Nahe an Steinbrocken bauen. |
-| **Erzmine** | Dorf | 40 Holz, 20 Stein | 35 s | 2×2 | 300 | Burgstufe 2 | Bergleute liefern hier ab und arbeiten 25 % schneller. Nahe an Erzadern bauen. |
-| **Jägerhütte** | Dorf | 25 Holz | 20 s | 2×2 | 300 | – | Sammler und Jäger liefern hier Nahrung ab und arbeiten 25 % schneller. |
-| **Bauernhof** | Dorf | 40 Holz | 30 s | 2×2 | 300 | – | Bis zu 3 Bauern erzeugen dauerhaft Nahrung. Am besten auf Ebene, schlecht in der Wüste. *(3 Arbeitsplätze)* |
-| **Brunnen / Zisterne** | Dorf | 15 Holz, 35 Stein | 20 s | 1×1 | 250 | – | Frisches Wasser für die Nachbarschaft: +5 Zufriedenheit für alle Bewohner im Umkreis von 8 Feldern (mehrere Brunnen zählen nicht doppelt). |
-| **Kornspeicher / Vorratsgrube** | Dorf | 45 Holz, 15 Stein | 30 s | 2×2 | 350 | – | Lager nur für Nahrung: Sammler, Jäger und Bauern liefern hier ab und sammeln 15 % schneller. Gut gelagert verdirbt weniger – das Reich verbraucht 10 % weniger Nahrung (zählt einmal). |
-| **Manabrunnen** | Dorf | 30 Holz, 30 Stein | 40 s | 2×2 | 300 | Burgstufe 2, auf einer Manaquelle | Muss auf einer Manaquelle stehen. Erzeugt etwas Mana, mit Manawirkern deutlich mehr. *(2 Arbeitsplätze)* |
-| **Kaserne** | Militär & Wissen | 60 Holz, 40 Stein, 30 Mana | 45 s | 2×2 | 600 | Burgstufe 2 | Hier beschwört der König Schwertkämpfer, Bogenschützen und – nach Forschung – Speerträger, Armbrustschützen, schwere Fusstruppen und Elitekrieger. Wird mit Mana errichtet. |
-| **Krankenstation** | Militär & Wissen | 50 Holz, 20 Stein, 25 Mana | 40 s | 2×2 | 400 | Burgstufe 3, Forschung Heilkunde / Dunkle Heilkunst | Beschwört Heiler. Eigene Einheiten in der Nähe erholen sich schneller. Wird mit Mana errichtet. Muss erforscht werden (Forschung R, Magie: Heilkunde). |
-| **Bibliothek / Dunkles Archiv** | Militär & Wissen | 40 Holz, 80 Stein, 10 Mana | 50 s | 2×2 | 500 | Burgstufe 2 | Forschungsstätte: hier wird geforscht (Forschung mit R). Jede weitere forscht 25 % schneller. |
-| **Heldenhalle / Halle der Schatten** | Militär & Wissen | 170 Holz, 210 Stein, 55 Erz, 55 Mana | 100 s | 3×3 | 900 | Burgstufe 3, Kaserne | Hier werden Helden angeworben (Heldenfenster mit G) und ausgebildet. Nur eine pro Reich, braucht eine Kaserne. *(höchstens 1)* |
-| **Kundschafterhaus / Schattenloge** | Militär & Wissen | 60 Holz, 50 Stein, 30 Mana | 45 s | 2×2 | 450 | Burgstufe 3, Forschung Spionagenetz / Schattennetz | Bildet Spione aus: sie beginnen eine Stufe höher. Erhöht die Wachsamkeit gegen fremde Spione und erlaubt einen Spion mehr. Nur eines pro Reich. *(höchstens 1)* |
-| **Taverne / Schenke** | Dorf | 60 Holz, 20 Stein, 30 Nahrung | 35 s | 2×2 | 350 | Burgstufe 2 | Hier treffen sich die Bewohner nach der Arbeit: +10 Zufriedenheit für bis zu 20 Bewohner (für mehr Bewohner weitere bauen). |
-| **Markt / Basar** | Dorf | 80 Holz, 50 Stein, 20 Nahrung | 45 s | 3×3 | 450 | Burgstufe 2 | Händler und Waagen: bessere Kurse beim Tausch mit Dörfern und für die Bezahlung der Handelslieferungen (Handelsmarge −10 Prozentpunkte, zählt einmal). |
-| **Tempel des Lichts / Schattenschrein** | Dorf | 110 Holz, 170 Stein, 55 Mana | 100 s | 3×3 | 700 | Burgstufe 3, Bibliothek | Ort des Glaubens: +8 Zufriedenheit für bis zu 30 Bewohner. Seuchen breiten sich langsamer aus, Verräter und eingeschleuste Spione fallen eher auf. Braucht eine Forschungsstätte. |
+| **Wohnhaus** | Wohnen & Versorgung | 25 Holz | 20 s | 2×2 | 300 | – | Wohnraum für 4 Bewohner. Erweitert das Gebiet. *(Wohnraum 4)* |
+| **Lager** | Wirtschaft | 40 Holz, 10 Stein | 30 s | 2×2 | 300 | – | Annahmestelle für Holz, Stein, Erz und Nahrung. Verkürzt die Wege der Sammler. |
+| **Holzfällerhütte** | Wirtschaft | 30 Holz | 20 s | 2×2 | 300 | – | Holzfäller liefern hier ab und arbeiten 25 % schneller. Am besten nahe am Wald bauen. |
+| **Steinmetzhütte** | Wirtschaft | 35 Holz | 25 s | 2×2 | 300 | – | Steinhauer liefern hier ab und arbeiten 25 % schneller. Nahe an Steinbrocken bauen. |
+| **Erzmine** | Wirtschaft | 40 Holz, 20 Stein | 35 s | 2×2 | 300 | Burgstufe 2 | Bergleute liefern hier ab und arbeiten 25 % schneller. Nahe an Erzadern bauen. |
+| **Jägerhütte** | Wirtschaft | 25 Holz | 20 s | 2×2 | 300 | – | Sammler und Jäger liefern hier Nahrung ab und arbeiten 25 % schneller. |
+| **Bauernhof** | Wirtschaft | 40 Holz | 30 s | 2×2 | 300 | – | Bis zu 3 Bauern erzeugen dauerhaft Nahrung. Am besten auf Ebene, schlecht in der Wüste. *(3 Arbeitsplätze)* |
+| **Brunnen / Zisterne** | Wohnen & Versorgung | 15 Holz, 35 Stein | 20 s | 1×1 | 250 | – | Frisches Wasser für die Nachbarschaft: +5 Zufriedenheit für alle Bewohner im Umkreis von 8 Feldern (mehrere Brunnen zählen nicht doppelt). |
+| **Kornspeicher / Vorratsgrube** | Wirtschaft | 45 Holz, 15 Stein | 30 s | 2×2 | 350 | – | Lager nur für Nahrung: Sammler, Jäger und Bauern liefern hier ab und sammeln 15 % schneller. Gut gelagert verdirbt weniger – das Reich verbraucht 10 % weniger Nahrung (zählt einmal). |
+| **Manabrunnen** | Magie & Forschung | 30 Holz, 30 Stein | 40 s | 2×2 | 300 | Burgstufe 2, auf einer Manaquelle | Muss auf einer Manaquelle stehen. Erzeugt etwas Mana, mit Manawirkern deutlich mehr. *(2 Arbeitsplätze)* |
+| **Kaserne** | Militär | 60 Holz, 40 Stein, 30 Mana | 45 s | 2×2 | 600 | Burgstufe 2 | Hier beschwört der König Schwertkämpfer, Bogenschützen und – nach Forschung – Speerträger, Armbrustschützen, schwere Fusstruppen und Elitekrieger. Wird mit Mana errichtet. |
+| **Krankenstation** | Militär | 50 Holz, 20 Stein, 25 Mana | 40 s | 2×2 | 400 | Burgstufe 3, Forschung Heilkunde / Dunkle Heilkunst | Beschwört Heiler. Eigene Einheiten in der Nähe erholen sich schneller. Wird mit Mana errichtet. Muss erforscht werden (Forschung R, Magie: Heilkunde). |
+| **Bibliothek / Dunkles Archiv** | Magie & Forschung | 40 Holz, 80 Stein, 10 Mana | 50 s | 2×2 | 500 | Burgstufe 2 | Forschungsstätte: hier wird geforscht (Forschung mit R). Jede weitere forscht 25 % schneller. |
+| **Heldenhalle / Halle der Schatten** | Militär | 170 Holz, 210 Stein, 55 Erz, 55 Mana | 100 s | 3×3 | 900 | Burgstufe 3, Kaserne | Hier werden Helden angeworben (Heldenfenster mit G) und ausgebildet. Nur eine pro Reich, braucht eine Kaserne. *(höchstens 1)* |
+| **Kundschafterhaus / Schattenloge** | Militär | 60 Holz, 50 Stein, 30 Mana | 45 s | 2×2 | 450 | Burgstufe 3, Forschung Spionagenetz / Schattennetz | Bildet Spione aus: sie beginnen eine Stufe höher. Erhöht die Wachsamkeit gegen fremde Spione und erlaubt einen Spion mehr. Nur eines pro Reich. *(höchstens 1)* |
+| **Taverne / Schenke** | Wohnen & Versorgung | 60 Holz, 20 Stein, 30 Nahrung | 35 s | 2×2 | 350 | Burgstufe 2 | Hier treffen sich die Bewohner nach der Arbeit: +10 Zufriedenheit für bis zu 20 Bewohner (für mehr Bewohner weitere bauen). |
+| **Markt / Basar** | Wirtschaft | 80 Holz, 50 Stein, 20 Nahrung | 45 s | 3×3 | 450 | Burgstufe 2 | Händler und Waagen: bessere Kurse beim Tausch mit Dörfern und für die Bezahlung der Handelslieferungen (Handelsmarge −10 Prozentpunkte, zählt einmal). |
+| **Tempel des Lichts / Schattenschrein** | Wohnen & Versorgung | 110 Holz, 170 Stein, 55 Mana | 100 s | 3×3 | 700 | Burgstufe 3, Bibliothek | Ort des Glaubens: +8 Zufriedenheit für bis zu 30 Bewohner. Seuchen breiten sich langsamer aus, Verräter und eingeschleuste Spione fallen eher auf. Braucht eine Forschungsstätte. |
 | **Steinmauer / Dornenwall** | Verteidigung | 1 Holz, 5 Stein | 6 s | 1×1 | 500 | – | Mauerstück: hält Feinde auf, bis sie es zerstören. Mit gedrückter Maustaste ziehen (wie Strassen). Über eigene Strassen wird automatisch ein Tor gesetzt. Bauarbeiter reparieren beschädigte Mauern. |
 | **Burgtor / Schattentor** | Verteidigung | 30 Holz, 25 Stein | 20 s | 1×1 | 1000 | Burgstufe 2 | Durchgang in der Mauer: eigene und verbündete Einheiten gehen hindurch, Feinde müssen es aufbrechen. Auf ein eigenes Mauerstück oder eine eigene Strasse setzen. Im Auswahlfenster verriegeln (dann nur noch eigene und Verbündete). |
 | **Wachturm / Dornenturm** | Verteidigung | 60 Holz, 90 Stein | 50 s | 2×2 | 900 | Burgstufe 2 | Schiesst selbsttätig auf Feinde in Reichweite (auch Monster) und hält nach fremden Spionen Ausschau. Gegen Katapulte (grössere Reichweite) hilft er wenig. |
-| **Belagerungswerkstatt / Kriegsschmiede** | Militär & Wissen | 210 Holz, 110 Stein, 55 Erz, 40 Mana | 85 s | 3×3 | 800 | Burgstufe 4, Forschung Belagerungskunst / Kriegsmaschinen, Kaserne | Hier entstehen Rammböcke und Katapulte. Muss erforscht werden (Militär: Belagerungskunst) und braucht eine Kaserne. Wird mit Mana errichtet. |
-| **Schmiede / Blutschmiede** | Militär & Wissen | 100 Holz, 85 Stein, 30 Erz | 65 s | 2×2 | 650 | Burgstufe 3, Kaserne | Hier werden Waffen und Rüstungen der Truppen verbessert: je Truppenklasse drei Stufen (Auswahlfenster der Schmiede). Braucht eine Kaserne, nur eine pro Reich. *(höchstens 1)* |
-| **Reitstall / Wolfszwinger** | Militär & Wissen | 125 Holz, 55 Stein, 55 Nahrung, 30 Mana | 80 s | 3×2 | 700 | Burgstufe 3, Forschung Ritterorden / Schreckensorden, Kaserne | Hier entstehen schnelle Reiter (GUT: Lanzenreiter, BÖSE: Wolfsreiter). Muss erforscht werden (Militär: Ritterorden bzw. Schreckensorden) und braucht eine Kaserne. |
-| **Magierturm / Hexenturm** | Militär & Wissen | 70 Holz, 125 Stein, 55 Mana | 85 s | 2×2 | 650 | Burgstufe 4, Forschung Lichtsegen / Fluch der Schwäche, Bibliothek | Bildet Kampfmagier (BÖSE: Hexer) aus, die Gruppen mit Flächenschaden treffen. Muss erforscht werden (Magie: Lichtsegen bzw. Fluch der Schwäche) und braucht eine Forschungsstätte. |
-| **Strasse** | Dorf | 1 Stein | 2 s | 1×1 | 300 | – | Bewohner laufen auf Strassen schneller. Mit gedrückter Maustaste ziehen. |
+| **Belagerungswerkstatt / Kriegsschmiede** | Militär | 210 Holz, 110 Stein, 55 Erz, 40 Mana | 85 s | 3×3 | 800 | Burgstufe 4, Forschung Belagerungskunst / Kriegsmaschinen, Kaserne | Hier entstehen Rammböcke und Katapulte. Muss erforscht werden (Militär: Belagerungskunst) und braucht eine Kaserne. Wird mit Mana errichtet. |
+| **Schmiede / Blutschmiede** | Militär | 100 Holz, 85 Stein, 30 Erz | 65 s | 2×2 | 650 | Burgstufe 3, Kaserne | Hier werden Waffen und Rüstungen der Truppen verbessert: je Truppenklasse drei Stufen (Auswahlfenster der Schmiede). Braucht eine Kaserne, nur eine pro Reich. *(höchstens 1)* |
+| **Reitstall / Wolfszwinger** | Militär | 125 Holz, 55 Stein, 55 Nahrung, 30 Mana | 80 s | 3×2 | 700 | Burgstufe 3, Forschung Ritterorden / Schreckensorden, Kaserne | Hier entstehen schnelle Reiter (GUT: Lanzenreiter, BÖSE: Wolfsreiter). Muss erforscht werden (Militär: Ritterorden bzw. Schreckensorden) und braucht eine Kaserne. |
+| **Magierturm / Hexenturm** | Magie & Forschung | 70 Holz, 125 Stein, 55 Mana | 85 s | 2×2 | 650 | Burgstufe 4, Forschung Lichtsegen / Fluch der Schwäche, Bibliothek | Bildet Kampfmagier (BÖSE: Hexer) aus, die Gruppen mit Flächenschaden treffen. Muss erforscht werden (Magie: Lichtsegen bzw. Fluch der Schwäche) und braucht eine Forschungsstätte. |
+| **Strasse** | Wirtschaft | 1 Stein | 2 s | 1×1 | 300 | – | Bewohner laufen auf Strassen schneller. Mit gedrückter Maustaste ziehen. |
 
 Nicht baubar, aber auf der Karte: **Königsburg** (Sitz des Königs. Lager für alle Ressourcen und Wohnraum.), **Monsterhöhle** (Ein Unterschlupf wilder Monster. Zerstöre ihn, um die Gegend zu sichern und Beute zu machen.), **Dorfzentrum** (Mittelpunkt eines neutralen Dorfs. Wird es erobert oder das Dorf aufgenommen, wird es zum Aussenposten mit Lager und Gebiet.), **Hütte** (Wohnhütte eines Dorfs (nach der Aufnahme Wohnraum für 2).), **Dorfbrunnen** (Brunnen eines neutralen Dorfs. Die Bewohner holen hier Wasser.), **Feld** (Acker eines neutralen Dorfs. Ein Bauer bestellt ihn (man kann darüber laufen).), **Werkstatt** (Werkstatt eines neutralen Dorfs. Hier zimmern und schmieden die Bewohner.)
 

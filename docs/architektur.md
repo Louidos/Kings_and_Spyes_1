@@ -383,18 +383,31 @@ Jedes Dorf ist ein eigenes `Kingdom` (`controller = "neutral"`, Feld `people_id`
   `UiStyle.place_window` (Faktor, aber nie grösser als der Bildschirm), die Zauberleiste folgt der skalierten
   Minikarte. Die obere Leiste passt sich an (`hud._fit_top_bar`: Reichsname ausblenden, sonst verkleinern).
 - **Aufbau des HUD**:
-  - *Obere Leiste* in drei Gruppen: links Ressourcen, Kampfpunkte, Bewohner, Zufriedenheit und König; in der Mitte die
-    Fenster-Knöpfe *Forschung · Helden · Armee · Diplomatie · Spionage · Reich* (Zahl, Strich und roter Punkt zeigen
-    den Stand, die Taste steht im Tooltip); rechts Tageszeit, Datum und Tempo.
+  - *Obere Leiste* in drei Gruppen mit eigenem Rahmen (`hud._group_top_bar`: `ResourceGroup` | `WindowGroup` |
+    `TimeGroup`, dazwischen Trennlinien): links Ressourcen als Symbol und Zahl (`ResourceBar`; Einkommen, Lagergrenze
+    und Einzelheiten nur im Tooltip), Kampfpunkte, Bewohner, Zufriedenheit und König; in der Mitte die Fenster-Knöpfe
+    *Forschung · Helden · Armee · Diplomatie · Spionage · Reich* mit Symbol (`HudIcons`, im Code gezeichnet) und
+    kurzem Namen (Strich und roter Punkt zeigen, dass etwas ansteht; Zahlen und Taste im Tooltip); rechts
+    Tageszeit, Datum und Tempo.
+  - *Kompaktes HUD* (`Settings.compact_hud`, Reiter Oberfläche): Fenster-Knöpfe nur als Symbol
+    (`HUD.window_label`), Baumenü mit Kurznamen, ohne Hinweiszeile und ohne Mehrfachauswahl-Hinweis.
   - *Links*: oben die Arbeitsverteilung (`JobPanel`, J); sie klappt sich von selbst ein, solange das Auswahlfenster
     darunter den Platz braucht. Unten das Auswahlfenster (`SelectionPanel`), Armee- und Heldenleiste und der
     Infobereich.
   - *Auswahlfenster*: Name, Leben, Kampfwerte, Zustand; bei Truppen Rang mit Erfahrungsbalken, „Wertepunkte“ mit
     „automatisch“ und „Aussehen“, die vier Wertepunkt-Knöpfe nur bei freien Punkten, dann **Haltung** und die Befehle.
-    Gebäude mit vielen Einheitentypen (Kaserne) zeigen die Beschwören-Knöpfe in zwei Spalten.
-  - *Unten Mitte* das Baumenü (`BuildMenu`) mit Steuerungshinweis; es steht immer zwischen linker Spalte und
-    Minikarte und bekommt bei wenig Platz eine Zeile mehr.
-  - *Rechts*: Meldungen (`NotificationPanel`) und Protokoll-Knopf oben, Zauberleiste (`SpellBar`) und Minikarte unten.
+    Gebäude mit vielen Einheitentypen (Kaserne) zeigen die Beschwören-Knöpfe in zwei Spalten. Die Abschnitte
+    *Werte*, *Rang & Wertepunkte* (bei der Schmiede *Schmiede*), *Haltung* und *Befehle* sind einklappbar
+    (`SelectionPanel._add_section`, `toggle_section`, `_sync_sections`: der Kopf erscheint nur, wenn der Abschnitt
+    etwas zeigt); der Zustand gilt während der Partie für jede Auswahl. Kampfbonus und Gelände stehen im Tooltip
+    der Werte.
+  - *Unten Mitte* das Baumenü (`BuildMenu`) mit Steuerungshinweis und fünf Reitern nach `category` aus
+    `buildings.json` (`economy` Wirtschaft, `housing` Wohnen & Versorgung, `military` Militär, `defense`
+    Verteidigung, `magic` Magie & Forschung; fehlt das Feld, gilt `menu`). Jedes Gebäude ist so in zwei Klicks
+    erreichbar; gesperrte sind ausgegraut und nennen den Grund im Tooltip. Es steht immer zwischen linker Spalte
+    und Minikarte, bekommt bei wenig Platz eine Zeile mehr und kürzt dann die Reiternamen.
+  - *Rechts*: Meldungen (`NotificationPanel`, höchstens vier; gleicher Text und gleiche Art werden zu „3× …“
+    gebündelt, alle stehen im Protokoll) und Protokoll-Knopf oben, Zauberleiste (`SpellBar`) und Minikarte unten.
     Meldungen reichen nie über die Zauberleiste.
 - Fenster: `ResearchPanel` (R), `HeroPanel` (G), `TroopPanel` (T), `DiplomacyPanel` (N), `EspionagePanel` (K),
   `KingdomPanel` (L), `MessageLogPanel` (M), `HelpPanel` (F1), `PauseMenu`, `SaveLoadPanel`, `SettingsForm`,

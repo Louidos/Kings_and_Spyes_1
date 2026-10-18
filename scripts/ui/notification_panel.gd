@@ -1,7 +1,9 @@
 ## NotificationPanel
 ##
 ## Meldungen oben rechts (Notify.posted). Die neueste steht oben, höchstens
-## MAX_ENTRIES gleichzeitig. Jede Meldung verschwindet nach Settings.notify_seconds echten
+## MAX_ENTRIES gleichzeitig (ältere stehen im Protokoll, M). Gleichartige Meldungen (gleicher
+## Text und gleiche Art) werden gebündelt: „3× Bewohner werden angegriffen!“, die Meldung rückt
+## nach oben und bleibt wieder die volle Zeit stehen. Jede Meldung verschwindet nach Settings.notify_seconds echten
 ## Sekunden (blendet aus); solange die Maus darauf liegt, bleibt sie stehen.
 ## Klick auf eine Meldung mit Ort springt mit der Kamera dorthin, eine Meldung
 ## mit Verweis öffnet das Fenster (HUD.open_link, z. B. Heldenfenster bei einer
@@ -9,7 +11,7 @@
 class_name NotificationPanel
 extends VBoxContainer
 
-const MAX_ENTRIES := 6
+const MAX_ENTRIES := 4
 const FADE_TIME := 0.8
 const FONT_SIZE := 16
 const KIND_COLORS := {
@@ -21,7 +23,7 @@ const KIND_COLORS := {
 
 var game: Node
 
-## Einträge, neueste zuerst: {button: Button, age: float}
+## Einträge, neueste zuerst: {button: Button, age: float, text: String, kind: String, count: int}
 var _entries: Array = []
 
 
@@ -59,6 +61,23 @@ func _process(delta: float) -> void:
 
 
 func _on_posted(text: String, kind: String, world_pos: Variant) -> void:
+	# Gleichartige Meldung schon sichtbar: bündeln statt eine weitere Zeile
+	for entry in _entries:
+		var e: Dictionary = entry
+		if str(e["text"]) == text and str(e["kind"]) == kind and is_instance_valid(e["button"]):
+			e["count"] = int(e["count"]) + 1
+			e["age"] = 0.0
+			var old: Button = e["button"]
+			old.text = "%d× %s" % [int(e["count"]), text]
+			old.modulate.a = 1.0
+			# Neuer Ort: der Klick springt zur jüngsten Stelle
+			for c in old.pressed.get_connections():
+				old.pressed.disconnect(c["callable"])
+			old.pressed.connect(_on_entry_pressed.bind(old, world_pos))
+			_entries.erase(e)
+			_entries.push_front(e)
+			move_child(old, 0)
+			return
 	var color: Color = KIND_COLORS.get(kind, KIND_COLORS["info"])
 	var b := Button.new()
 	b.text = text
@@ -82,7 +101,7 @@ func _on_posted(text: String, kind: String, world_pos: Variant) -> void:
 	b.pressed.connect(_on_entry_pressed.bind(b, world_pos))
 	add_child(b)
 	move_child(b, 0)
-	_entries.push_front({"button": b, "age": 0.0})
+	_entries.push_front({"button": b, "age": 0.0, "text": text, "kind": kind, "count": 1})
 	while _entries.size() > MAX_ENTRIES:
 		_remove(_entries.size() - 1)
 

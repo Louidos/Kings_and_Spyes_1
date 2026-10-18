@@ -377,6 +377,7 @@ func _on_settings_changed() -> void:
 	if is_inside_tree():
 		UiStyle.apply_ui_scale(get_tree())
 		_apply_minimap_scale()
+		_apply_compact()
 		_fit_top_bar()
 		_layout_bottom.call_deferred()
 		# Lebensbalken der Gebäude (Einstellung Oberfläche → Lebensbalken)
@@ -386,6 +387,36 @@ func _on_settings_changed() -> void:
 				for b in k.buildings:
 					if is_instance_valid(b):
 						(b as Building).queue_redraw()
+
+
+## Beschriftung eines Fenster-Knopfs oben: kurzer Name, im kompakten HUD nur das Symbol
+static func window_label(text: String) -> String:
+	return "" if Settings.compact_hud else text
+
+
+## Symbol eines Fenster-Knopfs (HudIcons)
+func _window_icon(b: Button, kind: String) -> void:
+	b.icon = HudIcons.get_icon(kind)
+	b.add_theme_constant_override("icon_max_width", int(HudIcons.SIZE))
+	b.add_theme_constant_override("h_separation", 5)
+
+
+## Kompaktes HUD (Einstellungen → Oberfläche): Fenster-Knöpfe nur als Symbol, ohne Hinweiszeile,
+## ohne Reichsnamen; das Baumenü kürzt selbst
+func _apply_compact() -> void:
+	if game == null:
+		return
+	var compact := Settings.compact_hud
+	for pair in [[_diplomacy_button, "Diplomatie"], [_kingdom_button, "Reich"]]:
+		var b: Button = pair[0]
+		if b != null:
+			b.text = window_label(str(pair[1]))
+	_refresh_research_button()
+	_refresh_hero_button()
+	_refresh_espionage_button()
+	_refresh_troop_button()
+	hint_label.visible = not compact
+	_log_button.text = "Protokoll" if compact else "Protokoll (M)"
 
 
 ## Grösse der Minikarte (Einstellungen → Oberfläche): Karte und Rahmen rechts unten
@@ -404,6 +435,13 @@ func _apply_minimap_scale() -> void:
 func _group_top_bar() -> void:
 	var hbox: HBoxContainer = top_bar.get_node("HBox")
 	resource_bar.size_flags_horizontal = Control.SIZE_FILL
+	# Linke Gruppe (Reich und Ressourcen) im selben Rahmen wie die beiden anderen
+	var res_group := _top_group("ResourceGroup")
+	var res_box: HBoxContainer = res_group.get_child(0)
+	hbox.add_child(res_group)
+	hbox.move_child(res_group, 0)
+	for c in [kingdom_label, resource_bar]:
+		(c as Control).reparent(res_box, false)
 	var win_group := _top_group("WindowGroup")
 	_window_box = win_group.get_child(0)
 	hbox.add_child(win_group)
@@ -421,9 +459,33 @@ func _group_top_bar() -> void:
 	var time_group := _top_group("TimeGroup")
 	_time_box = time_group.get_child(0)
 	hbox.add_child(time_group)
+	# Trennlinien zwischen den drei Gruppen (gleiche Abstände links und rechts); feste Reihenfolge:
+	# Ressourcen | Lücke, Fenster-Knöpfe, Lücke | Zeit
+	var sep1 := _top_separator("Separator1")
+	var sep2 := _top_separator("Separator2")
+	hbox.add_child(sep1)
+	hbox.add_child(sep2)
+	var order: Array = [res_group, sep1, hbox.get_node("Filler0"), win_group, hbox.get_node("Filler1"), sep2, time_group]
+	for i in order.size():
+		hbox.move_child(order[i] as Node, i)
 	for c in [day_clock, date_label, speed_bar]:
 		if c != null:
 			(c as Control).reparent(_time_box, false)
+
+
+func _top_separator(sep_name: String) -> VSeparator:
+	var sep := VSeparator.new()
+	sep.name = sep_name
+	sep.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var line := StyleBoxLine.new()
+	line.vertical = true
+	line.color = Color(0.78, 0.64, 0.36, 0.45)
+	line.thickness = 1
+	line.grow_begin = -8.0
+	line.grow_end = -8.0
+	sep.add_theme_stylebox_override("separator", line)
+	sep.add_theme_constant_override("separation", 8)
+	return sep
 
 
 func _top_group(group_name: String) -> PanelContainer:
@@ -669,6 +731,7 @@ func _setup_research() -> void:
 	_research_button = ResearchTipButton.new()
 	_research_button.name = "ResearchButton"
 	_research_button.text = "Forschung"
+	_window_icon(_research_button, "research")
 	_research_button.toggle_mode = true
 	_research_button.add_theme_font_size_override("font_size", 16)
 	_compact(_research_button)
@@ -704,28 +767,24 @@ func _on_research_state_changed(k: Kingdom) -> void:
 		_refresh_research_button()
 
 
-## Button oben: "Forschung · 45 %" (mit Strich), gelb "Forschung ruht"
-## bzw. "Forschung steht" (keine fertige Forschungsstätte),
+## Button oben: "Forschung" mit Fortschrittsstrich; gelb, wenn die Forschung ruht oder steht
+## (keine fertige Forschungsstätte) – Prozent und Zustand im Tooltip;
 ## Punkt, wenn eine Kampfpunkt-Verbesserung bezahlbar ist
 func _refresh_research_button() -> void:
 	var k: Kingdom = game.player
 	var rs: ResearchSystem = game.research_system
 	var active := rs.get_active(k)
-	var text := "Forschung"
+	# Fortschritt als Strich, Zustand als Farbe (gelb = ruht/steht), Einzelheiten im Tooltip
+	var text := window_label("Forschung")
 	var idle := false
 	if not active.is_empty():
 		_research_button.underline_ratio = rs.get_progress_ratio(k)
 		if rs.get_speed(k) <= 0.0:
 			# Keine fertige Forschungsstätte mehr: Forschung steht still
-			text = "Forschung steht · %d %%" % floori(rs.get_progress_ratio(k) * 100.0)
 			idle = true
-		else:
-			text = "Forschung · %d %%" % floori(rs.get_progress_ratio(k) * 100.0)
 	else:
 		_research_button.underline_ratio = -1.0
 		idle = rs.count_research_buildings(k) > 0
-		if idle:
-			text = "Forschung ruht"
 	if _research_button.text != text:
 		_research_button.text = text
 	var font_color := COLOR_RESEARCH_IDLE if idle else Color(0.95, 0.91, 0.82)
@@ -792,6 +851,7 @@ func _setup_heroes() -> void:
 	_hero_button = ResearchTipButton.new()
 	_hero_button.name = "HeroButton"
 	_hero_button.text = "Helden"
+	_window_icon(_hero_button, "heroes")
 	_hero_button.toggle_mode = true
 	_hero_button.add_theme_font_size_override("font_size", 16)
 	_compact(_hero_button)
@@ -823,8 +883,7 @@ func _refresh_hero_button() -> void:
 		return
 	var k: Kingdom = game.player
 	var hs: HeroSystem = game.hero_system
-	var n := hs.count_heroes(k)
-	var text := "Helden" if n == 0 else "Helden · %d/%d" % [n, hs.max_heroes(k)]
+	var text := window_label("Helden")
 	if _hero_button.text != text:
 		_hero_button.text = text
 	_hero_button.badge_visible = HeroPanel.needs_attention(hs, k)
@@ -834,7 +893,7 @@ func _hero_button_tip() -> String:
 	var k: Kingdom = game.player
 	var hs: HeroSystem = game.hero_system
 	var tip := ResearchTipButton
-	var lines: PackedStringArray = ["[b]Helden[/b] (Taste G)"]
+	var lines: PackedStringArray = ["[b]Helden %d/%d[/b] (Taste G)" % [hs.count_heroes(k), hs.max_heroes(k)]]
 	if hs.get_heroes(k).is_empty():
 		var hall_name := DataDB.get_building_name(DataDB.get_building("hero_hall"), k.faction_id)
 		lines.append(tip.colored("Noch keine Helden – in der %s anwerben (Reiter „Anwerben“)" % hall_name, COLOR_RESEARCH_IDLE))
@@ -871,6 +930,7 @@ func _setup_diplomacy() -> void:
 	_diplomacy_button = ResearchTipButton.new()
 	_diplomacy_button.name = "DiplomacyButton"
 	_diplomacy_button.text = "Diplomatie"
+	_window_icon(_diplomacy_button, "diplomacy")
 	_diplomacy_button.toggle_mode = true
 	_diplomacy_button.add_theme_font_size_override("font_size", 16)
 	_compact(_diplomacy_button)
@@ -944,6 +1004,7 @@ func _setup_espionage() -> void:
 	_espionage_button = ResearchTipButton.new()
 	_espionage_button.name = "EspionageButton"
 	_espionage_button.text = "Spionage"
+	_window_icon(_espionage_button, "espionage")
 	_espionage_button.toggle_mode = true
 	_espionage_button.add_theme_font_size_override("font_size", 16)
 	_compact(_espionage_button)
@@ -970,7 +1031,7 @@ func _refresh_espionage_button() -> void:
 	var k: Kingdom = game.player
 	var esp: EspionageSystem = game.espionage_system
 	var value := esp.get_discovery(k)
-	var text := "Spionage · %d" % roundi(value)
+	var text := window_label("Spionage")
 	if _espionage_button.text != text:
 		_espionage_button.text = text
 	_espionage_button.underline_ratio = clampf(value / maxf(float(DataDB.esp("discovery.max_display", 150)), 1.0), 0.0, 1.0)
@@ -1043,6 +1104,7 @@ func _setup_kingdom() -> void:
 	_kingdom_button = ResearchTipButton.new()
 	_kingdom_button.name = "KingdomButton"
 	_kingdom_button.text = "Reich"
+	_window_icon(_kingdom_button, "kingdom")
 	_kingdom_button.toggle_mode = true
 	_kingdom_button.add_theme_font_size_override("font_size", 16)
 	_compact(_kingdom_button)
@@ -1180,6 +1242,7 @@ func _setup_troops() -> void:
 	_troop_button = ResearchTipButton.new()
 	_troop_button.name = "TroopButton"
 	_troop_button.text = "Armee"
+	_window_icon(_troop_button, "army")
 	_troop_button.toggle_mode = true
 	_troop_button.add_theme_font_size_override("font_size", 16)
 	_compact(_troop_button)
@@ -1213,23 +1276,21 @@ func _on_troops_toggled(open: bool) -> void:
 		_close_other_panels(troop_panel)
 
 
-## "Armee · 24" mit Strich (Leben aller Truppen) und rotem Punkt, solange Truppen kämpfen
+## "Armee" mit Strich (Leben aller Truppen) und rotem Punkt, solange Truppen kämpfen (Zahl im Tooltip)
 func _refresh_troop_button() -> void:
 	if _troop_button == null:
 		return
-	var n := 0
 	var fighting := false
 	var hp := 0.0
 	var max_hp := 0.0
 	for u in game.player.units:
 		if not is_instance_valid(u) or not u.is_alive() or not CommandSystem.is_warrior(u):
 			continue
-		n += 1
 		hp += u.hp
 		max_hp += u.max_hp
 		if not fighting and TroopPanel.unit_state(u) == TroopPanel.STATE_FIGHTING:
 			fighting = true
-	var text := "Armee" if n == 0 else "Armee · %d" % n
+	var text := window_label("Armee")
 	if _troop_button.text != text:
 		_troop_button.text = text
 	var ratio := hp / max_hp if max_hp > 0.0 else -1.0
