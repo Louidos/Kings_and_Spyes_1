@@ -8,6 +8,7 @@ extends Node
 ## Prüfmodule in dieser Reihenfolge
 const MODULES := {
 	"Stärke": preload("res://tests/smoke_strength.gd"),
+	"Bewohner": preload("res://tests/smoke_residents.gd"),
 	"Dörfer": preload("res://tests/smoke_villages.gd"),
 	"Helden": preload("res://tests/smoke_new_heroes.gd"),
 	"Handel": preload("res://tests/smoke_trade.gd"),

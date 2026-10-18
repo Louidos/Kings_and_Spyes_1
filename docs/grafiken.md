@@ -164,7 +164,7 @@ Einen neuen Skin legt man in `data/troops.json` → `skins.variants` an (siehe
 
 - **Burg je Volk** (optional): `castle_<volk>.png`, z. B. `castle_orcs.png` (256 × 256). Fehlt sie, nimmt das Spiel
   `castle_good.png` bzw. `castle_evil.png`.
-- **Dorfzentren und Hütten** je neutralem Volk, **Milizen** und **Volkskrieger**: Namen in
+- **Dorfzentren und Hütten** je neutralem Volk, **Milizen**, **Dorfbewohner** und **Volkskrieger**: Namen in
   [`assets_liste.md`](../assets_liste.md), Abschnitt „Phase 6 – Neutrale Völker“. Ohne Datei zeichnet das Spiel sie in
   der Farbe des Volks (Milizen und Volkskrieger als Figuren mit eigener Waffe, siehe `figure` in `data/units.json`).
 

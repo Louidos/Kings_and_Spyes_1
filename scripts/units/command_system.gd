@@ -64,6 +64,8 @@ const COMMANDS := {
 	"cast": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "hold", "text": "wirkt eine Fähigkeit"},
 	# Bote (ab Phase 9 auch Karawane): reist zum Ziel, kämpft nie, danach Befehl gelöscht
 	"travel": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "überbringt eine Nachricht"},
+	# Dorfbewohner (VillageResidents): leben im Dorf, kämpfen nie und wehren sich nicht
+	"village_life": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "", "text": "lebt im Dorf"},
 	# Spion (Phase 7): schleicht zum Ziel, kämpft nie, danach Befehl gelöscht
 	"infiltrate": {"engage": false, "retaliate": false, "buildings": false, "leash": "none", "on_arrive": "clear", "text": "schleicht sich ans Ziel"},
 	# Spion am Ziel: bleibt, kämpft nie

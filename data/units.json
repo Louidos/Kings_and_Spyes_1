@@ -38,6 +38,7 @@
 		"tiers": {
 			"default": {"kind": "humanoid", "outfit": "soldier", "armor": "light", "head": "helmet", "gear": "sword"},
 			"villager": {"outfit": "villager", "armor": "cloth", "head": "cap", "tool_by_job": true},
+			"resident": {"outfit": "villager", "armor": "cloth", "head": "cap", "tool_by_job": true},
 			"king": {"outfit": "king", "armor": "heavy", "head": "crown", "gear": "sceptre", "cape": "#8e2b3a",
 			         "by_faction": {"evil": {"cape": "#3a1a44", "head": "horns"}}},
 			"scout": {"armor": "light", "head": "cap", "gear": "dagger"},
@@ -356,6 +357,78 @@
 			"hp": 45, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
 			"flee_on_hit": true, "joins_fights": false, "target_priority": 0.5, "kill_points": 0,
 			"sprite": "res://assets/sprites/units/wanderer.png"
+		},
+		{
+			"id": "resident_dwarves", "name": "Zwergenbewohner", "faction": "neutral", "tier": "resident", "role": "worker", "people": "dwarves",
+			"letter": "B", "color": "#b0703c", "figure": {"head": "hair"},
+			"description": "Bewohner eines neutralen Dorfs. Geht zur Arbeit, trägt Waren ins Dorfzentrum und flieht bei Gefahr – kämpft nie.",
+			"speed": 1.9, "radius": 13, "sight": 4, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 40, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
+			"flee_on_hit": false, "joins_fights": false, "target_priority": 0.5, "kill_points": 0,
+			"sprite": "res://assets/sprites/units/resident_dwarves.png"
+		},
+		{
+			"id": "resident_halflings", "name": "Halblingsbewohner", "faction": "neutral", "tier": "resident", "role": "worker", "people": "halflings",
+			"letter": "B", "color": "#8fbf5a", "figure": {"head": "cap"},
+			"description": "Bewohner eines neutralen Dorfs. Geht zur Arbeit, trägt Waren ins Dorfzentrum und flieht bei Gefahr – kämpft nie.",
+			"speed": 2.1, "radius": 12, "sight": 4, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 40, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
+			"flee_on_hit": false, "joins_fights": false, "target_priority": 0.5, "kill_points": 0,
+			"sprite": "res://assets/sprites/units/resident_halflings.png"
+		},
+		{
+			"id": "resident_wood_elves", "name": "Waldelfenbewohner", "faction": "neutral", "tier": "resident", "role": "worker", "people": "wood_elves",
+			"letter": "B", "color": "#3f9e5a", "figure": {"head": "hood"},
+			"description": "Bewohner eines neutralen Dorfs. Geht zur Arbeit, trägt Waren ins Dorfzentrum und flieht bei Gefahr – kämpft nie.",
+			"speed": 2.3, "radius": 14, "sight": 4, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 40, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
+			"flee_on_hit": false, "joins_fights": false, "target_priority": 0.5, "kill_points": 0,
+			"sprite": "res://assets/sprites/units/resident_wood_elves.png"
+		},
+		{
+			"id": "resident_lizardfolk", "name": "Echsenbewohner", "faction": "neutral", "tier": "resident", "role": "worker", "people": "lizardfolk",
+			"letter": "B", "color": "#6aa38f", "figure": {"head": "none", "skin_color": "#6aa38f"},
+			"description": "Bewohner eines neutralen Dorfs. Geht zur Arbeit, trägt Waren ins Dorfzentrum und flieht bei Gefahr – kämpft nie.",
+			"speed": 2.2, "radius": 14, "sight": 4, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 40, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
+			"flee_on_hit": false, "joins_fights": false, "target_priority": 0.5, "kill_points": 0,
+			"sprite": "res://assets/sprites/units/resident_lizardfolk.png"
+		},
+		{
+			"id": "resident_nomads", "name": "Nomadenbewohner", "faction": "neutral", "tier": "resident", "role": "worker", "people": "nomads",
+			"letter": "B", "color": "#d9a441", "figure": {"head": "brim"},
+			"description": "Bewohner eines neutralen Dorfs. Geht zur Arbeit, trägt Waren ins Dorfzentrum und flieht bei Gefahr – kämpft nie.",
+			"speed": 2.3, "radius": 14, "sight": 4, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 40, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
+			"flee_on_hit": false, "joins_fights": false, "target_priority": 0.5, "kill_points": 0,
+			"sprite": "res://assets/sprites/units/resident_nomads.png"
+		},
+		{
+			"id": "resident_giants", "name": "Riesenbewohner", "faction": "neutral", "tier": "resident", "role": "worker", "people": "giants",
+			"letter": "B", "color": "#8c8c9c", "figure": {"head": "none"},
+			"description": "Bewohner eines neutralen Dorfs. Geht zur Arbeit, trägt Waren ins Dorfzentrum und flieht bei Gefahr – kämpft nie.",
+			"speed": 1.6, "radius": 21, "sight": 4, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 40, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
+			"flee_on_hit": false, "joins_fights": false, "target_priority": 0.5, "kill_points": 0,
+			"sprite": "res://assets/sprites/units/resident_giants.png"
+		},
+		{
+			"id": "resident_water_spirits", "name": "Quellbewohner", "faction": "neutral", "tier": "resident", "role": "worker", "people": "water_spirits",
+			"letter": "B", "color": "#4fb6d6", "figure": {"kind": "spirit"},
+			"description": "Bewohner eines neutralen Dorfs. Geht zur Arbeit, trägt Waren ins Dorfzentrum und flieht bei Gefahr – kämpft nie.",
+			"speed": 2.1, "radius": 14, "sight": 4, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 40, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
+			"flee_on_hit": false, "joins_fights": false, "target_priority": 0.5, "kill_points": 0,
+			"sprite": "res://assets/sprites/units/resident_water_spirits.png"
+		},
+		{
+			"id": "resident_kobold_traders", "name": "Koboldbewohner", "faction": "neutral", "tier": "resident", "role": "worker", "people": "kobold_traders",
+			"letter": "B", "color": "#c76fd1", "figure": {"head": "cap", "skin_color": "#c79a6a"},
+			"description": "Bewohner eines neutralen Dorfs. Geht zur Arbeit, trägt Waren ins Dorfzentrum und flieht bei Gefahr – kämpft nie.",
+			"speed": 2.3, "radius": 12, "sight": 4, "food_per_day": 0, "can_work": false, "needs_housing": false,
+			"hp": 40, "attack": 0, "attack_interval": 1.0, "range": 0.8, "armor": 0.0, "aggro_range": 0, "regen": 0.5,
+			"flee_on_hit": false, "joins_fights": false, "target_priority": 0.5, "kill_points": 0,
+			"sprite": "res://assets/sprites/units/resident_kobold_traders.png"
 		},
 
 		{

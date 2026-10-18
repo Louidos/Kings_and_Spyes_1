@@ -34,6 +34,8 @@ var path_index := 0
 var moving := false
 ## Wartet auf eine Wegberechnung (Warteschlange im UnitSystem)
 var path_pending := false
+## Die Wegberechnung wartet in der Hintergrund-Schlange (UnitSystem.move_to_background)
+var path_background := false
 var path_target := Vector2.ZERO
 ## Endziel langer Wege, die in Abschnitten berechnet werden (sonst leer)
 var path_final := Vector2.ZERO

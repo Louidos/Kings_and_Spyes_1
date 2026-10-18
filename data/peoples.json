@@ -5,7 +5,7 @@
 		"strengths / weaknesses: Texte für Menüs und Fenster.",
 		"terrain_bonus: {Biom: {attack, defense, speed, regen}} – Faktoren für Einheiten dieses Volks auf diesem Gelände (ab Phase 8). defense 1.2 = erlittener Schaden ÷ 1.2.",
 		"day_bonus / night_bonus / base_bonus: Faktoren auf Reichs-Modifikatoren (Schlüssel wie in research.json: attack, defense, speed, sight, regen, hp, spell_power, mana_regen, summon, build, production, production.<res>, food_use). Ab Phase 8 als Quellen \"daynight\" bzw. \"people:<id>\" gesetzt.",
-		"Nur neutrale Völker (Dörfer): village_title, village_names, produces (Menge pro Spielminute ins Dorflager), tribute (pro Minute an den Schutzherrn), gift_preferences (Faktor auf den Geschenkwert), trade_rates.sells (<1 = das Dorf verkauft diese Ware billiger) / trade_rates.buys (>1 = das Dorf zahlt mehr dafür), trade_bonus (bessere Kurse, 0.25 = +25 %), delivery (Handelsvertrag: give = Lieferung des Dorfs, take = Bezahlung des Partners, je Lieferung), annex_gift (grosses Geschenk für die Aufnahme, wird mit der Dorfgrösse skaliert), militia_unit (units.json), militia_factor (Anteil der Standard-Milizzahl), special_unit (in der Kaserne freigeschaltet bei Bündnis oder Aufnahme)."
+		"Nur neutrale Völker (Dörfer): village_title, village_names, produces (Menge pro Spielminute ins Dorflager), tribute (pro Minute an den Schutzherrn), gift_preferences (Faktor auf den Geschenkwert), trade_rates.sells (<1 = das Dorf verkauft diese Ware billiger) / trade_rates.buys (>1 = das Dorf zahlt mehr dafür), trade_bonus (bessere Kurse, 0.25 = +25 %), delivery (Handelsvertrag: give = Lieferung des Dorfs, take = Bezahlung des Partners, je Lieferung), annex_gift (grosses Geschenk für die Aufnahme, wird mit der Dorfgrösse skaliert), resident_unit (units.json, Dorfbewohner) und resident_names (Namen der Bewohner), militia_unit (units.json), militia_factor (Anteil der Standard-Milizzahl), special_unit (in der Kaserne freigeschaltet bei Bündnis oder Aufnahme)."
 	],
 
 	"peoples": [
@@ -64,6 +64,7 @@
 		  "gift_preferences": {"food": 1.5, "wood": 1.3, "mana": 1.2, "ore": 0.6, "stone": 0.6},
 		  "trade_rates": {"sells": {"ore": 0.85, "stone": 0.85}, "buys": {"food": 1.2, "wood": 1.15}}, "trade_bonus": 0.0,
 		  "delivery": {"give": {"ore": 12}, "take": {"food": 15}}, "annex_gift": {"food": 250, "mana": 40},
+		  "resident_unit": "resident_dwarves", "resident_names": ["Borin", "Dagna", "Thrain", "Hilda", "Gromli", "Brunhild", "Durin", "Ketta"],
 		  "militia_unit": "militia_dwarves", "militia_factor": 1.0, "special_unit": "dwarf_ironguard" },
 		{ "id": "halflings", "name": "Halblinge", "faction": "neutral", "color": "#8fbf5a", "letter": "H",
 		  "description": "Fröhliches Bauernvolk. Liefert reichlich Nahrung und kämpft lieber aus dem Versteck.",
@@ -77,6 +78,7 @@
 		  "gift_preferences": {"ore": 1.4, "stone": 1.3, "mana": 1.2, "wood": 1.0, "food": 0.6},
 		  "trade_rates": {"sells": {"food": 0.8}, "buys": {"ore": 1.2, "stone": 1.1}}, "trade_bonus": 0.0,
 		  "delivery": {"give": {"food": 25}, "take": {"stone": 10}}, "annex_gift": {"ore": 120, "stone": 120},
+		  "resident_unit": "resident_halflings", "resident_names": ["Pippa", "Bodo", "Rosie", "Milo", "Tilda", "Fredo", "Lotti", "Hamfast"],
 		  "militia_unit": "militia_halflings", "militia_factor": 1.0, "special_unit": "halfling_slinger" },
 		{ "id": "wood_elves", "name": "Waldelfen", "faction": "neutral", "color": "#3f9e5a", "letter": "W",
 		  "description": "Scheue Bogenschützen der tiefen Wälder. Sie lieben Mana und misstrauen Holzfällern.",
@@ -90,6 +92,7 @@
 		  "gift_preferences": {"mana": 1.5, "food": 1.2, "stone": 1.1, "ore": 0.8, "wood": 0.5},
 		  "trade_rates": {"sells": {"wood": 0.8, "mana": 0.9}, "buys": {"food": 1.15, "stone": 1.1}}, "trade_bonus": 0.0,
 		  "delivery": {"give": {"wood": 20, "mana": 4}, "take": {"food": 15}}, "annex_gift": {"mana": 80, "food": 150},
+		  "resident_unit": "resident_wood_elves", "resident_names": ["Elarin", "Sylwen", "Thalion", "Nimriel", "Faelar", "Aerin", "Lirael", "Caelith"],
 		  "militia_unit": "militia_wood_elves", "militia_factor": 1.0, "special_unit": "wood_elf_ranger" },
 		{ "id": "lizardfolk", "name": "Echsenvolk", "faction": "neutral", "color": "#6aa38f", "letter": "E",
 		  "description": "Sumpfjäger mit Schuppenhaut. Bei Wärme flink, nachts träge.",
@@ -103,6 +106,7 @@
 		  "gift_preferences": {"ore": 1.4, "stone": 1.2, "wood": 1.0, "mana": 1.0, "food": 0.7},
 		  "trade_rates": {"sells": {"food": 0.85}, "buys": {"ore": 1.2}}, "trade_bonus": 0.0,
 		  "delivery": {"give": {"food": 20}, "take": {"ore": 8}}, "annex_gift": {"ore": 120, "food": 80},
+		  "resident_unit": "resident_lizardfolk", "resident_names": ["Sssarak", "Ixtli", "Zhaar", "Kesh", "Tlaka", "Ssiva", "Rhok", "Yaxa"],
 		  "militia_unit": "militia_lizardfolk", "militia_factor": 1.0, "special_unit": "lizard_skirmisher" },
 		{ "id": "nomads", "name": "Nomaden", "faction": "neutral", "color": "#d9a441", "letter": "N",
 		  "description": "Wandernde Händler der Wüste. Sie handeln mit jedem und kennen jeden Weg.",
@@ -116,6 +120,7 @@
 		  "gift_preferences": {"wood": 1.4, "stone": 1.3, "ore": 1.2, "mana": 1.0, "food": 0.8},
 		  "trade_rates": {"sells": {"food": 0.9, "stone": 0.95, "wood": 0.95}, "buys": {"wood": 1.1, "ore": 1.1}}, "trade_bonus": 0.1,
 		  "delivery": {"give": {"food": 10, "wood": 5}, "take": {"stone": 10}}, "annex_gift": {"wood": 200, "stone": 120},
+		  "resident_unit": "resident_nomads", "resident_names": ["Amar", "Leyla", "Tarik", "Samira", "Rashid", "Nura", "Kadir", "Zaina"],
 		  "militia_unit": "militia_nomads", "militia_factor": 1.0, "special_unit": "nomad_rider" },
 		{ "id": "giants", "name": "Riesen", "faction": "neutral", "color": "#8c8c9c", "letter": "R",
 		  "description": "Wenige, aber gewaltige Hügelriesen. Sie brechen Stein mit blossen Händen.",
@@ -129,6 +134,7 @@
 		  "gift_preferences": {"food": 1.6, "ore": 1.2, "wood": 1.0, "mana": 0.8, "stone": 0.5},
 		  "trade_rates": {"sells": {"stone": 0.8}, "buys": {"food": 1.25}}, "trade_bonus": 0.0,
 		  "delivery": {"give": {"stone": 20}, "take": {"food": 20}}, "annex_gift": {"food": 300, "ore": 60},
+		  "resident_unit": "resident_giants", "resident_names": ["Grom", "Hulda", "Brakk", "Ymma", "Torvald", "Ragna", "Ogg", "Sigrun"],
 		  "militia_unit": "militia_giants", "militia_factor": 0.5, "special_unit": "giant_brute" },
 		{ "id": "water_spirits", "name": "Wassergeister", "faction": "neutral", "color": "#4fb6d6", "letter": "Q",
 		  "description": "Geister der Quellen und Moore. Ihre Teiche sprudeln vor Mana.",
@@ -142,6 +148,7 @@
 		  "gift_preferences": {"food": 1.2, "wood": 1.2, "stone": 1.0, "ore": 0.7, "mana": 0.6},
 		  "trade_rates": {"sells": {"mana": 0.85}, "buys": {"food": 1.1, "wood": 1.1}}, "trade_bonus": 0.0,
 		  "delivery": {"give": {"mana": 8}, "take": {"food": 15}}, "annex_gift": {"food": 150, "wood": 150},
+		  "resident_unit": "resident_water_spirits", "resident_names": ["Quell", "Nixa", "Perle", "Tau", "Welle", "Brisa", "Morgentau", "Silbertropf"],
 		  "militia_unit": "militia_water_spirits", "militia_factor": 1.0, "special_unit": "water_spirit_healer" },
 		{ "id": "kobold_traders", "name": "Koboldhändler", "faction": "neutral", "color": "#c76fd1", "letter": "K",
 		  "description": "Gerissene Koboldhändler. Die besten Kurse im Land – und keine Scheu vor dunklen Kunden.",
@@ -155,6 +162,7 @@
 		  "gift_preferences": {"ore": 1.5, "mana": 1.5, "food": 1.0, "wood": 0.8, "stone": 0.8},
 		  "trade_rates": {"sells": {"ore": 0.9, "stone": 0.9, "food": 0.9, "wood": 0.9, "mana": 0.95}, "buys": {"mana": 1.15, "ore": 1.1}}, "trade_bonus": 0.25,
 		  "delivery": {"give": {"ore": 8, "stone": 5}, "take": {"mana": 5}}, "annex_gift": {"ore": 150, "mana": 60},
+		  "resident_unit": "resident_kobold_traders", "resident_names": ["Fips", "Knack", "Zinka", "Gripp", "Moppel", "Tikka", "Schnurr", "Pfennig"],
 		  "militia_unit": "militia_kobold_traders", "militia_factor": 1.0, "special_unit": "kobold_bombardier" },
 
 		{ "id": "blood_elves", "name": "Blutelfen", "faction": "evil", "color": "#b0283c", "letter": "B",

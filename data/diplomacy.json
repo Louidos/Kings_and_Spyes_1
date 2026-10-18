@@ -10,6 +10,7 @@
 		"village: Dorfwirtschaft und Milizen. messenger: Boten, die angegriffene Dörfer losschicken.",
 		"strength_attitude: Wirkung der Heeresstärke auf den Ruf (alle interval Sekunden). Stärke = Kampfkraft aller Truppen, Helden und des Königs (wie Dorfmilizen); unter min_power keine Wirkung, Faktor = Stärke / reference_power (höchstens max_factor). Freundlich/Ergeben (friendly_tiers) oder mit Schutz-/Bündnisvertrag: + friendly_per_interval × Faktor bis friendly_cap (Grund friendly_reason). Neutral: keine Wirkung. Misstrauisch/Feindselig oder im Krieg: + hostile_per_interval × Faktor bis hostile_floor. Angst bei allen erzeugen nur Taten (events: Angriff, Drohung, Eroberung und ihre Gerüchte). merge_seconds: gleiche Gründe werden im Verlauf zusammengezählt.",
 		"village.growth: Dorfwachstum. Im Frieden wächst ein Dorf je interval Sekunden um base (Handelsvertrag oder Handelsweg + trade_bonus, Schutz- oder Bündnisvertrag + alliance_bonus); bei 1 kommt eine Hütte dazu (mehr Bewohner, mehr Milizplätze; militia_max begrenzt). Krieg mit einem Reich, Alarm oder ein Angriff/eine zerstörte Hütte in den letzten attack_pause_seconds halten es an. Höchstens max_size Hütten; neue Hütten auf freien Kacheln bis hut_search_radius um das Dorfzentrum. towers_at_size: ab dieser Grösse je ein Wachturm (Gebäude tower). Fehlen Hütten (zerstört) oder fällige Türme, werden sie mit dem nächsten Wachstumsschritt wieder gebaut, auch bei voller Grösse.",
+		"village.residents: sichtbare Dorfbewohner (nur Darstellung, keine Wirtschaft – die Produktion bleibt wie sie ist). Je population_per_resident Einwohner ein Bewohner, höchstens max_visible je Dorf. Tagsüber wählt ein Bewohner eine Ware seines Volks (gewichtet nach produces) und damit eine Tätigkeit aus tasks (job: Beruf aus jobs.json für Werkzeug und Text; at: hut = Feld an einer Hütte, hall = am Dorfzentrum, sonst ein passendes Vorkommen bis work_radius Kacheln ums Dorfzentrum, sonst an einer Hütte), arbeitet work_seconds (von–bis), trägt carry Einheiten der Ware sichtbar ins Dorfzentrum und ruht rest_seconds. Nachts schlafen sie in den Hütten. Bei Alarm fliehen sie ins Dorfzentrum und kommen erst nach dem Alarm wieder heraus. Fällt ein Bewohner, sinkt die Einwohnerzahl um 1; nach replace_seconds (ohne Alarm) kommt ein neuer. Aufnahme und Eroberung: Die Bewohner bleiben Dorfbewohner; bei einer Eroberung sinkt die Einwohnerzahl (annex.conquest_population_loss), wer dann zu viel ist, verlässt das Dorf.",
 		"station: Truppen bei Verbündeten stationieren (Armeefenster und Diplomatiefenster, nur bei Bündnis). Am Dorf zählt, wer höchstens Dorfradius + radius_extra Kacheln vom Zentrum steht; ein Marschbefehl weiter weg als Dorfradius + leave_extra beendet die Stationierung. Ab min_units anwesenden Kriegern: alle reputation_interval s Ruf + (reputation_per_interval + reputation_per_unit × Anzahl), höchstens reputation_max_per_interval, nur bis reputation_cap; alle tribute_interval s Abgabe des Dorfs: tribute_per_unit × Anzahl (höchstens tribute_max) seiner reichlichsten Handelsware. Hilferuf, wenn ein verbündetes Dorf ohne deine Truppen angegriffen wird: help_seconds Zeit, Annehmen schickt bis help_units freie Krieger (Ruf help_accept_reputation), Ablehnen help_decline_reputation, Verstreichen help_ignore_reputation; höchstens alle help_cooldown s je Dorf. Miliz anfordern: Miliz des Dorfs kommt zur Burg (Ruf militia_reputation, wieder nach militia_cooldown s). ai: KI-Reiche stationieren ab min_minute bei ihren verbündeten Dörfern units Krieger, wenn danach noch keep_home_share ihrer Truppen daheim bleiben; Hilferufe nimmt sie ab accept_help_min_pool Kriegern daheim an und schickt höchstens so viele, dass keep_home_share daheim bleibt (mindestens min_units, sonst lehnt sie ab), bei Alarm an der eigenen Burg keine. Nach dem Kampf kehren Hilfstruppen bis auf units heim. Ein Hilferuf entsteht nur, wenn Feinde am Dorf stehen (nicht bei blossen Boten-Warnungen), und endet mit dem Bündnis."
 	],
 
@@ -26,7 +27,7 @@
 	},
 
 	"events": {
-		"attack": -5, "kill_militia": -3, "destroy_building": -10, "declare_war": -30, "treaty_break": -40,
+		"attack": -5, "kill_militia": -3, "kill_resident": -3, "destroy_building": -10, "declare_war": -30, "treaty_break": -40,
 		"threat_success": -10, "threat_fail": -15, "treaty_refused": -2,
 		"protection_kill_per_point": 2.0, "protection_cap_per_hour": 15,
 		"protection_help_success": 5, "protection_help_failed": -15,
@@ -85,7 +86,11 @@
 		"tick_seconds": 1.0, "militia_base": 2, "militia_per_size": 1, "militia_max": 10, "refill_seconds": 120,
 		"guard_radius": [3.5, 5.0], "alarm_radius_extra": 4, "alarm_calm_seconds": 10, "population_per_size": 4,
 		"growth": {"interval": 600, "base": 1.0, "trade_bonus": 0.5, "alliance_bonus": 0.25, "attack_pause_seconds": 900,
-		           "max_size": 10, "hut_search_radius": 8, "tower": "tower", "towers_at_size": [7, 9]}
+		           "max_size": 10, "hut_search_radius": 8, "tower": "tower", "towers_at_size": [7, 9]},
+		"residents": {"max_visible": 6, "population_per_resident": 4, "work_radius": 9, "work_seconds": [6, 12],
+		              "rest_seconds": [2, 5], "carry": 5, "replace_seconds": 120,
+		              "tasks": {"wood": {"job": "woodcutter"}, "stone": {"job": "stonecutter"}, "ore": {"job": "miner"},
+		                        "food": {"job": "farmer", "at": "hut"}, "mana": {"job": "mana_worker", "at": "hall"}}}
 	},
 
 	"messenger": {

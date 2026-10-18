@@ -226,6 +226,12 @@ Jedes Dorf ist ein eigenes `Kingdom` (`controller = "neutral"`, Feld `people_id`
   (Produktion ins Dorflager, Tribut, Milizen nachfüllen), Alarm, Bündnishilfe, Eroberung (`try_capture`:
   Dorfzentren werden bei 0 Leben erobert statt zerstört) und `transfer_settlement` (Aufnahme/Eroberung: Gebäude über
   `BuildingSystem.transfer_building`, Milizen über `UnitSystem.transfer_unit`, Gebiet wechselt mit).
+- **`VillageResidents`** (Teil des VillageSystem, `village_system.residents`): sichtbare Dorfbewohner (`units.json`
+  Stufe `resident`, je Volk `resident_unit`). Reine Darstellung: Tagesablauf (Arbeitsort → arbeiten → Ware ins
+  Dorfzentrum → ruhen), nachts in den Hütten, bei Alarm im Dorfzentrum; Befehl `village_life` (kämpft nie, wehrt sich
+  nicht). Ihr Zustand steht im Dorf-Datensatz (`residents`), die Einheiten selbst speichert SaveGame wie alle anderen.
+  Alltagswege laufen über `UnitSystem.move_to_background` (eigene Warteschlange mit niedrigem Vorrang), damit viele
+  Dörfer keine Armeen oder Karawanen bremsen.
 - **`DiplomacySystem`**: Ruf je Dorf und Reich (−100 … +100, Stufen, Verfall zum Grundwert, Verlauf), Geschenke,
   Verträge (Schutz, Handel, Bündnis) mit Pflichten und Lieferungen, Tauschhandel mit Tageslimit, Aufnahme, Drohung,
   Krieg/Frieden, Seitenwechsel, Gebietsverletzung. Alle Aktionen haben `Kingdom`-Parameter (Spieler und KI rufen

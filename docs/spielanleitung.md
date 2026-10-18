@@ -746,6 +746,16 @@ mit einem Handelsvertrag oder Handelsweg schneller (+50 %), mit einem Schutzvert
 Dorf je einen Wachturm. Höchstens 10 Hütten. Krieg mit einem Reich, ein Alarm oder ein Angriff bzw. eine zerstörte
 Hütte in den letzten 15 Minuten halten das Wachstum an. Die Hüttenzahl steht im Diplomatiefenster.
 
+**Dorfbewohner:** In jedem Dorf leben sichtbare Bewohner im Aussehen ihres Volks (je 4 Einwohner einer, höchstens 6).
+Tagsüber gehen sie zur Arbeit – Bäume fällen, Steine brechen, Erz abbauen, Felder bestellen oder Mana bündeln, je
+nachdem, was ihr Volk herstellt –, tragen die Ware ins Dorfzentrum und fangen von vorn an. Nachts schlafen sie in den
+Hütten. Bei einem Alarm fliehen sie ins Dorfzentrum und kommen erst wieder heraus, wenn eine Weile Ruhe ist. Sie
+kämpfen nie. Ein Klick zeigt Name, Dorf und Tätigkeit. Wer einen Bewohner angreift, greift das Dorf an (gleiche Folgen
+wie bei der Miliz); fällt ein Bewohner, hat das Dorf einen Einwohner weniger, nach etwa 2 Minuten kommt ein neuer.
+Die Bewohner sind Leben im Dorf, keine eigene Wirtschaft: Die Produktion des Dorfs bleibt gleich. Wird ein Dorf
+aufgenommen oder erobert, bleiben sie Dorfbewohner und leben am Dorfzentrum weiter (nach einer Eroberung flieht ein
+Teil).
+
 ![Weit herausgezoomt: das eigene Reich und seine Umgebung](bilder/umgebung.jpg)
 
 ![Diplomatiefenster](bilder/diplomatie.jpg)
@@ -763,7 +773,7 @@ Hütte in den letzten 15 Minuten halten das Wachstum an. Die Hüttenzahl steht i
 | −50 bis −11 | **Misstrauisch** |
 | −100 bis −51 | **Feindselig** – das Dorf schliesst sich deinem Gegner an |
 
-Der Ruf steigt durch Geschenke, Handel, Verträge und Schutz und sinkt durch Angriffe (−5), getötete Milizen,
+Der Ruf steigt durch Geschenke, Handel, Verträge und Schutz und sinkt durch Angriffe (−5), getötete Milizen und Bewohner,
 zerstörte Gebäude, Drohungen, Kriegserklärungen (−30) und Vertragsbruch (−40). Andere Dörfer hören Gerüchte davon.
 Mit der Zeit nähert er sich wieder dem Grundwert.
 
