@@ -95,7 +95,7 @@ tests/                   Skriptprüfung, Rauchtests, Balancing-Läufe, Bildschir
 |---|---|
 | `DataDB` | lädt alle JSON-Dateien aus `data/` (in fester Reihenfolge, `reload()`), ergänzt Standardwerte, prüft Verweise (z. B. Völker → Milizen), Hilfsfunktionen (`get_unit_for_tier`, `describe_requirement`, `cost_to_text`) und einen Fingerabdruck der Daten für Spielstände |
 | `Settings` | Einstellungen (`user://settings.cfg`): Grafik, Ton, Steuerung, Oberfläche, Spiel (siehe [Oberfläche](#oberfläche)) |
-| `GameSession` | Parameter der Partie: Fraktion, Volk, Schwierigkeit, Karte, Seed, Tutorial, vorgemerkter Spielstand |
+| `GameSession` | Parameter der Partie: Fraktion, Volk, Schwierigkeit, Karte, Seed, Optionen des neuen Spiels (`options`: Gegnerreiche, Dörfer, Startvorräte, Monster, Ereignisse – gespeichert im Spielstand und im Kopf, damit der Weltgenerator beim Laden dieselbe Welt erzeugt), Tutorial, vorgemerkter Spielstand |
 | `GameClock` | einzige Zeitquelle der Spielwelt: Pause, Tempo, Tag und Uhrzeit, `frame_delta`, Signal `sim_tick` (10 Schritte pro Spielsekunde) |
 | `Assets` | lädt Texturen über ihren Pfad mit Zwischenspeicher (auch Fehltreffer); erzeugt Platzhalter-Figuren und Abzeichen |
 | `Notify` | Meldungen (Info, Warnung, Gefahr, gut) mit Ort bzw. Fensterverweis, Protokoll (höchstens 300) |

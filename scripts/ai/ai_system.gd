@@ -81,13 +81,16 @@ func setup(p_game: Node) -> void:
 # Gründung und Schwierigkeit
 # ---------------------------------------------------------------------------
 
-## Gründet die KI-Reiche: Anzahl aus ai.json → difficulty.kingdoms[Kartengrösse]
-## (oder GameSession.ai_count_override), höchstens so viele, wie es Plätze gibt.
+## Gründet die KI-Reiche: Anzahl aus ai.json → difficulty.kingdoms[Kartengrösse], der Option
+## des neuen Spiels (GameSession.options ai_kingdoms) oder GameSession.ai_count_override,
+## höchstens so viele, wie es Plätze gibt.
 ## Völker der Gegenfraktion, aus dem Seed gemischt (gleicher Seed = gleiche Völker).
 func found_ai_kingdoms() -> void:
 	var sites: Array = game.world.get_sites("kingdom")
 	sites.sort_custom(func(x: Dictionary, y: Dictionary) -> bool: return int(x.get("index", 0)) < int(y.get("index", 0)))
 	var n := GameSession.ai_count_override
+	if n < 0:
+		n = GameSession.get_ai_kingdoms_option()
 	if n < 0:
 		n = int((get_difficulty().get("kingdoms", {}) as Dictionary).get(GameSession.map_size_id, 1))
 	n = mini(n, sites.size())

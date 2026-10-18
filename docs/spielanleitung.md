@@ -63,6 +63,18 @@ Hauptmenü → **Neues Spiel**:
   gibt es mehr Dörfer, Monsterlager und Platz.
 - **Seed** – ein beliebiger Text oder eine Zahl. Gleicher Seed = gleiche Welt. „Zufall“ würfelt einen neuen.
 - **Tipps/Tutorial anzeigen** – startet das Tutorial in dieser Partie.
+- **Weitere Optionen** – jeweils mit „Standard“ (so wie ohne Option):
+  - **Gegnerreiche**: Standard (nach Schwierigkeit und Karte), 1, 2, 3 oder so viele wie möglich (klein höchstens 3,
+    mittel 4, gross 5).
+  - **Neutrale Dörfer**: wenige (halb so viele), Standard, viele (anderthalbmal so viele).
+  - **Startvorräte**: wenig (halb so viel), Standard, viel (doppelt) – für dich und die Gegner.
+  - **Monster**: aus (keine Monster, Streifzüge und Monsterwellen), wenige (jedes zweite Lager), Standard, viele
+    (mehr Monster je Lager).
+  - **Zufallsereignisse**: an oder aus.
+
+  Die Optionen stehen im Spielstand und gelten nach dem Laden weiter. Mit allen Optionen auf „Standard“ ergibt
+  derselbe Seed dieselbe Welt wie bisher; mehr Gegnerreiche oder andere Dorfzahlen verändern die Welt. Das Tutorial
+  nutzt immer seine festen Werte.
 
 **Tutorial:** Wer das Spiel zum ersten Mal spielt, wählt im Hauptmenü **Tutorial**. Es startet eine feste,
 freundliche Partie (Seed „Lernreich“, kleine Karte, Leicht, ein Gegnerreich) und führt in **37 Schritten** durch

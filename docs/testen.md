@@ -89,6 +89,9 @@ Prüfpunkt. Geprüft werden unter anderem:
 - **Einstellungen** (`smoke_settings.gd`, in `smoke_features.tscn`, eigene Datei): fünf Reiter, neue Werte wirken
   sofort, Speichern/Laden, alte `settings.cfg` ohne neue Schlüssel, „Standard“, Fenster passt bei UI-Grösse 80–150 %,
   Krieg ohne Rückfrage.
+- **Neues Spiel** (`smoke_new_game.gd`, letztes Modul in `smoke_features.tscn`): Standard ergibt dieselbe Welt, Dörfer
+  und Gegnerplätze nach Option; eine Partie mit 1 Gegner, wenigen Dörfern, vielen Vorräten, ohne Monster und
+  Ereignisse; Speichern/Laden behält die Optionen.
 - **Spione** (`smoke_spies.gd`, eigene Szene `smoke_spies.tscn`): zu Spielbeginn hat kein Reich Spione; ein im
   Spionagefenster beschworener Spion existiert genau einmal (Einheit, Datensatz, Liste, Fenster), auch mit Auftrag
   und nach Speichern und Laden. Spionagebericht: ohne Kundschaft „unbekannt“, ein Spion der höchsten Stufe liefert

@@ -4,6 +4,8 @@
 ## Seed). Das Hauptmenü füllt diese Werte, die Spielszene liest sie.
 ## Ab Phase 10 merkt sich die Sitzung auch, welcher Spielstand geladen werden soll
 ## (pending_load_path), die echte Spielzeit und Fehler für das Hauptmenü.
+## Optionen des neuen Spiels (game_config.json → new_game: Gegnerreiche, Dörfer, Startvorräte,
+## Monster, Zufallsereignisse) stehen in options und im Spielstand; fehlt eine, gilt "standard".
 ## Tutorial: start_tutorial startet es mit der neuen Partie (Knopf "Tutorial" im Hauptmenü
 ## bzw. "Tipps/Tutorial anzeigen"); sein Zustand liegt danach im TutorialSystem.
 extends Node
@@ -34,6 +36,12 @@ var debug_verify_load := false
 ## Neue Partie startet mit dem Tutorial (gilt auch für "Neu starten" derselben Partie;
 ## ein geladener Spielstand bringt seinen eigenen Tutorial-Zustand mit)
 var start_tutorial := false
+## Optionen des neuen Spiels: Schlüssel (ai_kingdoms, villages, resources, monsters, events) -> id;
+## fehlende Schlüssel = "standard"
+var options: Dictionary = {}
+
+## Schlüssel der Optionen in game_config.json → new_game (Reihenfolge im Dialog)
+const OPTION_KEYS := ["ai_kingdoms", "villages", "resources", "monsters", "events"]
 
 
 func _ready() -> void:
@@ -44,7 +52,7 @@ func _ready() -> void:
 ## Startet eine neue Partie mit den gegebenen Parametern. p_people: Volk des Spielers
 ## (leer oder unpassend = erstes Volk der Fraktion).
 func setup_new_game(p_faction: String, p_difficulty: String, p_map_size: String, p_seed_text: String,
-		p_people: String = "") -> void:
+		p_people: String = "", p_options: Dictionary = {}) -> void:
 	faction_id = p_faction
 	people_id = p_people
 	if str(DataDB.get_people(people_id).get("faction", "")) != faction_id:
@@ -61,6 +69,33 @@ func setup_new_game(p_faction: String, p_difficulty: String, p_map_size: String,
 	last_save_name = ""
 	play_seconds = 0.0
 	start_tutorial = false
+	options = {}
+	for key in p_options:
+		if OPTION_KEYS.has(str(key)) and not get_option_entry(str(key), str(p_options[key])).is_empty():
+			options[str(key)] = str(p_options[key])
+
+
+## Gewählte Option (id, "standard" wenn nicht gesetzt)
+func get_option(key: String) -> String:
+	return str(options.get(key, "standard"))
+
+
+## Eintrag einer Option aus game_config.json → new_game ({} wenn unbekannt)
+static func get_option_entry(key: String, id: String) -> Dictionary:
+	for e in DataDB.cfg("new_game." + key, []):
+		if e is Dictionary and str((e as Dictionary).get("id", "")) == id:
+			return e
+	return {}
+
+
+## Zahl der gewählten Option (factor bzw. count), default bei "standard" oder unbekannt
+func option_number(key: String, field: String, default: float) -> float:
+	return float(get_option_entry(key, get_option(key)).get(field, default))
+
+
+## Gewünschte Zahl der Gegnerreiche (-1 = Standard nach Schwierigkeit und Kartengrösse)
+func get_ai_kingdoms_option() -> int:
+	return int(option_number("ai_kingdoms", "count", -1.0))
 
 
 ## Tutorial-Partie (Knopf "Tutorial"): fester Seed, Kartengrösse und Schwierigkeit aus
@@ -75,7 +110,7 @@ func setup_tutorial_game(p_faction: String, p_people: String = "") -> void:
 func to_dict() -> Dictionary:
 	return {"faction_id": faction_id, "difficulty_id": difficulty_id, "map_size_id": map_size_id,
 			"seed_text": seed_text, "world_seed": world_seed, "people_id": people_id,
-			"ai_count_override": ai_count_override, "play_seconds": play_seconds}
+			"ai_count_override": ai_count_override, "play_seconds": play_seconds, "options": options.duplicate()}
 
 
 ## Partie aus einem Spielstand (Kopf oder session-Teil) übernehmen
@@ -89,6 +124,8 @@ func apply_session(d: Dictionary) -> void:
 	if d.has("ai_count_override"):
 		ai_count_override = int(d["ai_count_override"])
 	play_seconds = float(d.get("play_seconds", 0.0))
+	# Spielstände vor den Optionen (1.2.x): alles "standard"
+	options = (d.get("options", {}) as Dictionary).duplicate() if d.get("options", {}) is Dictionary else {}
 	start_tutorial = false
 
 

@@ -726,6 +726,9 @@ func _schedule(now: float) -> void:
 	if now < next_check:
 		return
 	next_check = now + interval
+	# Option „Zufallsereignisse: aus“ des neuen Spiels
+	if GameSession.get_option("events") == "off":
+		return
 	var freq := float(DataDB.evt("difficulty.%s.frequency" % GameSession.difficulty_id, 1.0))
 	if now < float(DataDB.evt("first_event_minutes", 20)) * 60.0 or active.size() >= int(DataDB.evt("max_active", 3)) \
 			or now - last_event_at < float(DataDB.evt("global_min_gap", 1500)) / maxf(freq, 0.01):
@@ -737,6 +740,9 @@ func _schedule(now: float) -> void:
 	for e in DataDB.get_events():
 		var def: Dictionary = e
 		if now < float(def.get("min_minutes", 0)) * 60.0 or float(cooldowns.get(str(def["id"]), -1.0)) > now:
+			continue
+		# Ohne Monster (Option des neuen Spiels) keine Monsterwellen
+		if str(def.get("kind", "")) == "monster_wave" and MonsterSystem.monster_factor() <= 0.0:
 			continue
 		candidates.append(def)
 		total += float(def.get("weight", 1))

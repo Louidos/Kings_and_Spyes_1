@@ -169,6 +169,7 @@ static func make_header(game: Node, slot: String, display_name: String, kind: St
 			"difficulty_id": GameSession.difficulty_id, "difficulty_name": str(diff.get("name", GameSession.difficulty_id)),
 			"map_size_id": GameSession.map_size_id, "map_size_name": str(map_size.get("name", GameSession.map_size_id)),
 			"seed_text": GameSession.seed_text, "world_seed": GameSession.world_seed,
+			"options": GameSession.options.duplicate(),
 			"summary": {"buildings": player.buildings.size() if player != null else 0,
 				"units": player.units.size() if player != null else 0, "heroes_max_level": max_level,
 				"enemies_left": enemies, "villages_allied": allied,

@@ -97,15 +97,27 @@ func setup(p_game: Node, p_wild: Kingdom) -> void:
 
 
 ## Setzt alle Höhlen der Karte mit ihren ersten Monstern.
+## Faktor der Option „Monster“ des neuen Spiels (0 = aus, 0,5 = wenige, 1 = Standard, 1,5 = viele)
+static func monster_factor() -> float:
+	return maxf(GameSession.option_number("monsters", "factor", 1.0), 0.0)
+
+
+## Lager der Weltgenerierung besetzen. Option „Monster“: aus = keine, wenige = jedes zweite Lager,
+## viele = mehr Monster je Lager (die Welt selbst bleibt gleich)
 func spawn_camps() -> void:
 	var lair_def := DataDB.get_building("monster_lair")
-	if lair_def.is_empty():
+	var factor := monster_factor()
+	if lair_def.is_empty() or factor <= 0.0:
 		return
+	var camp_index := -1
 	var size_range: Array = DataDB.cmb("camps.size", [3, 5])
 	var by_biome: Dictionary = DataDB.cmb("camps.by_biome", {})
 	var max_with: Dictionary = DataDB.cmb("camps.max_size_with", {})
 	var ref_points := maxf(float(DataDB.cmb("camps.loot_reference_points", 5)), 1.0)
 	for camp in world.get_sites("camp"):
+		camp_index += 1
+		if factor < 1.0 and camp_index % roundi(1.0 / factor) != 0:
+			continue
 		var cell: Vector2i = camp["cell"]
 		if not _footprint_free(cell, lair_def.get("size", Vector2i(2, 2))):
 			continue
@@ -113,6 +125,8 @@ func spawn_camps() -> void:
 		if kinds.is_empty():
 			continue
 		var count := int(camp.get("size", _rng.randi_range(int(size_range[0]), int(size_range[size_range.size() - 1]))))
+		if factor > 1.0:
+			count = roundi(count * factor)
 		# Monsterarten vorab auslosen: starke Arten begrenzen die Lagergrösse
 		var chosen: Array = []
 		for _i in count:
@@ -328,7 +342,7 @@ func _respawn_seconds(lair: Building) -> float:
 ## Monsterwelle (EventSystem): count Monster der Arten kinds bei origin, Ziel target.
 ## Gibt die Streifzug-id zurück (0 = nicht möglich).
 func spawn_wave(target: Kingdom, origin: Vector2, kinds: Array, count: int) -> int:
-	if target == null or kinds.is_empty() or count <= 0:
+	if target == null or kinds.is_empty() or count <= 0 or monster_factor() <= 0.0:
 		return 0
 	var target_pos := _settlement_point(target, origin)
 	if target_pos.x < 0.0:
@@ -450,6 +464,9 @@ func _start_group(units: Array, kind: String, lair_uid: int, target: Kingdom, ta
 
 
 func _tick_phase8(now: float) -> void:
+	# Option „Monster: aus“: keine Streifzüge, keine neuen Lager
+	if monster_factor() <= 0.0:
+		return
 	for r in raids.duplicate():
 		_tick_raid(r, now)
 	_tick_leaving()
