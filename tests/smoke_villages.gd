@@ -1,6 +1,7 @@
 ## Rauchtest Dörfer und Reiche wachsen (diplomacy.json village.growth, worldgen.json villages.size,
 ## ai.json start_bonus): neue Dörfer haben 4–7 Hütten, im Frieden wächst ein Dorf in 30 Spielminuten
-## sichtbar (Hütten, Bewohner, Milizplätze, ab einer Grösse ein Turm), im Krieg nicht; KI-Reiche
+## sichtbar (Hütten, Bewohner, Milizplätze, ab einer Grösse ein Turm, Brunnen, Feld und Werkstatt –
+## die Baustellen werden hier sofort fertiggestellt, das echte Bauen prüft smoke_sites.gd), im Krieg nicht; KI-Reiche
 ## starten mit mehr Bewohnern und Gebäuden; Dorfgrösse und Hütten überstehen Speichern und Laden.
 extends RefCounted
 
@@ -40,7 +41,7 @@ func run(r: Node) -> void:
 	var now := GameClock.game_time + float(DataDB.diplo("village.growth.attack_pause_seconds", 900))
 	rec["last_attacked"] = -1.0e9
 	for i in 180:
-		vs.tick_growth(v, rec, 10.0, now + i * 10.0)
+		grow_step(vs, v, rec, now + i * 10.0)
 	var grown := int(rec["size"]) - size0
 	r.check(TOPIC, grown >= 2 and v.buildings.size() > buildings0 and int(rec["population"]) > pop0
 			and (rec["hut_uids"] as Array).size() == int(rec["size"]),
@@ -59,7 +60,7 @@ func run(r: Node) -> void:
 	var later := now + 180 * 10.0
 	var guard := 0
 	while int(rec["size"]) < max_size and guard < 400:
-		vs.tick_growth(v, rec, 10.0, later)
+		grow_step(vs, v, rec, later)
 		later += 10.0
 		guard += 1
 	var huts: Array = rec["hut_uids"]
@@ -69,10 +70,23 @@ func run(r: Node) -> void:
 		var missing := (rec["hut_uids"] as Array).size()
 		later += float(DataDB.diplo("village.growth.attack_pause_seconds", 900)) + 10.0
 		for i in 120:
-			vs.tick_growth(v, rec, 10.0, later + i * 10.0)
+			grow_step(vs, v, rec, later + i * 10.0)
 		r.check(TOPIC, missing == max_size - 1 and (rec["hut_uids"] as Array).size() == max_size,
 				"Volles Dorf baut eine zerstörte Hütte wieder auf (%d → %d von %d)" % [missing,
 				(rec["hut_uids"] as Array).size(), max_size])
+	# Volles Dorf hat alle Zusatzgebäude (growth.extras_at_size)
+	var extra_ids: Array = []
+	for uid in rec.get("extra_uids", []):
+		var eb: Variant = g.find_by_uid(int(uid))
+		if eb is Building:
+			extra_ids.append(str((eb as Building).def.get("id", "")))
+	var want_extras: Array = []
+	for e in DataDB.diplo("village.growth.extras_at_size", []):
+		want_extras.append(str(e["building"]))
+	var all_extras := true
+	for id in want_extras:
+		all_extras = all_extras and extra_ids.has(id)
+	r.check(TOPIC, all_extras, "Volles Dorf mit Zusatzgebäuden %s" % str(extra_ids))
 	# Krieg hält das Wachstum an
 	var w: Kingdom = villages[1]
 	var wrec := vs.get_record(w)
@@ -94,3 +108,11 @@ func run(r: Node) -> void:
 		huts_exist = huts_exist and g2.find_by_uid(int(uid)) is Building
 	r.check(TOPIC, int(rec2.get("size", 0)) == size_saved and rec2.get("hut_uids", []) == huts_saved and huts_exist,
 			"Nach dem Laden: %d Hütten, alle Gebäude vorhanden" % int(rec2.get("size", 0)))
+
+
+## Ein Wachstumsschritt von 10 s; Baustellen werden sofort fertig gebaut (Bauarbeit wie im Spiel)
+static func grow_step(vs: VillageSystem, v: Kingdom, rec: Dictionary, t: float) -> void:
+	vs.tick_growth(v, rec, 10.0, t)
+	for b in vs.get_sites(v):
+		(b as Building).add_work(1.0e6)
+	vs.tick_sites(v, rec, 0.0, false)

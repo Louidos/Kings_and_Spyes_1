@@ -14,7 +14,9 @@ static func draw_entity(ci: CanvasItem, tex: Texture2D, rect: Rect2, color: Colo
 		return
 	var fill := color * tint
 	var border := color.darkened(0.45) * tint
-	if shape == "circle":
+	if shape == "well" or shape == "field" or shape == "workshop":
+		_draw_village_shape(ci, rect, color, shape, tint)
+	elif shape == "circle":
 		var r := minf(rect.size.x, rect.size.y) * 0.5
 		var c := rect.get_center()
 		ci.draw_circle(c + Vector2(1.5, 2.5), r, Color(0, 0, 0, 0.3 * tint.a))  # Schatten
@@ -29,6 +31,59 @@ static func draw_entity(ci: CanvasItem, tex: Texture2D, rect: Rect2, color: Colo
 		ci.draw_rect(inner, border, false, 2.0)
 	if not label.is_empty():
 		draw_label(ci, label, rect.get_center(), clampi(int(rect.size.y * 0.28), 10, 26), tint.a)
+
+
+## Platzhalter der Dorfgebäude (buildings.json shape): Brunnen (Steinring mit Wasser und Dach),
+## Feld (Acker mit Furchen und Ähren, flach) und Werkstatt (Haus mit Esse und Rauch)
+static func _draw_village_shape(ci: CanvasItem, rect: Rect2, color: Color, shape: String, tint: Color) -> void:
+	var inner := rect.grow(-3.0)
+	var shadow := Color(0, 0, 0, 0.25 * tint.a)
+	match shape:
+		"well":
+			var c := rect.get_center()
+			var r := minf(rect.size.x, rect.size.y) * 0.36
+			ci.draw_circle(c + Vector2(1.5, 2.5), r, shadow)
+			ci.draw_circle(c, r, color * tint)
+			ci.draw_arc(c, r, 0.0, TAU, 24, color.darkened(0.45) * tint, 2.0, true)
+			ci.draw_circle(c, r * 0.62, Color(0.22, 0.45, 0.78) * tint)
+			ci.draw_arc(c, r * 0.62, 0.0, TAU, 20, color.darkened(0.3) * tint, 1.5, true)
+			# Pfosten und Dachbalken mit Kurbel
+			var wood := Color(0.45, 0.3, 0.17) * tint
+			ci.draw_line(c + Vector2(-r, 0), c + Vector2(-r, -r * 1.4), wood, 3.0)
+			ci.draw_line(c + Vector2(r, 0), c + Vector2(r, -r * 1.4), wood, 3.0)
+			ci.draw_line(c + Vector2(-r * 1.2, -r * 1.4), c + Vector2(r * 1.2, -r * 1.4), wood.darkened(0.2), 4.0)
+			ci.draw_line(c + Vector2(0, -r * 1.4), c + Vector2(0, -r * 0.4), Color(0.75, 0.7, 0.55) * tint, 1.5)
+		"field":
+			ci.draw_rect(inner.grow(2.0), shadow, true)
+			ci.draw_rect(inner, color.darkened(0.25) * tint, true)
+			var rows := maxi(int(inner.size.y / 12.0), 3)
+			var crop := Color(0.84, 0.74, 0.3) * tint
+			for i in rows:
+				var y := inner.position.y + (i + 0.5) * inner.size.y / rows
+				ci.draw_line(Vector2(inner.position.x + 4, y), Vector2(inner.end.x - 4, y), color.darkened(0.5) * tint, 2.0)
+				var x := inner.position.x + 8.0 + (i % 2) * 6.0
+				while x < inner.end.x - 6.0:
+					ci.draw_line(Vector2(x, y - 1.0), Vector2(x, y - 6.0), crop, 2.0)
+					x += 12.0
+			ci.draw_rect(inner, color.darkened(0.55) * tint, false, 2.0)
+		"workshop":
+			ci.draw_rect(inner.grow(2.0), shadow, true)
+			ci.draw_rect(inner, color * tint, true)
+			ci.draw_rect(Rect2(inner.position, Vector2(inner.size.x, inner.size.y * 0.42)), color.lightened(0.18) * tint, true)
+			ci.draw_rect(inner, color.darkened(0.45) * tint, false, 2.0)
+			# Esse mit Glut und Rauch, Tür
+			var chimney := Rect2(inner.end.x - inner.size.x * 0.28, inner.position.y - inner.size.y * 0.12,
+					inner.size.x * 0.14, inner.size.y * 0.32)
+			ci.draw_rect(chimney, Color(0.42, 0.38, 0.36) * tint, true)
+			ci.draw_rect(chimney, Color(0.2, 0.18, 0.17) * tint, false, 1.5)
+			var top := Vector2(chimney.get_center().x, chimney.position.y)
+			ci.draw_circle(top + Vector2(2, -6), 4.0, Color(0.7, 0.7, 0.7, 0.5 * tint.a))
+			ci.draw_circle(top + Vector2(6, -13), 5.0, Color(0.75, 0.75, 0.75, 0.35 * tint.a))
+			var door := Rect2(inner.get_center().x - inner.size.x * 0.12, inner.end.y - inner.size.y * 0.36,
+					inner.size.x * 0.24, inner.size.y * 0.36)
+			ci.draw_rect(door, Color(0.3, 0.2, 0.12) * tint, true)
+			ci.draw_rect(Rect2(door.position + Vector2(door.size.x * 0.3, door.size.y * 0.2), door.size * Vector2(0.4, 0.25)),
+					Color(1.0, 0.55, 0.15, 0.9 * tint.a), true)
 
 
 ## Zentrierter Text mit dunkler Kontur.

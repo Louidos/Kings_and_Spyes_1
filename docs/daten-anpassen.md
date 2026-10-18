@@ -223,6 +223,8 @@ Bewerbern: `castle_level`, `building` (mit `level`), `research`, `kills`, `lairs
 `village` (Milizen, Nachschub; `village.residents`: sichtbare Dorfbewohner – `max_visible` je Dorf,
 `population_per_resident`, Arbeitszeiten `work_seconds`, Ersatz `replace_seconds`, Tätigkeiten `tasks` je Ware),
 `messenger` (Boten). Aussehen und Namen der Dorfbewohner: `peoples.json` → `resident_unit`, `resident_names`.
+Dorfwachstum (`village.growth`): Bauzeiten der Dorf-Baustellen `build_seconds` (Sekunden bei einem Bauarbeiter),
+höchstens `builders` Bewohner je Baustelle, Zusatzgebäude `extras_at_size` (Grösse → Gebäude-id, nur Dörfer).
 
 ### espionage.json
 
