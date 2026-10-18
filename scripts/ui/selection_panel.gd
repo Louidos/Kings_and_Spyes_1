@@ -1117,7 +1117,7 @@ func _show_unit(u: Unit) -> void:
 		_hero_box.show_hero(u, false)
 	else:
 		_hero_box.hide_box()
-	if intel >= 2 and not caravan:
+	if intel >= 2 and not caravan and not VillageResidents.is_resident(u):
 		_troop_box.show_unit(u, own)
 	else:
 		_troop_box.hide_box()
@@ -1711,9 +1711,11 @@ func _show_village_row(v: Kingdom) -> void:
 		_village_row.visible = v != null
 
 
-## Zeile für Einheiten eines Dorfs: Bote "Bote von … nach …", Miliz "Dorfwache"
+## Zeile für Einheiten eines Dorfs: Bote "Bote von … nach …", Miliz "Dorfwache", Bewohner mit Tätigkeit
 func _village_unit_text(u: Unit) -> String:
 	var vs: VillageSystem = game.village_system
+	if VillageResidents.is_resident(u) and vs.is_village_kingdom(u.kingdom):
+		return vs.residents.describe(u)
 	if u.role == "messenger":
 		var rec: Dictionary = game.messenger_system.get_record(u)
 		if rec.is_empty():

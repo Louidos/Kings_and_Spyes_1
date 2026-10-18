@@ -303,6 +303,20 @@ des Volks (wie das Dorfzentrum, aber schlichter):
 | `militia_water_spirits.png` | Quellwächter | halb durchsichtige Wassergestalt mit Wasserkugel |
 | `militia_kobold_traders.png` | Koboldwache | Kobold mit Laterne und Funkenstab |
 
+**Dorfbewohner** (`assets/sprites/units/`, 64 × 64, transparent – laufen im Dorf herum, kämpfen nie). Ohne Datei
+zeichnet das Spiel eine Figur im Bewohner-Gewand in der Farbe des Volks, mit dem Werkzeug ihrer Tätigkeit:
+
+| Datei | Einheit | Aussehen |
+|---|---|---|
+| `resident_dwarves.png` | Zwergenbewohner | stämmiger Zwerg mit Lederschürze und Werkzeug |
+| `resident_halflings.png` | Halblingsbewohner | kleiner Halbling mit Weste und Korb |
+| `resident_wood_elves.png` | Waldelfenbewohner | schlanke Elfe in grünem Leinen |
+| `resident_lizardfolk.png` | Echsenbewohner | Echsenmensch mit Schilfgürtel |
+| `resident_nomads.png` | Nomadenbewohner | Nomade mit Kopftuch und weitem Gewand |
+| `resident_giants.png` | Riesenbewohner | Hügelriese in grobem Fell (wirkt grösser als andere) |
+| `resident_water_spirits.png` | Quellbewohner | halb durchsichtige Wassergestalt |
+| `resident_kobold_traders.png` | Koboldbewohner | Kobold mit Kappe und Bauchladen |
+
 **Volkskrieger** (`assets/sprites/units/`, 64 × 64, transparent – in der Kaserne bei Bündnis oder Aufnahme):
 
 | Datei | Einheit | Aussehen |

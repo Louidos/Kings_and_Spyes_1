@@ -77,6 +77,9 @@ Prüfpunkt. Geprüft werden unter anderem:
   Golem, Speichern der Haltung, Fenstergrösse bei 100/150 %, Tooltips.
 - **Truppen** (`smoke_troops.gd`): jede neue Truppe beschwören, Konter, Schmiede, Rang und Wertepunkte, Aussehen und
   dessen Erhalt im Speichern-Laden-Rundlauf.
+- **Bewohner** (`smoke_residents.gd`, in `smoke_features.tscn`): jedes Dorf hat Bewohner (nicht als Miliz), sie
+  arbeiten und tragen Waren, fliehen bei Alarm ins Dorfzentrum und kommen wieder heraus, schlafen nachts in Hütten,
+  werden nach dem Tod ersetzt; Speichern/Laden und ein Dorf wie aus einem Spielstand 1.2.x.
 - **Spione** (`smoke_spies.gd`, eigene Szene `smoke_spies.tscn`): zu Spielbeginn hat kein Reich Spione; ein im
   Spionagefenster beschworener Spion existiert genau einmal (Einheit, Datensatz, Liste, Fenster), auch mit Auftrag
   und nach Speichern und Laden. Spionagebericht: ohne Kundschaft „unbekannt“, ein Spion der höchsten Stufe liefert

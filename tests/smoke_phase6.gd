@@ -249,8 +249,10 @@ func _s1() -> void:
 			player_militia += 1
 	_check(annexed and str(info["mode"]) == "devoted" and hall != null and hall.kingdom == player
 			and str(vs.get_record(_c)["status"]) == "annexed" and g.world.get_owner(hall.cell) == player.id
-			and player_militia >= militia_before and militia_before > 0 and _c.units.is_empty(),
-			"Aufnahme von %s: Dorfzentrum, Gebiet und %d Milizen gehören dem Spieler" % [_c.display_name, player_militia])
+			and player_militia >= militia_before and militia_before > 0 and vs.get_militia(_c).is_empty()
+			and _c.units.size() == vs.residents.get_residents(_c).size(),
+			"Aufnahme von %s: Dorfzentrum, Gebiet und %d Milizen gehören dem Spieler, %d Bewohner bleiben" % [_c.display_name,
+			player_militia, vs.residents.get_residents(_c).size()])
 	_check(not vs.get_annexed_text(hall).is_empty() if hall != null else false, "Aufgenommenes Dorf: %s" % (
 			vs.get_annexed_text(hall) if hall != null else "-"))
 	# 6. Krieg und Angriff auf B

@@ -1368,11 +1368,14 @@ func _on_kingdom_attacked(victim: Kingdom, attacker: Kingdom, pos: Vector2) -> v
 			"danger", pos)
 
 
-## Miliz getötet: Ruf sinkt. Feind eines Dorfs in seiner Nähe getötet: Schutz geleistet.
+## Miliz oder Bewohner getötet: Ruf sinkt. Feind eines Dorfs in seiner Nähe getötet: Schutz geleistet.
 func _on_unit_died(u: Unit, killer: Kingdom) -> void:
 	if killer == null or not is_party(killer):
 		return
 	var victim_kingdom := u.kingdom
+	if village_system.is_village(victim_kingdom) and VillageResidents.is_resident(u):
+		change_reputation(victim_kingdom, killer, float(DataDB.diplo("events.kill_resident", -3)), "Bewohner getötet")
+		return
 	if village_system.is_village(victim_kingdom) and u.role != "messenger":
 		change_reputation(victim_kingdom, killer, float(DataDB.diplo("events.kill_militia", -3)), "Miliz getötet")
 		return

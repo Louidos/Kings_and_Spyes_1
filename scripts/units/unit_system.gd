@@ -22,6 +22,9 @@ signal unit_transferred(unit: Unit, from_kingdom: Kingdom, to_kingdom: Kingdom)
 ## Höchstens so viele Wegberechnungen bzw. so viel Zeit (µs) pro Frame
 const MAX_PATHS_PER_FRAME := 8
 const PATH_BUDGET_USEC := 2000
+## Wege mit niedriger Vorrang (Dorfbewohner): höchstens so viele pro Frame und nur, wenn die
+## normale Warteschlange leer ist
+const MAX_BACKGROUND_PATHS_PER_FRAME := 2
 ## Lange Wege werden in Abschnitten dieser Länge (Kacheln) berechnet, damit
 ## keine einzelne Berechnung das Spiel ruckeln lässt.
 const LEG_TILES := 48.0
@@ -34,6 +37,8 @@ var world: WorldData
 var units: Array = []
 
 var _path_queue: Array = []
+## Wege mit niedriger Vorrang (move_to_background); Einheiten darin haben path_background
+var _background_queue: Array = []
 
 
 func setup(p_game: Node) -> void:
@@ -197,9 +202,35 @@ func _request(u: Unit, target: Vector2, keep_path: bool) -> void:
 		u.path_index = 0
 		u.moving = false
 	u.path_target = target
+	if u.path_pending and u.path_background:
+		# Wartet noch in der Hintergrund-Schlange: jetzt mit normalem Vorrang
+		_background_queue.erase(u)
+		u.path_pending = false
+	u.path_background = false
 	if not u.path_pending:
 		u.path_pending = true
 		_path_queue.append(u)
+
+
+## Wie move_to, aber mit niedrigem Vorrang (Alltagswege der Dorfbewohner): kurze Wege ohne
+## Hindernis geradeaus, sonst in der Hintergrund-Schlange, die erst nach allen anderen Wegen
+## berechnet wird. So bremsen viele Dörfer keine Armeen, Karawanen oder Arbeiter.
+func move_to_background(u: Unit, target: Vector2, direct_tiles: float = 12.0) -> void:
+	if u.position.distance_to(target) <= direct_tiles * world.tile_size and can_walk_direct(u.position, target):
+		move_direct(u, target, direct_tiles)
+		return
+	if u.path_pending and not u.path_background:
+		u.path_target = target
+		return
+	u.path = PackedVector2Array()
+	u.path_index = 0
+	u.moving = false
+	u.has_path_final = false
+	u.path_target = target
+	if not u.path_pending:
+		u.path_pending = true
+		u.path_background = true
+		_background_queue.append(u)
 
 
 ## Zwischenziel LEG_TILES Kacheln in Richtung to (nächste freie Kachel). Liegt es in
@@ -407,13 +438,22 @@ func _on_building_removed(b: Building) -> void:
 func _process_path_queue() -> void:
 	var start := Time.get_ticks_usec()
 	var done := 0
-	while not _path_queue.is_empty() and done < MAX_PATHS_PER_FRAME:
+	var background := 0
+	while done < MAX_PATHS_PER_FRAME:
 		if Time.get_ticks_usec() - start > PATH_BUDGET_USEC:
 			break
-		var u = _path_queue.pop_front()  # untypisiert: kann bereits gelöscht sein
+		var u  # untypisiert: kann bereits gelöscht sein
+		if not _path_queue.is_empty():
+			u = _path_queue.pop_front()
+		elif not _background_queue.is_empty() and background < MAX_BACKGROUND_PATHS_PER_FRAME:
+			u = _background_queue.pop_front()
+			background += 1
+		else:
+			break
 		if not is_instance_valid(u) or not u.path_pending:
 			continue
 		u.path_pending = false
+		u.path_background = false
 		done += 1
 		var nav: NavGrid = game.nav
 		var p: PackedVector2Array = nav.find_path(world, u.position, u.path_target, u.kingdom.id)
@@ -458,3 +498,8 @@ func rebuild_runtime() -> void:
 		if is_instance_valid(u) and u.path_pending and not keep.has(u):
 			keep.append(u)
 	_path_queue = keep
+	var keep_bg: Array = []
+	for u in _background_queue:
+		if is_instance_valid(u) and u.path_pending and u.path_background and not keep_bg.has(u):
+			keep_bg.append(u)
+	_background_queue = keep_bg

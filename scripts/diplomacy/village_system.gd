@@ -14,6 +14,8 @@
 ##
 ## Zustand: villages (Datensatz je Dorf-Reich, Schlüssel Kingdom.id) und order
 ## (Gründungsreihenfolge). Gebäude und Einheiten nur über uids.
+## Bewohner (Darstellung und Leben, keine Wirtschaft): VillageResidents (residents), ihr Zustand
+## steht im Dorf-Datensatz.
 ## Laufzeit: _tick_acc und _pending (Folgen von Kampfsignalen, die erst im
 ## eigenen Takt abgearbeitet werden – die Signale feuern mitten in den
 ## Schleifen des CombatSystems).
@@ -46,7 +48,7 @@ var world: WorldData
 ##  "status": "active" | "annexed" | "conquered" | "destroyed", "owner_id" (bei annexed/conquered),
 ##  "population", "production_factor", "refill_timer", "alarm_until", "alarm_pos", "calm_since",
 ##  "help_until", "help_pos", "helpers": Array (uids), "posts": Array (Weltpositionen der Wachposten),
-##  "slots": Dictionary (Miliz-uid -> Postennummer)}
+##  "slots": Dictionary (Miliz-uid -> Postennummer), Bewohner siehe VillageResidents}
 var villages: Dictionary = {}
 ## Dorf-Reich-ids in Gründungsreihenfolge (Liste im Diplomatiefenster)
 var order: Array = []
@@ -57,6 +59,8 @@ var _ts := 64.0
 ## Wartende Aufgaben aus Kampfsignalen: ["alarm", Dorf-id, Angreifer-id, pos],
 ## ["help", Dorf-id, pos, Feind-id], ["destroy", Dorf-id, Täter-id]
 var _pending: Array = []
+## Sichtbare Dorfbewohner (Tagesablauf, Flucht, Ersatz)
+var residents := VillageResidents.new()
 
 
 func setup(p_game: Node) -> void:
@@ -68,6 +72,7 @@ func setup(p_game: Node) -> void:
 	game.combat_system.kingdom_attacked.connect(_on_kingdom_attacked)
 	game.combat_system.building_destroyed.connect(_on_building_destroyed)
 	game.unit_system.unit_removed.connect(_on_unit_removed)
+	residents.setup(self)
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +128,7 @@ func found_village(site: Dictionary) -> Kingdom:
 	rec["posts"] = _make_posts(hall, target)
 	for i in target:
 		_spawn_militia(k, rec, i, rec["posts"][i])
+	residents.seed_residents(k, rec)
 	village_founded.emit(k)
 	return k
 
@@ -275,13 +281,13 @@ func get_radius_tiles(_k: Kingdom = null) -> float:
 	return float(hall_def.get("territory_radius", 8)) + 1.5
 
 
-## Lebende Milizen des Dorfs (alle Einheiten ausser Boten)
+## Lebende Milizen des Dorfs (alle Einheiten ausser Boten und Bewohnern)
 func get_militia(k: Kingdom) -> Array:
 	var list: Array = []
 	if k == null:
 		return list
 	for u in k.units:
-		if u.is_alive() and u.role != "messenger":
+		if u.is_alive() and u.role != "messenger" and not VillageResidents.is_resident(u):
 			list.append(u)
 	return list
 
@@ -593,6 +599,8 @@ func transfer_settlement(from: Kingdom, to: Kingdom, reason: String) -> void:
 		rec["helpers"] = []
 		rec["alarm_until"] = 0.0
 		rec["help_until"] = 0.0
+		# Die Bewohner bleiben Dorfbewohner (siehe VillageResidents.on_transfer)
+		residents.on_transfer(from, rec)
 		var people := get_people(from)
 		var special := str(people.get("special_unit", ""))
 		if not special.is_empty():
@@ -691,6 +699,7 @@ func _tick_active(v: Kingdom, rec: Dictionary, step: float, now: float) -> void:
 			rec["alarm_until"] = 0.0
 			_return_to_posts(v, rec)
 	tick_growth(v, rec, step, now)
+	residents.tick(v, rec, step, now, float(rec["alarm_until"]) > 0.0)
 	# Bündnishilfe beenden (Zeit um oder keine Feinde mehr am Einsatzort)
 	if float(rec["help_until"]) > 0.0:
 		if now >= float(rec["help_until"]) or not has_enemies_near(v, rec["help_pos"], HELP_ENEMY_RADIUS):
@@ -828,6 +837,7 @@ func _refill(v: Kingdom, rec: Dictionary) -> void:
 
 ## Aufgenommenes/erobertes Dorf: Produktion fliesst dem Besitzer zu, solange er das Dorfzentrum hält
 func _tick_owned(v: Kingdom, rec: Dictionary, step: float) -> void:
+	residents.tick(v, rec, step, GameClock.game_time, false)
 	var hall := get_hall(v)
 	if hall == null or hall.kingdom == null or hall.kingdom.id != int(rec["owner_id"]):
 		return
@@ -862,6 +872,7 @@ func _destroy_village(v: Kingdom, by: Kingdom) -> void:
 		game.building_system.remove_building(b, 0.0, true)
 	for u in get_militia(v):
 		game.unit_system.remove_unit(u)
+	residents.remove_all(v, rec)
 	rec["slots"] = {}
 	rec["helpers"] = []
 	game.defeat_kingdom(v, "destroyed", by)
@@ -908,6 +919,9 @@ func _on_unit_removed(u: Unit) -> void:
 	if u.kingdom == null or not villages.has(u.kingdom.id):
 		return
 	var rec: Dictionary = villages[u.kingdom.id]
+	if VillageResidents.is_resident(u):
+		residents.on_unit_removed(u, rec)
+		return
 	(rec["slots"] as Dictionary).erase(u.uid)
 	(rec["helpers"] as Array).erase(u.uid)
 
@@ -932,12 +946,14 @@ func from_dict(d: Dictionary) -> void:
 			rec["last_attacked"] = -1.0e9
 		if not rec.has("tower_uids"):
 			rec["tower_uids"] = []
+		# Spielstände vor den Dorfbewohnern (1.2.x): sie erscheinen im ersten Takt
+		VillageResidents.ensure_fields(rec)
 	order = (d.get("order", []) as Array).duplicate()
 	_pending = (d.get("pending", []) as Array).duplicate(true)
 	_tick_acc = float(d.get("tick_acc", 0.0))
 
 
-## Nach dem Laden: Verweise auf nicht mehr vorhandene Milizen entfernen (die Warteliste
+## Nach dem Laden: Verweise auf nicht mehr vorhandene Milizen und Bewohner entfernen (die Warteliste
 ## _pending ist gespeichert und bleibt)
 func rebuild_runtime() -> void:
 	for vid in villages:
@@ -951,6 +967,7 @@ func rebuild_runtime() -> void:
 		for uid in helpers.duplicate():
 			if game.find_by_uid(int(uid)) == null:
 				helpers.erase(uid)
+		residents.rebuild_runtime(int(vid), rec)
 
 
 # ---------------------------------------------------------------------------

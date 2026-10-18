@@ -632,7 +632,7 @@ const _TIER_NAMES := {"fighter": "Kämpfer", "archer": "Schützen", "elite": "El
 	"spearman": "Speerträger", "crossbow": "Armbrustschützen", "heavy": "Schwere Fusstruppen", "cavalry": "Reiter",
 	"battlemage": "Kampfmagier",
 	"medic": "Heiler", "king": "König", "villager": "Bewohner", "summon": "Beschworene", "hero": "Helden",
-	"militia": "Miliz", "special": "Volkskrieger", "messenger": "Boten", "spy": "Spione", "refugee": "Flüchtlinge",
+	"militia": "Miliz", "resident": "Dorfbewohner", "special": "Volkskrieger", "messenger": "Boten", "spy": "Spione", "refugee": "Flüchtlinge",
 	"ram": "Rammböcke", "catapult": "Katapulte", "caravan": "Karawanen"}
 const _ROLE_NAMES := {"combat": "alle Truppen ohne Helden", "worker": "Bewohner", "support": "Heiler",
 	"king": "König", "monster": "Monster", "hero": "Helden", "messenger": "Boten", "spy": "Spione",

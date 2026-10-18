@@ -220,7 +220,9 @@ Bewerbern: `castle_level`, `building` (mit `level`), `research`, `kills`, `lairs
 `rumour_*`), `gifts` (`value_per_point`, `max_per_gift`, Ermüdung `saturation` / `half_life`), `treaties` (je Vertrag
 `min_reputation`, `keep_min`, `rep_per_hour`, `cancel_penalty`; Annahme-Chance `chance_base` / `chance_span`),
 `trade` (`base_margin`, `daily_value_limit`), `annex` (`min_reputation`, `intimidation_ratio`), `threat`,
-`village` (Milizen, Nachschub), `messenger` (Boten).
+`village` (Milizen, Nachschub; `village.residents`: sichtbare Dorfbewohner – `max_visible` je Dorf,
+`population_per_resident`, Arbeitszeiten `work_seconds`, Ersatz `replace_seconds`, Tätigkeiten `tasks` je Ware),
+`messenger` (Boten). Aussehen und Namen der Dorfbewohner: `peoples.json` → `resident_unit`, `resident_names`.
 
 ### espionage.json
 

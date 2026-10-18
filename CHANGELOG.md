@@ -5,6 +5,12 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 ## Unveröffentlicht
 
+### Hinzugefügt
+
+- In neutralen Dörfern leben jetzt Bewohner: Sie gehen zur Arbeit, tragen Waren heim und fliehen bei einem Angriff ins
+  Dorfzentrum. Nachts schlafen sie in den Hütten; ein Klick zeigt Name, Dorf und Tätigkeit. Die Dorfproduktion bleibt
+  gleich, alte Spielstände bekommen ihre Bewohner beim Laden.
+
 ## 1.2.1 – 2026-10-17
 
 Nur Fehlerbehebungen; Spielstände aus 1.2.0 und 1.1.0 laden weiter.
