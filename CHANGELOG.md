@@ -18,6 +18,13 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 - Mehr Einstellungen, geordnet nach Reitern (Grafik · Ton · Steuerung · Oberfläche · Spiel): VSync und Bildrate,
   Zoom- und Scrolltempo am Bildschirmrand, Lebensbalken, Meldungsdauer, Minikarten-Grösse, Starttempo, Rückfrage vor
   einer Kriegserklärung und Tooltip-Verzögerung. Ältere Einstellungsdateien laden mit den Standardwerten.
+- Neues Spiel: Anzahl Gegner und Dörfer, Startvorräte, Monster und Zufallsereignisse lassen sich einstellen; die
+  Optionen stehen im Spielstand. Mit allen Werten auf „Standard“ bleibt alles wie bisher.
+
+### Behoben
+
+- Der Dialog „Neues Spiel“ lässt sich bei grosser Oberfläche (150 %) rollen, statt oben und unten abgeschnitten zu
+  werden.
 
 ## 1.2.1 – 2026-10-17
 

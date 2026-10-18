@@ -35,6 +35,29 @@
 		"default_speed_index": 1
 	},
 
+	"new_game": {
+		"_hinweis": "Optionen im Dialog „Neues Spiel“ (werden im Spielstand gespeichert; ältere Spielstände und das Tutorial nutzen „standard“ = Verhalten wie ohne Option). ai_kingdoms: Anzahl Gegnerreiche (count; standard = nach Schwierigkeit und Kartengrösse aus ai.json, max = so viele, wie die Karte Plätze hat – worldgen.json kingdom_sites.max_by_size). villages: factor auf die Zahl der neutralen Dörfer (worldgen.json villages.count_by_size). resources: factor auf die Startvorräte aller Reiche (economy.json start.resources). monsters: factor auf Monsterlager und Monster je Lager (0 = keine Monster, keine Streifzüge, keine Monsterwellen). events: Zufallsereignisse an/aus.",
+		"ai_kingdoms": [
+			{"id": "standard", "name": "Standard"}, {"id": "1", "name": "1", "count": 1}, {"id": "2", "name": "2", "count": 2},
+			{"id": "3", "name": "3", "count": 3}, {"id": "max", "name": "So viele wie möglich", "count": 99}
+		],
+		"villages": [
+			{"id": "few", "name": "Wenige", "factor": 0.5}, {"id": "standard", "name": "Standard", "factor": 1.0},
+			{"id": "many", "name": "Viele", "factor": 1.5}
+		],
+		"resources": [
+			{"id": "low", "name": "Wenig", "factor": 0.5}, {"id": "standard", "name": "Standard", "factor": 1.0},
+			{"id": "high", "name": "Viel", "factor": 2.0}
+		],
+		"monsters": [
+			{"id": "off", "name": "Aus", "factor": 0.0}, {"id": "few", "name": "Wenige", "factor": 0.5},
+			{"id": "standard", "name": "Standard", "factor": 1.0}, {"id": "many", "name": "Viele", "factor": 1.5}
+		],
+		"events": [
+			{"id": "standard", "name": "An"}, {"id": "off", "name": "Aus"}
+		]
+	},
+
 	"save": {
 		"_hinweis": "Spielstände (Phase 10). autosave_slots = so viele Autospeicherplätze werden reihum überschrieben. autosave_min_gap_seconds = frühestens so viele echte Sekunden nach Start oder Laden automatisch speichern (Abstand stellt der Spieler in den Einstellungen ein). max_message_log = so viele Meldungen behält das Protokoll (Taste M, wird gespeichert). unsaved_warning_seconds = ab so vielen Spielsekunden ohne Speichern fragt das Spielmenü vor dem Beenden oder Laden nach.",
 		"autosave_slots": 3,

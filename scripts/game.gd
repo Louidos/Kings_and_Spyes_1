@@ -460,8 +460,10 @@ func defeat_kingdom(k: Kingdom, reason: String, by: Kingdom = null) -> void:
 ## Wird für den Spieler genutzt und ab Phase 7 genauso für die KI-Reiche.
 func found_settlement(kingdom: Kingdom, center_cell: Vector2i) -> void:
 	var start_res: Dictionary = DataDB.eco("start.resources", {})
+	# Startvorräte des neuen Spiels (wenig/Standard/viel) gelten für alle Reiche
+	var res_factor := GameSession.option_number("resources", "factor", 1.0)
 	for res_id in start_res:
-		kingdom.resources[res_id] = float(start_res[res_id])
+		kingdom.resources[res_id] = float(start_res[res_id]) * res_factor
 	building_system.place_start_castle(kingdom, center_cell)
 	var count := int(DataDB.eco("start.villagers", 5))
 	var center := kingdom.castle.get_center()

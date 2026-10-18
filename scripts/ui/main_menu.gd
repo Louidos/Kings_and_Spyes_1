@@ -35,6 +35,18 @@ var _difficulty_hint: Label
 ## Knopf "Tutorial" und Haken "Tipps/Tutorial anzeigen" im Dialog "Neues Spiel"
 var _tutorial_button: Button
 var _tutorial_check: CheckBox
+## Optionen des neuen Spiels (game_config.json → new_game): Schlüssel -> OptionButton
+var _game_options := {}
+## Rollbereich um den Inhalt der Menütafel (passt sich der Bildschirmhöhe an)
+var _scroll: ScrollContainer
+## Beschriftung und Tooltip je Option
+const GAME_OPTION_TEXTS := {
+	"ai_kingdoms": ["Gegnerreiche", "Wie viele gegnerische Königreiche es gibt (Standard: nach Schwierigkeit und Kartengrösse; höchstens so viele, wie die Karte Plätze hat)"],
+	"villages": ["Neutrale Dörfer", "Wie viele neutrale Dörfer auf der Karte liegen (Standard: klein 6, mittel 10, gross 16)"],
+	"resources": ["Startvorräte", "Holz, Stein, Nahrung und Mana zu Beginn – für dich und die Gegner"],
+	"monsters": ["Monster", "Monsterlager auf der Karte (aus: keine Monster, keine Streifzüge, keine Monsterwellen)"],
+	"events": ["Zufallsereignisse", "Dürre, Seuche, Magiesturm, Monsterwellen, Flüchtlinge, Erntedank …"],
+}
 
 
 func _ready() -> void:
@@ -52,8 +64,8 @@ func _ready() -> void:
 	%BackButton.pressed.connect(_show.bind(main_buttons))
 	%RandomSeedButton.pressed.connect(func() -> void: seed_edit.text = GameSession.random_seed_text())
 	%StartButton.pressed.connect(_start_game)
-	%NewGameButton.tooltip_text = "Neue Partie: Fraktion, Volk, Schwierigkeit, Karte, Seed"
-	%SettingsButton.tooltip_text = "Ton, Kamera, Anzeige, automatisches Speichern"
+	%NewGameButton.tooltip_text = "Neue Partie: Fraktion, Volk, Schwierigkeit, Karte, Seed und weitere Optionen"
+	%SettingsButton.tooltip_text = "Grafik, Ton, Steuerung, Oberfläche, Spiel"
 	%QuitButton.tooltip_text = "Spiel schliessen"
 	%RandomSeedButton.tooltip_text = "Zufälligen Seed würfeln"
 	%StartButton.tooltip_text = "Partie mit diesen Einstellungen starten"
@@ -93,6 +105,7 @@ func _ready() -> void:
 	difficulty_option.item_selected.connect(func(_i: int) -> void: _update_difficulty_hint())
 	_update_difficulty_hint()
 	_build_tutorial_controls()
+	_build_game_options()
 	# Seiten: Laden und Einstellungen
 	load_panel = SaveLoadPanel.new()
 	load_panel.visible = false
@@ -103,6 +116,7 @@ func _ready() -> void:
 	settings_form = SettingsForm.new()
 	settings_form.closed.connect(_close_settings)
 	settings_panel.add_child(settings_form)
+	_wrap_in_scroll()
 	Settings.changed.connect(_apply_ui_scale)
 	_apply_ui_scale()
 
@@ -121,12 +135,42 @@ func _exit_tree() -> void:
 func _apply_ui_scale() -> void:
 	if is_inside_tree():
 		get_tree().root.content_scale_factor = Settings.ui_scale
+		_fit_panel.call_deferred()
+
+
+## Inhalt der Menütafel in einen Rollbereich: Der Dialog „Neues Spiel“ ist bei grosser Oberfläche
+## höher als der Bildschirm – dann lässt er sich rollen, statt oben und unten abgeschnitten zu werden
+func _wrap_in_scroll() -> void:
+	var vbox := $Center/Panel/VBox as Control
+	_scroll = ScrollContainer.new()
+	_scroll.name = "Scroll"
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	$Center/Panel.add_child(_scroll)
+	vbox.reparent(_scroll, false)
+	vbox.minimum_size_changed.connect(_fit_panel, CONNECT_DEFERRED)
+	get_viewport().size_changed.connect(_fit_panel, CONNECT_DEFERRED)
+
+
+## Höhe des Rollbereichs: so hoch wie der Inhalt, höchstens der Bildschirm (mit Rand)
+func _fit_panel() -> void:
+	if _scroll == null or not is_inside_tree():
+		return
+	var vbox := _scroll.get_child(0) as Control
+	var need := vbox.get_combined_minimum_size()
+	var avail := get_viewport().get_visible_rect().size.y - 60.0
+	var h := minf(need.y, maxf(avail, 200.0))
+	# Mit Rollbalken etwas breiter, damit er nichts verdeckt
+	var bar := _scroll.get_v_scroll_bar().get_combined_minimum_size().x + 6.0 if h < need.y else 0.0
+	_scroll.custom_minimum_size = Vector2(need.x + bar, h)
 
 
 func _show(panel: Control) -> void:
 	for p in [main_buttons, new_game_panel, settings_panel, load_panel]:
 		if p != null:
 			p.visible = p == panel
+	if _scroll != null:
+		_scroll.scroll_vertical = 0
+	_fit_panel.call_deferred()
 	if panel == main_buttons:
 		_refresh_continue()
 
@@ -303,9 +347,62 @@ func _start_game() -> void:
 		str(difficulty_option.get_selected_metadata()),
 		str(map_size_option.get_selected_metadata()),
 		seed_edit.text,
-		_selected_people)
+		_selected_people,
+		get_game_options())
 	GameSession.start_tutorial = _tutorial_check != null and _tutorial_check.button_pressed
 	get_tree().change_scene_to_file(GAME_SCENE)
+
+
+## Gewählte Optionen des neuen Spiels: Schlüssel -> id (nur von "standard" abweichende)
+func get_game_options() -> Dictionary:
+	var result := {}
+	for key in _game_options:
+		var id := str((_game_options[key] as OptionButton).get_selected_metadata())
+		if id != "standard":
+			result[key] = id
+	return result
+
+
+## Weitere Optionen unter Schwierigkeit und Kartengrösse, je mit "Standard" (= bisheriges Verhalten),
+## in zwei Spalten, damit der Dialog auch bei grosser Oberfläche auf den Bildschirm passt
+func _build_game_options() -> void:
+	var main_grid := difficulty_option.get_parent() as GridContainer
+	var grid := GridContainer.new()
+	grid.name = "OptionsGrid"
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 12)
+	grid.add_theme_constant_override("v_separation", 8)
+	new_game_panel.add_child(grid)
+	new_game_panel.move_child(grid, main_grid.get_index() + 1)
+	for key in GameSession.OPTION_KEYS:
+		var texts: Array = GAME_OPTION_TEXTS.get(key, [key, ""])
+		var label := Label.new()
+		label.text = str(texts[0])
+		label.tooltip_text = str(texts[1])
+		label.mouse_filter = Control.MOUSE_FILTER_PASS
+		grid.add_child(label)
+		var option := OptionButton.new()
+		option.name = "Option_" + str(key)
+		option.tooltip_text = str(texts[1])
+		option.focus_mode = Control.FOCUS_NONE
+		option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		for e in DataDB.cfg("new_game." + str(key), []):
+			option.add_item(str((e as Dictionary).get("name", "?")))
+			option.set_item_metadata(option.item_count - 1, str((e as Dictionary).get("id", "")))
+			if str((e as Dictionary).get("id", "")) == "standard":
+				option.select(option.item_count - 1)
+		grid.add_child(option)
+		_game_options[key] = option
+
+
+## Rauchtest: Option setzen (id aus game_config.json → new_game)
+func set_game_option(key: String, id: String) -> void:
+	var option: OptionButton = _game_options.get(key)
+	if option == null:
+		return
+	for i in option.item_count:
+		if str(option.get_item_metadata(i)) == id:
+			option.select(i)
 
 
 # ---------------------------------------------------------------------------

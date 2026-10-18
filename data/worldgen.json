@@ -56,8 +56,8 @@
 	},
 
 	"kingdom_sites": {
-		"_hinweis": "Plätze für gegnerische Königreiche (ab Phase 7 genutzt, schon jetzt erzeugt, damit sich die Welt eines Seeds später nicht ändert). Abstand zum Spieler als Anteil der Kartenbreite (min_dist…max_dist, mindestens min_dist_tiles), untereinander min_between × Breite. Rohstoffe wie beim Spielerstart gesichert.",
-		"count": 2, "min_dist": 0.35, "max_dist": 0.6, "min_dist_tiles": 70, "min_between": 0.25,
+		"_hinweis": "Plätze für gegnerische Königreiche (ab Phase 7 genutzt, schon jetzt erzeugt, damit sich die Welt eines Seeds später nicht ändert). Abstand zum Spieler als Anteil der Kartenbreite (min_dist…max_dist, mindestens min_dist_tiles), untereinander min_between × Breite. Rohstoffe wie beim Spielerstart gesichert. max_by_size: so viele Plätze höchstens, wenn beim neuen Spiel mehr Gegnerreiche als count gewählt sind (game_config.json new_game.ai_kingdoms; die Welt ändert sich dann, bei count oder weniger bleibt sie gleich).",
+		"count": 2, "max_by_size": [[256, 3], [512, 4], [1024, 5]], "min_dist": 0.35, "max_dist": 0.6, "min_dist_tiles": 70, "min_between": 0.25,
 		"center_biomes": ["plains"], "check_radius": 6, "min_buildable_ratio": 0.8, "attempts": 800, "edge_margin": 0.08, "relax_steps": 3
 	},
 

@@ -505,9 +505,18 @@ func _put_deposit(world: WorldData, c: Vector2i, d: Dictionary, rng: RandomNumbe
 func _place_kingdom_sites(world: WorldData) -> void:
 	var cfg: Dictionary = DataDB.worldgen.get("kingdom_sites", {})
 	var count := int(cfg.get("count", 0))
+	var w := world.width
+	# Neues Spiel mit mehr Gegnerreichen (GameSession.options): mehr Plätze, höchstens max_by_size.
+	# Weniger oder gleich viele lassen die Welt unverändert (die übrigen Plätze bleiben leer).
+	var wanted := GameSession.get_ai_kingdoms_option()
+	if wanted > count:
+		var most := count
+		for entry in cfg.get("max_by_size", []):
+			if int(entry[0]) <= w:
+				most = int(entry[1])
+		count = clampi(wanted, count, maxi(most, count))
 	if count <= 0:
 		return
-	var w := world.width
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(world.world_seed + 7211)
 	var border := int(DataDB.worldgen.get("border", {}).get("width", 0))
@@ -570,6 +579,10 @@ func _place_villages(world: WorldData) -> void:
 			count = int(entry[1])
 	if count == 0 and not table.is_empty():
 		count = int(table[0][1])
+	# Neues Spiel: wenige/viele Dörfer (GameSession.options, Standard ×1 = Welt unverändert)
+	var factor := GameSession.option_number("villages", "factor", 1.0)
+	if not is_equal_approx(factor, 1.0):
+		count = maxi(roundi(count * factor), 1)
 	var village_peoples: Array = DataDB.get_village_peoples().duplicate()
 	if count <= 0 or village_peoples.is_empty():
 		return

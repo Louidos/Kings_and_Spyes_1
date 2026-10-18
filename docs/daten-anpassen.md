@@ -79,11 +79,13 @@ Code. Beim nächsten Start (F5 im Editor) gilt der neue Wert.
 | `time.start_hour` | Uhrzeit beim Start (8) |
 | `time.speed_steps` | Tempostufen (`[0.5, 1.0, 2.0, 3.0]`) |
 | `save.*` | Autospeicher-Plätze und Mindestabstand |
+| `new_game.*` | Optionen im Dialog „Neues Spiel“ je mit `id`, `name` und Wert: `ai_kingdoms` (`count`), `villages`, `resources`, `monsters` (`factor`), `events` (`standard` = an, `off`). Der Eintrag `standard` entspricht dem Verhalten ohne Option |
 
 ### worldgen.json
 
 Rauschebenen (`layers`: Höhe, Feuchte, Hitze, Vulkan), Grenzgebirge am Kartenrand (`border`), Startplatz (`start`),
-Plätze der KI-Reiche (`kingdom_sites`) und **Dörfer** (`villages`: `count_by_size` = Anzahl je Kartengrösse,
+Plätze der KI-Reiche (`kingdom_sites`; `max_by_size` = höchstens so viele, wenn beim neuen Spiel mehr Gegnerreiche
+gewählt sind) und **Dörfer** (`villages`: `count_by_size` = Anzahl je Kartengrösse,
 `min_dist_start` = Abstand zum Start, `size` = Hütten je Dorf). Änderungen hier ergeben bei gleichem Seed eine andere
 Welt (siehe [Spielstände](#spielstände-und-datenänderungen)).
 
