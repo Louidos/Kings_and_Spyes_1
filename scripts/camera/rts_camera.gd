@@ -61,11 +61,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		match mb.button_index:
 			MOUSE_BUTTON_WHEEL_UP:
 				if mb.pressed:
-					_zoom_by(pow(zoom_step, _wheel_steps(mb)), mb.position)
+					_zoom_by(pow(zoom_step, _wheel_steps(mb) * Settings.zoom_speed), mb.position)
 					get_viewport().set_input_as_handled()
 			MOUSE_BUTTON_WHEEL_DOWN:
 				if mb.pressed:
-					_zoom_by(1.0 / pow(zoom_step, _wheel_steps(mb)), mb.position)
+					_zoom_by(1.0 / pow(zoom_step, _wheel_steps(mb) * Settings.zoom_speed), mb.position)
 					get_viewport().set_input_as_handled()
 			MOUSE_BUTTON_MIDDLE:
 				_dragging = mb.pressed
@@ -86,18 +86,20 @@ func _process(delta: float) -> void:
 		_dragging = false
 		return
 	# Mit Strg gehören die Tasten Befehlen (Strg+A: alle Krieger), nicht der Kamera
+	# Tasten (Kamera-Tempo) und Bildschirmrand (eigenes Tempo, Einstellungen → Steuerung)
 	var dir := Vector2.ZERO if Input.is_key_pressed(KEY_CTRL) \
 			else Input.get_vector("camera_left", "camera_right", "camera_up", "camera_down")
+	var move := dir.limit_length(1.0) * Settings.camera_speed
 	if Settings.edge_scroll and not _dragging:
-		dir += _edge_scroll_direction()
-	if dir != Vector2.ZERO:
-		var speed := pan_speed * Settings.camera_speed
-		position += dir.limit_length(1.0) * speed * delta / zoom.x
+		move += _edge_scroll_direction().limit_length(1.0) * Settings.edge_scroll_speed
+	if move != Vector2.ZERO:
+		var top := maxf(Settings.camera_speed, Settings.edge_scroll_speed)
+		position += move.limit_length(top) * pan_speed * delta / zoom.x
 
 	# Zoom per Tastatur (gedrückt halten), Zentrum = Bildmitte
 	var key_zoom := Input.get_axis("camera_zoom_out", "camera_zoom_in")
 	if key_zoom != 0.0:
-		_target_zoom = clampf(_target_zoom * pow(zoom_step, key_zoom * delta * 10.0), zoom_min, zoom_max)
+		_target_zoom = clampf(_target_zoom * pow(zoom_step, key_zoom * delta * 10.0 * Settings.zoom_speed), zoom_min, zoom_max)
 		_zoom_anchor = get_viewport_rect().size * 0.5
 
 	# Weiches Zoomen zum Ziel, der Punkt unter dem Anker bleibt fest

@@ -380,7 +380,7 @@ func _draw() -> void:
 				get_upgrade_ratio(), Color(0.45, 0.85, 1.0))
 	if hit_flash > 0.0:
 		draw_rect(rect, Color(1, 0.3, 0.2, 0.35), true)
-	if constructed and (hp < max_hp or selected):
+	if constructed and Settings.shows_hp_bar(hp < max_hp, selected):
 		var ratio := clampf(hp / max_hp, 0.0, 1.0)
 		var bar_color := Color(0.3, 0.9, 0.3) if ratio > 0.5 else (Color(0.95, 0.8, 0.2) if ratio > 0.25 else Color(0.95, 0.25, 0.2))
 		SpriteDraw.draw_bar(self, Rect2(rect.position.x + 6, rect.position.y - 12, px.x - 12, 7), ratio, bar_color)

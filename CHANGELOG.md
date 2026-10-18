@@ -15,6 +15,9 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
   Milizplätze; bei Alarm ruht der Bau. Spielstände mit Baustellen laden weiter, ältere Dörfer behalten ihre Hütten.
 - Neue Gebäude: Brunnen (Zufriedenheit für die Bewohner in der Nähe), Kornspeicher (Annahmestelle für Nahrung,
   weniger Nahrungsverbrauch) und Markt (bessere Handelskurse bei allen Dörfern). Auch die KI-Reiche bauen sie.
+- Mehr Einstellungen, geordnet nach Reitern (Grafik · Ton · Steuerung · Oberfläche · Spiel): VSync und Bildrate,
+  Zoom- und Scrolltempo am Bildschirmrand, Lebensbalken, Meldungsdauer, Minikarten-Grösse, Starttempo, Rückfrage vor
+  einer Kriegserklärung und Tooltip-Verzögerung. Ältere Einstellungsdateien laden mit den Standardwerten.
 
 ## 1.2.1 – 2026-10-17
 

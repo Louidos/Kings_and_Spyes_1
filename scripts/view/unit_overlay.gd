@@ -55,7 +55,7 @@ func _draw() -> void:
 		return
 	var ring_w := maxf(2.0, 2.0 / zoom)
 	for u in game.unit_system.units:
-		var show_bar: bool = u.selected or u.hp < u.max_hp
+		var show_bar: bool = Settings.shows_hp_bar(u.hp < u.max_hp, u.selected)
 		if u.inside != null or (not show_bar and u.vet_rank <= 0):
 			continue
 		if not view.has_point(u.position):

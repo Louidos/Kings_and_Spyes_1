@@ -1,7 +1,7 @@
 ## NotificationPanel
 ##
 ## Meldungen oben rechts (Notify.posted). Die neueste steht oben, höchstens
-## MAX_ENTRIES gleichzeitig. Jede Meldung verschwindet nach LIFETIME echten
+## MAX_ENTRIES gleichzeitig. Jede Meldung verschwindet nach Settings.notify_seconds echten
 ## Sekunden (blendet aus); solange die Maus darauf liegt, bleibt sie stehen.
 ## Klick auf eine Meldung mit Ort springt mit der Kamera dorthin, eine Meldung
 ## mit Verweis öffnet das Fenster (HUD.open_link, z. B. Heldenfenster bei einer
@@ -10,7 +10,6 @@ class_name NotificationPanel
 extends VBoxContainer
 
 const MAX_ENTRIES := 6
-const LIFETIME := 8.0
 const FADE_TIME := 0.8
 const FONT_SIZE := 16
 const KIND_COLORS := {
@@ -37,20 +36,26 @@ func setup(p_game: Node) -> void:
 	game = p_game
 
 
+## Anzeigedauer einer Meldung (Einstellungen, Reiter Oberfläche)
+static func lifetime() -> float:
+	return maxf(Settings.notify_seconds, FADE_TIME + 1.0)
+
+
 func _process(delta: float) -> void:
+	var life := lifetime()
 	for i in range(_entries.size() - 1, -1, -1):
 		var entry: Dictionary = _entries[i]
 		var b: Button = entry["button"]
 		if b.is_hovered():
-			entry["age"] = minf(float(entry["age"]), LIFETIME - FADE_TIME - 1.0)
+			entry["age"] = minf(float(entry["age"]), life - FADE_TIME - 1.0)
 			b.modulate.a = 1.0
 			continue
 		var age := float(entry["age"]) + delta
 		entry["age"] = age
-		if age >= LIFETIME:
+		if age >= life:
 			_remove(i)
-		elif age > LIFETIME - FADE_TIME:
-			b.modulate.a = clampf((LIFETIME - age) / FADE_TIME, 0.0, 1.0)
+		elif age > life - FADE_TIME:
+			b.modulate.a = clampf((life - age) / FADE_TIME, 0.0, 1.0)
 
 
 func _on_posted(text: String, kind: String, world_pos: Variant) -> void:
