@@ -1,10 +1,10 @@
 ## ResourceBar
 ##
-## Ressourcenleiste in der oberen Leiste: je Ressource Symbol und Menge
-## (Tooltip: Ertrag pro Minute, bei Nahrung auch Verbrauch und Hungersnot,
-## bei Mana Bestand/Maximum mit allen Anteilen), daneben die Kampfpunkte,
-## danach Bewohner/Wohnraum mit dem Wachstumszustand im Tooltip und das Leben des
-## Königs (die Zahl der Truppen steht auf dem Knopf „Armee“). Ab Phase 8 nach den Bewohnern
+## Ressourcenleiste in der oberen Leiste: je Ressource Symbol und Menge – Einzelheiten nur im
+## Tooltip (Ertrag pro Minute, Lagergrenze, bei Nahrung auch Verbrauch und Hungersnot, bei Mana
+## Bestand/Maximum mit allen Anteilen; volles Mana ist gelb), daneben die Kampfpunkte,
+## danach Bewohner/Wohnraum (Symbol) mit dem Wachstumszustand im Tooltip und das Leben des
+## Königs (Krone, Höchstwert im Tooltip). Ab Phase 8 nach den Bewohnern
 ## die Zufriedenheit (Gesicht mit Durchschnitt, Tooltip mit Ursachen; Klick öffnet
 ## die Reichsübersicht).
 ## Zeigt nur an – wird viermal pro Sekunde aktualisiert, nicht in jedem Bild.
@@ -106,8 +106,7 @@ func setup(p_game: Node) -> void:
 		var icon := ResourceIcon.new()
 		icon.setup(res_id, ICON_SIZE)
 		entry.add_child(icon)
-		# Mana zeigt "Bestand/Maximum" und braucht mehr Platz
-		var label := _make_label(74 if res_id == "mana" else 48)
+		var label := _make_label(48)
 		entry.add_child(label)
 		_amount_labels[res_id] = label
 		_entries[res_id] = entry
@@ -116,6 +115,7 @@ func setup(p_game: Node) -> void:
 	if _kp_label == null:
 		_add_kill_points_entry()
 	var pop_entry := _make_entry()
+	pop_entry.add_child(_icon_rect(HudIcons.get_icon("population")))
 	_pop_label = _make_label(0)
 	pop_entry.add_child(_pop_label)
 	_entries["_population"] = pop_entry
@@ -124,6 +124,7 @@ func setup(p_game: Node) -> void:
 	# Fenster-Knöpfen in 1920 passt
 	add_theme_constant_override("separation", 4)
 	var king_entry := _make_entry()
+	king_entry.add_child(_icon_rect(HudIcons.get_icon("king")))
 	_king_label = _make_label(0)
 	king_entry.add_child(_king_label)
 	king_entry.tooltip_text = "Leben des Königs – fällt er, ist das Spiel verloren"
@@ -184,13 +185,12 @@ func _refresh() -> void:
 	_refresh_king(k)
 
 
-## Mana "80/100"; voll = gelb. Läuft der volle Speicher weiter über, kommt
+## Mana "80" (Maximum im Tooltip); voll = gelb. Läuft der volle Speicher weiter über, kommt
 ## höchstens alle 2 Spielminuten ein Hinweis.
 func _refresh_mana(k: Kingdom, label: Label, amount: float) -> void:
-	var cap := k.get_capacity("mana")
 	var full := is_mana_full(k)
-	# Über dem Maximum (nach Erstattung) wird nicht gekürzt angezeigt: "160/100"
-	_set_label(label, "%d/%d" % [floori(amount), roundi(cap)], COLOR_FULL if full else COLOR_NORMAL)
+	# Nur der Bestand; das Maximum steht im Tooltip (voll = gelb)
+	_set_label(label, str(floori(amount)), COLOR_FULL if full else COLOR_NORMAL)
 	if full and is_mana_produced(k) \
 			and GameClock.game_time - _mana_full_notified_at >= MANA_FULL_NOTIFY_INTERVAL:
 		_mana_full_notified_at = GameClock.game_time
@@ -313,7 +313,7 @@ func _refresh_population(k: Kingdom) -> void:
 	var housing := k.get_housing()
 	var state: int = game.economy_system.get_growth_state(k)
 	var blocked := state != EconomySystem.Growth.GROWING
-	_set_label(_pop_label, "Bewohner %d/%d" % [pop, housing], COLOR_BAD if blocked else COLOR_NORMAL)
+	_set_label(_pop_label, "%d/%d" % [pop, housing], COLOR_BAD if blocked else COLOR_NORMAL)
 	var lines: PackedStringArray = ["Bewohner: %d  ·  Wohnraum: %d" % [pop, housing]]
 	match state:
 		EconomySystem.Growth.GROWING:
@@ -403,7 +403,21 @@ func _refresh_king(k: Kingdom) -> void:
 		return
 	var u := king as Unit
 	var low := u.hp < u.max_hp * 0.5
-	_set_label(_king_label, "König %d/%d" % [ceili(u.hp), roundi(u.max_hp)], COLOR_BAD if low else COLOR_NORMAL)
+	_set_label(_king_label, str(ceili(u.hp)), COLOR_BAD if low else COLOR_NORMAL)
+	var tip := "König: %d / %d Leben – fällt er, ist das Spiel verloren" % [ceili(u.hp), roundi(u.max_hp)]
+	if entry.tooltip_text != tip:
+		entry.tooltip_text = tip
+
+
+## Symbol (HudIcons) in Leistengrösse
+func _icon_rect(tex: Texture2D) -> TextureRect:
+	var r := TextureRect.new()
+	r.texture = tex
+	r.custom_minimum_size = Vector2(ICON_SIZE, ICON_SIZE)
+	r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	r.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return r
 
 
 func _make_entry() -> TipBox:

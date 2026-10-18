@@ -337,7 +337,7 @@ func get_target_controls() -> Array:
 				else:
 					# Knopf liegt in einem anderen Reiter: den Reiter zeigen
 					var def: Dictionary = DataDB.get_building(arg)
-					var tab: Variant = (menu.get("_tab_buttons") as Dictionary).get(str(def.get("menu", "economy")), null)
+					var tab: Variant = (menu.get("_tab_buttons") as Dictionary).get(BuildMenu.category_of(def), null)
 					if tab is Control:
 						list.append(tab)
 		"top":

@@ -9,8 +9,11 @@
 ## Gebäude, die erst erforscht werden müssen (def.requires) oder eine höhere Burgstufe brauchen
 ## (def.requires_castle_level), sehen gesperrt aus (grau mit Schloss); der Tooltip nennt, was
 ## fehlt, ein Klick nennt nur den Grund statt die Vorschau zu starten.
-## Phase 9: Reiter "Dorf", "Militär & Wissen", "Verteidigung" (def.menu); "Abreissen (X)"
-## steht in jedem Reiter. Startet eine Platzierung von anderswo, springt der Reiter mit.
+## Reiter nach Kategorie (buildings.json category): Wirtschaft · Wohnen & Versorgung · Militär ·
+## Verteidigung · Magie & Forschung – jedes Gebäude ist so in höchstens zwei Klicks erreichbar;
+## "Abreissen (X)" steht in jedem Reiter. Startet eine Platzierung von anderswo, springt der Reiter
+## mit. Ist der Platz knapp (oder das kompakte HUD an), zeigen die Reiter Kurznamen und die
+## Knöpfe die kurze Beschriftung (buildings.json label).
 class_name BuildMenu
 extends PanelContainer
 
@@ -18,16 +21,20 @@ const REFRESH_INTERVAL := 0.25
 ## Höchstens so viele Buttons pro Zeile
 const MAX_COLUMNS := 6
 const BUTTON_MIN_WIDTH := 150.0
+## Mindestbreite der Knöpfe im kompakten HUD (Kurzbeschriftung)
+const BUTTON_MIN_WIDTH_COMPACT := 104.0
 const FONT_SIZE := 16
 const UNAFFORDABLE_TINT := Color(1.0, 0.75, 0.75)
 const DEMOLISH_ID := "_demolish"
 const LOCKED_MODULATE := Color(0.62, 0.6, 0.6)
 const COLOR_BAD := Color(1.0, 0.45, 0.38)
 const COLOR_HINT := Color(0.74, 0.71, 0.66)
-## Reiter des Baumenüs (buildings.json menu) und ihre Beschriftung
-const TABS := [["economy", "Dorf", "Wohnen, Rohstoffe, Lager, Nahrung, Mana und Strassen"],
-		["military", "Militär & Wissen", "Kaserne, Forschung, Heldenhalle, Spionage und weitere Truppengebäude"],
-		["defense", "Verteidigung", "Mauern, Tore, Türme und Belagerungswerkstatt"]]
+## Reiter des Baumenüs (buildings.json category): [id, Name, Kurzname, Tooltip]
+const TABS := [["economy", "Wirtschaft", "Wirtschaft", "Rohstoffe, Lager, Nahrung, Handel und Strassen"],
+		["housing", "Wohnen & Versorgung", "Wohnen", "Wohnhäuser, Brunnen, Taverne und Tempel"],
+		["military", "Militär", "Militär", "Kaserne, Heldenhalle, Schmiede, Reitstall, Kundschafter und Belagerung"],
+		["defense", "Verteidigung", "Verteid.", "Mauern, Tore und Türme"],
+		["magic", "Magie & Forschung", "Magie", "Bibliothek, Manabrunnen und Magierturm"]]
 
 
 ## Button des Baumenüs: farbiger Tooltip, bei gesperrten Gebäuden ein Schloss
@@ -70,6 +77,8 @@ var _timer := 0.0
 ## Aktiver Reiter und seine Knöpfe (Reiter-id -> Button)
 var _tab := "economy"
 var _tab_buttons: Dictionary = {}
+## Gebäude-ID -> [voller Name, Kurzbeschriftung]
+var _names: Dictionary = {}
 
 
 func _ready() -> void:
@@ -84,7 +93,7 @@ func _ready() -> void:
 	for entry in TABS:
 		var t := Button.new()
 		t.text = str(entry[1])
-		t.tooltip_text = "Baumenü: %s" % str(entry[2])
+		t.tooltip_text = "%s: %s" % [str(entry[1]), str(entry[3])]
 		t.toggle_mode = true
 		t.button_group = group
 		t.focus_mode = Control.FOCUS_NONE
@@ -111,7 +120,10 @@ func setup(p_game: Node) -> void:
 		if not bool(def.get("player_buildable", false)):
 			continue
 		var id := str(def.get("id", ""))
-		var b := _make_button(DataDB.get_building_name(def, game.player.faction_id))
+		var full := DataDB.get_building_name(def, game.player.faction_id)
+		var short := DataDB.get_building_label(def, game.player.faction_id)
+		_names[id] = [full, full if short.is_empty() or short.length() >= full.length() else short]
+		var b := _make_button(full)
 		var tex := Assets.texture(DataDB.get_building_sprite(def, game.player.faction_id))
 		if tex != null:
 			b.icon = tex
@@ -128,19 +140,27 @@ func setup(p_game: Node) -> void:
 	game.placement.placement_started.connect(_on_placement_started)
 	game.placement.placement_ended.connect(_sync_pressed)
 	game.research_system.research_completed.connect(_on_research_completed)
+	if not Settings.changed.is_connected(_on_settings_changed):
+		Settings.changed.connect(_on_settings_changed)
 	select_tab(_tab)
 	_refresh()
 	_sync_pressed()
 
 
-## Reiter wählen ("economy", "military", "defense"): nur dessen Knöpfe und "Abreissen"
+## Reiter eines Gebäudes (buildings.json category)
+static func category_of(def: Dictionary) -> String:
+	return str(def.get("category", def.get("menu", "economy")))
+
+
+## Reiter wählen ("economy", "housing", "military", "defense", "magic"): nur dessen Knöpfe und "Abreissen"
 func select_tab(menu: String) -> void:
 	_tab = menu if _tab_buttons.has(menu) else "economy"
 	for id in _tab_buttons:
 		(_tab_buttons[id] as Button).set_pressed_no_signal(id == _tab)
+	_apply_labels()
 	var n := 0
 	for id in _buttons:
-		var shown: bool = id == DEMOLISH_ID or str((_defs_by_id.get(id, {}) as Dictionary).get("menu", "economy")) == _tab
+		var shown: bool = id == DEMOLISH_ID or category_of(_defs_by_id.get(id, {})) == _tab
 		(_buttons[id] as Button).visible = shown
 		if shown:
 			n += 1
@@ -149,10 +169,40 @@ func select_tab(menu: String) -> void:
 	var cols := clampi(ceili(n / 2.0), 1, MAX_COLUMNS)
 	if _max_width > 0.0:
 		var sep := float(_grid.get_theme_constant("h_separation"))
-		var fit := floori((_max_width - 40.0 + sep) / (BUTTON_MIN_WIDTH + 12.0 + sep))
+		var bw := BUTTON_MIN_WIDTH_COMPACT if Settings.compact_hud else BUTTON_MIN_WIDTH
+		var fit := floori((_max_width - 40.0 + sep) / (bw + 12.0 + sep))
 		cols = clampi(mini(cols, fit), 2, MAX_COLUMNS)
 	_grid.columns = cols
 	reset_size()
+
+
+## Beschriftungen: im kompakten HUD Kurznamen (Reiter und Gebäude, voller Name im Tooltip);
+## sonst volle Namen – passen die Reiter nicht in die Breite, nur die Reiter mit Kurznamen
+func _apply_labels() -> void:
+	var compact := Settings.compact_hud
+	for entry in TABS:
+		var t: Button = _tab_buttons.get(str(entry[0]))
+		if t != null:
+			t.text = str(entry[2] if compact else entry[1])
+	if not compact and _max_width > 0.0:
+		var need := 0.0
+		for id in _tab_buttons:
+			need += (_tab_buttons[id] as Button).get_combined_minimum_size().x + 6.0
+		if need > _max_width - 30.0:
+			for entry in TABS:
+				(_tab_buttons[str(entry[0])] as Button).text = str(entry[2])
+	for id in _buttons:
+		var b: Button = _buttons[id]
+		if id == DEMOLISH_ID:
+			b.text = "Abreissen" if compact else "Abreissen (X)"
+		elif _names.has(id):
+			b.text = str((_names[id] as Array)[1 if compact else 0])
+		b.custom_minimum_size.x = BUTTON_MIN_WIDTH_COMPACT if compact else BUTTON_MIN_WIDTH
+
+
+func _on_settings_changed() -> void:
+	if game != null:
+		select_tab(_tab)
 
 
 ## Höchstbreite (vom HUD: Platz zwischen linker Spalte und Minikarte)
@@ -302,7 +352,7 @@ func _on_demolish_pressed() -> void:
 func _on_placement_started(p_def: Dictionary) -> void:
 	# Reiter springt mit (Platzierung über einen Verweis)
 	if not p_def.is_empty():
-		var menu := str(p_def.get("menu", "economy"))
+		var menu := category_of(p_def)
 		if menu != _tab:
 			select_tab(menu)
 	_sync_pressed()

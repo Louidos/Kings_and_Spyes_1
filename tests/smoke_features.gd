@@ -18,6 +18,7 @@ const MODULES := {
 	"Entdeckung": preload("res://tests/smoke_discovery.gd"),
 	"Einstellungen": preload("res://tests/smoke_settings.gd"),
 	"Welt": preload("res://tests/smoke_world_compat.gd"),
+	"HUD": preload("res://tests/smoke_hud.gd"),
 	# Startet eine neue Partie mit anderen Optionen – darum zuletzt
 	"Neues Spiel": preload("res://tests/smoke_new_game.gd"),
 }

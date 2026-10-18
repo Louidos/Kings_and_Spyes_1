@@ -52,7 +52,7 @@ der Mitte offen – öffnet man ein anderes, schliesst sich das erste.
 
 | Aktion | Taste / Maus |
 |---|---|
-| Gebäude bauen | Baumenü unten (Reiter *Dorf* / *Militär & Wissen* / *Verteidigung*) → Vorschau (grün = möglich, rot = Grund) → Linksklick |
+| Gebäude bauen | Baumenü unten (Reiter *Wirtschaft* / *Wohnen & Versorgung* / *Militär* / *Verteidigung* / *Magie & Forschung*) → Vorschau (grün = möglich, rot = Grund) → Linksklick |
 | Mehrere gleiche Gebäude | Umschalttaste beim Klicken gedrückt halten |
 | Strassen | „Strasse“ im Baumenü → Maustaste gedrückt halten und ziehen (bleibt aktiv bis Rechtsklick / Esc) |
 | Mauer / Tor | Baumenü → *Verteidigung*: „Mauer“ wie Strassen ziehen (über eigenen Strassen entstehen Tore); „Tor“ auf ein eigenes Mauerstück oder eine Strasse setzen. Tor auswählen → „Verriegeln“ / „Öffnen“ |
@@ -143,7 +143,7 @@ zurück“ in `user://settings.cfg` (auch nach einem Neustart); „Standard“ s
 | **Grafik** | Vollbild, VSync, Bildrate-Grenze (30 / 60 / 120 / unbegrenzt), Tag-Nacht-Abdunklung |
 | **Ton** | Lautstärke Gesamt, Musik, Effekte, Oberfläche |
 | **Steuerung** | Kamera am Bildschirmrand an/aus, Kamera-Tempo der Tasten, Tempo am Bildschirmrand (getrennt), Zoom-Tempo (Mausrad, Q/E) |
-| **Oberfläche** | Grösse der Oberfläche (75–150 %), Lebensbalken (immer / nur verletzt oder ausgewählt / nur ausgewählt), wie lange Meldungen sichtbar bleiben (4–20 s), Grösse der Minikarte (75–150 %) |
+| **Oberfläche** | Grösse der Oberfläche (75–150 %), Lebensbalken (immer / nur verletzt oder ausgewählt / nur ausgewählt), wie lange Meldungen sichtbar bleiben (4–20 s), Grösse der Minikarte (75–150 %), **Kompaktes HUD** (Fenster-Knöpfe nur als Symbol, Kurznamen im Baumenü, keine Hinweiszeile) |
 | **Spiel** | Automatisch speichern, Spielstände komprimieren, Tempo zu Beginn einer Partie, Rückfrage vor einer Kriegserklärung (aus: der erste Rechtsklick auf ein friedliches Dorf bzw. „Krieg erklären“ gilt sofort), Tooltip-Verzögerung (gilt ab dem nächsten Start – Godot liest sie nur beim Programmstart; sie steht in `user://project_override.cfg`) |
 
 ## Tutorial

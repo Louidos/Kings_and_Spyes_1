@@ -3,7 +3,7 @@
 ## Formular der Einstellungen (Hauptmenü und Spielmenü) in fünf Reitern (UiStyle.tab_button):
 ## Grafik (Vollbild, VSync, Bildrate, Tag-Nacht-Abdunklung) · Ton (Lautstärken) · Steuerung
 ## (Rand-Scrollen, Kamera-, Rand- und Zoomtempo) · Oberfläche (Grösse, Lebensbalken, Meldungsdauer,
-## Minikarte) · Spiel (automatisch speichern, komprimieren, Starttempo, Rückfrage vor einer
+## Minikarte, kompaktes HUD) · Spiel (automatisch speichern, komprimieren, Starttempo, Rückfrage vor einer
 ## Kriegserklärung, Tooltip-Verzögerung). Änderungen wirken sofort (Settings.apply);
 ## "Speichern und zurück" schreibt die Datei, "Standard" setzt alle Standardwerte.
 class_name SettingsForm
@@ -38,6 +38,7 @@ var _tint_check: CheckBox
 var _hp_option: OptionButton
 var _notify_option: OptionButton
 var _minimap_slider: HSlider
+var _compact_check: CheckBox
 var _autosave_option: OptionButton
 var _compress_check: CheckBox
 var _start_speed_option: OptionButton
@@ -111,6 +112,7 @@ func _ready() -> void:
 	for sec in Settings.NOTIFY_STEPS:
 		_add_item(_notify_option, "%d Sekunden" % roundi(float(sec)), float(sec))
 	_minimap_slider = _slider_row("Grösse der Minikarte", 0.75, 1.5, 0.05, "Minikarte rechts unten grösser oder kleiner")
+	_compact_check = _check("Kompaktes HUD", "Weniger Text: Fenster-Knöpfe oben nur als Symbol, Kurznamen im Baumenü, ohne Hinweiszeile")
 	# Spiel
 	_page = _pages["game"]
 	_autosave_option = _option_row("Automatisch speichern",
@@ -188,6 +190,7 @@ func refresh() -> void:
 	_select(_hp_option, Settings.hp_bars)
 	_select(_notify_option, Settings.notify_seconds)
 	_minimap_slider.value = Settings.minimap_scale
+	_compact_check.button_pressed = Settings.compact_hud
 	_select(_autosave_option, Settings.autosave_minutes)
 	_compress_check.button_pressed = Settings.compress_saves
 	_select(_start_speed_option, Settings.start_speed_index)
@@ -228,6 +231,8 @@ func set_more_values(values: Dictionary) -> void:
 		_select(_notify_option, float(values["notify_seconds"]))
 	if values.has("minimap_scale"):
 		_minimap_slider.value = float(values["minimap_scale"])
+	if values.has("compact_hud"):
+		_compact_check.button_pressed = bool(values["compact_hud"])
 	if values.has("start_speed_index"):
 		_select(_start_speed_option, int(values["start_speed_index"]))
 	if values.has("confirm_war"):
@@ -254,6 +259,7 @@ func _take() -> void:
 	Settings.hp_bars = str(_selected(_hp_option, Settings.hp_bars))
 	Settings.notify_seconds = float(_selected(_notify_option, Settings.notify_seconds))
 	Settings.minimap_scale = _minimap_slider.value
+	Settings.compact_hud = _compact_check.button_pressed
 	Settings.autosave_minutes = int(_selected(_autosave_option, Settings.autosave_minutes))
 	Settings.compress_saves = _compress_check.button_pressed
 	Settings.start_speed_index = int(_selected(_start_speed_option, Settings.start_speed_index))

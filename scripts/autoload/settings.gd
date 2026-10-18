@@ -64,6 +64,8 @@ var start_speed_index: int = -1
 var confirm_war: bool = true
 ## Verzögerung, bis ein Tooltip erscheint (Sekunden; gilt ab dem nächsten Start)
 var tooltip_delay: float = 0.5
+## Kompaktes HUD: weniger Text (Fenster-Knöpfe nur als Symbol, Kurznamen im Baumenü, kein Hinweistext)
+var compact_hud: bool = false
 
 
 func _ready() -> void:
@@ -91,6 +93,7 @@ func reset_defaults() -> void:
 	start_speed_index = -1
 	confirm_war = true
 	tooltip_delay = 0.5
+	compact_hud = false
 
 
 func load_settings() -> void:
@@ -121,6 +124,7 @@ func load_settings() -> void:
 	start_speed_index = int(cf.get_value("game", "start_speed_index", start_speed_index))
 	confirm_war = bool(cf.get_value("game", "confirm_war", confirm_war))
 	tooltip_delay = clampf(float(cf.get_value("game", "tooltip_delay", tooltip_delay)), 0.0, 2.0)
+	compact_hud = bool(cf.get_value("interface", "compact_hud", compact_hud))
 
 
 func save_settings() -> void:
@@ -144,6 +148,7 @@ func save_settings() -> void:
 	cf.set_value("game", "start_speed_index", start_speed_index)
 	cf.set_value("game", "confirm_war", confirm_war)
 	cf.set_value("game", "tooltip_delay", tooltip_delay)
+	cf.set_value("interface", "compact_hud", compact_hud)
 	cf.save(file_path)
 	_save_override()
 
@@ -171,7 +176,7 @@ func values() -> Dictionary:
 			"compress_saves": compress_saves, "vsync": vsync, "max_fps": max_fps, "zoom_speed": zoom_speed,
 			"edge_scroll_speed": edge_scroll_speed, "hp_bars": hp_bars, "notify_seconds": notify_seconds,
 			"minimap_scale": minimap_scale, "start_speed_index": start_speed_index, "confirm_war": confirm_war,
-			"tooltip_delay": tooltip_delay}
+			"tooltip_delay": tooltip_delay, "compact_hud": compact_hud}
 
 
 ## Wird ein Lebensbalken gezeigt? (Einheiten und Gebäude)

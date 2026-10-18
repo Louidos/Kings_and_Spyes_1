@@ -21,6 +21,15 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 - Neues Spiel: Anzahl Gegner und Dörfer, Startvorräte, Monster und Zufallsereignisse lassen sich einstellen; die
   Optionen stehen im Spielstand. Mit allen Werten auf „Standard“ bleibt alles wie bisher.
 
+### Geändert
+
+- Übersichtlicheres HUD: aufgeräumte obere Leiste mit Symbolen, Baumenü mit Reitern, einklappbares Auswahlfenster,
+  gebündelte Meldungen und eine kompakte Ansicht. Ressourcen zeigen nur Symbol und Zahl (Einkommen und Lagergrenze im
+  Tooltip), die Fenster-Knöpfe Symbol und kurzen Namen (Taste im Tooltip). Das Baumenü hat fünf Reiter: Wirtschaft,
+  Wohnen & Versorgung, Militär, Verteidigung, Magie & Forschung. Gleiche Meldungen erscheinen gebündelt („3× …“),
+  höchstens vier auf einmal; alle stehen weiter im Protokoll. „Kompaktes HUD“ findet sich unter Einstellungen →
+  Oberfläche. Alle Tastenkürzel bleiben gleich.
+
 ### Behoben
 
 - Der Dialog „Neues Spiel“ lässt sich bei grosser Oberfläche (150 %) rollen, statt oben und unten abgeschnitten zu

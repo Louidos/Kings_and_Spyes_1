@@ -806,6 +806,8 @@ func _load_buildings() -> void:
 		b["replaces"] = b.get("replaces", []) if b.get("replaces", []) is Array else []
 		b["allow_on_road"] = bool(b.get("allow_on_road", false))
 		b["menu"] = str(b.get("menu", "economy"))
+		# Reiter im Baumenü (ältere Daten ohne category: aus menu)
+		b["category"] = str(b.get("category", b["menu"]))
 		b["max_builders"] = int(b.get("max_builders", 0))
 		b["requires_castle_level"] = maxi(int(b.get("requires_castle_level", 1)), 1)
 		b["repairable"] = bool(b.get("repairable", b["player_buildable"] or str(b.get("id", "")) == "castle"))

@@ -14,6 +14,7 @@
 		"capturable: true = wird bei 0 Leben erobert statt zerstört (Dorfzentrum).",
 		"people_sprites: Grafik je Volk (Dorfgebäude), sprite_fallback: Grafik, wenn weder Volks- noch Fraktionsgrafik angegeben ist.",
 		"satisfaction_aura: {bonus, radius, cause} = Zufriedenheit für alle eigenen Bewohner im Umkreis (Felder) des fertigen Gebäudes; mehrere zählen nicht doppelt (der höchste Bonus). kingdom_bonus {Schlüssel: Zuschlag} / kingdom_mods {Schlüssel: Faktor}: wirken auf das ganze Reich, solange mindestens ein fertiges Gebäude des Typs steht (je Typ einmal), z. B. food_use (Nahrungsverbrauch), trade_bonus (Handelsmarge kleiner, bessere Kurse).",
+		"category: Reiter im Baumenü – economy (Wirtschaft), housing (Wohnen & Versorgung), military (Militär), defense (Verteidigung), magic (Magie & Forschung); ohne Angabe aus dem älteren Feld menu (economy/military/defense).",
 		"people_color: Platzhalter in der Volksfarbe. shape: Form des gezeichneten Platzhalters (rect Standard, well Brunnen, field Acker, workshop Werkstatt mit Esse). village_only: nur neutrale Dörfer bauen es (Dorfwachstum, diplomacy.json village.growth.extras_at_size).",
 		"satisfaction: {bonus, capacity, cause} = Zufriedenheit für bis zu capacity Bewohner (mehrere Gebäude addieren die Plätze); plague_spread_mult / discover_bonus: der Tempel mildert Seuchen und entdeckt Verräter und eingeschleuste Spione eher (Phase 8).",
 		"spy_den: true = Spionagehaus (Spione beginnen eine Stufe höher, +1 Spion, Wachsamkeit siehe espionage.json). people_sprites bei der Burg: Grafik je Volk (nur wenn die Datei existiert, sonst Fraktionsgrafik).",
@@ -64,7 +65,7 @@
 			}
 		},
 		{
-			"id": "house", "name": "Wohnhaus", "label": "Haus",
+			"id": "house", "category": "housing", "name": "Wohnhaus", "label": "Haus",
 			"description": "Wohnraum für 4 Bewohner. Erweitert das Gebiet.",
 			"size": [2, 2], "cost": { "wood": 25 }, "build_time": 20,
 			"housing": 4, "territory_radius": 5,
@@ -76,7 +77,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/house_good.png", "evil": "res://assets/sprites/buildings/house_evil.png" }
 		},
 		{
-			"id": "storehouse", "name": "Lager", "label": "Lager",
+			"id": "storehouse", "category": "economy", "name": "Lager", "label": "Lager",
 			"description": "Annahmestelle für Holz, Stein, Erz und Nahrung. Verkürzt die Wege der Sammler.",
 			"size": [2, 2], "cost": { "wood": 40, "stone": 10 }, "build_time": 30,
 			"territory_radius": 4,
@@ -89,7 +90,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/storehouse_good.png", "evil": "res://assets/sprites/buildings/storehouse_evil.png" }
 		},
 		{
-			"id": "lumberyard", "name": "Holzfällerhütte", "label": "Holz",
+			"id": "lumberyard", "category": "economy", "name": "Holzfällerhütte", "label": "Holz",
 			"description": "Holzfäller liefern hier ab und arbeiten 25 % schneller. Am besten nahe am Wald bauen.",
 			"size": [2, 2], "cost": { "wood": 30 }, "build_time": 20,
 			"territory_radius": 4,
@@ -102,7 +103,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/lumberyard_good.png", "evil": "res://assets/sprites/buildings/lumberyard_evil.png" }
 		},
 		{
-			"id": "quarry", "name": "Steinmetzhütte", "label": "Stein",
+			"id": "quarry", "category": "economy", "name": "Steinmetzhütte", "label": "Stein",
 			"description": "Steinhauer liefern hier ab und arbeiten 25 % schneller. Nahe an Steinbrocken bauen.",
 			"size": [2, 2], "cost": { "wood": 35 }, "build_time": 25,
 			"territory_radius": 4,
@@ -115,7 +116,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/quarry_good.png", "evil": "res://assets/sprites/buildings/quarry_evil.png" }
 		},
 		{
-			"id": "mine", "name": "Erzmine", "label": "Mine",
+			"id": "mine", "category": "economy", "name": "Erzmine", "label": "Mine",
 			"description": "Bergleute liefern hier ab und arbeiten 25 % schneller. Nahe an Erzadern bauen.",
 			"requires_castle_level": 2, "size": [2, 2], "cost": { "wood": 40, "stone": 20 }, "build_time": 35,
 			"territory_radius": 4,
@@ -128,7 +129,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/mine_good.png", "evil": "res://assets/sprites/buildings/mine_evil.png" }
 		},
 		{
-			"id": "hunter", "name": "Jägerhütte", "label": "Jagd",
+			"id": "hunter", "category": "economy", "name": "Jägerhütte", "label": "Jagd",
 			"description": "Sammler und Jäger liefern hier Nahrung ab und arbeiten 25 % schneller.",
 			"size": [2, 2], "cost": { "wood": 25 }, "build_time": 20,
 			"territory_radius": 4,
@@ -141,7 +142,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/hunter_good.png", "evil": "res://assets/sprites/buildings/hunter_evil.png" }
 		},
 		{
-			"id": "farm", "name": "Bauernhof", "label": "Hof",
+			"id": "farm", "category": "economy", "name": "Bauernhof", "label": "Hof",
 			"description": "Bis zu 3 Bauern erzeugen dauerhaft Nahrung. Am besten auf Ebene, schlecht in der Wüste.",
 			"size": [2, 2], "cost": { "wood": 40 }, "build_time": 30,
 			"territory_radius": 4,
@@ -155,7 +156,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/farm_good.png", "evil": "res://assets/sprites/buildings/farm_evil.png" }
 		},
 		{
-			"id": "well", "name": "Brunnen", "names": { "good": "Brunnen", "evil": "Zisterne" },
+			"id": "well", "category": "housing", "name": "Brunnen", "names": { "good": "Brunnen", "evil": "Zisterne" },
 			"label": "", "labels": { "good": "", "evil": "" },
 			"description": "Frisches Wasser für die Nachbarschaft: +5 Zufriedenheit für alle Bewohner im Umkreis von 8 Feldern (mehrere Brunnen zählen nicht doppelt).",
 			"size": [1, 1], "cost": { "wood": 15, "stone": 35 }, "build_time": 20,
@@ -165,7 +166,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/well_good.png", "evil": "res://assets/sprites/buildings/well_evil.png" }
 		},
 		{
-			"id": "granary", "name": "Kornspeicher", "names": { "good": "Kornspeicher", "evil": "Vorratsgrube" },
+			"id": "granary", "category": "economy", "name": "Kornspeicher", "names": { "good": "Kornspeicher", "evil": "Vorratsgrube" },
 			"label": "Korn", "labels": { "good": "Korn", "evil": "Vorrat" },
 			"description": "Lager nur für Nahrung: Sammler, Jäger und Bauern liefern hier ab und sammeln 15 % schneller. Gut gelagert verdirbt weniger – das Reich verbraucht 10 % weniger Nahrung (zählt einmal).",
 			"size": [2, 2], "cost": { "wood": 45, "stone": 15 }, "build_time": 30,
@@ -175,7 +176,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/granary_good.png", "evil": "res://assets/sprites/buildings/granary_evil.png" }
 		},
 		{
-			"id": "mana_well", "name": "Manabrunnen", "label": "Mana",
+			"id": "mana_well", "category": "magic", "name": "Manabrunnen", "label": "Mana",
 			"description": "Muss auf einer Manaquelle stehen. Erzeugt etwas Mana, mit Manawirkern deutlich mehr.",
 			"requires_castle_level": 2, "size": [2, 2], "cost": { "wood": 30, "stone": 30 }, "build_time": 40,
 			"territory_radius": 4,
@@ -189,7 +190,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/mana_well_good.png", "evil": "res://assets/sprites/buildings/mana_well_evil.png" }
 		},
 		{
-			"id": "barracks", "name": "Kaserne", "label": "Kas.",
+			"id": "barracks", "category": "military", "name": "Kaserne", "label": "Kas.",
 			"description": "Hier beschwört der König Schwertkämpfer, Bogenschützen und – nach Forschung – Speerträger, Armbrustschützen, schwere Fusstruppen und Elitekrieger. Wird mit Mana errichtet.",
 			"requires_castle_level": 2, "size": [2, 2], "cost": { "wood": 60, "stone": 40, "mana": 30 }, "build_time": 45,
 			"territory_radius": 4, "hp": 600,
@@ -202,7 +203,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/barracks_good.png", "evil": "res://assets/sprites/buildings/barracks_evil.png" }
 		},
 		{
-			"id": "infirmary", "name": "Krankenstation", "label": "Heil",
+			"id": "infirmary", "category": "military", "name": "Krankenstation", "label": "Heil",
 			"description": "Beschwört Heiler. Eigene Einheiten in der Nähe erholen sich schneller. Wird mit Mana errichtet. Muss erforscht werden (Forschung R, Magie: Heilkunde).",
 			"requires": ["building:infirmary"],
 			"requires_castle_level": 3, "size": [2, 2], "cost": { "wood": 50, "stone": 20, "mana": 25 }, "build_time": 40,
@@ -213,7 +214,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/infirmary_good.png", "evil": "res://assets/sprites/buildings/infirmary_evil.png" }
 		},
 		{
-			"id": "library", "name": "Bibliothek", "names": { "good": "Bibliothek", "evil": "Dunkles Archiv" },
+			"id": "library", "category": "magic", "name": "Bibliothek", "names": { "good": "Bibliothek", "evil": "Dunkles Archiv" },
 			"label": "Bib.", "labels": { "good": "Bib.", "evil": "Archiv" },
 			"description": "Forschungsstätte: hier wird geforscht (Forschung mit R). Jede weitere forscht 25 % schneller.",
 			"requires_castle_level": 2, "size": [2, 2], "cost": { "wood": 40, "stone": 80, "mana": 10 }, "build_time": 50,
@@ -226,7 +227,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/library_good.png", "evil": "res://assets/sprites/buildings/library_evil.png" }
 		},
 		{
-			"id": "hero_hall", "name": "Heldenhalle", "names": { "good": "Heldenhalle", "evil": "Halle der Schatten" },
+			"id": "hero_hall", "category": "military", "name": "Heldenhalle", "names": { "good": "Heldenhalle", "evil": "Halle der Schatten" },
 			"label": "Helden", "labels": { "good": "Helden", "evil": "Schatten" },
 			"description": "Hier werden Helden angeworben (Heldenfenster mit G) und ausgebildet. Nur eine pro Reich, braucht eine Kaserne.",
 			"requires_buildings": ["barracks"], "max_per_kingdom": 1,
@@ -236,7 +237,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/hero_hall_good.png", "evil": "res://assets/sprites/buildings/hero_hall_evil.png" }
 		},
 		{
-			"id": "spy_den", "name": "Kundschafterhaus", "names": { "good": "Kundschafterhaus", "evil": "Schattenloge" },
+			"id": "spy_den", "category": "military", "name": "Kundschafterhaus", "names": { "good": "Kundschafterhaus", "evil": "Schattenloge" },
 			"label": "Spione", "labels": { "good": "Kundsch.", "evil": "Loge" },
 			"description": "Bildet Spione aus: sie beginnen eine Stufe höher. Erhöht die Wachsamkeit gegen fremde Spione und erlaubt einen Spion mehr. Nur eines pro Reich.",
 			"requires": ["building:spy_den"], "max_per_kingdom": 1,
@@ -246,7 +247,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/spy_den_good.png", "evil": "res://assets/sprites/buildings/spy_den_evil.png" }
 		},
 		{
-			"id": "tavern", "name": "Taverne", "names": { "good": "Taverne", "evil": "Schenke" },
+			"id": "tavern", "category": "housing", "name": "Taverne", "names": { "good": "Taverne", "evil": "Schenke" },
 			"label": "Taverne", "labels": { "good": "Taverne", "evil": "Schenke" },
 			"description": "Hier treffen sich die Bewohner nach der Arbeit: +10 Zufriedenheit für bis zu 20 Bewohner (für mehr Bewohner weitere bauen).",
 			"requires_castle_level": 2, "size": [2, 2], "cost": { "wood": 60, "stone": 20, "food": 30 }, "build_time": 35,
@@ -260,7 +261,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/tavern_good.png", "evil": "res://assets/sprites/buildings/tavern_evil.png" }
 		},
 		{
-			"id": "market", "name": "Markt", "names": { "good": "Markt", "evil": "Basar" },
+			"id": "market", "category": "economy", "name": "Markt", "names": { "good": "Markt", "evil": "Basar" },
 			"label": "Markt", "labels": { "good": "Markt", "evil": "Basar" },
 			"description": "Händler und Waagen: bessere Kurse beim Tausch mit Dörfern und für die Bezahlung der Handelslieferungen (Handelsmarge −10 Prozentpunkte, zählt einmal).",
 			"requires_castle_level": 2, "size": [3, 3], "cost": { "wood": 80, "stone": 50, "food": 20 }, "build_time": 45,
@@ -270,7 +271,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/market_good.png", "evil": "res://assets/sprites/buildings/market_evil.png" }
 		},
 		{
-			"id": "temple", "name": "Tempel", "names": { "good": "Tempel des Lichts", "evil": "Schattenschrein" },
+			"id": "temple", "category": "housing", "name": "Tempel", "names": { "good": "Tempel des Lichts", "evil": "Schattenschrein" },
 			"label": "Tempel", "labels": { "good": "Tempel", "evil": "Schrein" },
 			"description": "Ort des Glaubens: +8 Zufriedenheit für bis zu 30 Bewohner. Seuchen breiten sich langsamer aus, Verräter und eingeschleuste Spione fallen eher auf. Braucht eine Forschungsstätte.",
 			"requires_buildings": ["library"],
@@ -353,7 +354,7 @@
 			"sprite": "res://assets/sprites/buildings/village_workshop.png"
 		},
 		{
-			"id": "wall", "name": "Mauer", "names": { "good": "Steinmauer", "evil": "Dornenwall" }, "label": "",
+			"id": "wall", "category": "defense", "name": "Mauer", "names": { "good": "Steinmauer", "evil": "Dornenwall" }, "label": "",
 			"description": "Mauerstück: hält Feinde auf, bis sie es zerstören. Mit gedrückter Maustaste ziehen (wie Strassen). Über eigene Strassen wird automatisch ein Tor gesetzt. Bauarbeiter reparieren beschädigte Mauern.",
 			"size": [1, 1], "cost": { "stone": 5, "wood": 1 }, "build_time": 6, "placement": "line", "line_gate": "gate",
 			"segment": true, "fortification": "wall", "hp": 500, "armor": 0.5, "territory_radius": 0, "max_builders": 1,
@@ -361,7 +362,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/wall_good.png", "evil": "res://assets/sprites/buildings/wall_evil.png" }
 		},
 		{
-			"id": "gate", "name": "Tor", "names": { "good": "Burgtor", "evil": "Schattentor" }, "label": "Tor",
+			"id": "gate", "category": "defense", "name": "Tor", "names": { "good": "Burgtor", "evil": "Schattentor" }, "label": "Tor",
 			"description": "Durchgang in der Mauer: eigene und verbündete Einheiten gehen hindurch, Feinde müssen es aufbrechen. Auf ein eigenes Mauerstück oder eine eigene Strasse setzen. Im Auswahlfenster verriegeln (dann nur noch eigene und Verbündete).",
 			"requires_castle_level": 2, "size": [1, 1], "cost": { "wood": 30, "stone": 25 }, "build_time": 20, "segment": true, "fortification": "gate",
 			"replaces": ["wall"], "allow_on_road": true, "hp": 1000, "armor": 0.5, "territory_radius": 0, "max_builders": 2,
@@ -369,7 +370,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/gate_good.png", "evil": "res://assets/sprites/buildings/gate_evil.png" }
 		},
 		{
-			"id": "tower", "name": "Wachturm", "names": { "good": "Wachturm", "evil": "Dornenturm" }, "label": "Turm",
+			"id": "tower", "category": "defense", "name": "Wachturm", "names": { "good": "Wachturm", "evil": "Dornenturm" }, "label": "Turm",
 			"description": "Schiesst selbsttätig auf Feinde in Reichweite (auch Monster) und hält nach fremden Spionen Ausschau. Gegen Katapulte (grössere Reichweite) hilft er wenig.",
 			"requires_castle_level": 2, "size": [2, 2], "cost": { "wood": 60, "stone": 90 }, "build_time": 50, "fortification": "tower", "territory_radius": 3,
 			"hp": 900, "armor": 0.4, "sight": 10, "loot": { "stone": 20 }, "kill_points": 3, "menu": "defense",
@@ -383,7 +384,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/tower_good.png", "evil": "res://assets/sprites/buildings/tower_evil.png" }
 		},
 		{
-			"id": "siege_workshop", "name": "Belagerungswerkstatt", "names": { "good": "Belagerungswerkstatt", "evil": "Kriegsschmiede" },
+			"id": "siege_workshop", "category": "military", "name": "Belagerungswerkstatt", "names": { "good": "Belagerungswerkstatt", "evil": "Kriegsschmiede" },
 			"label": "Werkst.", "labels": { "good": "Werkst.", "evil": "Schmiede" },
 			"description": "Hier entstehen Rammböcke und Katapulte. Muss erforscht werden (Militär: Belagerungskunst) und braucht eine Kaserne. Wird mit Mana errichtet.",
 			"requires": ["building:siege_workshop"], "requires_buildings": ["barracks"], "requires_castle_level": 4, "size": [3, 3],
@@ -392,7 +393,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/siege_workshop_good.png", "evil": "res://assets/sprites/buildings/siege_workshop_evil.png" }
 		},
 		{
-			"id": "forge", "name": "Schmiede", "names": { "good": "Schmiede", "evil": "Blutschmiede" },
+			"id": "forge", "category": "military", "name": "Schmiede", "names": { "good": "Schmiede", "evil": "Blutschmiede" },
 			"label": "Schmiede", "labels": { "good": "Schmiede", "evil": "Blutsch." },
 			"description": "Hier werden Waffen und Rüstungen der Truppen verbessert: je Truppenklasse drei Stufen (Auswahlfenster der Schmiede). Braucht eine Kaserne, nur eine pro Reich.",
 			"requires_buildings": ["barracks"], "max_per_kingdom": 1,
@@ -406,7 +407,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/forge_good.png", "evil": "res://assets/sprites/buildings/forge_evil.png" }
 		},
 		{
-			"id": "stable", "name": "Reitstall", "names": { "good": "Reitstall", "evil": "Wolfszwinger" },
+			"id": "stable", "category": "military", "name": "Reitstall", "names": { "good": "Reitstall", "evil": "Wolfszwinger" },
 			"label": "Stall", "labels": { "good": "Stall", "evil": "Zwinger" },
 			"description": "Hier entstehen schnelle Reiter (GUT: Lanzenreiter, BÖSE: Wolfsreiter). Muss erforscht werden (Militär: Ritterorden bzw. Schreckensorden) und braucht eine Kaserne.",
 			"requires": ["building:stable"], "requires_buildings": ["barracks"],
@@ -417,7 +418,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/stable_good.png", "evil": "res://assets/sprites/buildings/stable_evil.png" }
 		},
 		{
-			"id": "mage_tower", "name": "Magierturm", "names": { "good": "Magierturm", "evil": "Hexenturm" },
+			"id": "mage_tower", "category": "magic", "name": "Magierturm", "names": { "good": "Magierturm", "evil": "Hexenturm" },
 			"label": "Magier", "labels": { "good": "Magier", "evil": "Hexer" },
 			"description": "Bildet Kampfmagier (BÖSE: Hexer) aus, die Gruppen mit Flächenschaden treffen. Muss erforscht werden (Magie: Lichtsegen bzw. Fluch der Schwäche) und braucht eine Forschungsstätte.",
 			"requires": ["building:mage_tower"], "requires_buildings": ["library"],
@@ -428,7 +429,7 @@
 			"sprites": { "good": "res://assets/sprites/buildings/mage_tower_good.png", "evil": "res://assets/sprites/buildings/mage_tower_evil.png" }
 		},
 		{
-			"id": "road", "name": "Strasse", "label": "",
+			"id": "road", "category": "economy", "name": "Strasse", "label": "",
 			"description": "Bewohner laufen auf Strassen schneller. Mit gedrückter Maustaste ziehen.",
 			"size": [1, 1], "cost": { "stone": 1 }, "build_time": 2,
 			"is_road": true, "placement": "line", "blocks_movement": false,
