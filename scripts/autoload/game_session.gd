@@ -41,7 +41,7 @@ var start_tutorial := false
 var options: Dictionary = {}
 
 ## Schlüssel der Optionen in game_config.json → new_game (Reihenfolge im Dialog)
-const OPTION_KEYS := ["ai_kingdoms", "villages", "resources", "monsters", "events"]
+const OPTION_KEYS := ["ai_kingdoms", "villages", "resources", "monsters", "events", "fog"]
 
 
 func _ready() -> void:
@@ -104,6 +104,8 @@ func setup_tutorial_game(p_faction: String, p_people: String = "") -> void:
 	setup_new_game(p_faction, str(DataDB.tut("game.difficulty", "easy")), str(DataDB.tut("game.map_size", "small")),
 			str(DataDB.tut("game.seed", "Lernreich")), p_people)
 	start_tutorial = true
+	# Das Tutorial läuft ohne Kriegsnebel (auch nach dem Laden seines Spielstands)
+	options["fog"] = "off"
 
 
 ## Gespeicherte Werte der Partie (Spielstand)

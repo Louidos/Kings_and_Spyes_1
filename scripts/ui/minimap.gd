@@ -90,6 +90,8 @@ var _messenger_blink := false
 var _pings: Array = []
 ## Obere Ebene für Kamerarahmen und Meldungen
 var _overlay: Control
+## Kriegsnebel über dem Kartenbild (Textur aus FogView, eigener Shader mit eigener Abdunklung)
+var _fog_rect: TextureRect
 var _last_view := Rect2()
 
 
@@ -123,13 +125,56 @@ func setup_game(game: Node) -> void:
 	if trs != null:
 		(trs as TradeRouteSystem).routes_changed.connect(func(_k: Kingdom) -> void: _routes_dirty = true)
 	_update_territory_boxes()
+	_setup_fog()
 	_refresh()
+
+
+## Kriegsnebel: dieselbe Textur wie in der Welt, unter dem Kamerarahmen
+func _setup_fog() -> void:
+	var view: Variant = _game.get("fog_view")
+	if not (view is FogView) or (view as FogView).fog_texture == null:
+		return
+	if _fog_rect == null:
+		_fog_rect = TextureRect.new()
+		_fog_rect.name = "Fog"
+		_fog_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_fog_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		_fog_rect.stretch_mode = TextureRect.STRETCH_SCALE
+		_fog_rect.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		add_child(_fog_rect)
+		move_child(_fog_rect, 0)
+	_fog_rect.texture = (view as FogView).fog_texture
+	_fog_rect.material = (view as FogView).make_material(float(DataDB.cfg("fog.minimap_explored_alpha", 0.5)),
+			float(DataDB.cfg("fog.unexplored_alpha", 1.0)))
+	(_game.fog_system as FogSystem).updated.connect(func(_id: int) -> void: _sync_fog_rect())
+	_sync_fog_rect()
+
+
+func _sync_fog_rect() -> void:
+	if _fog_rect == null:
+		return
+	var r := _map_rect()
+	_fog_rect.position = r.position
+	_fog_rect.size = r.size
+	_fog_rect.visible = (_game.fog_system as FogSystem).has_grid(_game.player)
+
+
+## Kennt der Spieler das Reich auf der Karte? (eigene, verbündete, gesehene Burg/Halle)
+func _knows_kingdom(kingdom: Kingdom) -> bool:
+	var player: Kingdom = _game.player
+	if _game.are_allied(player, kingdom) or not (_game.fog_system as FogSystem).has_grid(player):
+		return true
+	if is_instance_valid(kingdom.castle):
+		return _game.can_see(player, kingdom.castle)
+	var hall: Building = _game.village_system.get_hall(kingdom)
+	return hall != null and _game.can_see(player, hall)
 
 
 ## Punkte neu berechnen und alles neu zeichnen
 func _refresh() -> void:
 	_redraw_timer = 0.0
 	_rebuild_cache()
+	_sync_fog_rect()
 	queue_redraw()
 	if _overlay != null:
 		_overlay.queue_redraw()
@@ -222,6 +267,8 @@ func _draw_markers(r: Rect2) -> void:
 			var building: Building = b
 			if lairs.has(building):
 				continue  # eigenes Symbol, siehe _draw_units
+			if not _game.can_see(_game.player, building):
+				continue  # Kriegsnebel: nie gesehen
 			var marker_size := (Vector2(building.size) * tile_px).max(min_size)
 			var center := r.position + (Vector2(building.cell) + Vector2(building.size) * 0.5) * tile_px
 			var rect := Rect2(center - marker_size * 0.5, marker_size)
@@ -245,6 +292,8 @@ func _draw_castles(r: Rect2, tile_px: Vector2) -> void:
 				continue
 			var cell: Vector2i = ruin["cell"]
 			var ruin_size: Vector2i = ruin["size"]
+			if (_game.fog_system as FogSystem).get_state(player, cell) == FogSystem.UNEXPLORED:
+				continue
 			var rc := (r.position + (Vector2(cell) + Vector2(ruin_size) * 0.5) * tile_px).floor() + Vector2(0.5, 0.5)
 			draw_line(rc + Vector2(-3.5, -3.5), rc + Vector2(3.5, 3.5), OUTLINE_COLOR, 3.5)
 			draw_line(rc + Vector2(-3.5, 3.5), rc + Vector2(3.5, -3.5), OUTLINE_COLOR, 3.5)
@@ -255,6 +304,8 @@ func _draw_castles(r: Rect2, tile_px: Vector2) -> void:
 		if (kingdom.controller != "player" and kingdom.controller != "ai") or not is_instance_valid(kingdom.castle):
 			continue
 		var castle: Building = kingdom.castle
+		if not _game.can_see(player, castle):
+			continue
 		var c := (r.position + (Vector2(castle.cell) + Vector2(castle.size) * 0.5) * tile_px).floor() + Vector2(0.5, 0.5)
 		var body := Rect2(c + Vector2(-3.5, -2.5), Vector2(7.0, 6.0))
 		draw_rect(body.grow(1.0), OUTLINE_COLOR, true)
@@ -278,7 +329,7 @@ func _draw_villages(r: Rect2, tile_px: Vector2) -> void:
 	var player: Kingdom = _game.player
 	for v in vs.get_villages(true):
 		var hall := vs.get_hall(v)
-		if hall == null:
+		if hall == null or not _game.can_see(player, hall):
 			continue
 		var c := (r.position + hall.get_center() / float(_world.tile_size) * tile_px).floor() + Vector2(0.5, 0.5)
 		var owner_k := hall.kingdom
@@ -383,7 +434,7 @@ func _rebuild_cache() -> void:
 		if kingdom.controller == "wild":
 			_monster_color = kingdom.color
 			for u in kingdom.units:
-				if u.inside != null or (not visible_all and u.stealthed):
+				if u.inside != null or (not visible_all and not _game.can_see(player, u)):
 					continue
 				# Auf ganze Pixel runden, sonst verschwimmen die kleinen Quadrate
 				var p: Vector2 = (origin + u.position * s).floor()
@@ -396,7 +447,7 @@ func _rebuild_cache() -> void:
 		var messengers := PackedVector2Array()
 		var caravans := PackedVector2Array()
 		for u in kingdom.units:
-			if u.inside != null or (not visible_all and u.stealthed):
+			if u.inside != null or (not visible_all and not _game.can_see(player, u)):
 				continue
 			var p: Vector2 = (origin + u.position * s).floor()
 			# Boten eigenes Symbol (blinkt), nur wenn der Spieler sie sieht
@@ -425,7 +476,7 @@ func _rebuild_cache() -> void:
 	if not own_group.is_empty():
 		_dot_groups.append(own_group)
 	for lair in _game.monster_system.lairs:
-		if is_instance_valid(lair):
+		if is_instance_valid(lair) and _game.can_see(player, lair):
 			_lair_points.append((origin + (lair as Building).get_center() * s).floor() + Vector2(0.5, 0.5))
 	last_cache_usec = Time.get_ticks_usec() - t0
 
@@ -453,6 +504,8 @@ func _update_territory_boxes() -> void:
 		return
 	for k in _kingdoms:
 		var kingdom: Kingdom = k
+		if _game != null and not _knows_kingdom(kingdom):
+			continue
 		var rect := TerritorySystem.kingdom_bbox(kingdom, _world)
 		if rect.has_area():
 			_territory_boxes.append({"color": Color(kingdom.color, 0.75), "rect": rect})

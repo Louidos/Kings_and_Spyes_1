@@ -79,7 +79,8 @@ Code. Beim nächsten Start (F5 im Editor) gilt der neue Wert.
 | `time.start_hour` | Uhrzeit beim Start (8) |
 | `time.speed_steps` | Tempostufen (`[0.5, 1.0, 2.0, 3.0]`) |
 | `save.*` | Autospeicher-Plätze und Mindestabstand |
-| `new_game.*` | Optionen im Dialog „Neues Spiel“ je mit `id`, `name` und Wert: `ai_kingdoms` (`count`), `villages`, `resources`, `monsters` (`factor`), `events` (`standard` = an, `off`). Der Eintrag `standard` entspricht dem Verhalten ohne Option |
+| `new_game.*` | Optionen im Dialog „Neues Spiel“ je mit `id`, `name` und Wert: `ai_kingdoms` (`count`), `villages`, `resources`, `monsters` (`factor`), `events` und `fog` (`standard` = an, `off`). Der Eintrag `standard` entspricht dem Verhalten ohne Option |
+| `fog.*` | Kriegsnebel: `update_interval_ticks` (Raster alle so viele Simulationsschritte neu, 5 = ½ Spielsekunde), `building_sight` (Sicht der Gebäude in Feldern, 6) und `building_sight_by_type` (Ausnahmen je Gebäude-id: `castle` 12, `tower` 10), `unit_sight_min` (kleinste Sicht einer Einheit), `spy_reveal_radius` (Umkreis um das Ziel eines auskundschaftenden Spions, 14), `legacy_explored_margin` (alte Spielstände: so viele Felder über die Gebäudesicht hinaus gelten als erkundet), `explored_alpha` / `unexplored_alpha` / `minimap_explored_alpha` (Abdunklung), `view_z_index`. Die Sicht der Einheiten steht in `units.json` → `sight` |
 
 ### worldgen.json
 

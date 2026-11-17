@@ -23,11 +23,12 @@ Technische Dokumentation für alle, die am Code von **Königreiche** arbeiten. S
 15. [Wegfindung, Belagerung und Handel](#wegfindung-belagerung-und-handel)
 16. [Truppen: Klassen, Schmiede, Ränge, Aussehen](#truppen-klassen-schmiede-ränge-aussehen)
 17. [Tutorial](#tutorial)
-18. [Sieg und Niederlage](#sieg-und-niederlage)
-19. [Oberfläche](#oberfläche)
-20. [Speichern und Laden](#speichern-und-laden)
-21. [Exportieren](#exportieren)
-22. [Konventionen](#konventionen)
+18. [Kriegsnebel](#kriegsnebel)
+19. [Sieg und Niederlage](#sieg-und-niederlage)
+20. [Oberfläche](#oberfläche)
+21. [Speichern und Laden](#speichern-und-laden)
+22. [Exportieren](#exportieren)
+23. [Konventionen](#konventionen)
 
 ## Grundsätze
 
@@ -63,7 +64,7 @@ scripts/
   game.gd                  Spielszene: Weltgenerierung, Aufbau, globale Tasten, Speichern
   autoload/                DataDB, Settings, GameSession, GameClock, Assets, Notify, SaveManager
   world/                   WorldData, WorldGenerator, WorldMap (Chunks), Tilesets, TerritorySystem, NavGrid,
-                           PeopleSystem, DayNightSystem
+                           PeopleSystem, DayNightSystem, FogSystem
   economy/                 Kingdom, Building, BuildingSystem, EconomySystem, SatisfactionSystem,
                            TradeRouteSystem, SupplySystem
   units/                   Unit, UnitSystem, WorkSystem, CombatSystem, CommandSystem, SummonSystem, MonsterSystem,
@@ -79,7 +80,7 @@ scripts/
   save/                    SaveGame, SaveCodec, SaveMigration
   camera/                  RTSCamera
   view/                    Darstellung über der Welt: UnitOverlay, CombatEffects, MagicEffects, EventEffects,
-                           DayNightView, TradeRouteView
+                           DayNightView, TradeRouteView, FogView
   ui/                      HUD und alle Fenster, Bauvorschau, Auswahl, Zielmodus, Menüs, UiStyle
   util/                    PlaceholderArt, SpriteDraw
 assets/
@@ -119,7 +120,7 @@ Spielszene (`game.building_system`, `game.player` …).
    ResearchSystem → MagicSystem → HeroSystem → VillageSystem → DiplomacySystem → MessengerSystem →
    EspionageSystem → SpySystem → AISystem → VictorySystem → PeopleSystem → DayNightSystem →
    SatisfactionSystem → EventSystem → SiegeSystem → TradeRouteSystem → SupplySystem → TroopSystem →
-   TutorialSystem, danach Bauvorschau, Auswahl und die Darstellungs-Ebenen.
+   TutorialSystem → FogSystem, danach Bauvorschau, Auswahl und die Darstellungs-Ebenen.
 3. Neue Partie: **`_found_new_world`** – Spieler-Reich mit Volk und Burg, Startausstattung der Schwierigkeit,
    Monster-Reich, MonsterSystem, neutrale Dörfer, KI-Reiche, Reich „Wanderer“, Monsterlager, Volks- und
    Tageszeitboni. Geladene Partie: `SaveGame.restore`.
@@ -139,7 +140,9 @@ Spielszene (`game.building_system`, `game.player` …).
 - **`Kingdom`** hält Ressourcen, Gebäude, Einheiten, Forschung, Modifikatoren, Helden (`Kingdom.heroes`), KI-Zustand
   (`ai_state`) usw. `Game.create_kingdom`, `Game.found_settlement` gründen Reiche und Siedlungen.
 - **Beziehungen:** `Game.set_relation(a, b, "war" | "peace" | "alliance")`; Kampf nur bei Krieg. Die wilden Monster
-  sind ein eigenes Reich, mit allen im Krieg. `Game.can_see` ist die Stelle für Sichtbarkeit (Entdeckung, Tarnung).
+  sind ein eigenes Reich, mit allen im Krieg. `Game.can_see` ist die Stelle für Sichtbarkeit (Tarnung, Kriegsnebel):
+  Für Beobachter mit Sichtraster (der Spieler, siehe [Kriegsnebel](#kriegsnebel)) sind fremde Einheiten nur auf
+  sichtbaren Kacheln zu sehen und fremde Gebäude, sobald sie einmal gesehen wurden; die KI hat kein Raster.
 - **Gebiet** (`TerritorySystem`): Jedes fertige Gebäude beansprucht einen Kreis; bei Überschneidung gewinnt das
   ältere. Gebaut werden darf nur im eigenen Gebiet; Sammler holen nichts aus fremdem Gebiet. Signal `changed`.
 
@@ -172,6 +175,7 @@ Speicher-Schnittstelle `to_dict` / `from_dict` / `rebuild_runtime` ([Speichern](
 | `SiegeSystem`, `TradeRouteSystem`, `SupplySystem` | Mauern, Tore, Türme; Handelswege; Versorgung |
 | `TroopSystem` | Erfahrung, Ränge, Wertepunkte, Schmiede, Aussehen |
 | `TutorialSystem` | Schritte, Bedingungen, Schutz, Spielstand des Tutorials |
+| `FogSystem` | Kriegsnebel: Sichtraster je Spieler-Reich (unerforscht/erkundet/sichtbar), zuletzt gesehene Gebäude, Ein-/Ausblenden fremder Einheiten (`Unit.fog_hidden`) |
 
 **Signale im Kampf:** `kingdom_attacked`, `unit_died`, `building_destroyed` feuern mitten in den Schleifen des
 CombatSystems. Folgen (Alarm, Boten, Vertragsende …) landen deshalb in einer Warteschlange und laufen im eigenen Takt.
@@ -364,6 +368,30 @@ Jedes Dorf ist ein eigenes `Kingdom` (`controller = "neutral"`, Feld `people_id`
 - Spielstand: Schritt, Zustand, Schutz und bezahlte Geschenke (`TutorialSystem.to_dict`); nach dem Laden geht es beim
   gleichen Schritt weiter.
 
+## Kriegsnebel
+
+- **`FogSystem`** (`scripts/world/fog_system.gd`, Werte in `game_config.json` → `fog`): Raster je Reich mit
+  `controller = "player"` als `PackedByteArray` (0 unerforscht, 1 erkundet, 2 sichtbar). Alle
+  `update_interval_ticks` Simulationsschritte: die zuletzt sichtbaren Kacheln (Liste) zurück auf „erkundet“, dann
+  Kreise für jede Sichtquelle eintragen (eigene und verbündete Einheiten mit `Unit.sight`, Gebäude mit
+  `building_sight`, auskundschaftende Spione mit `spy_reveal_radius` um Burg bzw. Dorfzentrum des Ziels; gleiche
+  Kachel und gleicher Radius nur einmal, Kreis-Versätze je Radius zwischengespeichert). Danach
+  `Unit.set_fog_hidden` für fremde Einheiten und `Building.visible` für fremde Gebäude (sichtbar, sobald bekannt:
+  `known_buildings`). Signal `updated`.
+- **Nur Anzeige und Befehle des Spielers:** `Game.can_see` fragt das Raster nur für Reiche mit Raster. Auswahl,
+  Zielwahl (SelectionController, SpellTargeting), Minikarte und UnitOverlay laufen alle über `can_see` bzw.
+  `fog_hidden`. Die KI behält Entdeckung und Kundschaft.
+- **Aus:** Option `fog` = `off` im Dialog „Neues Spiel“ (`GameSession.options`) und immer im Tutorial
+  (`setup_tutorial_game` setzt `fog = off`, zusätzlich `TutorialSystem.is_running`).
+- **`FogView`** (`scripts/view/fog_view.gd`): Sprite mit einer R8-Textur (ein Pixel je Kachel = Rasterwert), ein
+  Shader rechnet den Wert in Schwarz bzw. Abdunklung um, lineare Filterung macht weiche Ränder. Zeichenebene
+  `view_z_index` (über Einheiten und Effekten, unter den Lebensbalken). Die Minikarte zeigt dieselbe Textur mit
+  eigenem Material (`Minimap._fog_rect`) unter Kamerarahmen und Meldungen; fremde Punkte, Burgen, Dörfer, Lager,
+  Gebietsrahmen und Ruinen nur, wenn bekannt.
+- **Speichern:** je Reich das rohe Raster komprimiert (`cells`, beim Laden gilt „sichtbar“ als „erkundet“) und die
+  uids der bekannten Gebäude. Spielstände ohne Eintrag (1.3.x): `explore_own_area` markiert die Sicht der eigenen
+  Gebäude plus `legacy_explored_margin` als erkundet.
+
 ## Sieg und Niederlage
 
 - `Game.defeat_kingdom` – stirbt der König des Spielers oder fällt seine Burg, ist das Spiel verloren.
@@ -409,6 +437,7 @@ Jedes Dorf ist ein eigenes `Kingdom` (`controller = "neutral"`, Feld `people_id`
   - *Rechts*: Meldungen (`NotificationPanel`, höchstens vier; gleicher Text und gleiche Art werden zu „3× …“
     gebündelt, alle stehen im Protokoll) und Protokoll-Knopf oben, Zauberleiste (`SpellBar`) und Minikarte unten.
     Meldungen reichen nie über die Zauberleiste.
+- *Kriegsnebel* über der Welt (`FogView`) und auf der Minikarte, siehe [Kriegsnebel](#kriegsnebel).
 - Fenster: `ResearchPanel` (R), `HeroPanel` (G), `TroopPanel` (T), `DiplomacyPanel` (N), `EspionagePanel` (K),
   `KingdomPanel` (L), `MessageLogPanel` (M), `HelpPanel` (F1), `PauseMenu`, `SaveLoadPanel`, `SettingsForm`,
   `GameOverScreen`, `RefugeeDialog`, `TutorialOverlay`.

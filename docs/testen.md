@@ -97,6 +97,12 @@ Prüfpunkt. Geprüft werden unter anderem:
   dieser Teil übersprungen, weil Godot dann keine echten Schriftmasse liefert:
   `xvfb-run -a -s "-screen 0 1280x720x24" $GODOT --rendering-driver opengl3 --resolution 1280x720
   res://tests/smoke_features.tscn -- faction=good only=HUD`.
+- **Kriegsnebel** (`smoke_fog.gd`, Modul in `smoke_features.gd`, `only=Nebel`): zu Beginn nur die Burg-Umgebung
+  sichtbar, der Rest schwarz; ein Späher deckt auf, hinter ihm bleibt die Karte erkundet; ein Wolf im Nebel ist
+  unsichtbar, nicht wählbar und nicht auf der Minikarte, beim Späher sichtbar; eine fremde Burg bleibt nach dem
+  Sehen „zuletzt gesehen“; ein auskundschaftender Spion deckt das Zielgebiet auf; Speichern/Laden behält das
+  Erkundete; Spielstand 1.3.x ohne Nebel-Daten; Option „aus“. Gibt die Dauer einer Aktualisierung aus
+  (`[smoke] Nebel: … ms je Aktualisierung`).
 - **Neues Spiel** (`smoke_new_game.gd`, letztes Modul in `smoke_features.tscn`): Standard ergibt dieselbe Welt, Dörfer
   und Gegnerplätze nach Option; eine Partie mit 1 Gegner, wenigen Dörfern, vielen Vorräten, ohne Monster und
   Ereignisse; Speichern/Laden behält die Optionen.

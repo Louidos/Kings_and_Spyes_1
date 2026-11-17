@@ -67,6 +67,7 @@ signal formation_changed(formation: String)
 @onready var trade_route_view: TradeRouteView = $TradeRoutes
 ## Tutorial (Schritte, Schutz vor Gegnern und Ereignissen, Oberfläche)
 @onready var tutorial_system: TutorialSystem = $Systems/TutorialSystem
+@onready var fog_system: FogSystem = $Systems/FogSystem
 @onready var selection: SelectionController = $Selection
 @onready var hud: CanvasLayer = $HUD
 @onready var pause_menu: CanvasLayer = $PauseMenu
@@ -82,6 +83,8 @@ var kingdoms: Array = []
 ## Kingdom.id -> Kingdom
 var kingdom_by_id: Dictionary = {}
 var territory := TerritorySystem.new()
+## Darstellung des Kriegsnebels über der Welt (Textur teilt sich die Minikarte)
+var fog_view: FogView
 var nav: NavGrid
 ## Zähler für eindeutige Nummern von Gebäuden und Einheiten (wird gespeichert)
 var uid_counter := 0
@@ -208,6 +211,8 @@ func _start_game(save_data: Dictionary = {}) -> void:
 	world.track_changes = true
 	if save_data.is_empty():
 		_found_new_world()
+		# Kriegsnebel: zu Beginn ist nur die Umgebung der Burg sichtbar
+		fog_system.update_all()
 		_finish_start(true)
 		return
 	loading.set_progress(1.0, "Stelle Spielstand wieder her …")
@@ -269,6 +274,8 @@ func _setup_world_and_systems() -> void:
 	station_system.setup(self)
 	# Tutorial nach allen Systemen und vor der Auswahl (hört auf deren Befehle)
 	tutorial_system.setup(self)
+	# Kriegsnebel nach allen Systemen (liest Einheiten, Gebäude, Bündnisse, Spione, Tutorial)
+	fog_system.setup(self)
 	placement.setup(self)
 	selection.setup(self)
 	unit_overlay.setup(self)
@@ -278,6 +285,9 @@ func _setup_world_and_systems() -> void:
 	event_effects.setup(self)
 	day_night_view.setup(self)
 	trade_route_view.setup(self)
+	fog_view = FogView.new()
+	add_child(fog_view)
+	move_child(fog_view, unit_overlay.get_index())
 	kingdom_defeated.connect(_on_kingdom_defeated)
 	victory_system.victory_reached.connect(_on_victory_reached)
 	camera.set_map_rect(world.get_pixel_rect())
@@ -315,6 +325,7 @@ func _finish_start(is_new: bool) -> void:
 		camera.focus_on(_loaded_camera["pos"], float(_loaded_camera.get("zoom", 0.8)))
 	elif is_instance_valid(player.castle):
 		camera.focus_on(player.castle.get_center(), float(DataDB.cfg("camera.zoom_start", 0.8)))
+	fog_view.setup(self)
 	hud.setup(self)
 	tutorial_system.setup_ui()
 	hud.visible = true
@@ -434,13 +445,21 @@ func are_allied(a: Kingdom, b: Kingdom) -> bool:
 	return a == b or a.relations.get(b.id, "peace") == "alliance"
 
 
-## Kann das Reich observer dieses Objekt (Unit/Building) sehen? In Phase 3 ist
-## alles sichtbar, ausser getarnten Einheiten fremder Reiche (Phase 7: Spione).
+## Kann das Reich observer dieses Objekt (Unit/Building) sehen? Getarnte Einheiten fremder
+## Reiche sind unsichtbar (Spione). Mit Kriegsnebel (nur Reiche mit Sichtraster, also der
+## Spieler): fremde Einheiten nur auf gerade sichtbaren Kacheln, fremde Gebäude, sobald sie
+## einmal gesehen wurden ("zuletzt gesehen"). Die KI hat kein Raster und sieht wie bisher.
 func can_see(observer: Kingdom, obj: Object) -> bool:
 	if obj == null or not is_instance_valid(obj):
 		return false
-	if obj.get("stealthed") == true and not are_allied(observer, obj.kingdom):
+	var owner_k: Kingdom = obj.get("kingdom")
+	if obj.get("stealthed") == true and not are_allied(observer, owner_k):
 		return false
+	if fog_system != null and fog_system.has_grid(observer) and not are_allied(observer, owner_k):
+		if obj is Unit:
+			return fog_system.is_visible_at(observer, (obj as Unit).position)
+		if obj is Building:
+			return fog_system.is_building_known(observer, obj as Building)
 	return true
 
 

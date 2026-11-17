@@ -48,7 +48,7 @@ func _draw() -> void:
 		# Fernansicht: jede Einheit als Punkt in ihrer Farbe
 		var r := 3.0 / zoom
 		for u in game.unit_system.units:
-			if u.inside != null or not view.has_point(u.position):
+			if u.inside != null or u.fog_hidden or not view.has_point(u.position):
 				continue
 			var c: Color = u.type_def.get("color", u.kingdom.color)
 			draw_rect(Rect2(u.position - Vector2(r, r), Vector2(r, r) * 2.0), c, true)
@@ -56,7 +56,7 @@ func _draw() -> void:
 	var ring_w := maxf(2.0, 2.0 / zoom)
 	for u in game.unit_system.units:
 		var show_bar: bool = Settings.shows_hp_bar(u.hp < u.max_hp, u.selected)
-		if u.inside != null or (not show_bar and u.vet_rank <= 0):
+		if u.inside != null or u.fog_hidden or (not show_bar and u.vet_rank <= 0):
 			continue
 		if not view.has_point(u.position):
 			continue
