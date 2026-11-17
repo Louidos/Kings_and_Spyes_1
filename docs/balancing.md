@@ -59,6 +59,11 @@ Ohne Fenster, eine Partie je Kern:
   Spielsekunde sind das 5–6 % eines Kerns bei Tempo 1x.
 - KI-Denkzeit Ø 2,8–3,6 ms je Denkvorgang (ein Reich alle paar Sekunden).
 - Grösste Posten: Kampf, Arbeit, Monster.
+- **Kriegsnebel** (`FogSystem`, nach 1.3.0): eine Aktualisierung des Spieler-Rasters dauert 2,1–3,4 ms bei 183
+  eigenen Einheiten und 9 Gebäuden (kleine Karte, Rauchtest `[smoke] Nebel: …`). Sie läuft nur alle 5
+  Simulationsschritte (`fog.update_interval_ticks`, ½ Spielsekunde), also im Mittel 0,4–0,7 ms je Schritt. Die Kosten
+  hängen an der Zahl der Sichtquellen (gleiche Kachel und gleicher Radius zählen einmal) und der sichtbaren Fläche,
+  kaum an der Kartengrösse; die Textur der Darstellung wird nur nach einer Aktualisierung neu hochgeladen.
 
 ## Anpassungen in Phase 10
 
