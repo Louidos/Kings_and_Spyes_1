@@ -338,7 +338,7 @@ func set_inside(u: Unit, b: Building) -> void:
 	if b == null and is_instance_valid(u.inside):
 		u.position = u.inside.get_approach_point(u.position)
 	u.inside = b
-	u.visible = b == null
+	u.visible = b == null and not u.fog_hidden
 
 
 func _process(_delta: float) -> void:

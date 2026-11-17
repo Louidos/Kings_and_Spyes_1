@@ -46,6 +46,7 @@ const GAME_OPTION_TEXTS := {
 	"resources": ["Startvorräte", "Holz, Stein, Nahrung und Mana zu Beginn – für dich und die Gegner"],
 	"monsters": ["Monster", "Monsterlager auf der Karte (aus: keine Monster, keine Streifzüge, keine Monsterwellen)"],
 	"events": ["Zufallsereignisse", "Dürre, Seuche, Magiesturm, Monsterwellen, Flüchtlinge, Erntedank …"],
+	"fog": ["Kriegsnebel", "An: Du siehst nur, was deine Leute, Gebäude, verbündeten Dörfer und Spione sehen. Unerforschtes ist schwarz, Erkundetes abgedunkelt. Aus: die ganze Karte ist sichtbar"],
 }
 
 

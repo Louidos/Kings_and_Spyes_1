@@ -1,4 +1,4 @@
-[gd_scene load_steps=45 format=3]
+[gd_scene load_steps=46 format=3]
 
 [ext_resource type="Script" path="res://scripts/game.gd" id="1_game"]
 [ext_resource type="Script" path="res://scripts/world/world_map.gd" id="2_worldmap"]
@@ -44,6 +44,7 @@
 [ext_resource type="Script" path="res://scripts/economy/recruit_system.gd" id="rc_recruits"]
 [ext_resource type="Script" path="res://scripts/diplomacy/station_system.gd" id="st_stations"]
 [ext_resource type="Script" path="res://scripts/tutorial/tutorial_system.gd" id="tut_system"]
+[ext_resource type="Script" path="res://scripts/world/fog_system.gd" id="fog_system"]
 
 [node name="Game" type="Node2D"]
 script = ExtResource("1_game")
@@ -176,6 +177,9 @@ script = ExtResource("st_stations")
 
 [node name="TutorialSystem" type="Node" parent="Systems"]
 script = ExtResource("tut_system")
+
+[node name="FogSystem" type="Node" parent="Systems"]
+script = ExtResource("fog_system")
 
 [node name="Selection" type="Node" parent="."]
 script = ExtResource("12_selection")

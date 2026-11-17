@@ -5,6 +5,13 @@ Alle wichtigen Änderungen an **Königreiche**, neueste zuerst. Die Versionsnumm
 
 ## Unveröffentlicht
 
+### Hinzugefügt
+
+- Kriegsnebel: Du siehst nur noch, was deine Leute sehen. Späher, Türme und Spione decken die Karte auf.
+  Unerforschtes ist schwarz, Erkundetes abgedunkelt mit den zuletzt gesehenen Gebäuden; fremde Truppen im Nebel
+  sind weder in der Welt noch auf der Minikarte zu sehen. Im Dialog „Neues Spiel“ abschaltbar, das Tutorial läuft
+  ohne Nebel. Spielstände aus 1.3.x laden mit erkundetem eigenem Gebiet.
+
 ## 1.3.0 – 2026-10-18
 
 Neue Inhalte; Spielstände aus 1.2.x laden weiter.

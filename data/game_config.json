@@ -36,7 +36,7 @@
 	},
 
 	"new_game": {
-		"_hinweis": "Optionen im Dialog „Neues Spiel“ (werden im Spielstand gespeichert; ältere Spielstände und das Tutorial nutzen „standard“ = Verhalten wie ohne Option). ai_kingdoms: Anzahl Gegnerreiche (count; standard = nach Schwierigkeit und Kartengrösse aus ai.json, max = so viele, wie die Karte Plätze hat – worldgen.json kingdom_sites.max_by_size). villages: factor auf die Zahl der neutralen Dörfer (worldgen.json villages.count_by_size). resources: factor auf die Startvorräte aller Reiche (economy.json start.resources). monsters: factor auf Monsterlager und Monster je Lager (0 = keine Monster, keine Streifzüge, keine Monsterwellen). events: Zufallsereignisse an/aus.",
+		"_hinweis": "Optionen im Dialog „Neues Spiel“ (werden im Spielstand gespeichert; ältere Spielstände und das Tutorial nutzen „standard“ = Verhalten wie ohne Option). ai_kingdoms: Anzahl Gegnerreiche (count; standard = nach Schwierigkeit und Kartengrösse aus ai.json, max = so viele, wie die Karte Plätze hat – worldgen.json kingdom_sites.max_by_size). villages: factor auf die Zahl der neutralen Dörfer (worldgen.json villages.count_by_size). resources: factor auf die Startvorräte aller Reiche (economy.json start.resources). monsters: factor auf Monsterlager und Monster je Lager (0 = keine Monster, keine Streifzüge, keine Monsterwellen). events: Zufallsereignisse an/aus. fog: Kriegsnebel an/aus (Werte im Abschnitt fog; das Tutorial läuft immer ohne).",
 		"ai_kingdoms": [
 			{"id": "standard", "name": "Standard"}, {"id": "1", "name": "1", "count": 1}, {"id": "2", "name": "2", "count": 2},
 			{"id": "3", "name": "3", "count": 3}, {"id": "max", "name": "So viele wie möglich", "count": 99}
@@ -55,7 +55,24 @@
 		],
 		"events": [
 			{"id": "standard", "name": "An"}, {"id": "off", "name": "Aus"}
+		],
+		"fog": [
+			{"id": "standard", "name": "An"}, {"id": "off", "name": "Aus"}
 		]
+	},
+
+	"fog": {
+		"_hinweis": "Kriegsnebel (Option „Kriegsnebel“ im Dialog „Neues Spiel“, im Tutorial immer aus). Der Spieler sieht nur, was seine Einheiten, Gebäude, verbündeten Dörfer und auskundschaftenden Spione sehen. Kacheln: unerforscht (schwarz), erkundet (abgedunkelt, Gelände und zuletzt gesehene Gebäude), sichtbar. update_interval_ticks = Raster nur alle so viele Simulationsschritte neu berechnen (10 Schritte = 1 Spielsekunde). building_sight = Sichtweite eines Gebäudes in Kacheln (ab dem Rand), building_sight_by_type = Ausnahmen je Gebäude-id (Wachturm, Burg). Einheiten sehen ihre Sichtweite aus units.json (sight, mit Tag/Nacht- und Volksboni), mindestens unit_sight_min. spy_reveal_radius = Umkreis um Burg bzw. Dorfzentrum des Ziels, den ein Spion beim Auskundschaften aufdeckt, solange er dort ist. legacy_explored_margin = alte Spielstände ohne Nebel: so viele Kacheln über die Sicht der eigenen Gebäude hinaus gelten als erkundet. explored_alpha / unexplored_alpha = Abdunklung erkundeter bzw. unerforschter Kacheln in der Welt (0 = klar, 1 = schwarz), minimap_explored_alpha = auf der Minikarte. view_z_index = Zeichenebene des Nebels (über Einheiten und Effekten, unter Lebensbalken).",
+		"update_interval_ticks": 5,
+		"building_sight": 6,
+		"building_sight_by_type": {"castle": 12, "tower": 10},
+		"unit_sight_min": 3,
+		"spy_reveal_radius": 14,
+		"legacy_explored_margin": 12,
+		"explored_alpha": 0.55,
+		"unexplored_alpha": 1.0,
+		"minimap_explored_alpha": 0.5,
+		"view_z_index": 27
 	},
 
 	"save": {

@@ -107,6 +107,9 @@ func run(r: Node) -> void:
 	var hall: Building = g.village_system.get_hall(village)
 	var soldiers: Array = r.spawn_tier(g.player, "fighter", 1)
 	if hall != null and not soldiers.is_empty() and not g.are_hostile(g.player, village):
+		# Kriegsnebel: das Dorf muss zu sehen sein – der Soldat steht davor
+		(soldiers[0] as Unit).position = hall.get_center() + Vector2(0, 3.0 * g.world.tile_size)
+		g.fog_system.update_all()
 		g.selection._issue_order(soldiers, hall.get_center(), false)
 		r.check(TOPIC, g.are_hostile(g.player, village), "Ohne Rückfrage erklärt der erste Rechtsklick auf %s den Krieg" % village.display_name)
 		g.diplomacy_system.debug_set_reputation(village, g.player, 50.0)

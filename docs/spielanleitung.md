@@ -10,7 +10,7 @@ feindlichen Reichs. Die Tasten stehen gesammelt in der [Steuerung](steuerung.md)
 ## Inhalt
 
 1. [Worum es geht](#1-worum-es-geht)
-2. [Eine Partie beginnen](#2-eine-partie-beginnen)
+2. [Eine Partie beginnen](#2-eine-partie-beginnen) · [Kriegsnebel](#kriegsnebel)
 3. [Der Bildschirm](#3-der-bildschirm)
 4. [Fraktionen und Völker](#4-fraktionen-und-völker)
 5. [Wirtschaft und Gebäude](#5-wirtschaft-und-gebäude)
@@ -71,10 +71,12 @@ Hauptmenü → **Neues Spiel**:
   - **Monster**: aus (keine Monster, Streifzüge und Monsterwellen), wenige (jedes zweite Lager), Standard, viele
     (mehr Monster je Lager).
   - **Zufallsereignisse**: an oder aus.
+  - **Kriegsnebel**: an (Standard) oder aus (die ganze Karte ist sichtbar wie früher). Siehe
+    [Kriegsnebel](#kriegsnebel).
 
   Die Optionen stehen im Spielstand und gelten nach dem Laden weiter. Mit allen Optionen auf „Standard“ ergibt
   derselbe Seed dieselbe Welt wie bisher; mehr Gegnerreiche oder andere Dorfzahlen verändern die Welt. Das Tutorial
-  nutzt immer seine festen Werte.
+  nutzt immer seine festen Werte und läuft ohne Kriegsnebel.
 
 **Tutorial:** Wer das Spiel zum ersten Mal spielt, wählt im Hauptmenü **Tutorial**. Es startet eine feste,
 freundliche Partie (Seed „Lernreich“, kleine Karte, Leicht, ein Gegnerreich) und führt in **37 Schritten** durch
@@ -85,6 +87,25 @@ Tutorial läuft (höchstens 120 Spielminuten), greifen dich weder Gegner noch Er
 lässt es sich fortsetzen oder neu beginnen.
 
 <br clear="right">
+
+### Kriegsnebel
+
+Du siehst nur, was **deine Leute sehen**. Die Karte hat drei Stufen:
+
+| Stufe | So sieht sie aus | Was du siehst |
+|---|---|---|
+| unerforscht | schwarz | nichts |
+| erkundet | abgedunkelt | Gelände und die Gebäude, wie du sie zuletzt gesehen hast – aber keine Truppen |
+| sichtbar | hell | alles, auch fremde Truppen |
+
+Sicht geben deine **Einheiten** (Sichtweite je Typ, Späher sehen am weitesten; nachts und je nach Volk weniger
+oder mehr), deine **Gebäude** (6 Felder, Wachturm 10, Burg 12) und **Dörfer mit Bündnis**. Ein **Spion**, der ein
+Reich oder Dorf auskundschaftet, deckt die Umgebung des Ziels auf (14 Felder), solange er dort ist. Fremde Truppen im
+Nebel erscheinen weder in der Welt noch auf der Minikarte und lassen sich nicht anklicken oder als Ziel wählen. Zu
+Beginn ist nur die Umgebung deiner Burg zu sehen – schick Späher los, bau Wachtürme an die Grenzen.
+
+Die Gegner haben keinen Nebel wie du: Sie wissen über dich, was ihnen Entdeckung und Kundschaft verraten
+(siehe [Entdeckung](#entdeckung)). Spielstände aus 1.3.x laden mit erkundetem eigenem Gebiet samt Umkreis.
 
 ## 3. Der Bildschirm
 

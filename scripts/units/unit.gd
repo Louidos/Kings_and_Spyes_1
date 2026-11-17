@@ -131,6 +131,8 @@ var regroup_pending := false
 ## Wirkung mit key "stealth"; eine Wirkung mit key "revealed" (enttarnter Spion,
 ## zeitlich begrenzt über MagicSystem.add_unit_effect) hebt die Tarnung auf.
 var stealthed := false
+## Kriegsnebel: ausserhalb der Sicht des Spielers (nicht gezeichnet, nicht wählbar; FogSystem)
+var fog_hidden := false
 ## Beschworene Zaubereinheit: verschwindet zu dieser Spielzeit (-1 = nie)
 var expires_at := -1.0
 ## Ursprüngliches Angriffsziel während einer Bresche (uid, 0 = keins)
@@ -554,6 +556,14 @@ static func _uid_of(o: Variant) -> int:
 	if o == null or not is_instance_valid(o):
 		return 0
 	return int(o.get("uid"))
+
+
+## Kriegsnebel: aus Sicht des Spielers verborgen bzw. wieder sichtbar
+func set_fog_hidden(value: bool) -> void:
+	if fog_hidden == value:
+		return
+	fog_hidden = value
+	visible = inside == null and not fog_hidden
 
 
 ## Kurz aufblitzen lassen (nach einem Treffer). Färbt nur ein, ohne neu zu zeichnen.
